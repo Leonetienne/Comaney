@@ -6,76 +6,201 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}Comoney{% endblock %}</title>
     <style>
+        /* ── Variables ───────────────────────────────────────────────────── */
+        :root {
+            --bg:             #fff;
+            --bg-surface:     #f8f8f8;
+            --bg-elevated:    #efefef;
+            --bg-input:       #fff;
+            --border:         #ddd;
+            --border-subtle:  #eee;
+            --text:           #333;
+            --text-muted:     #888;
+            --text-subtle:    #555;
+            --accent:         #333;
+            --accent-fg:      #fff;
+            --input-border:   #ccc;
+            --error:          #c00;
+            --error-bg:       #fff0f0;
+            --error-border:   #f5c6cb;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg:             #141414;
+                --bg-surface:     #1c1c1c;
+                --bg-elevated:    #272727;
+                --bg-input:       #202020;
+                --border:         #333;
+                --border-subtle:  #282828;
+                --text:           #e0e0e0;
+                --text-muted:     #666;
+                --text-subtle:    #aaa;
+                --accent:         #e0e0e0;
+                --accent-fg:      #141414;
+                --input-border:   #3a3a3a;
+                --error:          #ff6b6b;
+                --error-bg:       #2a1515;
+                --error-border:   #4a2020;
+            }
+        }
+
+        /* ── Reset ───────────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; }
-        body { margin: 0; font-family: sans-serif; color: #333; background: #fff; }
+        body { margin: 0; font-family: sans-serif; color: var(--text); background: var(--bg); }
 
-        /* header */
-        header { display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; border-bottom: 1px solid #ddd; }
-        header .brand { font-weight: 700; font-size: 1.1rem; text-decoration: none; color: #333; }
+        /* ── Header ──────────────────────────────────────────────────────── */
+        header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; height: 56px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg);
+            position: sticky; top: 0; z-index: 200;
+        }
+        .header-left { display: flex; align-items: center; }
+        .hamburger {
+            display: none; align-items: center; justify-content: center;
+            background: none; border: none; cursor: pointer; padding: 6px 8px 6px 0;
+            color: var(--text); flex-direction: column; gap: 5px; margin-right: 10px;
+        }
+        .hamburger span { display: block; width: 20px; height: 2px; background: currentColor; border-radius: 2px; transition: transform .2s, opacity .2s; }
+        body.nav-open .hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        body.nav-open .hamburger span:nth-child(2) { opacity: 0; }
+        body.nav-open .hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+        header .brand { font-weight: 700; font-size: 1.1rem; text-decoration: none; color: var(--text); }
         header nav { display: flex; align-items: center; gap: 16px; }
-        header nav a { text-decoration: none; color: #333; font-size: 0.95rem; }
+        header nav a { text-decoration: none; color: var(--text); font-size: 0.95rem; }
         header nav a:hover { text-decoration: underline; }
-        header nav .user-name { font-size: 0.95rem; font-weight: 600; }
-        header nav button { background: none; border: 1px solid #ccc; border-radius: 4px; padding: 5px 12px; cursor: pointer; font-size: 0.9rem; color: #333; }
-        header nav button:hover { background: #f5f5f5; }
+        header nav .user-name { font-size: 0.95rem; font-weight: 600; color: var(--text-subtle); }
+        header nav button {
+            background: none; border: 1px solid var(--border); border-radius: 4px;
+            padding: 5px 12px; cursor: pointer; font-size: 0.9rem; color: var(--text);
+        }
+        header nav button:hover { background: var(--bg-elevated); }
 
-        /* app layout (sidebar) */
-        .app-layout { display: flex; min-height: calc(100vh - 56px - 49px); }
-        .sidebar { width: 220px; flex-shrink: 0; background: #f8f8f8; border-right: 1px solid #ddd; padding: 20px 0; padding-left: 12px; }
+        /* ── App layout ──────────────────────────────────────────────────── */
+        .app-layout { display: flex; min-height: calc(100vh - 56px - 45px); }
+
+        /* Sidebar overlay */
+        .sidebar-overlay {
+            display: none; position: fixed; inset: 56px 0 0 0;
+            background: rgba(0,0,0,.45); z-index: 149;
+        }
+        body.nav-open .sidebar-overlay { display: block; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 220px; flex-shrink: 0;
+            background: var(--bg-surface); border-right: 1px solid var(--border);
+            padding: 20px 0; padding-left: 12px;
+        }
         .sidebar ul { list-style: none; margin: 0; padding: 0; }
-        .sidebar ul li a { display: block; padding: 10px 24px; text-decoration: none; color: #555; font-size: 0.92rem; border-left: 3px solid transparent; }
-        .sidebar ul li.active a { color: #111; font-weight: 600; border-left-color: #333; background: #efefef; }
-        .sidebar ul li a:hover { color: #111; background: #efefef; }
-        .sidebar-section-label { display: block; padding: 16px 24px 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #aaa; }
+        .sidebar ul li a {
+            display: block; padding: 10px 24px; text-decoration: none;
+            color: var(--text-subtle); font-size: 0.92rem; border-left: 3px solid transparent;
+        }
+        .sidebar ul li.active a { color: var(--text); font-weight: 600; border-left-color: var(--accent); background: var(--bg-elevated); }
+        .sidebar ul li a:hover { color: var(--text); background: var(--bg-elevated); }
+        .sidebar-section-label {
+            display: block; padding: 16px 24px 4px; font-size: 0.7rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted);
+        }
         .sidebar ul li:first-child .sidebar-section-label { padding-top: 4px; }
+
         .app-main { flex: 1; padding: 32px 40px; min-width: 0; }
 
-        /* plain main (non-app pages) */
+        /* ── Plain main (auth pages) ─────────────────────────────────────── */
         main { max-width: 860px; margin: 40px auto; padding: 0 24px; }
 
-        /* footer */
-        footer { border-top: 1px solid #ddd; padding: 14px 24px; font-size: 0.85rem; color: #888; text-align: center; }
+        /* ── Footer ──────────────────────────────────────────────────────── */
+        footer { border-top: 1px solid var(--border); padding: 14px 24px; font-size: 0.85rem; color: var(--text-muted); text-align: center; background: var(--bg); }
 
-        /* shared form styles */
-        label { display: block; margin-top: 16px; font-weight: 600; font-size: 0.95rem; }
+        /* ── Forms ───────────────────────────────────────────────────────── */
+        label { display: block; margin-top: 16px; font-weight: 600; font-size: 0.95rem; color: var(--text); }
         input[type=text], input[type=email], input[type=password], input[type=number],
-        input[type=date], textarea, select { width: 100%; padding: 8px 10px; margin-top: 4px;
-            border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; font-family: inherit; }
+        input[type=date], textarea, select {
+            width: 100%; padding: 8px 10px; margin-top: 4px;
+            border: 1px solid var(--input-border); border-radius: 4px;
+            font-size: 1rem; font-family: inherit;
+            background: var(--bg-input); color: var(--text);
+        }
+        input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
         textarea { resize: vertical; }
         select[multiple] { height: auto; }
-        .error-msg { color: #c00; font-size: 0.875rem; margin-top: 4px; }
-        .btn { display: inline-block; margin-top: 0; padding: 8px 18px; background: #333; color: #fff;
-            border: none; border-radius: 4px; font-size: 0.95rem; cursor: pointer; text-decoration: none; }
-        .btn:hover { background: #555; }
+        .error-msg { color: var(--error); font-size: 0.875rem; margin-top: 4px; }
+
+        /* ── Buttons ─────────────────────────────────────────────────────── */
+        .btn {
+            display: inline-block; padding: 8px 18px; margin-top: 0;
+            background: var(--accent); color: var(--accent-fg);
+            border: 1px solid transparent; border-radius: 4px;
+            font-size: 0.95rem; cursor: pointer; text-decoration: none;
+        }
+        .btn:hover { opacity: .82; }
         .btn-sm { padding: 4px 12px; font-size: 0.85rem; }
-        .btn-danger { background: #c00; }
-        .btn-danger:hover { background: #a00; }
-        .btn-secondary { background: #fff; color: #333; border: 1px solid #ccc; }
-        .btn-secondary:hover { background: #f5f5f5; }
+        .btn-danger { background: #c00; color: #fff; }
+        .btn-danger:hover { background: #a00; opacity: 1; }
+        .btn-secondary { background: var(--bg-input); color: var(--text); border-color: var(--input-border); }
+        .btn-secondary:hover { background: var(--bg-elevated); opacity: 1; }
         .btn-full { width: 100%; text-align: center; display: block; }
 
-        /* table */
+        /* ── Tables ──────────────────────────────────────────────────────── */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #eee; }
-        th { background: #f5f5f5; font-weight: 600; font-size: 0.9rem; }
-        tr:hover td { background: #fafafa; }
-        .empty { color: #888; font-style: italic; margin-top: 20px; }
+        th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); }
+        th { background: var(--bg-surface); font-weight: 600; font-size: 0.9rem; color: var(--text-subtle); }
+        tr:hover td { background: var(--bg-surface); }
+        .empty { color: var(--text-muted); font-style: italic; margin-top: 20px; }
 
-        /* badges */
+        /* ── Badges ──────────────────────────────────────────────────────── */
         .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; }
-        .badge-income { background: #d4edda; color: #155724; }
+        .badge-income  { background: #d4edda; color: #155724; }
         .badge-expense { background: #f8d7da; color: #721c24; }
-        .badge-tag { background: #e2e3e5; color: #383d41; margin: 1px; }
+        .badge-tag     { background: var(--bg-elevated); color: var(--text-subtle); margin: 1px; }
+        @media (prefers-color-scheme: dark) {
+            .badge-income  { background: #1a3326; color: #6ecf8a; }
+            .badge-expense { background: #331a1d; color: #cf7075; }
+        }
+
+        /* ── Mobile ──────────────────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            header { padding: 0 16px; }
+            .hamburger { display: flex; }
+
+            .sidebar {
+                position: fixed; top: 56px; left: 0;
+                height: calc(100vh - 56px);
+                width: 240px; z-index: 150;
+                transform: translateX(-110%);
+                transition: transform .25s ease;
+                overflow-y: auto;
+            }
+            body.nav-open .sidebar { transform: translateX(0); }
+
+            .app-main { padding: 20px 16px; }
+            main { padding: 0 16px; margin: 24px auto; }
+
+            table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
     {% include "partials/_header.html" %}
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
     {% block layout %}
     <main>
         {% block content %}{% endblock %}
     </main>
     {% endblock %}
     {% include "partials/_footer.html" %}
+    <script>
+    (function() {
+        const ham = document.getElementById('hamburger');
+        const overlay = document.getElementById('sidebar-overlay');
+        if (!ham) return;
+        function toggle() { document.body.classList.toggle('nav-open'); }
+        ham.addEventListener('click', toggle);
+        overlay.addEventListener('click', toggle);
+    })();
+    </script>
 </body>
 </html>

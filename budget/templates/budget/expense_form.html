@@ -7,6 +7,9 @@
     .form-wrap { max-width: 600px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .form-actions { display: flex; gap: 12px; margin-top: 28px; }
+    @media (max-width: 500px) {
+        .form-row { grid-template-columns: 1fr; gap: 0; }
+    }
 </style>
 {% endblock %}
 

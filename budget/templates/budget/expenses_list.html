@@ -5,8 +5,12 @@
 {% block extra_head %}
 <style>
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-    .value-income { color: #155724; font-weight: 600; }
+    .value-income  { color: #155724; font-weight: 600; }
     .value-expense { color: #721c24; font-weight: 600; }
+    @media (prefers-color-scheme: dark) {
+        .value-income  { color: #6ecf8a; }
+        .value-expense { color: #cf7075; }
+    }
     .tag-list { display: flex; flex-wrap: wrap; gap: 2px; }
     .actions { display: flex; gap: 8px; }
 </style>

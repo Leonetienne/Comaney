@@ -4,26 +4,49 @@
 
 {% block extra_head %}
 <style>
-    .dash-heading { margin: 0 0 24px; font-size: 1rem; color: #888; font-weight: 500; }
+    .dash-heading { margin: 0 0 24px; font-size: 1rem; color: var(--text-muted); font-weight: 500; }
 
     /* Summary panels */
-    .panels { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 16px; }
+    .panels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
     .panel { border-radius: 12px; padding: 24px 20px 20px; }
     .panel .label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 12px; }
     .panel .amount { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; white-space: nowrap; }
     .panel .amount .currency { font-size: 1.3rem; font-weight: 700; margin-left: 3px; }
+
     .panel-income      { background: #d4edda; color: #155724; }
     .panel-paid        { background: #f8d7da; color: #721c24; }
     .panel-outstanding { background: rgba(220,53,69,.12); color: #a0303a; }
     .panel-left        { background: rgba(40,167,69,.12); color: #1a6b30; }
 
+    @media (prefers-color-scheme: dark) {
+        .panel-income      { background: #1a3326; color: #6ecf8a; }
+        .panel-paid        { background: #331a1d; color: #cf7075; }
+        .panel-outstanding { background: #2b1a1c; color: #c97078; }
+        .panel-left        { background: #182b1f; color: #6ecf8a; }
+    }
+
     /* Charts */
-    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 40px; }
-    .chart-card { background: #fafafa; border: 1px solid #eee; border-radius: 10px; padding: 24px; }
-    .chart-card h2 { font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
-        letter-spacing: .06em; color: #888; margin: 0 0 20px; }
-    .chart-wrap { position: relative; }
-    .chart-empty { color: #bbb; font-size: 0.9rem; font-style: italic; padding: 20px 0; }
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px; }
+    .chart-card {
+        background: var(--bg-surface); border: 1px solid var(--border);
+        border-radius: 10px; padding: 24px;
+    }
+    .chart-card h2 {
+        font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .06em; color: var(--text-muted); margin: 0 0 20px;
+    }
+    .chart-empty { color: var(--text-muted); font-size: 0.9rem; font-style: italic; padding: 20px 0; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+        .panels { grid-template-columns: 1fr 1fr; }
+        .charts { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+        .panels { grid-template-columns: 1fr 1fr; gap: 10px; }
+        .panel { padding: 16px 14px; }
+        .panel .amount { font-size: 1.5rem; }
+    }
 </style>
 {% endblock %}
 
@@ -54,7 +77,7 @@
     <div class="chart-card">
         <h2>Expenses by category</h2>
         {% if cat_labels != "[]" %}
-        <div class="chart-wrap"><canvas id="cat-chart"></canvas></div>
+        <canvas id="cat-chart"></canvas>
         {% else %}
         <p class="chart-empty">No expense data this month.</p>
         {% endif %}
@@ -62,7 +85,7 @@
     <div class="chart-card">
         <h2>Expenses by tag</h2>
         {% if tag_labels != "[]" %}
-        <div class="chart-wrap"><canvas id="tag-chart"></canvas></div>
+        <canvas id="tag-chart"></canvas>
         {% else %}
         <p class="chart-empty">No tagged expenses this month.</p>
         {% endif %}
@@ -71,35 +94,27 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
+const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+Chart.defaults.color      = dark ? '#888' : '#666';
+Chart.defaults.borderColor = dark ? '#333' : '#e8e8e8';
+
 const PALETTE = [
     '#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f',
     '#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac',
 ];
-
-function palette(n) {
-    return Array.from({length: n}, (_, i) => PALETTE[i % PALETTE.length]);
-}
+const pal = n => Array.from({length: n}, (_, i) => PALETTE[i % PALETTE.length]);
 
 {% if cat_labels != "[]" %}
 new Chart(document.getElementById('cat-chart'), {
     type: 'pie',
     data: {
         labels: {{ cat_labels|safe }},
-        datasets: [{
-            data: {{ cat_values|safe }},
-            backgroundColor: palette({{ cat_labels|safe }}.length),
-            borderWidth: 2,
-            borderColor: '#fff',
-        }]
+        datasets: [{ data: {{ cat_values|safe }}, backgroundColor: pal({{ cat_labels|safe }}.length), borderWidth: 2, borderColor: dark ? '#1c1c1c' : '#fff' }]
     },
     options: {
         plugins: {
             legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14, font: { size: 12 } } },
-            tooltip: {
-                callbacks: {
-                    label: ctx => ` ${ctx.label}: ${ctx.parsed.toFixed(2)} {{ current_feuser.currency }}`
-                }
-            }
+            tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed.toFixed(2)} {{ current_feuser.currency }}` } }
         }
     }
 });
@@ -110,25 +125,16 @@ new Chart(document.getElementById('tag-chart'), {
     type: 'bar',
     data: {
         labels: {{ tag_labels|safe }},
-        datasets: [{
-            data: {{ tag_values|safe }},
-            backgroundColor: palette({{ tag_labels|safe }}.length),
-            borderRadius: 4,
-            borderSkipped: false,
-        }]
+        datasets: [{ data: {{ tag_values|safe }}, backgroundColor: pal({{ tag_labels|safe }}.length), borderRadius: 4, borderSkipped: false }]
     },
     options: {
         indexAxis: 'y',
         plugins: {
             legend: { display: false },
-            tooltip: {
-                callbacks: {
-                    label: ctx => ` ${ctx.parsed.x.toFixed(2)} {{ current_feuser.currency }}`
-                }
-            }
+            tooltip: { callbacks: { label: c => ` ${c.parsed.x.toFixed(2)} {{ current_feuser.currency }}` } }
         },
         scales: {
-            x: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 11 } } },
+            x: { grid: { color: dark ? '#2a2a2a' : '#f0f0f0' }, ticks: { font: { size: 11 } } },
             y: { grid: { display: false }, ticks: { font: { size: 12 } } }
         }
     }

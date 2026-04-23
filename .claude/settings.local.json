@@ -29,7 +29,8 @@
       "Bash(curl -s -o /dev/null -w \"/profile/ → %{http_code}\\\\n\" http://localhost:8080/profile/)",
       "Skill(claude-api)",
       "Skill(claude-api:*)",
-      "Bash(docker-compose build *)"
+      "Bash(docker-compose build *)",
+      "Bash(grep -n \"#[0-9a-fA-F]\\\\{3,6\\\\}\\\\|color:\\\\s*[a-z]\\\\|rgba\\(\" /Users/agent/private-work/Comoney/budget/templates/budget/smart_create.html)"
     ]
   }
 }

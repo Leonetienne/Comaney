@@ -1,5 +1,10 @@
 <header>
-    <a class="brand" href="{% url 'hello_world' %}">Comoney</a>
+    <div class="header-left">
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
+        <a class="brand" href="{% url 'hello_world' %}">Comoney</a>
+    </div>
     <nav>
         {% if current_feuser %}
             <span class="user-name">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</span>
