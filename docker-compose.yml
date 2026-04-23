@@ -1,0 +1,39 @@
+services:
+  db:
+    image: mariadb:11.3
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: comoney
+      MARIADB_USER: comoney
+      MARIADB_PASSWORD: comoney
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8080:8000"
+    environment:
+      DJANGO_SECRET_KEY: dev-secret-key-change-in-production
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: comoney
+      DB_USER: comoney
+      DB_PASSWORD: comoney
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose exec *)",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(lsof -nP -iTCP:8000)",
+      "Bash(curl -v http://localhost:8000/)",
+      "Bash(docker-compose up *)",
+      "Bash(docker-compose logs *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/)"
+    ]
+  }
+}
