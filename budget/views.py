@@ -74,6 +74,19 @@ def category_delete(request, uid):
 
 @feuser_required
 @require_POST
+def category_rename(request, uid):
+    category = get_object_or_404(Category, uid=uid, owning_feuser=request.feuser)
+    data = json.loads(request.body)
+    title = data.get("title", "").strip()
+    if not title:
+        return JsonResponse({"error": "Title required."}, status=400)
+    category.title = title
+    category.save(update_fields=["title"])
+    return JsonResponse({"uid": category.uid, "title": category.title})
+
+
+@feuser_required
+@require_POST
 def tag_create(request):
     data = json.loads(request.body)
     title = data.get("title", "").strip()
@@ -89,6 +102,19 @@ def tag_delete(request, uid):
     tag = get_object_or_404(Tag, uid=uid, owning_feuser=request.feuser)
     tag.delete()
     return JsonResponse({"ok": True})
+
+
+@feuser_required
+@require_POST
+def tag_rename(request, uid):
+    tag = get_object_or_404(Tag, uid=uid, owning_feuser=request.feuser)
+    data = json.loads(request.body)
+    title = data.get("title", "").strip()
+    if not title:
+        return JsonResponse({"error": "Title required."}, status=400)
+    tag.title = title
+    tag.save(update_fields=["title"])
+    return JsonResponse({"uid": tag.uid, "title": tag.title})
 
 
 @feuser_required

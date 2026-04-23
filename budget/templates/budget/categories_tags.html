@@ -7,10 +7,15 @@
     .ct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 8px; }
     .ct-panel h2 { font-size: 1rem; font-weight: 700; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .05em; color: #555; }
     .ct-list { list-style: none; margin: 0; padding: 0; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; min-height: 48px; }
-    .ct-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+    .ct-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid #eee; font-size: 0.95rem; gap: 8px; }
     .ct-item:last-child { border-bottom: none; }
     .ct-item:hover { background: #fafafa; }
-    .ct-delete { background: none; border: none; cursor: pointer; color: #bbb; font-size: 1.1rem; line-height: 1; padding: 0 4px; }
+    .ct-name { flex: 1; cursor: text; border-radius: 3px; padding: 1px 3px; margin: -1px -3px; }
+    .ct-name:hover { background: #f0f0f0; }
+    .ct-name-input { flex: 1; border: 1px solid #aaa; border-radius: 3px; padding: 2px 6px;
+        font-size: inherit; font-family: inherit; background: #fff; outline: none; }
+    .ct-name-input:focus { border-color: #333; box-shadow: 0 0 0 2px rgba(0,0,0,.06); }
+    .ct-delete { background: none; border: none; cursor: pointer; color: #bbb; font-size: 1.1rem; line-height: 1; padding: 0 4px; flex-shrink: 0; }
     .ct-delete:hover { color: #c00; }
     .ct-add { margin-top: 8px; }
     .ct-add input { margin-top: 0; border-radius: 6px; }
@@ -28,7 +33,7 @@
         <ul class="ct-list" id="category-list">
             {% for cat in categories %}
             <li class="ct-item" id="category-{{ cat.uid }}">
-                <span>{{ cat.title }}</span>
+                <span class="ct-name" data-type="category" data-uid="{{ cat.uid }}" title="Click to rename">{{ cat.title }}</span>
                 <button class="ct-delete" title="Delete" data-type="category" data-uid="{{ cat.uid }}" data-title="{{ cat.title|escapejs }}">×</button>
             </li>
             {% empty %}
@@ -45,7 +50,7 @@
         <ul class="ct-list" id="tag-list">
             {% for tag in tags %}
             <li class="ct-item" id="tag-{{ tag.uid }}">
-                <span>{{ tag.title }}</span>
+                <span class="ct-name" data-type="tag" data-uid="{{ tag.uid }}" title="Click to rename">{{ tag.title }}</span>
                 <button class="ct-delete" title="Delete" data-type="tag" data-uid="{{ tag.uid }}" data-title="{{ tag.title|escapejs }}">×</button>
             </li>
             {% empty %}
@@ -60,6 +65,7 @@
 
 <script>
 const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
 const createUrls = {
     category: "{% url 'budget:category_create' %}",
     tag:      "{% url 'budget:tag_create' %}",
@@ -68,17 +74,84 @@ const deleteUrls = {
     category: uid => "{% url 'budget:category_delete' 0 %}".replace('/0/', `/${uid}/`),
     tag:      uid => "{% url 'budget:tag_delete' 0 %}".replace('/0/', `/${uid}/`),
 };
+const renameUrls = {
+    category: uid => "{% url 'budget:category_rename' 0 %}".replace('/0/', `/${uid}/`),
+    tag:      uid => "{% url 'budget:tag_rename' 0 %}".replace('/0/', `/${uid}/`),
+};
 
 function makeItem(type, uid, title) {
     const li = document.createElement('li');
     li.className = 'ct-item';
     li.id = `${type}-${uid}`;
-    li.innerHTML = `<span>${title}</span>
-        <button class="ct-delete" title="Delete"
-            data-type="${type}" data-uid="${uid}" data-title="${title.replace(/"/g, '&quot;')}">×</button>`;
+    li.innerHTML =
+        `<span class="ct-name" data-type="${type}" data-uid="${uid}" title="Click to rename">${title}</span>` +
+        `<button class="ct-delete" title="Delete" data-type="${type}" data-uid="${uid}" data-title="${title.replace(/"/g, '&quot;')}">×</button>`;
     return li;
 }
 
+// ── Inline rename ────────────────────────────────────────────────────────────
+function startEdit(span) {
+    if (span.querySelector('input')) return; // already editing
+    const type  = span.dataset.type;
+    const uid   = span.dataset.uid;
+    const original = span.textContent.trim();
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'ct-name-input';
+    input.value = original;
+    span.textContent = '';
+    span.appendChild(input);
+    input.focus();
+    input.select();
+
+    let committed = false;
+
+    async function commit() {
+        if (committed) return;
+        committed = true;
+        const newTitle = input.value.trim();
+        if (!newTitle || newTitle === original) {
+            span.textContent = original;
+            return;
+        }
+        const res = await fetch(renameUrls[type](uid), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ title: newTitle }),
+        });
+        if (res.ok) {
+            const data = await res.json();
+            span.textContent = data.title;
+            // Keep delete button in sync
+            const delBtn = span.closest('.ct-item').querySelector('.ct-delete');
+            if (delBtn) delBtn.dataset.title = data.title;
+        } else {
+            span.textContent = original;
+        }
+    }
+
+    function cancel() {
+        committed = true;
+        span.textContent = original;
+    }
+
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+        if (e.key === 'Escape') { cancel(); }
+    });
+    input.addEventListener('blur', commit);
+}
+
+document.addEventListener('click', e => {
+    const span = e.target.closest('.ct-name');
+    if (span) { startEdit(span); return; }
+
+    const btn = e.target.closest('.ct-delete');
+    if (btn) deleteItem(btn.dataset.type, btn.dataset.uid, btn.dataset.title);
+});
+
+// ── Create ───────────────────────────────────────────────────────────────────
 function setupInput(type) {
     const input = document.getElementById(`${type}-input`);
     const list  = document.getElementById(`${type}-list`);
@@ -105,6 +178,7 @@ function setupInput(type) {
     });
 }
 
+// ── Delete ───────────────────────────────────────────────────────────────────
 async function deleteItem(type, uid, title) {
     if (!confirm(`Delete "${title}"?\nIt will be removed from all related expenses.`)) return;
     const res = await fetch(deleteUrls[type](uid), {
@@ -114,12 +188,6 @@ async function deleteItem(type, uid, title) {
     if (!res.ok) return;
     document.getElementById(`${type}-${uid}`).remove();
 }
-
-document.addEventListener('click', e => {
-    const btn = e.target.closest('.ct-delete');
-    if (!btn) return;
-    deleteItem(btn.dataset.type, btn.dataset.uid, btn.dataset.title);
-});
 
 setupInput('category');
 setupInput('tag');
