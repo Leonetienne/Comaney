@@ -18,7 +18,8 @@
       "Bash(curl -s -o /dev/null -w \"/ → %{http_code}\\\\n/register/ → \" http://localhost:8080/)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n/login/ → \" http://localhost:8080/register/)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n/password-forgot/ → \" http://localhost:8080/login/)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8080/password-forgot/)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8080/password-forgot/)",
+      "Bash(docker-compose restart *)"
     ]
   }
 }
