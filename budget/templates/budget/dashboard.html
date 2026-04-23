@@ -2,7 +2,40 @@
 
 {% block title %}Comoney – Dashboard{% endblock %}
 
+{% block extra_head %}
+<style>
+    .dash-heading { margin: 0 0 24px; font-size: 1rem; color: #888; font-weight: 500; }
+    .panels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .panel { border-radius: 12px; padding: 28px 28px 24px; }
+    .panel .label { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+    .panel .amount { font-size: 2.4rem; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+    .panel-income      { background: #d4edda; color: #155724; }
+    .panel-paid        { background: #f8d7da; color: #721c24; }
+    .panel-outstanding { background: rgba(220, 53, 69, 0.12); color: #a0303a; }
+    .panel-left        { background: rgba(40, 167, 69, 0.12); color: #1a6b30; }
+</style>
+{% endblock %}
+
 {% block content %}
-<h1>Dashboard</h1>
-<p style="color:#888;">More stats coming soon. You have <strong>{{ total_expenses }}</strong> expense record{{ total_expenses|pluralize }}.</p>
+<h1 style="margin-bottom:6px;">Dashboard</h1>
+<p class="dash-heading">{{ month_label }}</p>
+
+<div class="panels">
+    <div class="panel panel-income">
+        <div class="label">Income</div>
+        <div class="amount">{{ income }}</div>
+    </div>
+    <div class="panel panel-paid">
+        <div class="label">Paid expenses</div>
+        <div class="amount">{{ paid }}</div>
+    </div>
+    <div class="panel panel-outstanding">
+        <div class="label">Outstanding</div>
+        <div class="amount">{{ outstanding }}</div>
+    </div>
+    <div class="panel panel-left">
+        <div class="label">Left to spend</div>
+        <div class="amount">{{ left }}</div>
+    </div>
+</div>
 {% endblock %}

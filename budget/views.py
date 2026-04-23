@@ -1,7 +1,10 @@
 import json
+from decimal import Decimal
 
+from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .decorators import feuser_required
@@ -12,10 +15,28 @@ from .models import Category, Expense, ScheduledExpense, Tag
 @feuser_required
 def dashboard(request):
     feuser = request.feuser
-    total_expenses = Expense.objects.filter(owning_feuser=feuser).count()
+    today = timezone.localdate()
+    month_qs = Expense.objects.filter(
+        owning_feuser=feuser,
+        date_created__year=today.year,
+        date_created__month=today.month,
+    )
+
+    def _sum(qs):
+        return qs.aggregate(t=Sum("value"))["t"] or Decimal("0")
+
+    income      = _sum(month_qs.filter(type="income"))
+    paid        = _sum(month_qs.filter(type="expense", settled=True))
+    outstanding = _sum(month_qs.filter(type="expense", settled=False))
+    left        = income - paid - outstanding
+
     return render(request, "budget/dashboard.html", {
         "active_nav": "dashboard",
-        "total_expenses": total_expenses,
+        "income": income,
+        "paid": paid,
+        "outstanding": outstanding,
+        "left": left,
+        "month_label": today.strftime("%B %Y"),
     })
 
 
