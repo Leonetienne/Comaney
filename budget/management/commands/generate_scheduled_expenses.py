@@ -88,6 +88,7 @@ class Command(BaseCommand):
                     title=scheduled.title,
                     type=scheduled.type,
                     value=scheduled.value,
+                    payee=scheduled.payee,
                     note=scheduled.note,
                     category=scheduled.category,
                     tags=list(scheduled.tags.all()),

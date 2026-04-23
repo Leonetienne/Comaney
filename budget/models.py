@@ -75,6 +75,7 @@ class Expense(OwnedModel):
 
 class ScheduledExpense(OwnedModel):
     title = models.CharField(max_length=255)
+    payee = models.CharField(max_length=255, blank=True)
     note = models.TextField(blank=True)
     category = models.ForeignKey(
         Category, null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_expenses"

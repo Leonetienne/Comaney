@@ -46,7 +46,7 @@ class ScheduledExpenseForm(forms.ModelForm):
     class Meta:
         model = ScheduledExpense
         fields = [
-            "title", "type", "value",
+            "title", "payee", "type", "value",
             "repeat_every_factor", "repeat_every_unit", "repeat_base_date",
             "category", "tags", "note", "default_settled",
         ]
