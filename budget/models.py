@@ -57,6 +57,10 @@ class Expense(OwnedModel):
     date_due = models.DateField(null=True, blank=True, default=None)
     date_created = models.DateTimeField(auto_now_add=True)
     settled = models.BooleanField(default=True)
+    source_scheduled = models.ForeignKey(
+        "ScheduledExpense", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="generated_expenses",
+    )
 
     class Meta:
         ordering = ["-date_created"]
