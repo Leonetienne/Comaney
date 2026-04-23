@@ -1,12 +1,30 @@
 {% extends "base.html" %}
 
+{% block extra_head %}
+<style>
+    .sidebar-section-label {
+        display: block;
+        padding: 16px 24px 4px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .07em;
+        color: #aaa;
+    }
+    .sidebar ul li:first-child .sidebar-section-label { padding-top: 4px; }
+</style>
+{% endblock %}
+
 {% block layout %}
 <div class="app-layout">
     <nav class="sidebar">
         <ul>
+            <li><span class="sidebar-section-label">Overview</span></li>
             <li class="{% if active_nav == 'dashboard' %}active{% endif %}">
                 <a href="{% url 'budget:dashboard' %}">Dashboard</a>
             </li>
+
+            <li><span class="sidebar-section-label">Budget</span></li>
             <li class="{% if active_nav == 'categories_tags' %}active{% endif %}">
                 <a href="{% url 'budget:categories_tags' %}">Categories &amp; Tags</a>
             </li>
@@ -16,6 +34,15 @@
             <li class="{% if active_nav == 'scheduled' %}active{% endif %}">
                 <a href="{% url 'budget:scheduled_list' %}">Scheduled Expenses</a>
             </li>
+
+            {% if current_feuser.anthropic_api_key %}
+            <li><span class="sidebar-section-label">AI</span></li>
+            <li class="{% if active_nav == 'smart_create' %}active{% endif %}">
+                <a href="{% url 'budget:smart_create' %}">Smart Create</a>
+            </li>
+            {% endif %}
+
+            <li><span class="sidebar-section-label">Account</span></li>
             <li class="{% if active_nav == 'profile' %}active{% endif %}">
                 <a href="{% url 'profile' %}">Profile</a>
             </li>

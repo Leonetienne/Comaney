@@ -1,0 +1,414 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comoney – Smart Create{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+    .smart-create-wrap { max-width: 100%; }
+
+    /* Text input */
+    .smart-input { width: 100%; padding: 12px 14px; font-size: 1rem; font-family: inherit;
+        border: 1px solid #ccc; border-radius: 6px; resize: vertical; min-height: 72px; }
+    .smart-input:focus { outline: none; border-color: #888; box-shadow: 0 0 0 3px rgba(0,0,0,.06); }
+
+    /* Image zone */
+    .image-zone { margin-top: 12px; border: 2px dashed #ccc; border-radius: 8px;
+        transition: border-color .15s, background .15s; cursor: pointer; overflow: hidden; }
+    .image-zone:hover, .image-zone.drag-over { border-color: #888; background: #fafafa; }
+    .image-zone-placeholder { display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 4px; padding: 22px 16px; color: #888; font-size: 0.9rem; text-align: center; }
+    .image-zone-placeholder .icon { font-size: 1.6rem; line-height: 1; }
+    .image-zone-placeholder strong { color: #555; }
+    .image-zone-placeholder small { font-size: 0.78rem; }
+    .image-preview-wrap { position: relative; display: none; }
+    .image-preview-wrap img { display: block; width: 100%; max-height: 340px;
+        object-fit: contain; background: #f0f0f0; }
+    .image-remove { position: absolute; top: 8px; right: 8px; padding: 4px 10px;
+        background: rgba(0,0,0,.55); color: #fff; border: none; border-radius: 4px;
+        font-size: 0.82rem; cursor: pointer; line-height: 1.4; }
+    .image-remove:hover { background: rgba(0,0,0,.75); }
+
+    /* Actions row */
+    .parse-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+    .spinner { display: none; width: 18px; height: 18px; border: 2px solid #ccc;
+        border-top-color: #555; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Usage pill */
+    .usage-pill { display: inline-flex; align-items: center; gap: 10px; margin-top: 14px;
+        padding: 6px 12px; background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 20px;
+        font-size: 0.82rem; color: #555; }
+    .usage-pill .cost { font-weight: 700; color: #333; }
+    .usage-pill .tokens { color: #888; }
+
+    .ai-error { color: #c00; background: #fff0f0; border: 1px solid #f5c6cb;
+        border-radius: 4px; padding: 10px 14px; margin-top: 14px; font-size: 0.9rem; }
+
+    /* Preview */
+    .preview-section { margin-top: 32px; }
+    .preview-header { display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+    .preview-header h2 { font-size: 1rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .05em; color: #555; margin: 0; }
+    .select-toggle { font-size: 0.82rem; color: #666; cursor: pointer; user-select: none; }
+    .select-toggle:hover { color: #333; }
+    .preview-hint { font-size: 0.82rem; color: #aaa; margin: 0 0 12px; }
+
+    /* Table layout — fixed columns, no overflow wrapping */
+    .preview-table { table-layout: fixed; width: 100%; }
+    .preview-table th, .preview-table td { padding: 10px 8px; }
+    .preview-table th { font-size: 0.85rem; }
+    .col-cb    { width: 36px; }
+    .col-title { width: 18%; }
+    .col-type  { width: 100px; }
+    .col-value { width: 120px; }
+    .col-payee { width: 13%; }
+    .col-cat   { width: 14%; }
+    .col-tags  { width: 16%; }
+    .col-note  { width: 18%; }
+
+    .preview-table td { vertical-align: middle; }
+    .preview-table td.cb-col { text-align: center; vertical-align: middle; }
+    .preview-table td.cb-col input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: #333; }
+    .preview-table tr.deselected td { opacity: 0.3; }
+    .preview-table tr.deselected td.cb-col { opacity: 1; }
+    .preview-table tr.deselected td:not(.cb-col) { pointer-events: none; }
+
+    /* Editable inputs inside table */
+    .edit-input, .edit-select, .edit-textarea {
+        border: 1px solid transparent; border-radius: 3px; background: transparent;
+        padding: 2px 4px; width: 100%; font-size: 0.82rem; font-family: inherit; color: inherit;
+        box-sizing: border-box;
+    }
+    .edit-input:hover, .edit-select:hover, .edit-textarea:hover { border-color: #ddd; background: #fafafa; }
+    .edit-input:focus, .edit-select:focus, .edit-textarea:focus { border-color: #aaa; background: #fff; outline: none; }
+    .edit-textarea { resize: vertical; min-height: 46px; line-height: 1.35; }
+
+    td.value-col .val-wrap { display: flex; align-items: center; gap: 6px; }
+    td.value-col .val-wrap .edit-input { min-width: 0; }
+    td.value-col .val-wrap span { white-space: nowrap; color: #666; }
+
+    td.type-income .edit-type { color: #155724; font-weight: 600; }
+    td.type-expense .edit-type { color: #721c24; }
+
+    .confirm-actions { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+    .success-banner { background: #d4edda; color: #155724; border-radius: 6px;
+        padding: 14px 18px; margin-top: 20px; font-size: 0.95rem; }
+    .success-banner a { color: #155724; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="smart-create-wrap">
+    <h1>Smart Create</h1>
+    <p style="color:#555; margin-top:0; margin-bottom:20px;">
+        Describe what you bought, attach a receipt photo, or both — Claude will extract and categorise the items for you to review and edit.
+    </p>
+
+    {% if created_count is not None %}
+    <div class="success-banner">
+        ✓ {{ created_count }} expense{{ created_count|pluralize }} saved.
+        <a href="{% url 'budget:expenses_list' %}">View expenses →</a>
+    </div>
+    {% endif %}
+
+    <!-- Parse form -->
+    <form method="post" enctype="multipart/form-data" id="parse-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="parse">
+
+        <textarea
+            name="description"
+            class="smart-input"
+            placeholder="Optional context, e.g. "Rewe trip – split into groceries and household" — or just attach the receipt below."
+        >{{ description }}</textarea>
+
+        <!-- Image zone -->
+        <div class="image-zone" id="image-zone">
+            <div class="image-zone-placeholder" id="image-placeholder">
+                <span class="icon">📎</span>
+                <span><strong>Drop image, paste (⌘V / Ctrl+V), or tap to choose</strong></span>
+                <small>Receipt photo · order screenshot · invoice — JPEG, PNG, WebP, GIF</small>
+            </div>
+            <div class="image-preview-wrap" id="image-preview-wrap">
+                <img id="preview-img" src="" alt="Attached image">
+                <button type="button" class="image-remove" id="image-remove">✕ Remove</button>
+            </div>
+            <input type="file" id="img-file-input" name="image_file" accept="image/*" style="display:none">
+        </div>
+
+        <div class="parse-actions">
+            <button type="submit" class="btn" id="parse-btn">✦ Analyse with AI</button>
+            <div class="spinner" id="spinner"></div>
+        </div>
+    </form>
+
+    {% if usage %}
+    <div class="usage-pill">
+        <span class="cost">{{ usage.cost_str }}</span>
+        <span class="tokens">
+            {{ usage.input_tokens }} in · {{ usage.output_tokens }} out
+            {% if usage.cache_write_tokens %} · {{ usage.cache_write_tokens }} cache write{% endif %}
+            {% if usage.cache_read_tokens %} · {{ usage.cache_read_tokens }} cache hit{% endif %}
+        </span>
+    </div>
+    {% endif %}
+
+    {% if ai_error %}
+    <div class="ai-error">{{ ai_error }}</div>
+    {% endif %}
+
+    {% if preview_items %}
+    <div class="preview-section">
+        <div class="preview-header">
+            <h2>Preview — <span id="selected-count">{{ preview_items|length }}</span> of {{ preview_items|length }} selected</h2>
+            <span class="select-toggle" id="toggle-all">Deselect all</span>
+        </div>
+        <p class="preview-hint">All fields are editable — click any cell to adjust.</p>
+
+        <form method="post" id="confirm-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="confirm">
+            <input type="hidden" name="preview_json" id="preview_json_input" value="{{ preview_json }}">
+
+            <table class="preview-table">
+                <thead>
+                    <tr>
+                        <th class="col-cb cb-col"></th>
+                        <th class="col-title">Title</th>
+                        <th class="col-type">Type</th>
+                        <th class="col-value">Value</th>
+                        <th class="col-payee">Payee</th>
+                        <th class="col-cat">Category</th>
+                        <th class="col-tags">Tags</th>
+                        <th class="col-note">Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in preview_items %}
+                    <tr data-idx="{{ forloop.counter0 }}">
+                        <td class="cb-col">
+                            <input type="checkbox" name="selected" value="{{ forloop.counter0 }}" checked>
+                        </td>
+
+                        <!-- Title -->
+                        <td>
+                            <textarea class="edit-textarea edit-title" placeholder="Title">{{ item.title }}</textarea>
+                        </td>
+
+                        <!-- Type -->
+                        <td class="type-{{ item.type }}">
+                            <select class="edit-select edit-type">
+                                <option value="expense" {% if item.type == "expense" %}selected{% endif %}>Expense</option>
+                                <option value="income"  {% if item.type == "income"  %}selected{% endif %}>Income</option>
+                            </select>
+                        </td>
+
+                        <!-- Value -->
+                        <td class="value-col">
+                            <div class="val-wrap">
+                                <input type="number" class="edit-input edit-value" value="{{ item.value }}" step="0.01" min="0.01">
+                                <span>{{ current_feuser.currency }}</span>
+                            </div>
+                        </td>
+
+                        <!-- Payee -->
+                        <td>
+                            <textarea class="edit-textarea edit-payee" placeholder="—">{{ item.payee }}</textarea>
+                        </td>
+
+                        <!-- Category -->
+                        <td>
+                            <select class="edit-select edit-category">
+                                <option value="">—</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.uid }}" {% if cat.uid == item.category_uid %}selected{% endif %}>{{ cat.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+
+                        <!-- Tags -->
+                        <td>
+                            {% if tags %}
+                            <select class="edit-select edit-tags" multiple size="3">
+                                {% for tag in tags %}
+                                <option value="{{ tag.uid }}" {% if tag.uid in item.tag_uids %}selected{% endif %}>{{ tag.title }}</option>
+                                {% endfor %}
+                            </select>
+                            {% else %}—{% endif %}
+                        </td>
+
+                        <!-- Note -->
+                        <td>
+                            <textarea class="edit-textarea edit-note" placeholder="—">{{ item.note }}</textarea>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="confirm-actions">
+                <button type="submit" class="btn" id="confirm-btn">✓ Save selected</button>
+                <a href="{% url 'budget:smart_create' %}" class="btn btn-secondary">✗ Discard</a>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+const SESSION_KEY = 'smart_create_img';
+
+// ── Image zone ──────────────────────────────────────────────────────────────
+(function () {
+    const zone        = document.getElementById('image-zone');
+    const placeholder = document.getElementById('image-placeholder');
+    const previewWrap = document.getElementById('image-preview-wrap');
+    const previewImg  = document.getElementById('preview-img');
+    const removeBtn   = document.getElementById('image-remove');
+    const fileInput   = document.getElementById('img-file-input');
+
+    function showPreview(dataUrl) {
+        previewImg.src = dataUrl;
+        placeholder.style.display = 'none';
+        previewWrap.style.display = 'block';
+    }
+
+    function dataUrlToFile(dataUrl, name) {
+        const [head, data] = dataUrl.split(',');
+        const mime = (head.match(/:(.*?);/) || [])[1] || 'image/jpeg';
+        const bytes = atob(data);
+        const arr = new Uint8Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+        return new File([arr], name, { type: mime });
+    }
+
+    function setFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        // Put it in the file input so the form submits it properly
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+        // Read for preview + sessionStorage persistence
+        const reader = new FileReader();
+        reader.onload = e => {
+            showPreview(e.target.result);
+            try { sessionStorage.setItem(SESSION_KEY, e.target.result); } catch (_) {}
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function clearImage() {
+        fileInput.value = '';
+        previewImg.src  = '';
+        previewWrap.style.display = 'none';
+        placeholder.style.display = '';
+        try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
+    }
+
+    // Restore preview (and file input) from last session
+    (function restoreFromSession() {
+        let stored;
+        try { stored = sessionStorage.getItem(SESSION_KEY); } catch (_) {}
+        if (!stored) return;
+        showPreview(stored);
+        // Reconstruct the File so re-submitting the parse form still works
+        try {
+            const file = dataUrlToFile(stored, 'image');
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            fileInput.files = dt.files;
+        } catch (_) {}
+    })();
+
+    zone.addEventListener('click', e => { if (!e.target.closest('#image-remove')) fileInput.click(); });
+    fileInput.addEventListener('change', function () { if (this.files[0]) setFile(this.files[0]); });
+
+    zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', ()  => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+    });
+
+    document.addEventListener('paste', e => {
+        for (const item of (e.clipboardData || e.originalEvent.clipboardData).items)
+            if (item.type.startsWith('image/')) { setFile(item.getAsFile()); break; }
+    });
+
+    removeBtn.addEventListener('click', clearImage);
+})();
+
+// ── Spinner ─────────────────────────────────────────────────────────────────
+document.getElementById('parse-form').addEventListener('submit', function () {
+    document.getElementById('parse-btn').disabled = true;
+    document.getElementById('spinner').style.display = 'inline-block';
+});
+
+{% if created_count is not None %}
+// Clear stored image after a successful save
+try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
+{% endif %}
+
+{% if preview_items %}
+// ── Checkbox logic ───────────────────────────────────────────────────────────
+(function () {
+    const checkboxes = document.querySelectorAll('#confirm-form input[type=checkbox][name=selected]');
+    const countEl    = document.getElementById('selected-count');
+    const toggleBtn  = document.getElementById('toggle-all');
+    const confirmBtn = document.getElementById('confirm-btn');
+    const total      = checkboxes.length;
+
+    function updateUI() {
+        const checked = document.querySelectorAll('#confirm-form input[name=selected]:checked').length;
+        countEl.textContent    = checked;
+        toggleBtn.textContent  = checked === total ? 'Deselect all' : 'Select all';
+        confirmBtn.disabled    = checked === 0;
+        confirmBtn.textContent = checked === 0
+            ? '✓ Save selected'
+            : `✓ Save ${checked} expense${checked !== 1 ? 's' : ''}`;
+        checkboxes.forEach(cb => {
+            cb.closest('tr').classList.toggle('deselected', !cb.checked);
+        });
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateUI));
+    toggleBtn.addEventListener('click', function () {
+        const anyChecked = !!document.querySelector('#confirm-form input[name=selected]:checked');
+        checkboxes.forEach(cb => { cb.checked = !anyChecked; });
+        updateUI();
+    });
+    updateUI();
+})();
+
+// ── Serialize edits → preview_json before confirm submit ────────────────────
+document.getElementById('confirm-form').addEventListener('submit', function () {
+    const rows    = document.querySelectorAll('.preview-table tbody tr[data-idx]');
+    const payload = JSON.parse(document.getElementById('preview_json_input').value);
+
+    rows.forEach(row => {
+        const idx  = parseInt(row.dataset.idx, 10);
+        const item = payload[idx];
+
+        item.title  = row.querySelector('.edit-title').value.trim() || item.title;
+        item.type   = row.querySelector('.edit-type').value;
+        item.value  = row.querySelector('.edit-value').value || item.value;
+        item.payee  = row.querySelector('.edit-payee').value.trim();
+        item.note   = row.querySelector('.edit-note').value.trim();
+
+        const catEl = row.querySelector('.edit-category');
+        item.category_uid = catEl.value ? parseInt(catEl.value, 10) : null;
+
+        const tagEl = row.querySelector('.edit-tags');
+        item.tag_uids = tagEl
+            ? Array.from(tagEl.selectedOptions).map(o => parseInt(o.value, 10))
+            : [];
+    });
+
+    document.getElementById('preview_json_input').value = JSON.stringify(payload);
+});
+{% endif %}
+</script>
+{% endblock %}
