@@ -34,7 +34,7 @@ ROOT_URLCONF = "comoney.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -42,6 +42,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "feusers.context_processors.current_feuser",
             ],
         },
     },
@@ -78,3 +79,11 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 1025))
+EMAIL_USE_TLS = False
+DEFAULT_FROM_EMAIL = "noreply@comoney.local"
+
+SITE_URL = os.environ.get("SITE_URL", "http://localhost:8080")

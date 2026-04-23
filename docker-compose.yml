@@ -15,6 +15,12 @@ services:
       timeout: 5s
       retries: 5
 
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8030:8025"
+      - "1025:1025"
+
   web:
     build: .
     command: >
@@ -31,6 +37,8 @@ services:
       DB_NAME: comoney
       DB_USER: comoney
       DB_PASSWORD: comoney
+      EMAIL_HOST: mailpit
+      EMAIL_PORT: 1025
     depends_on:
       db:
         condition: service_healthy

@@ -7,7 +7,14 @@
       "Bash(curl -v http://localhost:8000/)",
       "Bash(docker-compose up *)",
       "Bash(docker-compose logs *)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/)",
+      "Bash(curl -s -o /dev/null -w \"web:%{http_code}\" http://localhost:8080/)",
+      "Bash(curl -s -o /dev/null -w \"mailpit:%{http_code}\" http://localhost:8030/)",
+      "Bash(curl -s -o /dev/null -w \"/ → %{http_code}\\\\n\" http://localhost:8080/)",
+      "Bash(curl -s -o /dev/null -w \"/login/ → %{http_code}\\\\n\" http://localhost:8080/login/)",
+      "Bash(curl -s -o /dev/null -w \"/registrieren/ → %{http_code}\\\\n\" http://localhost:8080/registrieren/)",
+      "Bash(curl -s -o /dev/null -w \"/passwort-vergessen/ → %{http_code}\\\\n\" http://localhost:8080/passwort-vergessen/)",
+      "Bash(curl -s -o /dev/null -w \"/passwort-zuruecksetzen/erledigt/ → %{http_code}\\\\n\" http://localhost:8080/passwort-zuruecksetzen/erledigt/)"
     ]
   }
 }

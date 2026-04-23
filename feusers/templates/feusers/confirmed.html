@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Comoney – E-Mail bestätigt{% endblock %}
+
+{% block extra_head %}
+<style>main { max-width: 480px; text-align: center; }</style>
+{% endblock %}
+
+{% block content %}
+<h1>Konto aktiviert!</h1>
+<p>Deine E-Mail-Adresse <strong>{{ user.email }}</strong> wurde erfolgreich bestätigt.<br>
+Du kannst dich jetzt einloggen.</p>
+<a href="{% url 'login' %}" class="btn">→ Zum Login</a>
+{% endblock %}

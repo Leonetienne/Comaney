@@ -1,0 +1,15 @@
+<header>
+    <a class="brand" href="{% url 'hello_world' %}">Comoney</a>
+    <nav>
+        {% if current_feuser %}
+            <span class="user-name">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</span>
+            <form method="post" action="{% url 'logout' %}" style="margin:0">
+                {% csrf_token %}
+                <button type="submit">Logout</button>
+            </form>
+        {% else %}
+            <a href="{% url 'login' %}">Log In</a>
+            <a href="{% url 'register' %}">Registrieren</a>
+        {% endif %}
+    </nav>
+</header>

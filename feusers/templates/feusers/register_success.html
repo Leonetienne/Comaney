@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Comoney – Fast geschafft!{% endblock %}
+
+{% block extra_head %}
+<style>main { max-width: 480px; text-align: center; }</style>
+{% endblock %}
+
+{% block content %}
+<h1>Fast geschafft!</h1>
+<p>Wir haben dir eine Bestätigungsmail geschickt.<br>
+Bitte klicke auf den Link in der E-Mail, um dein Konto zu aktivieren.</p>
+<a href="{% url 'hello_world' %}" class="btn">← Zur Startseite</a>
+{% endblock %}
