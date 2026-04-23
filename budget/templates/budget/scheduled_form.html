@@ -1,0 +1,81 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comoney – {% if scheduled %}Edit scheduled expense{% else %}New scheduled expense{% endif %}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .form-wrap { max-width: 600px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+    .form-actions { display: flex; gap: 12px; margin-top: 28px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>{% if scheduled %}Edit scheduled expense{% else %}New scheduled expense{% endif %}</h1>
+
+<div class="form-wrap">
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+        {{ form.title }}
+        {% for e in form.title.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+
+        <div class="form-row">
+            <div>
+                <label for="{{ form.type.id_for_label }}">{{ form.type.label }}</label>
+                {{ form.type }}
+                {% for e in form.type.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+            </div>
+            <div>
+                <label for="{{ form.value.id_for_label }}">{{ form.value.label }}</label>
+                {{ form.value }}
+                {% for e in form.value.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+            </div>
+        </div>
+
+        <div class="form-row-3" style="margin-top:16px;">
+            <div style="grid-column: span 2;">
+                <label>Repeat</label>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px;">
+                    {{ form.repeat_every_factor }}
+                    {{ form.repeat_every_unit }}
+                </div>
+                {% for e in form.repeat_every_factor.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+                {% for e in form.repeat_every_unit.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+            </div>
+            <div>
+                <label for="{{ form.repeat_base_date.id_for_label }}">{{ form.repeat_base_date.label }}</label>
+                {{ form.repeat_base_date }}
+                {% for e in form.repeat_base_date.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label for="{{ form.category.id_for_label }}">{{ form.category.label }}</label>
+                {{ form.category }}
+                {% for e in form.category.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding-top:34px;">
+                {{ form.default_settled }}
+                <label for="{{ form.default_settled.id_for_label }}" style="margin:0; font-weight:400;">{{ form.default_settled.label }}</label>
+            </div>
+        </div>
+
+        <label for="{{ form.tags.id_for_label }}">{{ form.tags.label }}</label>
+        {{ form.tags }}
+        {% for e in form.tags.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+
+        <label for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
+        {{ form.note }}
+        {% for e in form.note.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn">{% if scheduled %}Save changes{% else %}Create{% endif %}</button>
+            <a href="{% url 'budget:scheduled_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

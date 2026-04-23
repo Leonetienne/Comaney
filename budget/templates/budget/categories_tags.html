@@ -1,0 +1,127 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comoney – Categories &amp; Tags{% endblock %}
+
+{% block extra_head %}
+<style>
+    .ct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 8px; }
+    .ct-panel h2 { font-size: 1rem; font-weight: 700; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .05em; color: #555; }
+    .ct-list { list-style: none; margin: 0; padding: 0; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; min-height: 48px; }
+    .ct-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+    .ct-item:last-child { border-bottom: none; }
+    .ct-item:hover { background: #fafafa; }
+    .ct-delete { background: none; border: none; cursor: pointer; color: #bbb; font-size: 1.1rem; line-height: 1; padding: 0 4px; }
+    .ct-delete:hover { color: #c00; }
+    .ct-add { margin-top: 8px; }
+    .ct-add input { margin-top: 0; border-radius: 6px; }
+    .ct-add input:focus { outline: 2px solid #333; border-color: #333; }
+    .ct-empty { padding: 12px 14px; color: #aaa; font-style: italic; font-size: 0.9rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Categories &amp; Tags</h1>
+
+<div class="ct-grid">
+    <div class="ct-panel">
+        <h2>Categories</h2>
+        <ul class="ct-list" id="category-list">
+            {% for cat in categories %}
+            <li class="ct-item" id="category-{{ cat.uid }}">
+                <span>{{ cat.title }}</span>
+                <button class="ct-delete" title="Delete" data-type="category" data-uid="{{ cat.uid }}" data-title="{{ cat.title|escapejs }}">×</button>
+            </li>
+            {% empty %}
+            <li class="ct-empty" id="category-empty">No categories yet.</li>
+            {% endfor %}
+        </ul>
+        <div class="ct-add">
+            <input type="text" id="category-input" placeholder="New category — press Enter to add">
+        </div>
+    </div>
+
+    <div class="ct-panel">
+        <h2>Tags</h2>
+        <ul class="ct-list" id="tag-list">
+            {% for tag in tags %}
+            <li class="ct-item" id="tag-{{ tag.uid }}">
+                <span>{{ tag.title }}</span>
+                <button class="ct-delete" title="Delete" data-type="tag" data-uid="{{ tag.uid }}" data-title="{{ tag.title|escapejs }}">×</button>
+            </li>
+            {% empty %}
+            <li class="ct-empty" id="tag-empty">No tags yet.</li>
+            {% endfor %}
+        </ul>
+        <div class="ct-add">
+            <input type="text" id="tag-input" placeholder="New tag — press Enter to add">
+        </div>
+    </div>
+</div>
+
+<script>
+const csrf = document.querySelector('meta[name="csrf-token"]').content;
+const createUrls = {
+    category: "{% url 'budget:category_create' %}",
+    tag:      "{% url 'budget:tag_create' %}",
+};
+const deleteUrls = {
+    category: uid => "{% url 'budget:category_delete' 0 %}".replace('/0/', `/${uid}/`),
+    tag:      uid => "{% url 'budget:tag_delete' 0 %}".replace('/0/', `/${uid}/`),
+};
+
+function makeItem(type, uid, title) {
+    const li = document.createElement('li');
+    li.className = 'ct-item';
+    li.id = `${type}-${uid}`;
+    li.innerHTML = `<span>${title}</span>
+        <button class="ct-delete" title="Delete"
+            data-type="${type}" data-uid="${uid}" data-title="${title.replace(/"/g, '&quot;')}">×</button>`;
+    return li;
+}
+
+function setupInput(type) {
+    const input = document.getElementById(`${type}-input`);
+    const list  = document.getElementById(`${type}-list`);
+
+    input.addEventListener('keydown', async e => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const title = input.value.trim();
+        if (!title) return;
+
+        const res = await fetch(createUrls[type], {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ title }),
+        });
+        if (!res.ok) return;
+        const item = await res.json();
+
+        const empty = document.getElementById(`${type}-empty`);
+        if (empty) empty.remove();
+
+        list.appendChild(makeItem(type, item.uid, item.title));
+        input.value = '';
+    });
+}
+
+async function deleteItem(type, uid, title) {
+    if (!confirm(`Delete "${title}"?\nIt will be removed from all related expenses.`)) return;
+    const res = await fetch(deleteUrls[type](uid), {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf },
+    });
+    if (!res.ok) return;
+    document.getElementById(`${type}-${uid}`).remove();
+}
+
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.ct-delete');
+    if (!btn) return;
+    deleteItem(btn.dataset.type, btn.dataset.uid, btn.dataset.title);
+});
+
+setupInput('category');
+setupInput('tag');
+</script>
+{% endblock %}

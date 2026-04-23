@@ -1,0 +1,69 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comoney – Expenses{% endblock %}
+
+{% block extra_head %}
+<style>
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .value-income { color: #155724; font-weight: 600; }
+    .value-expense { color: #721c24; font-weight: 600; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 2px; }
+    .actions { display: flex; gap: 8px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 style="margin:0">Expenses</h1>
+    <a href="{% url 'budget:expense_create' %}" class="btn">+ New expense</a>
+</div>
+
+{% if expenses %}
+<table>
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Payee</th>
+            <th>Type</th>
+            <th>Value</th>
+            <th>Category</th>
+            <th>Tags</th>
+            <th>Settled</th>
+            <th>Due date</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for exp in expenses %}
+        <tr>
+            <td>{{ exp.title }}</td>
+            <td>{{ exp.payee|default:"—" }}</td>
+            <td><span class="badge badge-{{ exp.type }}">{{ exp.get_type_display }}</span></td>
+            <td class="value-{{ exp.type }}">{{ exp.value }}</td>
+            <td>{{ exp.category.title|default:"—" }}</td>
+            <td>
+                <div class="tag-list">
+                    {% for tag in exp.tags.all %}
+                    <span class="badge badge-tag">{{ tag.title }}</span>
+                    {% empty %}—{% endfor %}
+                </div>
+            </td>
+            <td>{{ exp.settled|yesno:"✓,—" }}</td>
+            <td>{{ exp.date_due|date:"Y-m-d"|default:"—" }}</td>
+            <td>
+                <div class="actions">
+                    <a href="{% url 'budget:expense_edit' exp.uid %}" class="btn btn-sm btn-secondary">Edit</a>
+                    <form method="post" action="{% url 'budget:expense_delete' exp.uid %}" onsubmit="return confirm('Delete \'{{ exp.title|escapejs }}\'?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty">No expenses yet. <a href="{% url 'budget:expense_create' %}">Add one.</a></p>
+{% endif %}
+{% endblock %}

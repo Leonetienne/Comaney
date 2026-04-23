@@ -8,7 +8,7 @@ from .models import FeUser
 
 def hello_world(request):
     feusers = FeUser.objects.filter(is_active=True, is_confirmed=True)
-    return render(request, "feusers/hello_world.html", {"feusers": feusers})
+    return render(request, "feusers/hello_world.html", {"feusers": feusers, "active_nav": "home"})
 
 
 def register(request):

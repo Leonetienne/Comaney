@@ -19,7 +19,13 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n/login/ → \" http://localhost:8080/register/)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n/password-forgot/ → \" http://localhost:8080/login/)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8080/password-forgot/)",
-      "Bash(docker-compose restart *)"
+      "Bash(docker-compose restart *)",
+      "Bash(curl -s -o /dev/null -w \"/budget/ → %{http_code}\\\\n/budget/categories-tags/ → \" http://localhost:8080/budget/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n/budget/expenses/ → \" http://localhost:8080/budget/categories-tags/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n/budget/scheduled/ → \" http://localhost:8080/budget/expenses/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8080/budget/scheduled/)",
+      "Bash(curl -s -o /dev/null -w \"/budget/scheduled/ → %{http_code}\\\\n/budget/scheduled/new/ → \" http://localhost:8080/budget/scheduled/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8080/budget/scheduled/new/)"
     ]
   }
 }

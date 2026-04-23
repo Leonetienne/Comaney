@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block layout %}
+<div class="app-layout">
+    <nav class="sidebar">
+        <ul>
+            <li class="{% if active_nav == 'dashboard' %}active{% endif %}">
+                <a href="{% url 'budget:dashboard' %}">Dashboard</a>
+            </li>
+            <li class="{% if active_nav == 'categories_tags' %}active{% endif %}">
+                <a href="{% url 'budget:categories_tags' %}">Categories &amp; Tags</a>
+            </li>
+            <li class="{% if active_nav == 'expenses' %}active{% endif %}">
+                <a href="{% url 'budget:expenses_list' %}">Expenses</a>
+            </li>
+            <li class="{% if active_nav == 'scheduled' %}active{% endif %}">
+                <a href="{% url 'budget:scheduled_list' %}">Scheduled Expenses</a>
+            </li>
+        </ul>
+    </nav>
+    <main class="app-main">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}
