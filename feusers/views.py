@@ -25,16 +25,14 @@ def register(request):
             user.generate_confirmation_token()
             user.save()
 
-            confirm_url = (
-                f"{settings.SITE_URL}/bestaetigen/{user.confirmation_token}/"
-            )
+            confirm_url = f"{settings.SITE_URL}/confirm/{user.confirmation_token}/"
             send_mail(
-                subject="Bitte bestätige deine E-Mail-Adresse",
+                subject="Please confirm your email address",
                 message=(
-                    f"Hallo,\n\n"
-                    f"bitte bestätige deine Registrierung bei Comoney:\n\n"
+                    f"Hi {user.first_name},\n\n"
+                    f"please confirm your Comoney registration:\n\n"
                     f"{confirm_url}\n\n"
-                    f"Falls du dich nicht registriert hast, kannst du diese E-Mail ignorieren."
+                    f"If you didn't sign up, you can safely ignore this email."
                 ),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
@@ -65,9 +63,9 @@ def login_view(request):
                 user = None
 
             if user is None or not user.check_password(form.cleaned_data["password"]):
-                error = "E-Mail oder Passwort falsch."
+                error = "Invalid email or password."
             elif not user.is_confirmed:
-                error = "Bitte bestätige zuerst deine E-Mail-Adresse."
+                error = "Please confirm your email address first."
             else:
                 request.session["feuser_id"] = user.pk
                 return redirect("hello_world")
@@ -92,21 +90,20 @@ def password_forgot(request):
                 user = FeUser.objects.get(email=email, is_active=True, is_confirmed=True)
                 user.generate_password_reset_token()
                 user.save(update_fields=["password_reset_token", "password_reset_expires"])
-                reset_url = f"{settings.SITE_URL}/passwort-zuruecksetzen/{user.password_reset_token}/"
+                reset_url = f"{settings.SITE_URL}/password-reset/{user.password_reset_token}/"
                 send_mail(
-                    subject="Dein Passwort zurücksetzen",
+                    subject="Reset your password",
                     message=(
-                        f"Hallo {user.first_name},\n\n"
-                        f"du hast eine Passwort-Zurücksetzen-Anfrage gestellt.\n"
-                        f"Klicke auf den folgenden Link — er ist 1 Stunde gültig:\n\n"
+                        f"Hi {user.first_name},\n\n"
+                        f"you requested a password reset. Click the link below — it expires in 1 hour:\n\n"
                         f"{reset_url}\n\n"
-                        f"Falls du diese Anfrage nicht gestellt hast, ignoriere diese E-Mail."
+                        f"If you didn't request this, you can safely ignore this email."
                     ),
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[user.email],
                 )
             except FeUser.DoesNotExist:
-                pass  # Bewusst: kein Hinweis ob die E-Mail existiert
+                pass  # intentional: don't reveal whether the email exists
             return redirect("password_forgot_sent")
     else:
         form = PasswordForgotForm()

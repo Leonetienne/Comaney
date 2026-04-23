@@ -1,15 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Comoney – Registrieren{% endblock %}
+{% block title %}Comoney – Register{% endblock %}
 
 {% block extra_head %}
-<style>
-    main { max-width: 480px; }
-</style>
+<style>main { max-width: 480px; }</style>
 {% endblock %}
 
 {% block content %}
-<h1>Registrieren</h1>
+<h1>Create an account</h1>
 <form method="post" novalidate>
     {% csrf_token %}
     {% for field in form %}
@@ -19,6 +17,6 @@
     <p class="error-msg">{{ error }}</p>
     {% endfor %}
     {% endfor %}
-    <button type="submit" class="btn btn-full">Konto erstellen</button>
+    <button type="submit" class="btn btn-full">Create account</button>
 </form>
 {% endblock %}

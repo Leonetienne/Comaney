@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Comoney – Login{% endblock %}
+{% block title %}Comoney – Log In{% endblock %}
 
 {% block extra_head %}
 <style>main { max-width: 480px; }</style>
@@ -20,11 +20,11 @@
     <p class="error-msg">{{ error }}</p>
     {% endfor %}
     {% endfor %}
-    <button type="submit" class="btn btn-full">Einloggen</button>
+    <button type="submit" class="btn btn-full">Log in</button>
 </form>
 <p style="margin-top:16px; font-size:0.9rem;">
-    <a href="{% url 'password_forgot' %}">Passwort vergessen?</a>
+    <a href="{% url 'password_forgot' %}">Forgot your password?</a>
     &nbsp;·&nbsp;
-    Noch kein Konto? <a href="{% url 'register' %}">Registrieren</a>
+    No account yet? <a href="{% url 'register' %}">Register</a>
 </p>
 {% endblock %}

@@ -4,38 +4,38 @@ from .models import FeUser
 
 
 class PasswordForgotForm(forms.Form):
-    email = forms.EmailField(label="E-Mail-Adresse")
+    email = forms.EmailField(label="Email address")
 
 
 class PasswordResetForm(forms.Form):
-    password = forms.CharField(label="Neues Passwort", widget=forms.PasswordInput)
-    password_confirm = forms.CharField(label="Passwort wiederholen", widget=forms.PasswordInput)
+    password = forms.CharField(label="New password", widget=forms.PasswordInput)
+    password_confirm = forms.CharField(label="Repeat password", widget=forms.PasswordInput)
 
     def clean(self):
         cleaned = super().clean()
         pw = cleaned.get("password")
         pw_confirm = cleaned.get("password_confirm")
         if pw and pw_confirm and pw != pw_confirm:
-            self.add_error("password_confirm", "Die Passwörter stimmen nicht überein.")
+            self.add_error("password_confirm", "Passwords do not match.")
         return cleaned
 
 
 class LoginForm(forms.Form):
-    email = forms.EmailField(label="E-Mail-Adresse")
-    password = forms.CharField(label="Passwort", widget=forms.PasswordInput)
+    email = forms.EmailField(label="Email address")
+    password = forms.CharField(label="Password", widget=forms.PasswordInput)
 
 
 class RegistrationForm(forms.Form):
-    first_name = forms.CharField(label="Vorname", max_length=150)
-    last_name = forms.CharField(label="Nachname", max_length=150)
-    email = forms.EmailField(label="E-Mail-Adresse")
-    password = forms.CharField(label="Passwort", widget=forms.PasswordInput)
-    password_confirm = forms.CharField(label="Passwort wiederholen", widget=forms.PasswordInput)
+    first_name = forms.CharField(label="First name", max_length=150)
+    last_name = forms.CharField(label="Last name", max_length=150)
+    email = forms.EmailField(label="Email address")
+    password = forms.CharField(label="Password", widget=forms.PasswordInput)
+    password_confirm = forms.CharField(label="Repeat password", widget=forms.PasswordInput)
 
     def clean_email(self):
         email = self.cleaned_data["email"].lower().strip()
         if FeUser.objects.filter(email=email).exists():
-            raise forms.ValidationError("Diese E-Mail-Adresse ist bereits vergeben.")
+            raise forms.ValidationError("This email address is already taken.")
         return email
 
     def clean(self):
@@ -43,5 +43,5 @@ class RegistrationForm(forms.Form):
         pw = cleaned.get("password")
         pw_confirm = cleaned.get("password_confirm")
         if pw and pw_confirm and pw != pw_confirm:
-            self.add_error("password_confirm", "Die Passwörter stimmen nicht überein.")
+            self.add_error("password_confirm", "Passwords do not match.")
         return cleaned
