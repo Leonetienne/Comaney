@@ -18,6 +18,10 @@ class FeUser(models.Model):
     confirmation_token = models.CharField(max_length=64, blank=True, db_index=True)
     password_reset_token = models.CharField(max_length=64, blank=True, db_index=True)
     password_reset_expires = models.DateTimeField(null=True, blank=True)
+    currency = models.CharField(max_length=10, blank=True, default="€")
+    anthropic_api_key = models.CharField(max_length=255, blank=True)
+    pending_email = models.EmailField(blank=True)
+    email_change_token = models.CharField(max_length=64, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -52,3 +56,8 @@ class FeUser(models.Model):
     def clear_password_reset_token(self) -> None:
         self.password_reset_token = ""
         self.password_reset_expires = None
+
+    def generate_email_change_token(self, new_email: str) -> str:
+        self.pending_email = new_email
+        self.email_change_token = secrets.token_urlsafe(32)
+        return self.email_change_token

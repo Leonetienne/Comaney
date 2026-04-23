@@ -3,6 +3,59 @@ from django import forms
 from .models import FeUser
 
 
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = FeUser
+        fields = ["first_name", "last_name", "currency", "anthropic_api_key"]
+        labels = {"anthropic_api_key": "Anthropic API key"}
+        widgets = {"anthropic_api_key": forms.PasswordInput(render_value=True)}
+
+
+class ChangeEmailForm(forms.Form):
+    email = forms.EmailField(label="New email address")
+    password = forms.CharField(label="Current password", widget=forms.PasswordInput)
+
+    def __init__(self, *args, feuser=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._feuser = feuser
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].lower().strip()
+        if FeUser.objects.filter(email=email).exclude(pk=self._feuser.pk).exists():
+            raise forms.ValidationError("This email address is already taken.")
+        return email
+
+    def clean_password(self):
+        pw = self.cleaned_data["password"]
+        if self._feuser and not self._feuser.check_password(pw):
+            raise forms.ValidationError("Incorrect password.")
+        return pw
+
+
+class ChangePasswordForm(forms.Form):
+    current_password = forms.CharField(label="Current password", widget=forms.PasswordInput)
+    new_password = forms.CharField(label="New password", widget=forms.PasswordInput)
+    new_password_confirm = forms.CharField(label="Repeat new password", widget=forms.PasswordInput)
+
+    def __init__(self, *args, feuser=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._feuser = feuser
+
+    def clean_current_password(self):
+        pw = self.cleaned_data["current_password"]
+        if self._feuser and not self._feuser.check_password(pw):
+            raise forms.ValidationError("Incorrect password.")
+        return pw
+
+    def clean(self):
+        cleaned = super().clean()
+        pw = cleaned.get("new_password")
+        pw2 = cleaned.get("new_password_confirm")
+        if pw and pw2 and pw != pw2:
+            self.add_error("new_password_confirm", "Passwords do not match.")
+        return cleaned
+
+
 class PasswordForgotForm(forms.Form):
     email = forms.EmailField(label="Email address")
 

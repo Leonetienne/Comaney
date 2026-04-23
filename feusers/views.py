@@ -2,7 +2,10 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import LoginForm, PasswordForgotForm, PasswordResetForm, RegistrationForm
+from .forms import (
+    ChangeEmailForm, ChangePasswordForm, LoginForm,
+    PasswordForgotForm, PasswordResetForm, ProfileForm, RegistrationForm,
+)
 from .models import FeUser
 
 
@@ -81,6 +84,71 @@ def logout_view(request):
     return redirect("hello_world")
 
 
+def _get_session_feuser(request):
+    feuser_id = request.session.get("feuser_id")
+    if not feuser_id:
+        return None
+    try:
+        return FeUser.objects.get(pk=feuser_id, is_active=True)
+    except FeUser.DoesNotExist:
+        return None
+
+
+def profile(request):
+    feuser = _get_session_feuser(request)
+    if not feuser:
+        return redirect("login")
+
+    profile_form = ProfileForm(instance=feuser)
+    email_form = ChangeEmailForm(feuser=feuser)
+    password_form = ChangePasswordForm(feuser=feuser)
+    success = None
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "profile":
+            profile_form = ProfileForm(request.POST, instance=feuser)
+            if profile_form.is_valid():
+                profile_form.save()
+                success = "profile"
+
+        elif action == "email":
+            email_form = ChangeEmailForm(request.POST, feuser=feuser)
+            if email_form.is_valid():
+                new_email = email_form.cleaned_data["email"]
+                feuser.generate_email_change_token(new_email)
+                feuser.save(update_fields=["pending_email", "email_change_token"])
+                confirm_url = f"{settings.SITE_URL}/confirm-email-change/{feuser.email_change_token}/"
+                send_mail(
+                    subject="Confirm your new email address",
+                    message=(
+                        f"Hi {feuser.first_name},\n\n"
+                        f"please confirm your new email address by clicking the link below:\n\n"
+                        f"{confirm_url}\n\n"
+                        f"If you didn't request this, you can safely ignore this email."
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[new_email],
+                )
+                success = "email"
+
+        elif action == "password":
+            password_form = ChangePasswordForm(request.POST, feuser=feuser)
+            if password_form.is_valid():
+                feuser.set_password(password_form.cleaned_data["new_password"])
+                feuser.save(update_fields=["password"])
+                success = "password"
+
+    return render(request, "feusers/profile.html", {
+        "active_nav": "profile",
+        "profile_form": profile_form,
+        "email_form": email_form,
+        "password_form": password_form,
+        "success": success,
+    })
+
+
 def password_forgot(request):
     if request.method == "POST":
         form = PasswordForgotForm(request.POST)
@@ -137,6 +205,15 @@ def password_reset(request, token):
 
 def password_reset_done(request):
     return render(request, "feusers/password_reset_done.html")
+
+
+def confirm_email_change(request, token):
+    user = get_object_or_404(FeUser, email_change_token=token)
+    user.email = user.pending_email
+    user.pending_email = ""
+    user.email_change_token = ""
+    user.save(update_fields=["email", "pending_email", "email_change_token"])
+    return render(request, "feusers/email_change_confirmed.html", {"user": user})
 
 
 def confirm_email(request, token):

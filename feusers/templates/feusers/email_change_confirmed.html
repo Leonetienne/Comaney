@@ -1,0 +1,13 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comoney – Email updated{% endblock %}
+
+{% block extra_head %}
+<style>main { max-width: 480px; text-align: center; }</style>
+{% endblock %}
+
+{% block content %}
+<h1>Email updated!</h1>
+<p>Your email address has been changed to <strong>{{ user.email }}</strong>.</p>
+<a href="{% url 'profile' %}" class="btn">← Back to profile</a>
+{% endblock %}

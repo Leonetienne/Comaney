@@ -16,6 +16,9 @@
             <li class="{% if active_nav == 'scheduled' %}active{% endif %}">
                 <a href="{% url 'budget:scheduled_list' %}">Scheduled Expenses</a>
             </li>
+            <li class="{% if active_nav == 'profile' %}active{% endif %}">
+                <a href="{% url 'profile' %}">Profile</a>
+            </li>
         </ul>
     </nav>
     <main class="app-main">

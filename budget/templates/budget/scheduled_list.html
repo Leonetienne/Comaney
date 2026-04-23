@@ -35,7 +35,7 @@
         <tr>
             <td>{{ s.title }}</td>
             <td><span class="badge badge-{{ s.type }}">{{ s.get_type_display }}</span></td>
-            <td>{{ s.value }}</td>
+            <td>{{ s.value }} {{ current_feuser.currency }}</td>
             <td>
                 {% if s.repeat_every_factor and s.repeat_every_unit %}
                     {{ s.repeat_every_factor }} {{ s.get_repeat_every_unit_display|lower }}

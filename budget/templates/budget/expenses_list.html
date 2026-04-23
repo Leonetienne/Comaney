@@ -39,7 +39,7 @@
             <td>{{ exp.title }}</td>
             <td>{{ exp.payee|default:"—" }}</td>
             <td><span class="badge badge-{{ exp.type }}">{{ exp.get_type_display }}</span></td>
-            <td class="value-{{ exp.type }}">{{ exp.value }}</td>
+            <td class="value-{{ exp.type }}">{{ exp.value }} {{ current_feuser.currency }}</td>
             <td>{{ exp.category.title|default:"—" }}</td>
             <td>
                 <div class="tag-list">

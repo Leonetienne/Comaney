@@ -25,7 +25,8 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n/budget/scheduled/ → \" http://localhost:8080/budget/expenses/)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8080/budget/scheduled/)",
       "Bash(curl -s -o /dev/null -w \"/budget/scheduled/ → %{http_code}\\\\n/budget/scheduled/new/ → \" http://localhost:8080/budget/scheduled/)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8080/budget/scheduled/new/)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8080/budget/scheduled/new/)",
+      "Bash(curl -s -o /dev/null -w \"/profile/ → %{http_code}\\\\n\" http://localhost:8080/profile/)"
     ]
   }
 }

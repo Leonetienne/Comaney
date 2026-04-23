@@ -23,19 +23,19 @@
 <div class="panels">
     <div class="panel panel-income">
         <div class="label">Income</div>
-        <div class="amount">{{ income }}</div>
+        <div class="amount">{{ income }} {{ current_feuser.currency }}</div>
     </div>
     <div class="panel panel-paid">
         <div class="label">Paid expenses</div>
-        <div class="amount">{{ paid }}</div>
+        <div class="amount">{{ paid }} {{ current_feuser.currency }}</div>
     </div>
     <div class="panel panel-outstanding">
         <div class="label">Outstanding</div>
-        <div class="amount">{{ outstanding }}</div>
+        <div class="amount">{{ outstanding }} {{ current_feuser.currency }}</div>
     </div>
     <div class="panel panel-left">
         <div class="label">Left to spend</div>
-        <div class="amount">{{ left }}</div>
+        <div class="amount">{{ left }} {{ current_feuser.currency }}</div>
     </div>
 </div>
 {% endblock %}
