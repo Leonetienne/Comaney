@@ -5,14 +5,25 @@
 {% block extra_head %}
 <style>
     .dash-heading { margin: 0 0 24px; font-size: 1rem; color: #888; font-weight: 500; }
-    .panels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-    .panel { border-radius: 12px; padding: 28px 28px 24px; }
-    .panel .label { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
-    .panel .amount { font-size: 2.4rem; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+
+    /* Summary panels */
+    .panels { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 16px; }
+    .panel { border-radius: 12px; padding: 24px 20px 20px; }
+    .panel .label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 12px; }
+    .panel .amount { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; white-space: nowrap; }
+    .panel .amount .currency { font-size: 1.3rem; font-weight: 700; margin-left: 3px; }
     .panel-income      { background: #d4edda; color: #155724; }
     .panel-paid        { background: #f8d7da; color: #721c24; }
-    .panel-outstanding { background: rgba(220, 53, 69, 0.12); color: #a0303a; }
-    .panel-left        { background: rgba(40, 167, 69, 0.12); color: #1a6b30; }
+    .panel-outstanding { background: rgba(220,53,69,.12); color: #a0303a; }
+    .panel-left        { background: rgba(40,167,69,.12); color: #1a6b30; }
+
+    /* Charts */
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 40px; }
+    .chart-card { background: #fafafa; border: 1px solid #eee; border-radius: 10px; padding: 24px; }
+    .chart-card h2 { font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .06em; color: #888; margin: 0 0 20px; }
+    .chart-wrap { position: relative; }
+    .chart-empty { color: #bbb; font-size: 0.9rem; font-style: italic; padding: 20px 0; }
 </style>
 {% endblock %}
 
@@ -23,19 +34,105 @@
 <div class="panels">
     <div class="panel panel-income">
         <div class="label">Income</div>
-        <div class="amount">{{ income }} {{ current_feuser.currency }}</div>
+        <div class="amount">{{ income }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
     <div class="panel panel-paid">
         <div class="label">Paid expenses</div>
-        <div class="amount">{{ paid }} {{ current_feuser.currency }}</div>
+        <div class="amount">{{ paid }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
     <div class="panel panel-outstanding">
         <div class="label">Outstanding</div>
-        <div class="amount">{{ outstanding }} {{ current_feuser.currency }}</div>
+        <div class="amount">{{ outstanding }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
     <div class="panel panel-left">
         <div class="label">Left to spend</div>
-        <div class="amount">{{ left }} {{ current_feuser.currency }}</div>
+        <div class="amount">{{ left }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
 </div>
+
+<div class="charts">
+    <div class="chart-card">
+        <h2>Expenses by category</h2>
+        {% if cat_labels != "[]" %}
+        <div class="chart-wrap"><canvas id="cat-chart"></canvas></div>
+        {% else %}
+        <p class="chart-empty">No expense data this month.</p>
+        {% endif %}
+    </div>
+    <div class="chart-card">
+        <h2>Expenses by tag</h2>
+        {% if tag_labels != "[]" %}
+        <div class="chart-wrap"><canvas id="tag-chart"></canvas></div>
+        {% else %}
+        <p class="chart-empty">No tagged expenses this month.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+const PALETTE = [
+    '#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f',
+    '#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac',
+];
+
+function palette(n) {
+    return Array.from({length: n}, (_, i) => PALETTE[i % PALETTE.length]);
+}
+
+{% if cat_labels != "[]" %}
+new Chart(document.getElementById('cat-chart'), {
+    type: 'pie',
+    data: {
+        labels: {{ cat_labels|safe }},
+        datasets: [{
+            data: {{ cat_values|safe }},
+            backgroundColor: palette({{ cat_labels|safe }}.length),
+            borderWidth: 2,
+            borderColor: '#fff',
+        }]
+    },
+    options: {
+        plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14, font: { size: 12 } } },
+            tooltip: {
+                callbacks: {
+                    label: ctx => ` ${ctx.label}: ${ctx.parsed.toFixed(2)} {{ current_feuser.currency }}`
+                }
+            }
+        }
+    }
+});
+{% endif %}
+
+{% if tag_labels != "[]" %}
+new Chart(document.getElementById('tag-chart'), {
+    type: 'bar',
+    data: {
+        labels: {{ tag_labels|safe }},
+        datasets: [{
+            data: {{ tag_values|safe }},
+            backgroundColor: palette({{ tag_labels|safe }}.length),
+            borderRadius: 4,
+            borderSkipped: false,
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: ctx => ` ${ctx.parsed.x.toFixed(2)} {{ current_feuser.currency }}`
+                }
+            }
+        },
+        scales: {
+            x: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 11 } } },
+            y: { grid: { display: false }, ticks: { font: { size: 12 } } }
+        }
+    }
+});
+{% endif %}
+</script>
 {% endblock %}

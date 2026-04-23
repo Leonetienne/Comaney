@@ -31,6 +31,24 @@ def dashboard(request):
     outstanding = _sum(month_qs.filter(type="expense", settled=False))
     left        = income - paid - outstanding
 
+    expense_qs = month_qs.filter(type="expense")
+
+    cat_rows = list(
+        expense_qs.values("category__title")
+        .annotate(total=Sum("value"))
+        .order_by("-total")
+    )
+    for r in cat_rows:
+        if r["category__title"] is None:
+            r["category__title"] = "Uncategorized"
+
+    tag_rows = list(
+        expense_qs.filter(tags__isnull=False)
+        .values("tags__title")
+        .annotate(total=Sum("value"))
+        .order_by("-total")
+    )
+
     return render(request, "budget/dashboard.html", {
         "active_nav": "dashboard",
         "income": income,
@@ -38,6 +56,10 @@ def dashboard(request):
         "outstanding": outstanding,
         "left": left,
         "month_label": today.strftime("%B %Y"),
+        "cat_labels": json.dumps([r["category__title"] for r in cat_rows]),
+        "cat_values": json.dumps([float(r["total"]) for r in cat_rows]),
+        "tag_labels": json.dumps([r["tags__title"] for r in tag_rows]),
+        "tag_values": json.dumps([float(r["total"]) for r in tag_rows]),
     })
 
 
