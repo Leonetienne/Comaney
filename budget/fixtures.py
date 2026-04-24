@@ -17,21 +17,20 @@ DEFAULT_CATEGORIES = [
     "Insurance",
     "Personal Care",
     "Gifts & Donations",
-    "Savings",
     "Miscellaneous",
 ]
 
 DEFAULT_TAGS = [
-    "essential",
-    "recurring",
-    "one-time",
-    "work",
-    "family",
-    "fun",
-    "online",
-    "cash",
-    "reimbursable",
-    "tax-deductible",
+    "Essential",
+    "Recurring",
+    "One-time",
+    "Work",
+    "Family",
+    "Fun",
+    "Online",
+    "Cash",
+    "Reimbursable",
+    "Ax-deductible",
 ]
 
 

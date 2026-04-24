@@ -10,6 +10,8 @@ from .models import FeUser
 
 
 def hello_world(request):
+    if request.session.get("feuser_id"):
+        return redirect("budget:dashboard")
     return render(request, "feusers/hello_world.html", {"active_nav": "home"})
 
 
