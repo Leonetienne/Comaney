@@ -25,6 +25,6 @@
 <p style="margin-top:16px; font-size:0.9rem;">
     <a href="{% url 'password_forgot' %}">Forgot your password?</a>
     &nbsp;·&nbsp;
-    No account yet? <a href="{% url 'register' %}">Register</a>
+    {% if registration_enabled %}No account yet? <a href="{% url 'register' %}">Register</a>{% endif %}
 </p>
 {% endblock %}

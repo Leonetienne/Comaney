@@ -14,7 +14,7 @@
             </form>
         {% else %}
             <a href="{% url 'login' %}">Log In</a>
-            <a href="{% url 'register' %}">Register</a>
+            {% if registration_enabled %}<a href="{% url 'register' %}">Register</a>{% endif %}
         {% endif %}
     </nav>
 </header>

@@ -15,6 +15,9 @@ def hello_world(request):
 
 
 def register(request):
+    if not settings.ENABLE_REGISTRATION:
+        from django.http import Http404
+        raise Http404
     if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():
@@ -48,6 +51,9 @@ def register(request):
 
 
 def register_success(request):
+    if not settings.ENABLE_REGISTRATION:
+        from django.http import Http404
+        raise Http404
     return render(request, "feusers/register_success.html")
 
 

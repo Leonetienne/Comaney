@@ -88,3 +88,5 @@ EMAIL_USE_TLS = False
 DEFAULT_FROM_EMAIL = "noreply@comoney.local"
 
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:8080")
+
+ENABLE_REGISTRATION = os.environ.get("ENABLE_REGISTRATION", "").upper() == "TRUE"
