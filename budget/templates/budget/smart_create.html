@@ -46,7 +46,7 @@
     .ai-error { color: var(--error); background: var(--error-bg); border: 1px solid var(--error-border);
         border-radius: 4px; padding: 10px 14px; margin-top: 14px; font-size: 0.9rem; }
 
-    /* Preview */
+    /* Preview section */
     .preview-section { margin-top: 32px; }
     .preview-header { display: flex; align-items: center; justify-content: space-between;
         margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle); }
@@ -56,48 +56,59 @@
     .select-toggle:hover { color: var(--text); }
     .preview-hint { font-size: 0.82rem; color: var(--text-muted); margin: 0 0 12px; }
 
-    /* Table layout */
-    .preview-table { table-layout: fixed; width: 100%; }
-    .preview-table th, .preview-table td { padding: 10px 8px; }
-    .preview-table th { font-size: 0.85rem; }
-    .col-cb    { width: 36px; }
-    .col-title { width: 18%; }
-    .col-type  { width: 100px; }
-    .col-value { width: 120px; }
-    .col-payee { width: 13%; }
-    .col-cat   { width: 14%; }
-    .col-tags  { width: 16%; }
-    .col-note  { width: 18%; }
+    /* Preview cards */
+    .preview-cards { display: flex; flex-direction: column; gap: 10px; }
 
-    .preview-table td { vertical-align: middle; }
-    .preview-table td.cb-col { text-align: center; vertical-align: middle; }
-    .preview-table td.cb-col input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
-    .preview-table tr.deselected td { opacity: 0.3; }
-    .preview-table tr.deselected td.cb-col { opacity: 1; }
-    .preview-table tr.deselected td:not(.cb-col) { pointer-events: none; }
+    .preview-card {
+        background: var(--bg-surface); border: 1px solid var(--border);
+        border-radius: 10px; padding: 14px 16px;
+        display: flex; flex-direction: column; gap: 10px;
+        transition: opacity .15s;
+    }
+    .preview-card.deselected { opacity: 0.35; }
+    .preview-card.deselected .pcard-body { pointer-events: none; }
 
-    /* Editable inputs inside table */
+    .pcard-header { display: flex; align-items: center; justify-content: space-between; }
+    .pcard-include { display: flex; align-items: center; gap: 8px; font-size: 0.85rem;
+        color: var(--text-muted); cursor: pointer; user-select: none; }
+    .pcard-include input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+    .pcard-body { display: flex; flex-direction: column; gap: 8px; }
+
+    /* Rows inside the card body */
+    .pcard-row1, .pcard-row2 { display: grid; gap: 10px; }
+    .pcard-row1 { grid-template-columns: 1fr 1fr auto; }
+    .pcard-row2 { grid-template-columns: auto 1fr 1fr; }
+
+    .pcard-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .pcard-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .05em; color: var(--text-muted); }
+
+    /* Value field in row 1 */
+    .pcard-value { min-width: 100px; }
+    .val-wrap { display: flex; align-items: center; gap: 6px; }
+    .val-wrap span { white-space: nowrap; color: var(--text-muted); font-size: 0.85rem; }
+
+    /* Type colour on the select */
+    .pcard-type-wrap.type-income      .edit-type { color: #155724; font-weight: 600; }
+    .pcard-type-wrap.type-expense     .edit-type { color: #721c24; }
+    .pcard-type-wrap.type-savings_dep .edit-type { color: var(--sav-dep-fg); }
+    .pcard-type-wrap.type-savings_wit .edit-type { color: var(--sav-wit-fg); }
+    @media (prefers-color-scheme: dark) {
+        .pcard-type-wrap.type-income  .edit-type { color: #6ecf8a; }
+        .pcard-type-wrap.type-expense .edit-type { color: #cf7075; }
+    }
+
+    /* Editable inputs */
     .edit-input, .edit-select, .edit-textarea {
         border: 1px solid transparent; border-radius: 3px; background: transparent;
-        padding: 2px 4px; width: 100%; font-size: 0.82rem; font-family: inherit; color: inherit;
+        padding: 4px 6px; width: 100%; font-size: 0.88rem; font-family: inherit; color: inherit;
         box-sizing: border-box;
     }
-    .edit-input:hover, .edit-select:hover, .edit-textarea:hover { border-color: var(--border); background: var(--bg-surface); }
+    .edit-input:hover, .edit-select:hover, .edit-textarea:hover { border-color: var(--border); background: var(--bg-elevated); }
     .edit-input:focus, .edit-select:focus, .edit-textarea:focus { border-color: var(--input-border); background: var(--bg-input); outline: none; }
-    .edit-textarea { resize: vertical; min-height: 46px; line-height: 1.35; }
-
-    td.value-col .val-wrap { display: flex; align-items: center; gap: 6px; }
-    td.value-col .val-wrap .edit-input { min-width: 0; }
-    td.value-col .val-wrap span { white-space: nowrap; color: var(--text-muted); }
-
-    td.type-income      .edit-type { color: #155724; font-weight: 600; }
-    td.type-expense     .edit-type { color: #721c24; }
-    td.type-savings_dep .edit-type { color: var(--sav-dep-fg); }
-    td.type-savings_wit .edit-type { color: var(--sav-wit-fg); }
-    @media (prefers-color-scheme: dark) {
-        td.type-income  .edit-type { color: #6ecf8a; }
-        td.type-expense .edit-type { color: #cf7075; }
-    }
+    .edit-textarea { resize: vertical; min-height: 40px; line-height: 1.4; }
+    .val-wrap .edit-input { min-width: 0; }
 
     .confirm-actions { display: flex; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
     .success-banner { background: #d4edda; color: #155724; border-radius: 6px;
@@ -106,6 +117,11 @@
     @media (prefers-color-scheme: dark) {
         .success-banner { background: #1a3326; color: #6ecf8a; }
         .success-banner a { color: #6ecf8a; }
+    }
+
+    @media (max-width: 600px) {
+        .pcard-row1 { grid-template-columns: 1fr; }
+        .pcard-row2 { grid-template-columns: 1fr; }
     }
 </style>
 {% endblock %}
@@ -176,90 +192,86 @@
             <h2>Preview — <span id="selected-count">{{ preview_items|length }}</span> of {{ preview_items|length }} selected</h2>
             <span class="select-toggle" id="toggle-all">Deselect all</span>
         </div>
-        <p class="preview-hint">All fields are editable — click any cell to adjust.</p>
+        <p class="preview-hint">All fields are editable — click any field to adjust.</p>
 
         <form method="post" id="confirm-form">
             {% csrf_token %}
             <input type="hidden" name="action" value="confirm">
             <input type="hidden" name="preview_json" id="preview_json_input" value="{{ preview_json }}">
 
-            <table class="preview-table">
-                <thead>
-                    <tr>
-                        <th class="col-cb cb-col"></th>
-                        <th class="col-title">Title</th>
-                        <th class="col-type">Type</th>
-                        <th class="col-value">Value</th>
-                        <th class="col-payee">Payee</th>
-                        <th class="col-cat">Category</th>
-                        <th class="col-tags">Tags</th>
-                        <th class="col-note">Note</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in preview_items %}
-                    <tr data-idx="{{ forloop.counter0 }}">
-                        <td class="cb-col">
+            <div class="preview-cards">
+                {% for item in preview_items %}
+                <div class="preview-card" data-idx="{{ forloop.counter0 }}">
+
+                    <div class="pcard-header">
+                        <label class="pcard-include">
                             <input type="checkbox" name="selected" value="{{ forloop.counter0 }}" checked>
-                        </td>
+                            Include
+                        </label>
+                    </div>
 
-                        <!-- Title -->
-                        <td>
-                            <textarea class="edit-textarea edit-title" placeholder="Title">{{ item.title }}</textarea>
-                        </td>
-
-                        <!-- Type -->
-                        <td class="type-{{ item.type }}">
-                            <select class="edit-select edit-type">
-                                <option value="expense"     {% if item.type == "expense"     %}selected{% endif %}>Expense</option>
-                                <option value="income"      {% if item.type == "income"      %}selected{% endif %}>Income</option>
-                                <option value="savings_dep" {% if item.type == "savings_dep" %}selected{% endif %}>Savings Deposit</option>
-                                <option value="savings_wit" {% if item.type == "savings_wit" %}selected{% endif %}>Savings Withdrawal</option>
-                            </select>
-                        </td>
-
-                        <!-- Value -->
-                        <td class="value-col">
-                            <div class="val-wrap">
-                                <input type="number" class="edit-input edit-value" value="{{ item.value }}" step="0.01" min="0.01">
-                                <span>{{ current_feuser.currency }}</span>
+                    <div class="pcard-body">
+                        <!-- Row 1: title, payee, value -->
+                        <div class="pcard-row1">
+                            <div class="pcard-field">
+                                <span class="pcard-label">Title</span>
+                                <textarea class="edit-textarea edit-title" placeholder="Title">{{ item.title }}</textarea>
                             </div>
-                        </td>
+                            <div class="pcard-field">
+                                <span class="pcard-label">Payee</span>
+                                <textarea class="edit-textarea edit-payee" placeholder="—">{{ item.payee }}</textarea>
+                            </div>
+                            <div class="pcard-field pcard-value">
+                                <span class="pcard-label">Value</span>
+                                <div class="val-wrap">
+                                    <input type="number" class="edit-input edit-value" value="{{ item.value }}" step="0.01" min="0.01">
+                                    <span>{{ current_feuser.currency }}</span>
+                                </div>
+                            </div>
+                        </div>
 
-                        <!-- Payee -->
-                        <td>
-                            <textarea class="edit-textarea edit-payee" placeholder="—">{{ item.payee }}</textarea>
-                        </td>
+                        <!-- Row 2: type, category, tags -->
+                        <div class="pcard-row2">
+                            <div class="pcard-field pcard-type-wrap type-{{ item.type }}">
+                                <span class="pcard-label">Type</span>
+                                <select class="edit-select edit-type">
+                                    <option value="expense"     {% if item.type == "expense"     %}selected{% endif %}>Expense</option>
+                                    <option value="income"      {% if item.type == "income"      %}selected{% endif %}>Income</option>
+                                    <option value="savings_dep" {% if item.type == "savings_dep" %}selected{% endif %}>Savings Deposit</option>
+                                    <option value="savings_wit" {% if item.type == "savings_wit" %}selected{% endif %}>Savings Withdrawal</option>
+                                </select>
+                            </div>
+                            <div class="pcard-field">
+                                <span class="pcard-label">Category</span>
+                                <select class="edit-select edit-category">
+                                    <option value="">—</option>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat.uid }}" {% if cat.uid == item.category_uid %}selected{% endif %}>{{ cat.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="pcard-field">
+                                <span class="pcard-label">Tags</span>
+                                {% if tags %}
+                                <select class="edit-select edit-tags" multiple size="3">
+                                    {% for tag in tags %}
+                                    <option value="{{ tag.uid }}" {% if tag.uid in item.tag_uids %}selected{% endif %}>{{ tag.title }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% else %}<span style="color:var(--text-muted)">—</span>{% endif %}
+                            </div>
+                        </div>
 
-                        <!-- Category -->
-                        <td>
-                            <select class="edit-select edit-category">
-                                <option value="">—</option>
-                                {% for cat in categories %}
-                                <option value="{{ cat.uid }}" {% if cat.uid == item.category_uid %}selected{% endif %}>{{ cat.title }}</option>
-                                {% endfor %}
-                            </select>
-                        </td>
-
-                        <!-- Tags -->
-                        <td>
-                            {% if tags %}
-                            <select class="edit-select edit-tags" multiple size="3">
-                                {% for tag in tags %}
-                                <option value="{{ tag.uid }}" {% if tag.uid in item.tag_uids %}selected{% endif %}>{{ tag.title }}</option>
-                                {% endfor %}
-                            </select>
-                            {% else %}—{% endif %}
-                        </td>
-
-                        <!-- Note -->
-                        <td>
+                        <!-- Row 3: note -->
+                        <div class="pcard-field">
+                            <span class="pcard-label">Note</span>
                             <textarea class="edit-textarea edit-note" placeholder="—">{{ item.note }}</textarea>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        </div>
+                    </div>
+
+                </div>
+                {% endfor %}
+            </div>
 
             <div class="confirm-actions">
                 <button type="submit" class="btn" id="confirm-btn">✓ Save selected</button>
@@ -299,11 +311,9 @@ const SESSION_KEY = 'smart_create_img';
 
     function setFile(file) {
         if (!file || !file.type.startsWith('image/')) return;
-        // Put it in the file input so the form submits it properly
         const dt = new DataTransfer();
         dt.items.add(file);
         fileInput.files = dt.files;
-        // Read for preview + sessionStorage persistence
         const reader = new FileReader();
         reader.onload = e => {
             showPreview(e.target.result);
@@ -320,13 +330,11 @@ const SESSION_KEY = 'smart_create_img';
         try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
     }
 
-    // Restore preview (and file input) from last session
     (function restoreFromSession() {
         let stored;
         try { stored = sessionStorage.getItem(SESSION_KEY); } catch (_) {}
         if (!stored) return;
         showPreview(stored);
-        // Reconstruct the File so re-submitting the parse form still works
         try {
             const file = dataUrlToFile(stored, 'image');
             const dt = new DataTransfer();
@@ -337,7 +345,6 @@ const SESSION_KEY = 'smart_create_img';
 
     zone.addEventListener('click', e => { if (!e.target.closest('#image-remove')) fileInput.click(); });
     fileInput.addEventListener('change', function () { if (this.files[0]) setFile(this.files[0]); });
-
     zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
     zone.addEventListener('dragleave', ()  => zone.classList.remove('drag-over'));
     zone.addEventListener('drop', e => {
@@ -345,12 +352,10 @@ const SESSION_KEY = 'smart_create_img';
         zone.classList.remove('drag-over');
         if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
     });
-
     document.addEventListener('paste', e => {
         for (const item of (e.clipboardData || e.originalEvent.clipboardData).items)
             if (item.type.startsWith('image/')) { setFile(item.getAsFile()); break; }
     });
-
     removeBtn.addEventListener('click', clearImage);
 })();
 
@@ -361,12 +366,11 @@ document.getElementById('parse-form').addEventListener('submit', function () {
 });
 
 {% if created_count is not None %}
-// Clear stored image after a successful save
 try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
 {% endif %}
 
 {% if preview_items %}
-// ── Checkbox logic ───────────────────────────────────────────────────────────
+// ── Checkbox / deselect logic ────────────────────────────────────────────────
 (function () {
     const checkboxes = document.querySelectorAll('#confirm-form input[type=checkbox][name=selected]');
     const countEl    = document.getElementById('selected-count');
@@ -376,14 +380,14 @@ try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
 
     function updateUI() {
         const checked = document.querySelectorAll('#confirm-form input[name=selected]:checked').length;
-        countEl.textContent    = checked;
-        toggleBtn.textContent  = checked === total ? 'Deselect all' : 'Select all';
-        confirmBtn.disabled    = checked === 0;
+        countEl.textContent   = checked;
+        toggleBtn.textContent = checked === total ? 'Deselect all' : 'Select all';
+        confirmBtn.disabled   = checked === 0;
         confirmBtn.textContent = checked === 0
             ? '✓ Save selected'
             : `✓ Save ${checked} expense${checked !== 1 ? 's' : ''}`;
         checkboxes.forEach(cb => {
-            cb.closest('tr').classList.toggle('deselected', !cb.checked);
+            cb.closest('.preview-card').classList.toggle('deselected', !cb.checked);
         });
     }
 
@@ -399,31 +403,31 @@ try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
 // ── Live type-colour update ──────────────────────────────────────────────────
 document.querySelectorAll('.edit-type').forEach(sel => {
     sel.addEventListener('change', function () {
-        const td = this.closest('td');
-        td.className = td.className.replace(/\btype-\S+/, '');
-        td.classList.add('type-' + this.value);
+        const wrap = this.closest('.pcard-type-wrap');
+        wrap.className = wrap.className.replace(/\btype-\S+/g, '');
+        wrap.classList.add('type-' + this.value);
     });
 });
 
 // ── Serialize edits → preview_json before confirm submit ────────────────────
 document.getElementById('confirm-form').addEventListener('submit', function () {
-    const rows    = document.querySelectorAll('.preview-table tbody tr[data-idx]');
+    const cards   = document.querySelectorAll('.preview-card[data-idx]');
     const payload = JSON.parse(document.getElementById('preview_json_input').value);
 
-    rows.forEach(row => {
-        const idx  = parseInt(row.dataset.idx, 10);
+    cards.forEach(card => {
+        const idx  = parseInt(card.dataset.idx, 10);
         const item = payload[idx];
 
-        item.title  = row.querySelector('.edit-title').value.trim() || item.title;
-        item.type   = row.querySelector('.edit-type').value;
-        item.value  = row.querySelector('.edit-value').value || item.value;
-        item.payee  = row.querySelector('.edit-payee').value.trim();
-        item.note   = row.querySelector('.edit-note').value.trim();
+        item.title  = card.querySelector('.edit-title').value.trim() || item.title;
+        item.type   = card.querySelector('.edit-type').value;
+        item.value  = card.querySelector('.edit-value').value || item.value;
+        item.payee  = card.querySelector('.edit-payee').value.trim();
+        item.note   = card.querySelector('.edit-note').value.trim();
 
-        const catEl = row.querySelector('.edit-category');
+        const catEl = card.querySelector('.edit-category');
         item.category_uid = catEl.value ? parseInt(catEl.value, 10) : null;
 
-        const tagEl = row.querySelector('.edit-tags');
+        const tagEl = card.querySelector('.edit-tags');
         item.tag_uids = tagEl
             ? Array.from(tagEl.selectedOptions).map(o => parseInt(o.value, 10))
             : [];

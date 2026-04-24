@@ -41,18 +41,6 @@
             </div>
         </div>
 
-        <div class="form-row" style="align-items:end;">
-            <div style="display:flex; align-items:center; gap:8px; padding-bottom:2px;">
-                {{ form.settled }}
-                <label for="{{ form.settled.id_for_label }}" style="margin:0; font-weight:400;">{{ form.settled.label }}</label>
-            </div>
-            <div>
-                <label for="{{ form.date_due.id_for_label }}">{{ form.date_due.label }}</label>
-                {{ form.date_due }}
-                {% for e in form.date_due.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
-            </div>
-        </div>
-
         <div class="form-row">
             <div>
                 <label for="{{ form.category.id_for_label }}">{{ form.category.label }}</label>

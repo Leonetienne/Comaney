@@ -4,8 +4,8 @@
 
 {% block extra_head %}
 <style>
-    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-    .actions { display: flex; gap: 8px; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .exp-repeat { font-size: 0.85rem; color: var(--text-subtle); }
 </style>
 {% endblock %}
 
@@ -16,52 +16,40 @@
 </div>
 
 {% if scheduled %}
-<table>
-    <thead>
-        <tr>
-            <th>Title</th>
-            <th>Type</th>
-            <th>Value</th>
-            <th>Repeats every</th>
-            <th>Starting from</th>
-            <th>Category</th>
-            <th>Tags</th>
-            <th>Default settled</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for s in scheduled %}
-        <tr>
-            <td>{{ s.title }}</td>
-            <td><span class="badge badge-{{ s.type }}">{{ s.get_type_display }}</span></td>
-            <td>{{ s.value }} {{ current_feuser.currency }}</td>
-            <td>
-                {% if s.repeat_every_factor and s.repeat_every_unit %}
-                    {{ s.repeat_every_factor }} {{ s.get_repeat_every_unit_display|lower }}
-                {% else %}—{% endif %}
-            </td>
-            <td>{{ s.repeat_base_date|date:"Y-m-d"|default:"—" }}</td>
-            <td>{{ s.category.title|default:"—" }}</td>
-            <td>
-                {% for tag in s.tags.all %}
-                <span class="badge badge-tag">{{ tag.title }}</span>
-                {% empty %}—{% endfor %}
-            </td>
-            <td>{{ s.default_settled|yesno:"✓,—" }}</td>
-            <td>
-                <div class="actions">
-                    <a href="{% url 'budget:scheduled_edit' s.uid %}" class="btn btn-sm btn-secondary">Edit</a>
-                    <form method="post" action="{% url 'budget:scheduled_delete' s.uid %}" onsubmit="return confirm('Delete \'{{ s.title|escapejs }}\'?')">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="exp-list">
+    {% for s in scheduled %}
+    <div class="exp-card">
+
+        {% if s.repeat_base_date %}
+        <div class="exp-date-label">Starting {{ s.repeat_base_date|date:"Y-m-d" }}</div>
+        {% endif %}
+
+        <div class="exp-row1">
+            <span class="exp-title">{{ s.title }}</span>
+            <span class="exp-amount type-{{ s.type }}">{{ s.value }} {{ current_feuser.currency }}</span>
+        </div>
+
+        <div class="exp-actions">
+            <a href="{% url 'budget:scheduled_edit' s.uid %}" class="btn btn-sm btn-secondary">Edit</a>
+            <form method="post" action="{% url 'budget:scheduled_delete' s.uid %}" onsubmit="return confirm('Delete \'{{ s.title|escapejs }}\'?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+            </form>
+        </div>
+
+        <div class="exp-row2">
+            <span class="badge badge-{{ s.type }}">{{ s.get_type_display }}</span>
+            {% if s.repeat_every_factor and s.repeat_every_unit %}
+            <span class="exp-repeat">every {{ s.repeat_every_factor }} {{ s.get_repeat_every_unit_display|lower }}</span>
+            {% endif %}
+            {% if s.default_settled %}<span class="exp-settled yes">✓ settled</span>{% endif %}
+            {% if s.category %}<span class="sep">·</span><span class="exp-category">{{ s.category.title }}</span>{% endif %}
+            {% for tag in s.tags.all %}<span class="badge badge-tag">{{ tag.title }}</span>{% endfor %}
+        </div>
+
+    </div>
+    {% endfor %}
+</div>
 {% else %}
 <p class="empty">No scheduled expenses yet. <a href="{% url 'budget:scheduled_create' %}">Add one.</a></p>
 {% endif %}

@@ -5,14 +5,6 @@
 {% block extra_head %}
 <style>
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-    .value-income  { color: #155724; font-weight: 600; }
-    .value-expense { color: #721c24; font-weight: 600; }
-    @media (prefers-color-scheme: dark) {
-        .value-income  { color: #6ecf8a; }
-        .value-expense { color: #cf7075; }
-    }
-    .tag-list { display: flex; flex-wrap: wrap; gap: 2px; }
-    .actions { display: flex; gap: 8px; }
 </style>
 {% endblock %}
 
@@ -24,50 +16,49 @@
 {% include "partials/_month_nav.html" %}
 
 {% if expenses %}
-<table>
-    <thead>
-        <tr>
-            <th>Title</th>
-            <th>Payee</th>
-            <th>Type</th>
-            <th>Value</th>
-            <th>Category</th>
-            <th>Tags</th>
-            <th>Settled</th>
-            <th>Due date</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for exp in expenses %}
-        <tr>
-            <td>{{ exp.title }}</td>
-            <td>{{ exp.payee|default:"—" }}</td>
-            <td><span class="badge badge-{{ exp.type }}">{{ exp.get_type_display }}</span></td>
-            <td class="value-{{ exp.type }}">{{ exp.value }} {{ current_feuser.currency }}</td>
-            <td>{{ exp.category.title|default:"—" }}</td>
-            <td>
-                <div class="tag-list">
-                    {% for tag in exp.tags.all %}
-                    <span class="badge badge-tag">{{ tag.title }}</span>
-                    {% empty %}—{% endfor %}
-                </div>
-            </td>
-            <td>{{ exp.settled|yesno:"✓,—" }}</td>
-            <td>{{ exp.date_due|date:"Y-m-d"|default:"—" }}</td>
-            <td>
-                <div class="actions">
-                    <a href="{% url 'budget:expense_edit' exp.uid %}" class="btn btn-sm btn-secondary">Edit</a>
-                    <form method="post" action="{% url 'budget:expense_delete' exp.uid %}" onsubmit="return confirm('Delete \'{{ exp.title|escapejs }}\'?')">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="exp-list">
+    {% for exp in expenses %}
+    <div class="exp-card">
+
+        <!-- Date label above title -->
+        {% if exp.date_due %}<div class="exp-date-label" style="grid-column:1;grid-row:1;">{{ exp.date_due|date:"Y-m-d" }}</div>{% endif %}
+
+        <!-- Row 1: title, payee, amount -->
+        <div class="exp-row1" style="grid-row:2;">
+            <span class="exp-title">{{ exp.title }}</span>
+            {% if exp.payee %}<span class="exp-payee">{{ exp.payee }}</span>{% endif %}
+            <span class="exp-amount type-{{ exp.type }}">{{ exp.value }} {{ current_feuser.currency }}</span>
+        </div>
+
+        <!-- Actions column (right, all rows) -->
+        <div class="exp-actions">
+            <a href="{% url 'budget:expense_edit' exp.uid %}" class="btn btn-sm btn-secondary">Edit</a>
+            <form method="post" action="{% url 'budget:expense_delete' exp.uid %}" onsubmit="return confirm('Delete \'{{ exp.title|escapejs }}\'?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+            </form>
+        </div>
+
+        <!-- Row 2: type, settled, category, tags, date -->
+        <div class="exp-row2">
+            <span class="badge badge-{{ exp.type }}">{{ exp.get_type_display }}</span>
+            {% if exp.settled %}
+            <span class="exp-settled yes">✓ settled</span>
+            {% else %}
+            <span class="exp-settled">unsettled</span>
+            {% endif %}
+            {% if exp.category %}<span class="sep">·</span><span class="exp-category">{{ exp.category.title }}</span>{% endif %}
+            {% for tag in exp.tags.all %}<span class="badge badge-tag">{{ tag.title }}</span>{% endfor %}
+        </div>
+
+        <!-- Row 3: note (only if set) -->
+        {% if exp.note %}
+        <div class="exp-row3">{{ exp.note }}</div>
+        {% endif %}
+
+    </div>
+    {% endfor %}
+</div>
 {% else %}
 <p class="empty">No expenses yet. <a href="{% url 'budget:expense_create' %}">Add one.</a></p>
 {% endif %}
