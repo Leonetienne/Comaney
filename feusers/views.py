@@ -36,7 +36,7 @@ def register(request):
                 subject="Please confirm your email address",
                 message=(
                     f"Hi {user.first_name},\n\n"
-                    f"please confirm your Comoney registration:\n\n"
+                    f"please confirm your Comaney registration:\n\n"
                     f"{confirm_url}\n\n"
                     f"If you didn't sign up, you can safely ignore this email."
                 ),

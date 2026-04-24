@@ -36,7 +36,8 @@
       "Bash(git -C /Users/agent/private-work/Comoney log --format=\"%H %ae %an\")",
       "Bash(git -C /Users/agent/private-work/Comoney stash)",
       "Bash(git -C /Users/agent/private-work/Comoney filter-branch -f --env-filter ' *)",
-      "Bash(git -C /Users/agent/private-work/Comoney stash pop)"
+      "Bash(git -C /Users/agent/private-work/Comoney stash pop)",
+      "Bash(xargs sed *)"
     ]
   }
 }

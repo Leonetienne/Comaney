@@ -33,7 +33,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "comoney.urls"
+ROOT_URLCONF = "comaney.urls"
 
 TEMPLATES = [
     {
@@ -52,14 +52,14 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "comoney.wsgi.application"
+WSGI_APPLICATION = "comaney.wsgi.application"
 
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.environ.get("DB_NAME", "comoney"),
-        "USER": os.environ.get("DB_USER", "comoney"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "comoney"),
+        "NAME": os.environ.get("DB_NAME", "comaney"),
+        "USER": os.environ.get("DB_USER", "comaney"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "comaney"),
         "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
         "PORT": os.environ.get("DB_PORT", "3306"),
         "OPTIONS": {
@@ -92,7 +92,7 @@ EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 1025))
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "").upper() == "TRUE"
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@comoney.local")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@comaney.local")
 
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:8080")
 

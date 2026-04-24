@@ -4,9 +4,9 @@ services:
     restart: always
     environment:
       MARIADB_ROOT_PASSWORD: rootpassword
-      MARIADB_DATABASE: comoney
-      MARIADB_USER: comoney
-      MARIADB_PASSWORD: comoney
+      MARIADB_DATABASE: comaney
+      MARIADB_USER: comaney
+      MARIADB_PASSWORD: comaney
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
@@ -32,9 +32,9 @@ services:
       DJANGO_SECRET_KEY: dev-secret-key
       DB_HOST: db
       DB_PORT: 3306
-      DB_NAME: comoney
-      DB_USER: comoney
-      DB_PASSWORD: comoney
+      DB_NAME: comaney
+      DB_USER: comaney
+      DB_PASSWORD: comaney
       SITE_URL: http://localhost:8080
       DEBUG: "TRUE"
       ENABLE_REGISTRATION: "TRUE"
