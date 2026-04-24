@@ -1,33 +1,18 @@
-{% extends "budget_base.html" %}
+{% extends "base.html" %}
 
-{% block title %}Comaney – Hello World{% endblock %}
+{% block title %}Comaney{% endblock %}
 
 {% block content %}
-<h1>Hello, World!</h1>
-<p>Frontend users ordered by email:</p>
+<div style="text-align:center; padding: 60px 0;">
+    <h1 style="font-size:2rem; margin-bottom:8px;">Comaney</h1>
+    <p style="color:var(--text-muted); margin-bottom:32px;">Personal budget tracking.</p>
 
-{% if feusers %}
-<table>
-    <thead>
-        <tr>
-            <th>Email</th>
-            <th>First name</th>
-            <th>Last name</th>
-            <th>Registered</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for user in feusers %}
-        <tr>
-            <td>{{ user.email }}</td>
-            <td>{{ user.first_name|default:"—" }}</td>
-            <td>{{ user.last_name|default:"—" }}</td>
-            <td>{{ user.created_at|date:"Y-m-d H:i" }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<p class="empty">No confirmed users yet.</p>
-{% endif %}
+    {% if registration_enabled %}
+    <a href="{% url 'register' %}" class="btn" style="margin-right:8px;">Register now</a>
+    <a href="{% url 'login' %}" class="btn btn-secondary">Log in</a>
+    {% else %}
+    <p style="color:var(--text-muted); margin-bottom:16px;">This is a private instance.</p>
+    <a href="{% url 'login' %}" class="btn">Log in</a>
+    {% endif %}
+</div>
 {% endblock %}

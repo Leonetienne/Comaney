@@ -18,8 +18,8 @@ staticfiles/
 
 # Environment
 .env
-.env.*
-!.env.example
+Deployment/.env.example
+!Deployment/.env.example
 
 # Docker
 .dockerignore

@@ -1,32 +1,13 @@
 services:
-  db:
-    image: mariadb:11.3
-    restart: unless-stopped
-    environment:
-      MARIADB_DATABASE: ${DB_NAME:-comaney}
-      MARIADB_USER: ${DB_USER:-comaney}
-      MARIADB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
-    volumes:
-      - db_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   web:
     image: leonetienne/comaney:0.1.0
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     ports:
       - "${PORT:-8000}:8000"
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
-      DB_HOST: db
-      DB_PORT: 3306
+      DB_HOST: ${DB_HOST:?DB_HOST is required}
+      DB_PORT: ${DB_PORT:-3306}
       DB_NAME: ${DB_NAME:-comaney}
       DB_USER: ${DB_USER:-comaney}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
@@ -41,6 +22,3 @@ services:
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@comaney.local}
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
-
-volumes:
-  db_data:
