@@ -1,0 +1,46 @@
+services:
+  db:
+    image: mariadb:11.3
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-comoney}
+      MARIADB_USER: ${DB_USER:-comoney}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    image: ghcr.io/yourusername/comoney:latest   # or: build: { context: .., dockerfile: Deployment/Dockerfile }
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-comoney}
+      DB_USER: ${DB_USER:-comoney}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      SITE_URL: ${SITE_URL:-http://localhost:8000}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+      ENABLE_REGISTRATION: ${ENABLE_REGISTRATION:-}
+      EMAIL_HOST: ${EMAIL_HOST:-localhost}
+      EMAIL_PORT: ${EMAIL_PORT:-25}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@comoney.local}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+
+volumes:
+  db_data:
