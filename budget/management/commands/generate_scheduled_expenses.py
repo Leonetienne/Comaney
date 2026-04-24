@@ -73,13 +73,26 @@ class Command(BaseCommand):
         created = skipped = 0
 
         for scheduled in ScheduledExpense.objects.select_related("owning_feuser", "category").prefetch_related("tags"):
-            for occurrence in occurrences_in_month(scheduled, year, month):
-                already_exists = Expense.objects.filter(
-                    source_scheduled=scheduled,
-                    date_due=occurrence,
-                ).exists()
+            occurrences = occurrences_in_month(scheduled, year, month)
+            if not occurrences:
+                continue
 
-                if already_exists:
+            existing_dates = set(
+                Expense.objects.filter(
+                    source_scheduled=scheduled,
+                    date_due__year=year,
+                    date_due__month=month,
+                ).values_list("date_due", flat=True)
+            )
+
+            # If enough expenses already exist for this month (regardless of exact date),
+            # skip — handles the case where date_due was changed on the rule after generation.
+            if len(existing_dates) >= len(occurrences):
+                skipped += len(occurrences)
+                continue
+
+            for occurrence in occurrences:
+                if occurrence in existing_dates:
                     skipped += 1
                     continue
 
