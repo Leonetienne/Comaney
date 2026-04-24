@@ -7,21 +7,23 @@
     .dash-heading { margin: 0 0 24px; font-size: 1rem; color: var(--text-muted); font-weight: 500; }
 
     /* Summary panels */
-    .panels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
     .panel { border-radius: 12px; padding: 24px 20px 20px; }
-    .panel .label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 12px; }
-    .panel .amount { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; white-space: nowrap; }
-    .panel .amount .currency { font-size: 1.3rem; font-weight: 700; margin-left: 3px; }
+    .panel .label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; }
+    .panel .amount { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; word-break: break-all; }
+    .panel .amount .currency { font-size: 1.1rem; font-weight: 700; margin-left: 2px; }
 
     .panel-income      { background: #d4edda; color: #155724; }
     .panel-paid        { background: #f8d7da; color: #721c24; }
     .panel-outstanding { background: rgba(220,53,69,.12); color: #a0303a; }
+    .panel-savings     { background: #fce4ec; color: #880e4f; }
     .panel-left        { background: rgba(40,167,69,.12); color: #1a6b30; }
 
     @media (prefers-color-scheme: dark) {
         .panel-income      { background: #1a3326; color: #6ecf8a; }
         .panel-paid        { background: #331a1d; color: #cf7075; }
         .panel-outstanding { background: #2b1a1c; color: #c97078; }
+        .panel-savings     { background: #3a1a2a; color: #f48fb1; }
         .panel-left        { background: #182b1f; color: #6ecf8a; }
     }
 
@@ -59,14 +61,22 @@
         <div class="label">Income</div>
         <div class="amount">{{ income }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
+
     <div class="panel panel-paid">
         <div class="label">Paid expenses</div>
         <div class="amount">{{ paid }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
+
     <div class="panel panel-outstanding">
         <div class="label">Outstanding</div>
         <div class="amount">{{ outstanding }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
+
+    <div class="panel panel-savings">
+        <div class="label">Savings</div>
+        <div class="amount">{{ savings }}<span class="currency">{{ current_feuser.currency }}</span></div>
+    </div>
+
     <div class="panel panel-left">
         <div class="label">Left to spend</div>
         <div class="amount">{{ left }}<span class="currency">{{ current_feuser.currency }}</span></div>

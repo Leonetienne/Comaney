@@ -29,7 +29,10 @@ def dashboard(request):
     income      = _sum(month_qs.filter(type="income"))
     paid        = _sum(month_qs.filter(type="expense", settled=True))
     outstanding = _sum(month_qs.filter(type="expense", settled=False))
-    left        = income - paid - outstanding
+    sav_dep     = _sum(month_qs.filter(type="savings_dep"))
+    sav_wit     = _sum(month_qs.filter(type="savings_wit"))
+    savings     = sav_dep - sav_wit
+    left        = income - paid - outstanding - savings
 
     expense_qs = month_qs.filter(type="expense")
 
@@ -54,6 +57,7 @@ def dashboard(request):
         "income": income,
         "paid": paid,
         "outstanding": outstanding,
+        "savings": savings,
         "left": left,
         "month_label": today.strftime("%B %Y"),
         "cat_labels": json.dumps([r["category__title"] for r in cat_rows]),
@@ -269,7 +273,7 @@ Rules:
 - Return ONLY a valid JSON array — no prose, no markdown, no code fences.
 - Each object must have exactly these keys:
     "title"        — as short as possible (2–4 words max, e.g. "Groceries", "Netflix sub", "Diesel")
-    "type"         — "expense" or "income"
+    "type"         — "expense", "income", "savings_dep", or "savings_wit"
     "value"        — positive decimal number (e.g. 9.99)
     "payee"        — merchant or person name, or "" if unknown
     "category_uid" — integer uid from the Categories list below, or null if none fits
@@ -277,7 +281,7 @@ Rules:
     "note"         — any extra context worth keeping, or ""
 - Only use category_uid and tag_uids values that appear in the lists below.
 - If the user mentions a single lump sum for multiple things, split them into separate objects.
-- Default type to "expense" unless the description clearly indicates income.
+- Default type to "expense" unless the description clearly indicates income, a savings deposit ("savings_dep"), or a savings withdrawal ("savings_wit").
 
 {catalog}"""
 
@@ -396,7 +400,7 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
             continue
 
         tx_type = raw.get("type", "expense")
-        if tx_type not in ("expense", "income"):
+        if tx_type not in ("expense", "income", "savings_dep", "savings_wit"):
             tx_type = "expense"
 
         cat_uid = raw.get("category_uid")

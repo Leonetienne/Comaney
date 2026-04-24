@@ -6,6 +6,8 @@ from feusers.models import FeUser
 class TransactionType(models.TextChoices):
     INCOME = "income", "Income"
     EXPENSE = "expense", "Expense"
+    SAVINGS_DEPOSIT = "savings_dep", "Savings Deposit"
+    SAVINGS_WITHDRAWAL = "savings_wit", "Savings Withdrawal"
 
 
 class RepeatUnit(models.TextChoices):
@@ -52,7 +54,7 @@ class Expense(OwnedModel):
         Category, null=True, blank=True, on_delete=models.SET_NULL, related_name="expenses"
     )
     tags = models.ManyToManyField(Tag, blank=True, related_name="expenses")
-    type = models.CharField(max_length=10, choices=TransactionType.choices)
+    type = models.CharField(max_length=12, choices=TransactionType.choices)
     value = models.DecimalField(max_digits=12, decimal_places=2)
     date_due = models.DateField(null=True, blank=True, default=None)
     date_created = models.DateTimeField(auto_now_add=True)
@@ -81,7 +83,7 @@ class ScheduledExpense(OwnedModel):
         Category, null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_expenses"
     )
     tags = models.ManyToManyField(Tag, blank=True, related_name="scheduled_expenses")
-    type = models.CharField(max_length=10, choices=TransactionType.choices)
+    type = models.CharField(max_length=12, choices=TransactionType.choices)
     value = models.DecimalField(max_digits=12, decimal_places=2)
     default_settled = models.BooleanField(default=True)
     repeat_base_date = models.DateField(null=True, blank=True)
