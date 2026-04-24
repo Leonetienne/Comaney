@@ -54,8 +54,8 @@
 {% endblock %}
 
 {% block content %}
-<h1 style="margin-bottom:6px;">Dashboard</h1>
-<p class="dash-heading">{{ month_label }}</p>
+<h1 style="margin-bottom:16px;">Dashboard</h1>
+{% include "partials/_month_nav.html" %}
 
 <div class="panels">
     <div class="panel panel-income">

@@ -21,6 +21,7 @@
     <h1 style="margin:0">Expenses</h1>
     <a href="{% url 'budget:expense_create' %}" class="btn">+ New expense</a>
 </div>
+{% include "partials/_month_nav.html" %}
 
 {% if expenses %}
 <table>
