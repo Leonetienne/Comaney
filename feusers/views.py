@@ -228,4 +228,6 @@ def confirm_email(request, token):
     user.is_active = True
     user.confirmation_token = ""
     user.save(update_fields=["is_confirmed", "is_active", "confirmation_token"])
+    from budget.fixtures import create_defaults
+    create_defaults(user)
     return render(request, "feusers/confirmed.html", {"user": user})
