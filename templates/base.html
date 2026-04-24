@@ -23,6 +23,11 @@
             --error:          #c00;
             --error-bg:       #fff0f0;
             --error-border:   #f5c6cb;
+
+            --sav-dep-bg:     #cce5ff;
+            --sav-dep-fg:     #004085;
+            --sav-wit-bg:     #fff3cd;
+            --sav-wit-fg:     #856404;
         }
         @media (prefers-color-scheme: dark) {
             :root {
@@ -41,6 +46,11 @@
                 --error:          #ff6b6b;
                 --error-bg:       #2a1515;
                 --error-border:   #4a2020;
+
+                --sav-dep-bg:     #0d2a4a;
+                --sav-dep-fg:     #7ec8f7;
+                --sav-wit-bg:     #3a2e00;
+                --sav-wit-fg:     #ffd966;
             }
         }
 
@@ -154,14 +164,12 @@
         .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; }
         .badge-income      { background: #d4edda; color: #155724; }
         .badge-expense     { background: #f8d7da; color: #721c24; }
-        .badge-savings_dep { background: #cce5ff; color: #004085; }
-        .badge-savings_wit { background: #fff3cd; color: #856404; }
+        .badge-savings_dep { background: var(--sav-dep-bg); color: var(--sav-dep-fg); }
+        .badge-savings_wit { background: var(--sav-wit-bg); color: var(--sav-wit-fg); }
         .badge-tag         { background: var(--bg-elevated); color: var(--text-subtle); margin: 1px; }
         @media (prefers-color-scheme: dark) {
-            .badge-income      { background: #1a3326; color: #6ecf8a; }
-            .badge-expense     { background: #331a1d; color: #cf7075; }
-            .badge-savings_dep { background: #0d2a4a; color: #7ec8f7; }
-            .badge-savings_wit { background: #3a2e00; color: #ffd966; }
+            .badge-income  { background: #1a3326; color: #6ecf8a; }
+            .badge-expense { background: #331a1d; color: #cf7075; }
         }
 
         /* ── Mobile ──────────────────────────────────────────────────────── */

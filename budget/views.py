@@ -281,7 +281,7 @@ Rules:
     "note"         — any extra context worth keeping, or ""
 - Only use category_uid and tag_uids values that appear in the lists below.
 - If the user mentions a single lump sum for multiple things, split them into separate objects.
-- Default type to "expense" unless the description clearly indicates income, a savings deposit ("savings_dep"), or a savings withdrawal ("savings_wit").
+- Default type to "expense" unless the description clearly indicates income, a savings deposit ("savings_dep"), or a savings withdrawal ("savings_wit"). If savings were used to purchase an item, split the price between upfront payment (if any) and savings. 
 
 {catalog}"""
 

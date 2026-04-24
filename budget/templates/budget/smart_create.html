@@ -90,10 +90,12 @@
     td.value-col .val-wrap .edit-input { min-width: 0; }
     td.value-col .val-wrap span { white-space: nowrap; color: var(--text-muted); }
 
-    td.type-income .edit-type { color: #155724; font-weight: 600; }
-    td.type-expense .edit-type { color: #721c24; }
+    td.type-income      .edit-type { color: #155724; font-weight: 600; }
+    td.type-expense     .edit-type { color: #721c24; }
+    td.type-savings_dep .edit-type { color: var(--sav-dep-fg); }
+    td.type-savings_wit .edit-type { color: var(--sav-wit-fg); }
     @media (prefers-color-scheme: dark) {
-        td.type-income .edit-type  { color: #6ecf8a; }
+        td.type-income  .edit-type { color: #6ecf8a; }
         td.type-expense .edit-type { color: #cf7075; }
     }
 
@@ -209,8 +211,10 @@
                         <!-- Type -->
                         <td class="type-{{ item.type }}">
                             <select class="edit-select edit-type">
-                                <option value="expense" {% if item.type == "expense" %}selected{% endif %}>Expense</option>
-                                <option value="income"  {% if item.type == "income"  %}selected{% endif %}>Income</option>
+                                <option value="expense"     {% if item.type == "expense"     %}selected{% endif %}>Expense</option>
+                                <option value="income"      {% if item.type == "income"      %}selected{% endif %}>Income</option>
+                                <option value="savings_dep" {% if item.type == "savings_dep" %}selected{% endif %}>Savings Deposit</option>
+                                <option value="savings_wit" {% if item.type == "savings_wit" %}selected{% endif %}>Savings Withdrawal</option>
                             </select>
                         </td>
 
@@ -391,6 +395,15 @@ try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
     });
     updateUI();
 })();
+
+// ── Live type-colour update ──────────────────────────────────────────────────
+document.querySelectorAll('.edit-type').forEach(sel => {
+    sel.addEventListener('change', function () {
+        const td = this.closest('td');
+        td.className = td.className.replace(/\btype-\S+/, '');
+        td.classList.add('type-' + this.value);
+    });
+});
 
 // ── Serialize edits → preview_json before confirm submit ────────────────────
 document.getElementById('confirm-form').addEventListener('submit', function () {

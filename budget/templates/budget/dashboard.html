@@ -16,14 +16,15 @@
     .panel-income      { background: #d4edda; color: #155724; }
     .panel-paid        { background: #f8d7da; color: #721c24; }
     .panel-outstanding { background: rgba(220,53,69,.12); color: #a0303a; }
-    .panel-savings     { background: #fce4ec; color: #880e4f; }
+    .panel-savings     { background: var(--sav-dep-bg); color: var(--sav-dep-fg); }
+    .panel-savings-neg { background: var(--sav-wit-bg); color: var(--sav-wit-fg); }
     .panel-left        { background: rgba(40,167,69,.12); color: #1a6b30; }
 
     @media (prefers-color-scheme: dark) {
         .panel-income      { background: #1a3326; color: #6ecf8a; }
         .panel-paid        { background: #331a1d; color: #cf7075; }
         .panel-outstanding { background: #2b1a1c; color: #c97078; }
-        .panel-savings     { background: #3a1a2a; color: #f48fb1; }
+        .panel-savings     { background: var(--sav-dep-bg); color: var(--sav-dep-fg); }
         .panel-left        { background: #182b1f; color: #6ecf8a; }
     }
 
@@ -72,7 +73,7 @@
         <div class="amount">{{ outstanding }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
 
-    <div class="panel panel-savings">
+    <div class="panel {% if savings < 0 %}panel-savings-neg{% else %}panel-savings{% endif %}">
         <div class="label">Savings</div>
         <div class="amount">{{ savings }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
