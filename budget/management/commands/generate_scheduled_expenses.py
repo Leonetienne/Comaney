@@ -2,8 +2,8 @@ import calendar
 from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 
+from budget.date_utils import current_financial_month, financial_month_range
 from budget.expense_factory import create_expense
 from budget.models import Expense, ScheduledExpense
 
@@ -26,7 +26,7 @@ def _add_period(d: date, factor: int, unit: str) -> date:
     raise ValueError(f"Unknown unit: {unit}")
 
 
-def occurrences_in_month(scheduled: ScheduledExpense, year: int, month: int) -> list[date]:
+def occurrences_in_range(scheduled: ScheduledExpense, start: date, end: date) -> list[date]:
     base = scheduled.repeat_base_date
     factor = scheduled.repeat_every_factor
     unit = scheduled.repeat_every_unit
@@ -34,23 +34,20 @@ def occurrences_in_month(scheduled: ScheduledExpense, year: int, month: int) -> 
     if not base or not factor or not unit:
         return []
 
-    month_start = date(year, month, 1)
-    month_end = date(year, month, calendar.monthrange(year, month)[1])
-
-    if base > month_end:
+    if base > end:
         return []
 
     current = base
-    while current < month_start:
+    while current < start:
         nxt = _add_period(current, factor, unit)
         if nxt == current:
             break
         current = nxt
-        if current > month_end:
+        if current > end:
             return []
 
     results = []
-    while current <= month_end:
+    while current <= end:
         results.append(current)
         current = _add_period(current, factor, unit)
 
@@ -58,35 +55,45 @@ def occurrences_in_month(scheduled: ScheduledExpense, year: int, month: int) -> 
 
 
 class Command(BaseCommand):
-    help = "Generate expenses for a calendar month from all scheduled expenses."
+    help = "Generate expenses from scheduled expenses for each user's current financial month."
 
     def add_arguments(self, parser):
-        today = timezone.localdate()
-        parser.add_argument("--year",  type=int, default=today.year,  help="Target year  (default: current)")
-        parser.add_argument("--month", type=int, default=today.month, help="Target month (default: current)")
+        parser.add_argument("--year",  type=int, default=None, help="Override financial month year  (applies to all users)")
+        parser.add_argument("--month", type=int, default=None, help="Override financial month (applies to all users)")
 
     def handle(self, *args, **options):
-        year  = options["year"]
-        month = options["month"]
-        self.stdout.write(f"Generating expenses for {year}-{month:02d}…")
+        override_year  = options["year"]
+        override_month = options["month"]
 
+        if bool(override_year) != bool(override_month):
+            self.stderr.write("Provide both --year and --month or neither.")
+            return
+
+        self.stdout.write(f"Generating scheduled expenses…")
         created = skipped = 0
 
         for scheduled in ScheduledExpense.objects.select_related("owning_feuser", "category").prefetch_related("tags"):
-            occurrences = occurrences_in_month(scheduled, year, month)
+            feuser = scheduled.owning_feuser
+
+            if override_year:
+                year, month = override_year, override_month
+            else:
+                year, month = current_financial_month(feuser.month_start_day, feuser.month_start_prev)
+
+            start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+            occurrences = occurrences_in_range(scheduled, start, end)
+
             if not occurrences:
                 continue
 
             existing_dates = set(
                 Expense.objects.filter(
                     source_scheduled=scheduled,
-                    date_due__year=year,
-                    date_due__month=month,
+                    date_due__gte=start,
+                    date_due__lte=end,
                 ).values_list("date_due", flat=True)
             )
 
-            # If enough expenses already exist for this month (regardless of exact date),
-            # skip — handles the case where date_due was changed on the rule after generation.
             if len(existing_dates) >= len(occurrences):
                 skipped += len(occurrences)
                 continue
@@ -97,7 +104,7 @@ class Command(BaseCommand):
                     continue
 
                 create_expense(
-                    owning_feuser=scheduled.owning_feuser,
+                    owning_feuser=feuser,
                     title=scheduled.title,
                     type=scheduled.type,
                     value=scheduled.value,
@@ -110,7 +117,7 @@ class Command(BaseCommand):
                     source_scheduled=scheduled,
                 )
                 created += 1
-                self.stdout.write(f"  + [{scheduled.owning_feuser.email}] {scheduled.title} on {occurrence}")
+                self.stdout.write(f"  + [{feuser.email}] {scheduled.title} on {occurrence}")
 
         self.stdout.write(self.style.SUCCESS(
             f"Done — {created} created, {skipped} already existed."

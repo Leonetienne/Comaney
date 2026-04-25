@@ -1,5 +1,7 @@
 <div class="month-nav">
     <a href="?year={{ nav_prev_year }}&month={{ nav_prev_month }}" class="month-nav__arrow" aria-label="Previous month">&#8249;</a>
-    <span class="month-nav__label">{{ nav_label }}</span>
+    <span class="month-nav__label">
+        {{ nav_label }}{% if nav_range %}<span class="month-nav__range">{{ nav_range }}</span>{% endif %}
+    </span>
     <a href="?year={{ nav_next_year }}&month={{ nav_next_month }}" class="month-nav__arrow {% if nav_is_current %}month-nav__arrow--disabled{% endif %}" aria-label="Next month">&#8250;</a>
 </div>

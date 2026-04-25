@@ -44,6 +44,14 @@ main.page-centered { text-align: center; }
   &:hover { color: var(--text); }
 }
 
+.month-offset-preview {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: pre;
+  line-height: 1.6;
+}
+
 .success-msg {
   color: #155724;
   background: #d4edda;

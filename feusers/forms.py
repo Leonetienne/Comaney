@@ -6,14 +6,17 @@ from .models import FeUser
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = FeUser
-        fields = ["first_name", "last_name", "currency", "anthropic_api_key", "ai_custom_instructions"]
+        fields = ["first_name", "last_name", "currency", "anthropic_api_key", "ai_custom_instructions", "month_start_day", "month_start_prev"]
         labels = {
             "anthropic_api_key": "Anthropic API key",
             "ai_custom_instructions": "Custom instructions",
+            "month_start_day": "Month starts on day",
+            "month_start_prev": "In the previous calendar month",
         }
         widgets = {
             "anthropic_api_key": forms.PasswordInput(render_value=True, attrs={"autocomplete": "off"}),
             "ai_custom_instructions": forms.Textarea(attrs={"rows": 5, "placeholder": "e.g. Always assign groceries to the 'Food' category and tag with 'Rewe' when the payee is Rewe."}),
+            "month_start_day": forms.NumberInput(attrs={"min": 1, "max": 31}),
         }
 
     def __init__(self, *args, **kwargs):

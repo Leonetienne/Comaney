@@ -21,6 +21,8 @@ class FeUser(models.Model):
     currency = models.CharField(max_length=10, blank=True, default="€")
     anthropic_api_key = models.CharField(max_length=255, blank=True)
     ai_custom_instructions = models.TextField(blank=True)
+    month_start_day = models.SmallIntegerField(default=1)
+    month_start_prev = models.BooleanField(default=False)
     pending_email = models.EmailField(blank=True)
     email_change_token = models.CharField(max_length=64, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -1,6 +1,6 @@
 import calendar
 import json
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.db.models import Sum
@@ -9,39 +9,43 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from .date_utils import current_financial_month, financial_month_range
 from .decorators import feuser_required
 from .expense_factory import create_expense
 from .forms import ExpenseForm, ScheduledExpenseForm
 from .models import Category, Expense, ScheduledExpense, Tag, TransactionType
 
 
-def _get_month(request) -> tuple[int, int]:
-    today = timezone.localdate()
+def _get_month(request, start_day: int = 1, prev_month: bool = False) -> tuple[int, int]:
     try:
         year = int(request.GET["year"])
         month = int(request.GET["month"])
         if not (1 <= month <= 12):
             raise ValueError
     except (KeyError, ValueError, TypeError):
-        return today.year, today.month
+        return current_financial_month(start_day, prev_month)
     return year, month
 
 
-def _month_nav_context(year: int, month: int) -> dict:
-    prev_month = month - 1 or 12
-    prev_year  = year - 1 if month == 1 else year
-    next_month = month % 12 + 1
-    next_year  = year + 1 if month == 12 else year
-    today = timezone.localdate()
-    is_current = (year == today.year and month == today.month)
+def _month_nav_context(year: int, month: int, start_day: int = 1, prev_month: bool = False) -> dict:
+    nav_prev_month = month - 1 or 12
+    nav_prev_year  = year - 1 if month == 1 else year
+    nav_next_month = month % 12 + 1
+    nav_next_year  = year + 1 if month == 12 else year
+    cur_year, cur_month = current_financial_month(start_day, prev_month)
+    is_current = (year == cur_year and month == cur_month)
+    start, end = financial_month_range(year, month, start_day, prev_month)
+    is_default = (start_day == 1 and not prev_month)
+    range_str = f"{start.strftime('%-d %b')} – {end.strftime('%-d %b')}" if not is_default else ""
     return {
         "nav_year": year,
         "nav_month": month,
         "nav_label": date(year, month, 1).strftime("%B %Y"),
-        "nav_prev_year": prev_year,
-        "nav_prev_month": prev_month,
-        "nav_next_year": next_year,
-        "nav_next_month": next_month,
+        "nav_range": range_str,
+        "nav_prev_year": nav_prev_year,
+        "nav_prev_month": nav_prev_month,
+        "nav_next_year": nav_next_year,
+        "nav_next_month": nav_next_month,
         "nav_is_current": is_current,
     }
 
@@ -49,11 +53,12 @@ def _month_nav_context(year: int, month: int) -> dict:
 @feuser_required
 def dashboard(request):
     feuser = request.feuser
-    year, month = _get_month(request)
+    year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
+    start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
     month_qs = Expense.objects.filter(
         owning_feuser=feuser,
-        date_created__year=year,
-        date_created__month=month,
+        date_created__date__gte=start,
+        date_created__date__lte=end,
     )
 
     def _sum(qs):
@@ -97,7 +102,7 @@ def dashboard(request):
         "tag_labels": json.dumps([r["tags__title"] for r in tag_rows]),
         "tag_values": json.dumps([float(r["total"]) for r in tag_rows]),
     }
-    ctx.update(_month_nav_context(year, month))
+    ctx.update(_month_nav_context(year, month, feuser.month_start_day, feuser.month_start_prev))
     return render(request, "budget/dashboard.html", ctx)
 
 
@@ -179,12 +184,14 @@ def tag_rename(request, uid):
 
 @feuser_required
 def expenses_list(request):
-    year, month = _get_month(request)
+    feuser = request.feuser
+    year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
+    start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
     expenses = (
         Expense.objects.filter(
-            owning_feuser=request.feuser,
-            date_created__year=year,
-            date_created__month=month,
+            owning_feuser=feuser,
+            date_created__date__gte=start,
+            date_created__date__lte=end,
         )
         .select_related("category")
         .prefetch_related("tags")
@@ -194,7 +201,7 @@ def expenses_list(request):
         "active_nav": "expenses",
         "expenses": expenses,
     }
-    ctx.update(_month_nav_context(year, month))
+    ctx.update(_month_nav_context(year, month, feuser.month_start_day, feuser.month_start_prev))
     return render(request, "budget/expenses_list.html", ctx)
 
 

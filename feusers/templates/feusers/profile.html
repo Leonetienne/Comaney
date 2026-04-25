@@ -15,7 +15,7 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="profile">
             {% for field in profile_form %}
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% if field.html_name != "month_start_prev" %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{% endif %}
             {% if field.html_name == "anthropic_api_key" %}
             <div class="pw-wrap">
                 {{ field }}
@@ -24,6 +24,11 @@
                     <svg class="eye-hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18" height="18" style="display:none"><path d="M2.22 2.22a.75.75 0 0 0-1.06 1.06l2.42 2.42A10.6 10.6 0 0 0 1.05 8.63a1 1 0 0 0 0 .74C1.73 10.89 5 15 10 15c1.5 0 2.9-.38 4.12-1.02l2.66 2.66a.75.75 0 0 0 1.06-1.06L2.22 2.22Zm6.13 6.13 3.3 3.3A2 2 0 0 1 8.35 8.35ZM10 3c-1.08 0-2.1.22-3.04.6l1.55 1.55a4 4 0 0 1 4.34 4.34l2.23 2.23C16.4 10.46 18 9 18.95 9.37a1 1 0 0 0 0-.74C18.27 7.11 15 3 10 3Z"/></svg>
                 </button>
             </div>
+            {% elif field.html_name == "month_start_day" %}
+            {{ field }}
+            {% elif field.html_name == "month_start_prev" %}
+            <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
+            <p class="month-offset-preview" id="month-offset-preview"></p>
             {% else %}
             {{ field }}
             {% endif %}
@@ -87,5 +92,59 @@ document.querySelectorAll('.pw-eye').forEach(btn => {
         hide.style.display = revealing ? '' : 'none';
     });
 });
+</script>
+<script>
+(function () {
+    const dayInput  = document.getElementById('id_month_start_day');
+    const prevCheck = document.getElementById('id_month_start_prev');
+    const preview   = document.getElementById('month-offset-preview');
+    if (!dayInput || !prevCheck || !preview) return;
+
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    function daysInMonth(y, m) {
+        return new Date(y, m + 1, 0).getDate();
+    }
+
+    function financialRange(year, month, startDay, prevMonth) {
+        // month is 0-based
+        let sy = year, sm = month;
+        if (prevMonth) { sm -= 1; if (sm < 0) { sm = 11; sy -= 1; } }
+        const sd = Math.min(startDay, daysInMonth(sy, sm));
+        const start = new Date(sy, sm, sd);
+
+        let ny = year, nm = month;
+        if (prevMonth) { nm = month; } // next financial month starts in calendar `month`
+        else { nm += 1; if (nm > 11) { nm = 0; ny += 1; } }
+        const nd = Math.min(startDay, daysInMonth(ny, nm));
+        const end = new Date(ny, nm, nd);
+        end.setDate(end.getDate() - 1);
+        return [start, end];
+    }
+
+    function fmt(d) {
+        return d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3);
+    }
+
+    function update() {
+        const startDay = parseInt(dayInput.value, 10);
+        const prevMonth = prevCheck.checked;
+        if (isNaN(startDay) || startDay < 1) { preview.textContent = ''; return; }
+        const now = new Date();
+        const lines = [];
+        for (let i = 2; i >= 0; i--) {
+            let m = now.getMonth() - i;
+            let y = now.getFullYear();
+            if (m < 0) { m += 12; y -= 1; }
+            const [s, e] = financialRange(y, m, startDay, prevMonth);
+            lines.push(MONTHS[m] + ' ' + y + ': ' + fmt(s) + ' – ' + fmt(e));
+        }
+        preview.textContent = lines.join('\n');
+    }
+
+    dayInput.addEventListener('input', update);
+    prevCheck.addEventListener('change', update);
+    update();
+})();
 </script>
 {% endblock %}
