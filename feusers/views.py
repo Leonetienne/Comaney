@@ -3,7 +3,7 @@ from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import (
-    ChangeEmailForm, ChangePasswordForm, LoginForm,
+    AISettingsForm, ChangeEmailForm, ChangePasswordForm, LoginForm,
     PasswordForgotForm, PasswordResetForm, ProfileForm, RegistrationForm,
 )
 from .models import FeUser
@@ -106,9 +106,10 @@ def profile(request):
     if not feuser:
         return redirect("login")
 
-    profile_form = ProfileForm(instance=feuser)
-    email_form = ChangeEmailForm(feuser=feuser)
-    password_form = ChangePasswordForm(feuser=feuser)
+    profile_form    = ProfileForm(instance=feuser)
+    ai_form         = AISettingsForm(instance=feuser)
+    email_form      = ChangeEmailForm(feuser=feuser)
+    password_form   = ChangePasswordForm(feuser=feuser)
     success = None
 
     if request.method == "POST":
@@ -119,6 +120,12 @@ def profile(request):
             if profile_form.is_valid():
                 profile_form.save()
                 success = "profile"
+
+        elif action == "ai":
+            ai_form = AISettingsForm(request.POST, instance=feuser)
+            if ai_form.is_valid():
+                ai_form.save()
+                success = "ai"
 
         elif action == "email":
             email_form = ChangeEmailForm(request.POST, feuser=feuser)
@@ -150,6 +157,7 @@ def profile(request):
     return render(request, "feusers/profile.html", {
         "active_nav": "profile",
         "profile_form": profile_form,
+        "ai_form": ai_form,
         "email_form": email_form,
         "password_form": password_form,
         "success": success,

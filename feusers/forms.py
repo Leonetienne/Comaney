@@ -6,30 +6,38 @@ from .models import FeUser
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = FeUser
-        fields = ["first_name", "last_name", "currency", "anthropic_api_key", "ai_custom_instructions", "month_start_day", "month_start_prev"]
+        fields = ["first_name", "last_name", "currency", "month_start_day", "month_start_prev"]
         labels = {
-            "anthropic_api_key": "Anthropic API key",
-            "ai_custom_instructions": "Custom instructions",
             "month_start_day": "Month starts on day",
             "month_start_prev": "In the previous calendar month",
         }
         widgets = {
+            "month_start_day": forms.NumberInput(attrs={"min": 1, "max": 31}),
+        }
+
+
+class AISettingsForm(forms.ModelForm):
+    class Meta:
+        model = FeUser
+        fields = ["anthropic_api_key", "ai_custom_instructions"]
+        labels = {
+            "anthropic_api_key": "Anthropic API key",
+            "ai_custom_instructions": "Custom instructions",
+        }
+        widgets = {
             "anthropic_api_key": forms.PasswordInput(render_value=True, attrs={"autocomplete": "off"}),
             "ai_custom_instructions": forms.Textarea(attrs={"rows": 5, "placeholder": "e.g. Always assign groceries to the 'Food' category and tag with 'Rewe' when the payee is Rewe."}),
-            "month_start_day": forms.NumberInput(attrs={"min": 1, "max": 31}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         key = self.instance.anthropic_api_key if self.instance and self.instance.pk else ""
         if key:
-            # Send only a fixed mask + last 4 chars — the real key never reaches the frontend
             self.initial["anthropic_api_key"] = "********" + key[-4:]
 
     def clean_anthropic_api_key(self):
         value = self.cleaned_data.get("anthropic_api_key", "")
         if value.startswith("*"):
-            # Masked placeholder submitted — keep the existing key unchanged
             return self.instance.anthropic_api_key
         return value
 
