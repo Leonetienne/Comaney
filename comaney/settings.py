@@ -98,3 +98,6 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@comaney.local
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:8080")
 
 ENABLE_REGISTRATION = os.environ.get("ENABLE_REGISTRATION", "").upper() == "TRUE"
+
+AI_TRIAL_API_KEY     = os.environ.get("AI_TRIAL_API_KEY", "")
+AI_TRIAL_USAGE_LIMIT = float(os.environ.get("AI_TRIAL_USAGE_LIMIT", "0"))  # cents

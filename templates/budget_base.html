@@ -21,7 +21,7 @@
                 <a href="{% url 'budget:scheduled_list' %}">Scheduled Expenses</a>
             </li>
 
-            {% if current_feuser.anthropic_api_key %}
+            {% if ai_smart_create_available %}
             <li><span class="sidebar-section-label">AI</span></li>
             <li class="{% if active_nav == 'smart_create' %}active{% endif %}">
                 <a href="{% url 'budget:smart_create' %}">Smart Create</a>

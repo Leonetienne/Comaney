@@ -13,4 +13,9 @@ def current_feuser(request):
         except FeUser.DoesNotExist:
             ctx = {"current_feuser": None}
     ctx["registration_enabled"] = settings.ENABLE_REGISTRATION
+    feuser = ctx["current_feuser"]
+    ctx["ai_smart_create_available"] = bool(
+        (feuser and feuser.anthropic_api_key) or
+        (settings.AI_TRIAL_API_KEY and settings.AI_TRIAL_USAGE_LIMIT)
+    )
     return ctx

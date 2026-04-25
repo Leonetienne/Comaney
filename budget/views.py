@@ -539,10 +539,30 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
     return items, errors
 
 
+def _trial_state(feuser):
+    """Return (api_key, is_trial, trial_limit, trial_spent, trial_blocked).
+
+    is_trial=True means the user has no personal key and is on the shared trial key.
+    trial_blocked=True means they've hit or exceeded the limit.
+    """
+    from django.conf import settings
+    if feuser.anthropic_api_key:
+        return feuser.anthropic_api_key, False, 0, 0, False
+    trial_key   = settings.AI_TRIAL_API_KEY
+    trial_limit = settings.AI_TRIAL_USAGE_LIMIT
+    if not trial_key or not trial_limit:
+        return "", False, 0, 0, False
+    spent   = float(feuser.ai_trial_budget_spent or 0)
+    blocked = spent >= trial_limit
+    return trial_key, True, trial_limit, spent, blocked
+
+
 @feuser_required
 def smart_create(request):
     feuser = request.feuser
-    if not feuser.anthropic_api_key:
+    api_key, is_trial, trial_limit, trial_spent, trial_blocked = _trial_state(feuser)
+
+    if not api_key:
         return redirect("profile")
 
     categories = list(Category.objects.filter(owning_feuser=feuser).values("uid", "title"))
@@ -557,7 +577,14 @@ def smart_create(request):
         "created_count": None,
         "categories": categories,
         "tags": tags,
+        "is_trial": is_trial,
+        "trial_limit": trial_limit,
+        "trial_spent": round(trial_spent, 1),
+        "trial_blocked": trial_blocked,
     }
+
+    if trial_blocked:
+        return render(request, "budget/smart_create.html", context)
 
     if request.method == "POST":
         action = request.POST.get("action", "parse")
@@ -580,7 +607,7 @@ def smart_create(request):
                 system_prompt = _SMART_CREATE_SYSTEM.format(catalog=catalog) + extra
                 try:
                     raw_items, usage = _call_claude(
-                        feuser.anthropic_api_key, system_prompt, description,
+                        api_key, system_prompt, description,
                         image_b64=image_b64, image_type=image_type,
                     )
                     if not isinstance(raw_items, list):
@@ -592,6 +619,12 @@ def smart_create(request):
                         context["preview_items"] = items
                         context["preview_json"] = json.dumps(items)
                     context["usage"] = usage
+                    if is_trial and usage:
+                        from decimal import Decimal as _Dec
+                        feuser.ai_trial_budget_spent = (feuser.ai_trial_budget_spent or _Dec(0)) + _Dec(str(usage["cost_cents"]))
+                        feuser.save(update_fields=["ai_trial_budget_spent"])
+                        context["trial_spent"] = round(float(feuser.ai_trial_budget_spent), 1)
+                        context["trial_blocked"] = float(feuser.ai_trial_budget_spent) >= trial_limit
                 except json.JSONDecodeError as exc:
                     import logging
                     logging.getLogger(__name__).error("smart_create JSON parse failure: %s", exc)
@@ -603,7 +636,6 @@ def smart_create(request):
                     elif isinstance(exc, _anthropic.PermissionDeniedError):
                         context["ai_error"] = "API key does not have permission to use this model. Please check your Anthropic account."
                     elif isinstance(exc, _anthropic.RateLimitError):
-                        # Anthropic returns 429 for both rate limits and exhausted credits
                         msg = str(exc).lower()
                         if "credit" in msg or "billing" in msg or "balance" in msg:
                             context["ai_error"] = "Insufficient Anthropic credits. Please top up your account at console.anthropic.com."

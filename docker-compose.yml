@@ -49,6 +49,8 @@ services:
       ENABLE_REGISTRATION: "TRUE"
       EMAIL_HOST: mailpit
       EMAIL_PORT: 1025
+      AI_TRIAL_API_KEY: ""
+      AI_TRIAL_USAGE_LIMIT: "5"
     depends_on:
       db:
         condition: service_healthy

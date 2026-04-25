@@ -23,3 +23,4 @@ class Command(BaseCommand):
         call_command("auto_settle_expenses", stdout=self.stdout)
 
         self.stdout.write(self.style.SUCCESS("\n=== done ==="))
+
