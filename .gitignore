@@ -38,3 +38,4 @@ static/dist/
 .idea/
 *.swp
 *.swo
+.claude/
