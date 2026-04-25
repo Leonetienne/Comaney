@@ -19,6 +19,8 @@
     .panel-savings     { background: var(--sav-dep-bg); color: var(--sav-dep-fg); }
     .panel-savings-neg { background: var(--sav-wit-bg); color: var(--sav-wit-fg); }
     .panel-left        { background: rgba(40,167,69,.12); color: #1a6b30; }
+    .panel-left-warn   { background: #fff3cd; color: #856404; }
+    .panel-left-danger { background: #f8d7da; color: #721c24; }
 
     @media (prefers-color-scheme: dark) {
         .panel-income      { background: #1a3326; color: #6ecf8a; }
@@ -26,6 +28,8 @@
         .panel-outstanding { background: #2b1a1c; color: #c97078; }
         .panel-savings     { background: var(--sav-dep-bg); color: var(--sav-dep-fg); }
         .panel-left        { background: #182b1f; color: #6ecf8a; }
+        .panel-left-warn   { background: var(--sav-wit-bg); color: var(--sav-wit-fg); }
+        .panel-left-danger { background: #331a1d; color: #cf7075; }
     }
 
     /* Charts */
@@ -78,7 +82,7 @@
         <div class="amount">{{ savings }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
 
-    <div class="panel panel-left">
+    <div class="panel {% if left < 0 %}panel-left-danger{% elif left < 100 %}panel-left-warn{% else %}panel-left{% endif %}">
         <div class="label">Left to spend</div>
         <div class="amount">{{ left }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
