@@ -234,6 +234,24 @@ def confirm_email_change(request, token):
     return render(request, "feusers/email_change_confirmed.html", {"user": user})
 
 
+def account_delete(request):
+    feuser = _get_session_feuser(request)
+    if not feuser:
+        return redirect("login")
+
+    error = None
+    if request.method == "POST":
+        password = request.POST.get("password", "")
+        if not feuser.check_password(password):
+            error = "Incorrect password."
+        else:
+            request.session.flush()
+            feuser.delete()
+            return redirect("hello_world")
+
+    return render(request, "feusers/account_delete.html", {"error": error})
+
+
 def _totp_qr_b64(uri: str) -> str:
     import io, base64, qrcode
     qr = qrcode.QRCode(box_size=6, border=2)

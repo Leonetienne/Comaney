@@ -110,6 +110,12 @@
         </form>
     </div>
 
+    <div class="profile-section profile-section--danger">
+        <h2>Danger zone</h2>
+        <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Permanently delete your account and all associated data.</p>
+        <a href="{% url 'account_delete' %}" class="btn btn-danger btn-sm">Delete account</a>
+    </div>
+
 </div>
 <script>
 document.querySelectorAll('.pw-eye').forEach(btn => {
