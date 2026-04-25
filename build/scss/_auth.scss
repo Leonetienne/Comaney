@@ -21,6 +21,29 @@ main.page-centered { text-align: center; }
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.pw-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  input { padding-right: 40px; }
+}
+
+.pw-eye {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  &:hover { color: var(--text); }
+}
+
 .success-msg {
   color: #155724;
   background: #d4edda;

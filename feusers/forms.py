@@ -8,7 +8,21 @@ class ProfileForm(forms.ModelForm):
         model = FeUser
         fields = ["first_name", "last_name", "currency", "anthropic_api_key"]
         labels = {"anthropic_api_key": "Anthropic API key"}
-        widgets = {"anthropic_api_key": forms.PasswordInput(render_value=True)}
+        widgets = {"anthropic_api_key": forms.PasswordInput(render_value=True, attrs={"autocomplete": "off"})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        key = self.instance.anthropic_api_key if self.instance and self.instance.pk else ""
+        if key:
+            # Send only a fixed mask + last 4 chars — the real key never reaches the frontend
+            self.initial["anthropic_api_key"] = "********" + key[-4:]
+
+    def clean_anthropic_api_key(self):
+        value = self.cleaned_data.get("anthropic_api_key", "")
+        if value.startswith("*"):
+            # Masked placeholder submitted — keep the existing key unchanged
+            return self.instance.anthropic_api_key
+        return value
 
 
 class ChangeEmailForm(forms.Form):
