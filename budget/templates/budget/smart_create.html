@@ -57,28 +57,36 @@
     .preview-hint { font-size: 0.82rem; color: var(--text-muted); margin: 0 0 12px; }
 
     /* Preview cards */
-    .preview-cards { display: flex; flex-direction: column; gap: 10px; }
+    .preview-cards { display: flex; flex-direction: column; gap: 12px; }
 
     .preview-card {
         background: var(--bg-surface); border: 1px solid var(--border);
         border-radius: 10px; padding: 14px 16px;
-        display: flex; flex-direction: column; gap: 10px;
+        display: flex; flex-direction: column; gap: 0;
         transition: opacity .15s;
     }
     .preview-card.deselected { opacity: 0.35; }
     .preview-card.deselected .pcard-body { pointer-events: none; }
 
-    .pcard-header { display: flex; align-items: center; justify-content: space-between; }
+    .pcard-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding-bottom: 12px; margin-bottom: 14px;
+        border-bottom: 1px solid var(--border-subtle);
+    }
     .pcard-include { display: flex; align-items: center; gap: 8px; font-size: 0.85rem;
         color: var(--text-muted); cursor: pointer; user-select: none; }
     .pcard-include input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 
-    .pcard-body { display: flex; flex-direction: column; gap: 8px; }
+    .pcard-body { display: flex; flex-direction: column; gap: 0; }
 
-    /* Rows inside the card body */
+    /* Rows inside the card body — row1 and row2 are one logical group */
     .pcard-row1, .pcard-row2 { display: grid; gap: 10px; }
-    .pcard-row1 { grid-template-columns: 1fr 1fr auto; }
-    .pcard-row2 { grid-template-columns: auto 1fr 1fr; }
+    .pcard-row1 { grid-template-columns: 1fr 1fr auto; margin-bottom: 8px; }
+    .pcard-row2 { grid-template-columns: auto 1fr; margin-bottom: 20px; }
+
+    /* Tags and Note are standalone sections */
+    .pcard-body > .pcard-field { margin-bottom: 16px; }
+    .pcard-body > .pcard-field:last-child { margin-bottom: 0; }
 
     .pcard-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .pcard-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
@@ -230,7 +238,7 @@
                             </div>
                         </div>
 
-                        <!-- Row 2: type, category, tags -->
+                        <!-- Row 2: type, category -->
                         <div class="pcard-row2">
                             <div class="pcard-field pcard-type-wrap type-{{ item.type }}">
                                 <span class="pcard-label">Type</span>
@@ -250,17 +258,21 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="pcard-field">
-                                <span class="pcard-label">Tags</span>
-                                {% if tags %}
-                                <select class="edit-select edit-tags" multiple size="3">
+                        </div>
+
+                        <!-- Row 3: tags (full width) -->
+                        {% if tags %}
+                        <div class="pcard-field">
+                            <span class="pcard-label">Tags</span>
+                            <div class="tag-cb-wrap">
+                                <ul>
                                     {% for tag in tags %}
-                                    <option value="{{ tag.uid }}" {% if tag.uid in item.tag_uids %}selected{% endif %}>{{ tag.title }}</option>
+                                    <li><label><input type="checkbox" class="edit-tag-cb" value="{{ tag.uid }}" {% if tag.uid in item.tag_uids %}checked{% endif %}>{{ tag.title }}</label></li>
                                     {% endfor %}
-                                </select>
-                                {% else %}<span style="color:var(--text-muted)">—</span>{% endif %}
+                                </ul>
                             </div>
                         </div>
+                        {% endif %}
 
                         <!-- Row 3: note -->
                         <div class="pcard-field">
@@ -427,10 +439,8 @@ document.getElementById('confirm-form').addEventListener('submit', function () {
         const catEl = card.querySelector('.edit-category');
         item.category_uid = catEl.value ? parseInt(catEl.value, 10) : null;
 
-        const tagEl = card.querySelector('.edit-tags');
-        item.tag_uids = tagEl
-            ? Array.from(tagEl.selectedOptions).map(o => parseInt(o.value, 10))
-            : [];
+        item.tag_uids = Array.from(card.querySelectorAll('.edit-tag-cb:checked'))
+            .map(cb => parseInt(cb.value, 10));
     });
 
     document.getElementById('preview_json_input').value = JSON.stringify(payload);

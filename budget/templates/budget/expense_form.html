@@ -49,8 +49,8 @@
             </div>
         </div>
 
-        <label for="{{ form.tags.id_for_label }}">{{ form.tags.label }}</label>
-        {{ form.tags }}
+        <label>{{ form.tags.label }}</label>
+        <div class="tag-cb-wrap">{{ form.tags }}</div>
         {% for e in form.tags.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
 
         <label for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>

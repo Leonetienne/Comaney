@@ -154,6 +154,26 @@
         .btn-secondary:hover { background: var(--bg-elevated); opacity: 1; }
         .btn-full { width: 100%; text-align: center; display: block; }
 
+        /* ── Tag checkbox pills ─────────────────────────────────────────── */
+        /* display:contents collapses Django's wrapper ul/li/div so labels
+           become direct flex items of .tag-cb-wrap */
+        .tag-cb-wrap {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+        }
+        .tag-cb-wrap ul, .tag-cb-wrap > div { display: contents; }
+        .tag-cb-wrap li, .tag-cb-wrap ul li, .tag-cb-wrap > div > div { display: contents; }
+        .tag-cb-wrap label {
+            display: inline-flex; align-items: center;
+            padding: 4px 12px; border-radius: 20px;
+            background: var(--bg-elevated); border: 1px solid var(--border);
+            font-size: 0.82rem; color: var(--text-subtle);
+            cursor: pointer; user-select: none;
+            transition: background .12s, border-color .12s, color .12s;
+        }
+        .tag-cb-wrap label:hover { border-color: var(--text-muted); color: var(--text); }
+        .tag-cb-wrap input[type=checkbox] { display: none; }
+        .tag-cb-wrap label:has(input:checked) { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+
         /* ── Expense / scheduled cards ──────────────────────────────────── */
         .exp-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
         .exp-card {

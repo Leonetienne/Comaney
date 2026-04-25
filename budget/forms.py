@@ -27,7 +27,7 @@ class ExpenseForm(forms.ModelForm):
             "value": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             "note": forms.Textarea(attrs={"rows": 3}),
             "date_due": forms.DateInput(attrs={"type": "date"}),
-            "tags": forms.SelectMultiple(),
+            "tags": forms.CheckboxSelectMultiple(),
         }
         labels = {
             "date_due": "Due date",
@@ -56,7 +56,7 @@ class ScheduledExpenseForm(forms.ModelForm):
             "repeat_base_date": forms.DateInput(attrs={"type": "date"}),
             "repeat_every_factor": forms.NumberInput(attrs={"min": "1"}),
             "note": forms.Textarea(attrs={"rows": 3}),
-            "tags": forms.SelectMultiple(),
+            "tags": forms.CheckboxSelectMultiple(),
         }
         labels = {
             "repeat_every_factor": "Every",
