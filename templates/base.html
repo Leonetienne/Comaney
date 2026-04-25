@@ -23,6 +23,17 @@
     </main>
     {% endblock %}
     {% include "partials/_footer.html" %}
+
+    <div class="cdialog-backdrop" id="cdialog-backdrop" aria-hidden="true">
+        <div class="cdialog" role="dialog" aria-modal="true">
+            <p class="cdialog-msg" id="cdialog-msg"></p>
+            <div class="cdialog-actions">
+                <button class="btn btn-danger" id="cdialog-ok">Delete</button>
+                <button class="btn btn-secondary" id="cdialog-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
     (function() {
         const ham = document.getElementById('hamburger');
@@ -32,6 +43,46 @@
         ham.addEventListener('click', toggle);
         overlay.addEventListener('click', toggle);
     })();
+
+    document.addEventListener('submit', function(e) {
+        const form = e.target.closest('.delete-form');
+        if (!form) return;
+        e.preventDefault();
+        confirmDialog('Delete "' + (form.dataset.title || 'this item') + '"?')
+            .then(function() { form.submit(); })
+            .catch(function() {});
+    });
+
+    window.confirmDialog = function(message, okLabel) {
+        return new Promise(function(resolve, reject) {
+            const backdrop = document.getElementById('cdialog-backdrop');
+            const msg      = document.getElementById('cdialog-msg');
+            const okBtn    = document.getElementById('cdialog-ok');
+            const cancelBtn = document.getElementById('cdialog-cancel');
+
+            msg.textContent = message;
+            if (okLabel) okBtn.textContent = okLabel;
+            backdrop.classList.add('cdialog-visible');
+            okBtn.focus();
+
+            function cleanup() {
+                backdrop.classList.remove('cdialog-visible');
+                okBtn.removeEventListener('click', onOk);
+                cancelBtn.removeEventListener('click', onCancel);
+                backdrop.removeEventListener('click', onBackdrop);
+                document.removeEventListener('keydown', onKey);
+            }
+            function onOk()       { cleanup(); resolve(); }
+            function onCancel()   { cleanup(); reject(); }
+            function onBackdrop(e) { if (e.target === backdrop) { cleanup(); reject(); } }
+            function onKey(e)     { if (e.key === 'Escape') { cleanup(); reject(); } }
+
+            okBtn.addEventListener('click', onOk);
+            cancelBtn.addEventListener('click', onCancel);
+            backdrop.addEventListener('click', onBackdrop);
+            document.addEventListener('keydown', onKey);
+        });
+    };
     </script>
 </body>
 </html>

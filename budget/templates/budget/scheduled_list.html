@@ -25,7 +25,7 @@
 
         <div class="exp-actions">
             <a href="{% url 'budget:scheduled_edit' s.uid %}" class="btn btn-sm btn-secondary">Edit</a>
-            <form method="post" action="{% url 'budget:scheduled_delete' s.uid %}" onsubmit="return confirm('Delete \'{{ s.title|escapejs }}\'?')">
+            <form method="post" action="{% url 'budget:scheduled_delete' s.uid %}" class="delete-form" data-title="{{ s.title|escapejs }}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>
             </form>

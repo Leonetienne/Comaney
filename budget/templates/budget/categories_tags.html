@@ -159,7 +159,7 @@ function setupInput(type) {
 
 // ── Delete ───────────────────────────────────────────────────────────────────
 async function deleteItem(type, uid, title) {
-    if (!confirm(`Delete "${title}"?\nIt will be removed from all related expenses.`)) return;
+    try { await confirmDialog(`Delete "${title}"?\nIt will be removed from all related expenses.`); } catch { return; }
     const res = await fetch(deleteUrls[type](uid), {
         method: 'POST',
         headers: { 'X-CSRFToken': csrf },

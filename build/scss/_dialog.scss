@@ -1,0 +1,36 @@
+.cdialog-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+
+  &.cdialog-visible {
+    display: flex;
+  }
+}
+
+.cdialog {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 28px 28px 20px;
+  max-width: 360px;
+  width: calc(100% - 40px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, .18);
+}
+
+.cdialog-msg {
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.cdialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
