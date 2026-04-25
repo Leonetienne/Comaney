@@ -1,5 +1,11 @@
 *, *::before, *::after { box-sizing: border-box; }
 
+a {
+  color: var(--link);
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
+
 body {
   margin: 0;
   font-family: sans-serif;
