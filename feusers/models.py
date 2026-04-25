@@ -20,6 +20,7 @@ class FeUser(models.Model):
     password_reset_expires = models.DateTimeField(null=True, blank=True)
     currency = models.CharField(max_length=10, blank=True, default="€")
     anthropic_api_key = models.CharField(max_length=255, blank=True)
+    ai_custom_instructions = models.TextField(blank=True)
     pending_email = models.EmailField(blank=True)
     email_change_token = models.CharField(max_length=64, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)

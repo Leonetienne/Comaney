@@ -568,7 +568,9 @@ def smart_create(request):
                 context["ai_error"] = "Please enter a description or attach an image."
             else:
                 catalog = _build_catalog(feuser)
-                system_prompt = _SMART_CREATE_SYSTEM.format(catalog=catalog)
+                custom = feuser.ai_custom_instructions.strip()
+                extra = f"\n\nUser's custom instructions (follow these when assigning categories/tags):\n{custom}" if custom else ""
+                system_prompt = _SMART_CREATE_SYSTEM.format(catalog=catalog) + extra
                 try:
                     raw_items, usage = _call_claude(
                         feuser.anthropic_api_key, system_prompt, description,
