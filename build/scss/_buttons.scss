@@ -1,0 +1,36 @@
+.btn {
+  display: inline-block;
+  padding: 8px 18px;
+  margin-top: 0;
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover { opacity: .82; }
+
+  &-sm { padding: 4px 12px; font-size: 0.85rem; }
+
+  &-danger {
+    background: #c00;
+    color: #fff;
+    &:hover { background: #a00; opacity: 1; }
+  }
+
+  &-secondary {
+    background: var(--bg-input);
+    color: var(--text);
+    border-color: var(--input-border);
+    &:hover { background: var(--bg-elevated); opacity: 1; }
+  }
+
+  &-full {
+    width: 100%;
+    text-align: center;
+    display: block;
+  }
+}

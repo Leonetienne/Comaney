@@ -1,0 +1,88 @@
+.app-layout {
+  display: flex;
+  min-height: calc(100vh - 56px - 45px);
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 56px 0 0 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 149;
+
+  body.nav-open & { display: block; }
+}
+
+.sidebar {
+  width: 180px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  padding: 20px 0 20px 12px;
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    li {
+      a {
+        display: block;
+        padding: 10px 24px;
+        text-decoration: none;
+        color: var(--text-subtle);
+        font-size: 0.92rem;
+        border-left: 3px solid transparent;
+
+        &:hover {
+          color: var(--text);
+          background: var(--bg-elevated);
+        }
+      }
+
+      &.active a {
+        color: var(--text);
+        font-weight: 600;
+        border-left-color: var(--accent);
+        background: var(--bg-elevated);
+      }
+
+      &:first-child .sidebar-section-label { padding-top: 4px; }
+    }
+  }
+}
+
+.sidebar-section-label {
+  display: block;
+  padding: 16px 24px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-muted);
+}
+
+.app-main {
+  flex: 1;
+  padding: 24px 28px;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.app-content { max-width: 1400px; }
+
+// Auth pages (login, register)
+main {
+  max-width: 860px;
+  margin: 40px auto;
+  padding: 0 24px;
+}
+
+footer {
+  border-top: 1px solid var(--border);
+  padding: 14px 24px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+  background: var(--bg);
+}

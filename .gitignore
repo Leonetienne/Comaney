@@ -6,7 +6,6 @@ __pycache__/
 .Python
 *.egg-info/
 dist/
-build/
 *.egg
 
 # Django
@@ -27,6 +26,12 @@ Deployment/.env.example
 # OS
 .DS_Store
 Thumbs.db
+
+# Node
+node_modules/
+
+# Compiled assets (built from build/ — do not edit directly)
+static/dist/
 
 # IDE
 .vscode/

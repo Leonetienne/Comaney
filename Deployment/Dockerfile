@@ -4,16 +4,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     default-libmysqlclient-dev \
     gcc \
     pkg-config \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt package*.json ./
+RUN pip install --no-cache-dir -r requirements.txt && npm ci
 
 COPY . .
 
-RUN chmod +x entrypoint.sh
+RUN npm run build:css && chmod +x entrypoint.sh
 
 EXPOSE 8000
 

@@ -1,0 +1,11 @@
+{
+  "name": "comaney",
+  "private": true,
+  "scripts": {
+    "build:css": "sass build/scss/main.scss static/dist/main.css --style=compressed --no-source-map",
+    "watch:css": "sass --watch build/scss/main.scss:static/dist/main.css"
+  },
+  "devDependencies": {
+    "sass": "^1.77.6"
+  }
+}

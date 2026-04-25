@@ -3,7 +3,10 @@
         <button class="hamburger" id="hamburger" aria-label="Menu">
             <span></span><span></span><span></span>
         </button>
-        <a class="brand" href="{% url 'hello_world' %}">Comaney</a>
+        {% load static %}
+        <a class="brand" href="{% url 'hello_world' %}">
+            <img src="{% static 'favicon.svg' %}" alt="" class="brand-logo">Comaney
+        </a>
     </div>
     <nav>
         {% if current_feuser %}

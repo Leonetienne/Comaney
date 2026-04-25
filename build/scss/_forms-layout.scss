@@ -1,0 +1,27 @@
+.form-wrap { max-width: 600px; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+
+  @media (max-width: 500px) { grid-template-columns: 1fr; gap: 0; }
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+    gap: 0;
+    div[style*="grid-column"] { grid-column: 1; }
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+}

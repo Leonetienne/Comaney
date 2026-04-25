@@ -2,26 +2,6 @@
 
 {% block title %}Comaney – Categories &amp; Tags{% endblock %}
 
-{% block extra_head %}
-<style>
-    .ct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 8px; }
-    .ct-panel h2 { font-size: 1rem; font-weight: 700; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-subtle); }
-    .ct-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; min-height: 48px; background: var(--bg); }
-    .ct-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid var(--border-subtle); font-size: 0.95rem; gap: 8px; }
-    .ct-item:last-child { border-bottom: none; }
-    .ct-item:hover { background: var(--bg-surface); }
-    .ct-name { flex: 1; cursor: text; border-radius: 3px; padding: 1px 3px; margin: -1px -3px; }
-    .ct-name:hover { background: var(--bg-elevated); }
-    .ct-name-input { flex: 1; border: 1px solid var(--input-border); border-radius: 3px; padding: 2px 6px; font-size: inherit; font-family: inherit; background: var(--bg-input); color: var(--text); outline: none; }
-    .ct-name-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(128,128,128,.15); }
-    .ct-delete { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 1.1rem; line-height: 1; padding: 0 4px; flex-shrink: 0; }
-    .ct-delete:hover { color: var(--error); }
-    .ct-add { margin-top: 8px; }
-    .ct-add input { margin-top: 0; border-radius: 6px; }
-    .ct-empty { padding: 12px 14px; color: var(--text-muted); font-style: italic; font-size: 0.9rem; }
-    @media (max-width: 600px) { .ct-grid { grid-template-columns: 1fr; gap: 28px; } }
-</style>
-{% endblock %}
 
 {% block content %}
 <h1>Categories &amp; Tags</h1>

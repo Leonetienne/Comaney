@@ -1,0 +1,41 @@
+label {
+  display: block;
+  margin-top: 16px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+input[type=text],
+input[type=email],
+input[type=password],
+input[type=number],
+input[type=date],
+textarea,
+select {
+  width: 100%;
+  padding: 8px 10px;
+  margin-top: 4px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--bg-input);
+  color: var(--text);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+textarea { resize: vertical; }
+select[multiple] { height: auto; }
+
+.error-msg {
+  color: var(--error);
+  font-size: 0.875rem;
+  margin-top: 4px;
+}

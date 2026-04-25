@@ -1,0 +1,43 @@
+// display:contents collapses Django's CheckboxSelectMultiple wrappers
+// (ul/li/div) so labels become direct flex children of .tag-cb-wrap
+.tag-cb-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+
+  ul,
+  > div { display: contents; }
+
+  li,
+  ul li,
+  > div > div { display: contents; }
+
+  input[type=checkbox] { display: none; }
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    font-size: 0.82rem;
+    color: var(--text-subtle);
+    cursor: pointer;
+    user-select: none;
+    margin-top: 0; // override global label { margin-top: 16px }
+    transition: background .12s, border-color .12s, color .12s;
+
+    &:hover {
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+
+    &:has(input:checked) {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: transparent;
+    }
+  }
+}

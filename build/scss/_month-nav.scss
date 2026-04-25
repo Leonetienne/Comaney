@@ -1,0 +1,33 @@
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.month-nav__label {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 160px;
+  text-align: center;
+}
+
+.month-nav__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  transition: background .15s;
+
+  &:hover { background: var(--bg-elevated); }
+  &--disabled { opacity: .35; pointer-events: none; }
+}

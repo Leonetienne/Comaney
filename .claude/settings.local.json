@@ -37,7 +37,12 @@
       "Bash(git -C /Users/agent/private-work/Comoney stash)",
       "Bash(git -C /Users/agent/private-work/Comoney filter-branch -f --env-filter ' *)",
       "Bash(git -C /Users/agent/private-work/Comoney stash pop)",
-      "Bash(xargs sed *)"
+      "Bash(xargs sed *)",
+      "Bash(git -C /Users/agent/private-work/Comoney add static/.gitkeep comaney/settings.py)",
+      "Bash(git -C /Users/agent/private-work/Comoney status)",
+      "Bash(git add *)",
+      "Bash(python3 -c \"import sys; print\\(repr\\(sys.stdin.read\\(\\)[:300]\\)\\)\")",
+      "Bash(npm run *)"
     ]
   }
 }

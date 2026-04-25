@@ -1,0 +1,22 @@
+@media (max-width: 768px) {
+  header { padding: 0 16px; }
+
+  .hamburger { display: flex; }
+
+  .sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    height: calc(100vh - 56px);
+    width: 240px;
+    z-index: 150;
+    transform: translateX(-110%);
+    transition: transform .25s ease;
+    overflow-y: auto;
+
+    body.nav-open & { transform: translateX(0); }
+  }
+
+  .app-main { padding: 20px 16px; }
+  main      { padding: 0 16px; margin: 24px auto; }
+}

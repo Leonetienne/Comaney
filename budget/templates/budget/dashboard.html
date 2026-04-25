@@ -2,60 +2,6 @@
 
 {% block title %}Comaney – Dashboard{% endblock %}
 
-{% block extra_head %}
-<style>
-    .dash-heading { margin: 0 0 24px; font-size: 1rem; color: var(--text-muted); font-weight: 500; }
-
-    /* Summary panels */
-    .panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-    .panel { border-radius: 12px; padding: 24px 20px 20px; }
-    .panel .label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; }
-    .panel .amount { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; word-break: break-all; }
-    .panel .amount .currency { font-size: 1.1rem; font-weight: 700; margin-left: 2px; }
-
-    .panel-income      { background: #d4edda; color: #155724; }
-    .panel-paid        { background: #f8d7da; color: #721c24; }
-    .panel-outstanding { background: rgba(220,53,69,.12); color: #a0303a; }
-    .panel-savings     { background: var(--sav-dep-bg); color: var(--sav-dep-fg); }
-    .panel-savings-neg { background: var(--sav-wit-bg); color: var(--sav-wit-fg); }
-    .panel-left        { background: rgba(40,167,69,.12); color: #1a6b30; }
-    .panel-left-warn   { background: #fff3cd; color: #856404; }
-    .panel-left-danger { background: #f8d7da; color: #721c24; }
-
-    @media (prefers-color-scheme: dark) {
-        .panel-income      { background: #1a3326; color: #6ecf8a; }
-        .panel-paid        { background: #331a1d; color: #cf7075; }
-        .panel-outstanding { background: #2b1a1c; color: #c97078; }
-        .panel-savings     { background: var(--sav-dep-bg); color: var(--sav-dep-fg); }
-        .panel-left        { background: #182b1f; color: #6ecf8a; }
-        .panel-left-warn   { background: var(--sav-wit-bg); color: var(--sav-wit-fg); }
-        .panel-left-danger { background: #331a1d; color: #cf7075; }
-    }
-
-    /* Charts */
-    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px; }
-    .chart-card {
-        background: var(--bg-surface); border: 1px solid var(--border);
-        border-radius: 10px; padding: 24px;
-    }
-    .chart-card h2 {
-        font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
-        letter-spacing: .06em; color: var(--text-muted); margin: 0 0 20px;
-    }
-    .chart-empty { color: var(--text-muted); font-size: 0.9rem; font-style: italic; padding: 20px 0; }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-        .panels { grid-template-columns: 1fr 1fr; }
-        .charts { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 480px) {
-        .panels { grid-template-columns: 1fr 1fr; gap: 10px; }
-        .panel { padding: 16px 14px; }
-        .panel .amount { font-size: 1.5rem; }
-    }
-</style>
-{% endblock %}
 
 {% block content %}
 <h1 style="margin-bottom:16px;">Dashboard</h1>
