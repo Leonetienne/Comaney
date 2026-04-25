@@ -303,31 +303,63 @@ def scheduled_delete(request, uid):
 
 _SMART_CREATE_SYSTEM = """You are a financial data-entry assistant for a budgeting app.
 The user may provide an image (receipt, invoice, order confirmation, etc.), a text description, or both.
-Your job is to extract every expense or income item and return a JSON array of expense objects.
+Your job is to extract expense and income items and return a JSON array of expense objects.
+
+CRITICAL GROUPING RULE — read this carefully:
+All line items that share the same category AND the same tags MUST be merged into a single record.
+Sum their values. Use a short collective title (e.g. "Groceries", "Hygiene", "Drinks").
+This applies without exception — bottle deposits (Pfand), surcharges, or minor add-ons that belong
+to the same category/tag group must be absorbed into that group's record, not given their own entry.
+The goal is one record per (category, tags) combination, never one record per line item.
 
 If an image is provided:
-- Read every distinct line item from the receipt or document.
+- Read every line item, assign each a category and tags, then apply the grouping rule above.
+- A supermarket receipt will typically produce very few records (e.g. Groceries, Hygiene, Drinks, Household), not one per product.
+- The payee is the store or vendor name from the receipt header.
 - Use the user's text (if any) as additional context or filtering instructions.
-- Group items intelligently using the available categories and tags: for example, a supermarket receipt may contain groceries, household cleaning products, and personal care items — split them into separate expense objects assigned to fitting categories rather than one combined total. Items of the same category and tags should stay within the same expense item!
-- The payee is typically the store or vendor name shown on the receipt header.
 
 Rules:
-- Return ONLY a valid JSON array — no prose, no markdown, no code fences.
+- Return ONLY a valid JSON array. Your entire response must start with [ and end with ]. No prose, no reasoning, no markdown, no code fences — just the raw JSON array.
 - Each object must have exactly these keys:
-    "title"        — as short as possible (2–4 words max, e.g. "Groceries", "Netflix sub", "Diesel")
+    "title"        — collective name for the group, as short as possible (1–3 words)
     "type"         — "expense", "income", "savings_dep", or "savings_wit"
-    "value"        — positive decimal number (e.g. 9.99)
+    "value"        — positive decimal, sum of all merged line items in this group
     "payee"        — merchant or person name, or "" if unknown
     "category_uid" — integer uid from the Categories list below, or null if none fits
     "tag_uids"     — array of integer uids from the Tags list below (can be [])
     "note"         — any extra context worth keeping, or ""
 - Only use category_uid and tag_uids values that appear in the lists below.
-- If the user mentions a single lump sum for multiple things, split them into separate objects.
-- Default type to "expense" unless the description clearly indicates income, a savings deposit ("savings_dep"), or a savings withdrawal ("savings_wit"). If savings were used to purchase an item, split the price between upfront payment (if any) and savings. 
+- If the user describes a lump sum for categorically different things, split by category/tag group.
+- Default type to "expense" unless the description clearly indicates income or savings movement.
 
 {catalog}"""
 
 _ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+_IMAGE_MAX_PX = 1600  # longest side in pixels before downscaling
+_IMAGE_QUALITY = 82   # JPEG compression quality after resize
+
+
+def _prepare_image(image_file) -> tuple[str, str]:
+    """Downscale and JPEG-compress an uploaded image, return (base64, mime_type)."""
+    import base64 as _base64
+    import io
+    from PIL import Image
+
+    img = Image.open(image_file)
+
+    # Convert palette/RGBA modes so JPEG save works
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+
+    # Downscale if either dimension exceeds the limit
+    w, h = img.size
+    if max(w, h) > _IMAGE_MAX_PX:
+        scale = _IMAGE_MAX_PX / max(w, h)
+        img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=_IMAGE_QUALITY, optimize=True)
+    return _base64.b64encode(buf.getvalue()).decode("utf-8"), "image/jpeg"
 
 
 def _build_catalog(feuser) -> str:
@@ -385,8 +417,42 @@ def _call_claude(
         ],
         messages=[{"role": "user", "content": content}],
     )
-    raw = response.content[0].text.strip()
-    items = json.loads(raw)
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+
+    # Find the first text block — content may contain thinking or other block types
+    raw = ""
+    for block in response.content:
+        if getattr(block, "type", None) == "text":
+            raw = block.text.strip()
+            break
+
+    _log.debug("smart_create raw response: %r", raw)
+
+    if not raw:
+        _log.error("smart_create: empty response. Full content: %r", response.content)
+        raise ValueError(f"Claude returned an empty response. Content blocks: {[getattr(b, 'type', '?') for b in response.content]}")
+
+    # Strip markdown code fences if the model wrapped the JSON despite instructions
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[-1]
+        raw = raw.rsplit("```", 1)[0].strip()
+
+    # Extract JSON array even if the model prepended reasoning prose
+    if not raw.startswith("["):
+        start = raw.find("[")
+        end   = raw.rfind("]")
+        if start != -1 and end != -1 and end > start:
+            raw = raw[start:end + 1]
+
+    if not raw:
+        raise ValueError("Claude returned only a code fence with no content inside.")
+
+    try:
+        items = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        _log.error("smart_create JSON parse failure. raw=%r exc=%s", raw, exc)
+        raise ValueError(f"JSON parse failed ({exc}) — raw response was: {raw!r}") from exc
 
     u = response.usage
     input_tok        = getattr(u, "input_tokens", 0)
@@ -408,7 +474,7 @@ def _call_claude(
         "cache_read_tokens":  cache_read_tok,
         "total_tokens":      input_tok + output_tok + cache_write_tok + cache_read_tok,
         "cost_usd":          round(cost, 6),
-        "cost_str":          f"${cost:.4f}" if cost >= 0.0001 else "<$0.0001",
+        "cost_cents":        round(cost * 100, 1),
     }
     return items, usage
 
@@ -496,10 +562,7 @@ def smart_create(request):
             image_type = "image/jpeg"
             image_file = request.FILES.get("image_file")
             if image_file:
-                image_type = image_file.content_type or "image/jpeg"
-                if image_type not in _ALLOWED_IMAGE_TYPES:
-                    image_type = "image/jpeg"
-                image_b64 = _base64.b64encode(image_file.read()).decode("utf-8")
+                image_b64, image_type = _prepare_image(image_file)
             context["description"] = description
             if not description and not image_b64:
                 context["ai_error"] = "Please enter a description or attach an image."
@@ -520,10 +583,33 @@ def smart_create(request):
                         context["preview_items"] = items
                         context["preview_json"] = json.dumps(items)
                     context["usage"] = usage
-                except json.JSONDecodeError:
-                    context["ai_error"] = "Claude returned an unexpected format. Please rephrase and try again."
+                except json.JSONDecodeError as exc:
+                    import logging
+                    logging.getLogger(__name__).error("smart_create JSON parse failure: %s", exc)
+                    context["ai_error"] = f"Claude returned unexpected output (JSONDecodeError: {exc})."
                 except Exception as exc:
-                    context["ai_error"] = f"AI error: {exc}"
+                    import anthropic as _anthropic
+                    if isinstance(exc, _anthropic.AuthenticationError):
+                        context["ai_error"] = "Invalid API key. Please update it in your profile."
+                    elif isinstance(exc, _anthropic.PermissionDeniedError):
+                        context["ai_error"] = "API key does not have permission to use this model. Please check your Anthropic account."
+                    elif isinstance(exc, _anthropic.RateLimitError):
+                        # Anthropic returns 429 for both rate limits and exhausted credits
+                        msg = str(exc).lower()
+                        if "credit" in msg or "billing" in msg or "balance" in msg:
+                            context["ai_error"] = "Insufficient Anthropic credits. Please top up your account at console.anthropic.com."
+                        else:
+                            context["ai_error"] = "Anthropic rate limit reached. Please wait a moment and try again."
+                    elif isinstance(exc, _anthropic.APIConnectionError):
+                        context["ai_error"] = "Could not reach the Anthropic API. Please check your internet connection."
+                    elif isinstance(exc, _anthropic.APIStatusError):
+                        msg = str(exc).lower()
+                        if "credit" in msg or "billing" in msg or "balance" in msg:
+                            context["ai_error"] = "Insufficient Anthropic credits. Please top up your account at console.anthropic.com."
+                        else:
+                            context["ai_error"] = f"Anthropic API error {exc.status_code}: {exc.message}"
+                    else:
+                        context["ai_error"] = f"Unexpected error: {exc}"
 
         elif action == "confirm":
             preview_json = request.POST.get("preview_json", "")

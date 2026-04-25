@@ -50,12 +50,7 @@
 
     {% if usage %}
     <div class="usage-pill">
-        <span class="cost">{{ usage.cost_str }}</span>
-        <span class="tokens">
-            {{ usage.input_tokens }} in · {{ usage.output_tokens }} out
-            {% if usage.cache_write_tokens %} · {{ usage.cache_write_tokens }} cache write{% endif %}
-            {% if usage.cache_read_tokens %} · {{ usage.cache_read_tokens }} cache hit{% endif %}
-        </span>
+        <span class="cost">API cost: {{ usage.cost_cents }} ¢</span>
     </div>
     {% endif %}
 
