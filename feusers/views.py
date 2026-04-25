@@ -76,6 +76,9 @@ def login_view(request):
                 error = "Invalid email or password."
             elif not user.is_confirmed:
                 error = "Please confirm your email address first."
+            elif user.totp_enabled:
+                request.session["totp_pending_id"] = user.pk
+                return redirect("totp_verify")
             else:
                 request.session["feuser_id"] = user.pk
                 return redirect("hello_world")
@@ -229,6 +232,90 @@ def confirm_email_change(request, token):
     user.email_change_token = ""
     user.save(update_fields=["email", "pending_email", "email_change_token"])
     return render(request, "feusers/email_change_confirmed.html", {"user": user})
+
+
+def _totp_qr_b64(uri: str) -> str:
+    import io, base64, qrcode
+    qr = qrcode.QRCode(box_size=6, border=2)
+    qr.add_data(uri)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def totp_setup(request):
+    feuser = _get_session_feuser(request)
+    if not feuser:
+        return redirect("login")
+
+    import pyotp
+    error = None
+
+    if request.method == "POST":
+        code   = request.POST.get("code", "").strip()
+        secret = request.session.get("totp_setup_secret", "")
+        if not secret:
+            return redirect("totp_setup")
+        totp = pyotp.TOTP(secret)
+        if totp.verify(code, valid_window=1):
+            feuser.totp_secret  = secret
+            feuser.totp_enabled = True
+            feuser.save(update_fields=["totp_secret", "totp_enabled"])
+            del request.session["totp_setup_secret"]
+            return redirect("profile")
+        error = "Invalid code — please try again."
+    else:
+        secret = pyotp.random_base32()
+        request.session["totp_setup_secret"] = secret
+
+    secret = request.session["totp_setup_secret"]
+    uri    = pyotp.totp.TOTP(secret).provisioning_uri(feuser.email, issuer_name="Comaney")
+    return render(request, "feusers/totp_setup.html", {
+        "qr_b64": _totp_qr_b64(uri),
+        "secret": secret,
+        "error": error,
+    })
+
+
+def totp_disable(request):
+    feuser = _get_session_feuser(request)
+    if not feuser or not feuser.totp_enabled:
+        return redirect("profile")
+
+    import pyotp
+    error = None
+    if request.method == "POST":
+        code = request.POST.get("code", "").strip()
+        if pyotp.TOTP(feuser.totp_secret).verify(code, valid_window=1):
+            feuser.totp_secret  = ""
+            feuser.totp_enabled = False
+            feuser.save(update_fields=["totp_secret", "totp_enabled"])
+            return redirect("profile")
+        error = "Invalid code."
+    return render(request, "feusers/totp_disable.html", {"error": error})
+
+
+def totp_verify(request):
+    pending_id = request.session.get("totp_pending_id")
+    if not pending_id:
+        return redirect("login")
+
+    import pyotp
+    error = None
+    if request.method == "POST":
+        code = request.POST.get("code", "").strip()
+        try:
+            user = FeUser.objects.get(pk=pending_id, is_active=True, totp_enabled=True)
+        except FeUser.DoesNotExist:
+            return redirect("login")
+        if pyotp.TOTP(user.totp_secret).verify(code, valid_window=1):
+            del request.session["totp_pending_id"]
+            request.session["feuser_id"] = user.pk
+            return redirect("hello_world")
+        error = "Invalid code — please try again."
+    return render(request, "feusers/totp_verify.html", {"error": error})
 
 
 def confirm_email(request, token):

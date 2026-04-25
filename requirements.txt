@@ -4,3 +4,5 @@ anthropic>=0.40.0
 gunicorn==22.0.0
 whitenoise==6.7.0
 Pillow>=10.0.0
+pyotp>=2.9.0
+qrcode[pil]>=7.4

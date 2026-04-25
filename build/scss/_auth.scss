@@ -44,6 +44,50 @@ main.page-centered { text-align: center; }
   &:hover { color: var(--text); }
 }
 
+.totp-qr-wrap {
+  margin: 20px 0 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.totp-qr {
+  width: 200px;
+  height: 200px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.totp-secret-details {
+  margin-bottom: 20px;
+  font-size: 0.88rem;
+  color: var(--text-subtle);
+
+  summary { cursor: pointer; }
+}
+
+.totp-secret {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  word-break: break-all;
+}
+
+.totp-status {
+  font-weight: 600;
+  margin: 0 0 8px;
+
+  &--on  { color: #2a7a3b; }
+  &--off { color: var(--text-muted); }
+
+  @media (prefers-color-scheme: dark) {
+    &--on { color: #6ecf8a; }
+  }
+}
+
 .month-offset-preview {
   margin: 4px 0 0;
   font-size: 0.78rem;

@@ -59,6 +59,19 @@
     </div>
 
     <div class="profile-section">
+        <h2>Two-factor authentication</h2>
+        {% if current_feuser.totp_enabled %}
+        <p class="totp-status totp-status--on">✓ Enabled</p>
+        <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Your account is protected with an authenticator app.</p>
+        <a href="{% url 'totp_disable' %}" class="btn btn-danger btn-sm">Disable 2FA</a>
+        {% else %}
+        <p class="totp-status totp-status--off">Not enabled</p>
+        <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Add an extra layer of security to your account.</p>
+        <a href="{% url 'totp_setup' %}" class="btn">Set up 2FA</a>
+        {% endif %}
+    </div>
+
+    <div class="profile-section">
         <h2>Change email</h2>
         <p style="margin:0 0 12px; font-size:0.95rem;">Current: <strong>{{ current_feuser.email }}</strong></p>
         {% if success == "email" %}

@@ -21,6 +21,8 @@ class FeUser(models.Model):
     currency = models.CharField(max_length=10, blank=True, default="€")
     anthropic_api_key = models.CharField(max_length=255, blank=True)
     ai_custom_instructions = models.TextField(blank=True)
+    totp_secret = models.CharField(max_length=64, blank=True)
+    totp_enabled = models.BooleanField(default=False)
     ai_trial_budget_spent = models.DecimalField(max_digits=8, decimal_places=4, default=0)
     ai_trial_budget_last_reset = models.DateTimeField(null=True, blank=True)
     month_start_day = models.SmallIntegerField(default=1)
