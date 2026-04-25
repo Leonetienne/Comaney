@@ -5,7 +5,7 @@ services:
     environment:
       MARIADB_ROOT_PASSWORD: rootpassword
       MARIADB_DATABASE: comaney
-      MARIADB_USER: comaney
+      MARIADB_USER: comoney
       MARIADB_PASSWORD: comaney
     volumes:
       - db_data:/var/lib/mysql
@@ -22,10 +22,19 @@ services:
       - "1025:1025"
 
   web:
-    build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    image: python:3.12-slim
+    command: >
+      bash -c "
+        apt-get update -qq &&
+        apt-get install -y -qq --no-install-recommends default-libmysqlclient-dev gcc pkg-config &&
+        pip install -q -r requirements.txt &&
+        python manage.py migrate --noinput &&
+        python manage.py runserver 0.0.0.0:8000
+      "
     volumes:
       - .:/app
+      - pip_packages:/usr/local/lib/python3.12/site-packages
+    working_dir: /app
     ports:
       - "8080:8000"
     environment:
@@ -33,7 +42,7 @@ services:
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: comaney
-      DB_USER: comaney
+      DB_USER: comoney
       DB_PASSWORD: comaney
       SITE_URL: http://localhost:8080
       DEBUG: "TRUE"
@@ -46,3 +55,4 @@ services:
 
 volumes:
   db_data:
+  pip_packages:
