@@ -1,6 +1,12 @@
 main.page-narrow   { max-width: 480px; }
 main.page-centered { text-align: center; }
 
+.pow-status {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

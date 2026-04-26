@@ -6,8 +6,9 @@
 
 {% block content %}
 <h1>Create an account</h1>
-<form method="post" novalidate>
+<form method="post" novalidate id="register-form">
     {% csrf_token %}
+    <input type="hidden" name="pow_nonce" id="pow-nonce" value="">
     {% for field in form %}
     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
     {{ field }}
@@ -15,6 +16,62 @@
     <p class="error-msg">{{ error }}</p>
     {% endfor %}
     {% endfor %}
-    <div class="form-actions"><button type="submit" class="btn btn-full">Create account</button></div>
+    {% if pow_error %}<p class="error-msg">{{ pow_error }}</p>{% endif %}
+    <p class="pow-status" id="pow-status">⏳ Solving captcha, please wait...</p>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-full" id="submit-btn" disabled>Create account</button>
+    </div>
 </form>
+
+<script>
+(function () {
+    const CHALLENGE   = '{{ pow_challenge }}';
+    const DIFFICULTY  = {{ pow_difficulty }};
+    const nonceInput  = document.getElementById('pow-nonce');
+    const submitBtn   = document.getElementById('submit-btn');
+    const statusEl    = document.getElementById('pow-status');
+
+    const workerSrc = `
+function meetsTarget(bytes, bits) {
+    for (let i = 0; i < bytes.length && bits > 0; i++, bits -= 8) {
+        if (bits >= 8) { if (bytes[i] !== 0) return false; }
+        else           { if (bytes[i] >> (8 - bits) !== 0) return false; }
+    }
+    return true;
+}
+self.onmessage = async function (e) {
+    const { challenge, difficulty } = e.data;
+    const enc = new TextEncoder();
+    let nonce = 0;
+    while (true) {
+        const buf = await crypto.subtle.digest('SHA-256', enc.encode(challenge + ':' + nonce));
+        if (meetsTarget(new Uint8Array(buf), difficulty)) {
+            self.postMessage({ nonce });
+            return;
+        }
+        nonce++;
+        if (nonce % 10000 === 0) self.postMessage({ progress: nonce });
+    }
+};
+`;
+
+    const blob   = new Blob([workerSrc], { type: 'application/javascript' });
+    const worker = new Worker(URL.createObjectURL(blob));
+    worker.postMessage({ challenge: CHALLENGE, difficulty: DIFFICULTY });
+    worker.onmessage = function (e) {
+        if (e.data.nonce !== undefined) {
+            nonceInput.value      = e.data.nonce;
+            statusEl.textContent  = '✓ Captcha solved.';
+            statusEl.style.color  = 'var(--text-muted)';
+            submitBtn.disabled    = false;
+        } else if (e.data.progress !== undefined) {
+            statusEl.textContent = '⏳ Solving captcha, please wait...';
+        }
+    };
+
+    // On failed submit (server returned pow_error), a fresh challenge is in the DOM.
+    // The worker already stopped after finding the old nonce, so nothing extra needed —
+    // page reload re-runs this script with the new challenge automatically.
+})();
+</script>
 {% endblock %}

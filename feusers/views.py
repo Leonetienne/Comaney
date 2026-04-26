@@ -1,3 +1,6 @@
+import hashlib
+import secrets
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, redirect, render
@@ -16,13 +19,56 @@ def hello_world(request):
     return render(request, "feusers/hello_world.html", {"active_nav": "home"})
 
 
+_POW_DIFFICULTY = 18
+
+
+def _new_pow_challenge(request) -> str:
+    challenge = secrets.token_hex(16)
+    request.session["pow_challenge"] = challenge
+    return challenge
+
+
+def _check_pow(challenge: str, nonce_str: str) -> bool:
+    try:
+        nonce = int(nonce_str)
+        if nonce < 0:
+            return False
+    except (ValueError, TypeError):
+        return False
+    digest = hashlib.sha256(f"{challenge}:{nonce}".encode()).digest()
+    bits = _POW_DIFFICULTY
+    for byte in digest:
+        if bits <= 0:
+            break
+        if bits >= 8:
+            if byte != 0:
+                return False
+            bits -= 8
+        else:
+            if byte >> (8 - bits) != 0:
+                return False
+            break
+    return True
+
+
 def register(request):
     if not settings.ENABLE_REGISTRATION:
         from django.http import Http404
         raise Http404
+    pow_error = None
     if request.method == "POST":
         form = RegistrationForm(request.POST)
-        if form.is_valid():
+        challenge = request.session.get("pow_challenge", "")
+        nonce = request.POST.get("pow_nonce", "")
+        pow_ok = challenge and _check_pow(challenge, nonce)
+        if pow_ok:
+            # consume challenge — single use
+            del request.session["pow_challenge"]
+        else:
+            pow_error = "Proof-of-work validation failed. Please wait for the puzzle to solve and try again."
+        # always issue a fresh challenge for the next attempt
+        new_challenge = _new_pow_challenge(request)
+        if form.is_valid() and pow_ok:
             user = FeUser(
                 email=form.cleaned_data["email"],
                 first_name=form.cleaned_data["first_name"],
@@ -48,10 +94,17 @@ def register(request):
                 recipient_list=[user.email],
             )
             return redirect("register_success")
+        challenge = new_challenge
     else:
         form = RegistrationForm()
+        challenge = _new_pow_challenge(request)
 
-    return render(request, "feusers/register.html", {"form": form})
+    return render(request, "feusers/register.html", {
+        "form": form,
+        "pow_challenge": challenge,
+        "pow_difficulty": _POW_DIFFICULTY,
+        "pow_error": pow_error,
+    })
 
 
 def register_success(request):
