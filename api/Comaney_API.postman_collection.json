@@ -1,0 +1,463 @@
+{
+  "info": {
+    "name": "Comaney API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "REST API for Comaney. Set the `base_url` and `api_key` collection variables before use.\n\n**Authentication**: every request requires `Authorization: Bearer <api_key>`. Generate your API key on the Profile page.\n\n**IDs**: integer IDs returned by the API (BigAutoField).\n\n**Dates**: ISO 8601 format (`YYYY-MM-DD`).\n\n**Types**: `expense`, `income`, `savings_dep`, `savings_wit`.\n\n**Month params**: `year` and `month` are independent — omitting one falls back to the corresponding component of the current financial month, not both."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://your-comaney-instance.example.com",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "your-api-key-here",
+      "type": "string"
+    },
+    { "key": "expense_id",   "value": "", "type": "string" },
+    { "key": "scheduled_id", "value": "", "type": "string" },
+    { "key": "category_id",  "value": "", "type": "string" },
+    { "key": "tag_id",       "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_key}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Account",
+      "item": [
+        {
+          "name": "Get account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/account/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "account", ""]
+            },
+            "description": "Returns the authenticated user's account details."
+          }
+        },
+        {
+          "name": "Update account",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Jane\",\n  \"last_name\": \"Doe\",\n  \"currency\": \"€\",\n  \"month_start_day\": 1,\n  \"month_start_prev\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/account/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "account", ""]
+            },
+            "description": "Update one or more account fields. All fields are optional."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", ""],
+              "query": [
+                { "key": "year",  "value": "2025", "disabled": true, "description": "Defaults to current financial year" },
+                { "key": "month", "value": "4",    "disabled": true, "description": "1–12. Defaults to current financial month" }
+              ]
+            },
+            "description": "Returns income, expenses, savings and balance for the given financial month.\n\n`year` and `month` are independent — you can supply only one. Missing values fall back to the corresponding component of the current financial month."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "List categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories", ""]
+            }
+          }
+        },
+        {
+          "name": "Create category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) pm.collectionVariables.set('category_id', res.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Groceries\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories", ""]
+            },
+            "description": "Create a category. The `id` from the response is saved to `category_id` automatically."
+          }
+        },
+        {
+          "name": "Get category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/{{category_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories", "{{category_id}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Rename category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Food & Drink\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/{{category_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories", "{{category_id}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/{{category_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories", "{{category_id}}", ""]
+            },
+            "description": "Deletes the category. Expenses using it will have their category set to null."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tags",
+      "item": [
+        {
+          "name": "List tags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tags/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tags", ""]
+            }
+          }
+        },
+        {
+          "name": "Create tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) pm.collectionVariables.set('tag_id', res.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Recurring\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tags/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tags", ""]
+            },
+            "description": "Create a tag. The `id` from the response is saved to `tag_id` automatically."
+          }
+        },
+        {
+          "name": "Get tag",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tags/{{tag_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tags", "{{tag_id}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Rename tag",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Monthly\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tags/{{tag_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tags", "{{tag_id}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete tag",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tags/{{tag_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tags", "{{tag_id}}", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Expenses",
+      "item": [
+        {
+          "name": "List expenses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/expenses/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "expenses", ""],
+              "query": [
+                { "key": "year",  "value": "2025", "disabled": true, "description": "Defaults to current financial year" },
+                { "key": "month", "value": "4",    "disabled": true, "description": "1–12. Defaults to current financial month" }
+              ]
+            },
+            "description": "Returns expenses whose `date_due` falls within the given financial month. `year` and `month` are independent."
+          }
+        },
+        {
+          "name": "Create expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) pm.collectionVariables.set('expense_id', res.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Groceries\",\n  \"type\": \"expense\",\n  \"value\": \"42.50\",\n  \"date_due\": \"2025-04-15\",\n  \"payee\": \"Supermarket\",\n  \"note\": \"\",\n  \"settled\": true,\n  \"auto_settle_on_due_date\": false,\n  \"category_id\": null,\n  \"tag_ids\": []\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/expenses/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "expenses", ""]
+            },
+            "description": "Create an expense. Required fields: `title`, `type`, `value`. The `id` from the response is saved to `expense_id` automatically."
+          }
+        },
+        {
+          "name": "Get expense",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/expenses/{{expense_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "expenses", "{{expense_id}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Update expense",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"settled\": true,\n  \"value\": \"45.00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/expenses/{{expense_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "expenses", "{{expense_id}}", ""]
+            },
+            "description": "Update any subset of expense fields. Only supplied fields are changed."
+          }
+        },
+        {
+          "name": "Delete expense",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/expenses/{{expense_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "expenses", "{{expense_id}}", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Scheduled expenses",
+      "item": [
+        {
+          "name": "List scheduled expenses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/scheduled/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "scheduled", ""]
+            },
+            "description": "Returns all scheduled expenses for the user, sorted by title."
+          }
+        },
+        {
+          "name": "Create scheduled expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.id) pm.collectionVariables.set('scheduled_id', res.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Rent\",\n  \"type\": \"expense\",\n  \"value\": \"900.00\",\n  \"payee\": \"Landlord\",\n  \"note\": \"\",\n  \"default_settled\": false,\n  \"default_auto_settle_on_due_date\": false,\n  \"repeat_every_factor\": 1,\n  \"repeat_every_unit\": \"months\",\n  \"repeat_base_date\": \"2025-01-01\",\n  \"category_id\": null,\n  \"tag_ids\": []\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/scheduled/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "scheduled", ""]
+            },
+            "description": "Create a scheduled expense. `repeat_every_unit` must be `days`, `weeks`, `months`, or `years`. The `id` from the response is saved to `scheduled_id` automatically."
+          }
+        },
+        {
+          "name": "Get scheduled expense",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/scheduled/{{scheduled_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "scheduled", "{{scheduled_id}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Update scheduled expense",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"950.00\",\n  \"repeat_every_factor\": 1,\n  \"repeat_every_unit\": \"months\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/scheduled/{{scheduled_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "scheduled", "{{scheduled_id}}", ""]
+            },
+            "description": "Update any subset of scheduled expense fields."
+          }
+        },
+        {
+          "name": "Delete scheduled expense",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/scheduled/{{scheduled_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "scheduled", "{{scheduled_id}}", ""]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

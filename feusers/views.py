@@ -483,3 +483,37 @@ def confirm_email(request, token):
     from budget.fixtures import create_defaults
     create_defaults(user)
     return render(request, "feusers/confirmed.html", {"user": user})
+
+
+def _require_login(request):
+    feuser_id = request.session.get("feuser_id")
+    if not feuser_id:
+        return None
+    try:
+        return FeUser.objects.get(pk=feuser_id, is_active=True)
+    except FeUser.DoesNotExist:
+        return None
+
+
+def api_key_generate(request):
+    if request.method != "POST":
+        from django.http import HttpResponseNotAllowed
+        return HttpResponseNotAllowed(["POST"])
+    user = _require_login(request)
+    if not user:
+        return redirect("login")
+    user.generate_api_key()
+    user.save(update_fields=["api_key"])
+    return redirect("profile")
+
+
+def api_key_revoke(request):
+    if request.method != "POST":
+        from django.http import HttpResponseNotAllowed
+        return HttpResponseNotAllowed(["POST"])
+    user = _require_login(request)
+    if not user:
+        return redirect("login")
+    user.revoke_api_key()
+    user.save(update_fields=["api_key"])
+    return redirect("profile")

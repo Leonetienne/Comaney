@@ -29,6 +29,7 @@ class FeUser(models.Model):
     month_start_prev = models.BooleanField(default=False)
     pending_email = models.EmailField(blank=True)
     email_change_token = models.CharField(max_length=64, blank=True, db_index=True)
+    api_key = models.CharField(max_length=64, blank=True, null=True, unique=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -68,3 +69,10 @@ class FeUser(models.Model):
         self.pending_email = new_email
         self.email_change_token = secrets.token_urlsafe(32)
         return self.email_change_token
+
+    def generate_api_key(self) -> str:
+        self.api_key = secrets.token_urlsafe(32)
+        return self.api_key
+
+    def revoke_api_key(self) -> None:
+        self.api_key = None
