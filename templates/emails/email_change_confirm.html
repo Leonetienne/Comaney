@@ -1,0 +1,31 @@
+{% extends "emails/base_email.html" %}
+{% block subject %}Confirm your new email address{% endblock %}
+
+{% block content %}
+  <h1 style="margin:0 0 8px;font-size:1.4rem;font-weight:700;color:#e0e0e0;">Confirm new email{% if first_name %}, {{ first_name }}{% endif %}</h1>
+  <p style="margin:0 0 28px;font-size:0.95rem;color:#aaa;line-height:1.7;">
+    You requested to change your Comaney email address. Click the button below to confirm and apply the change.
+  </p>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
+    <tr>
+      <td align="center">
+        <a href="{{ confirm_url }}"
+           style="display:inline-block;padding:14px 32px;background:#6ecf8a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:0.95rem;letter-spacing:0.01em;">
+          Confirm new email address
+        </a>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin:0 0 6px;font-size:0.82rem;color:#666;line-height:1.6;">Or paste this link into your browser:</p>
+  <p style="margin:0;font-size:0.75rem;word-break:break-all;">
+    <a href="{{ confirm_url }}" style="color:#6ecf8a;text-decoration:none;">{{ confirm_url }}</a>
+  </p>
+
+  <hr style="border:none;border-top:1px solid #2a2a2a;margin:28px 0;">
+
+  <p style="margin:0;font-size:0.82rem;color:#555;line-height:1.5;">
+    If you didn't request this change, you can safely ignore this email — your current address remains unchanged.
+  </p>
+{% endblock %}

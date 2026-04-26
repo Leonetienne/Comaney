@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 
 from .forms import (
     AISettingsForm, ChangeEmailForm, ChangePasswordForm, LoginForm,
@@ -33,6 +34,7 @@ def register(request):
             user.save()
 
             confirm_url = f"{settings.SITE_URL}/confirm/{user.confirmation_token}/"
+            _ctx = {"confirm_url": confirm_url, "first_name": user.first_name, "site_url": settings.SITE_URL}
             send_mail(
                 subject="Please confirm your email address",
                 message=(
@@ -41,6 +43,7 @@ def register(request):
                     f"{confirm_url}\n\n"
                     f"If you didn't sign up, you can safely ignore this email."
                 ),
+                html_message=render_to_string("emails/registration_confirm.html", _ctx),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
             )
@@ -137,6 +140,7 @@ def profile(request):
                 feuser.generate_email_change_token(new_email)
                 feuser.save(update_fields=["pending_email", "email_change_token"])
                 confirm_url = f"{settings.SITE_URL}/confirm-email-change/{feuser.email_change_token}/"
+                _ctx = {"confirm_url": confirm_url, "first_name": feuser.first_name, "site_url": settings.SITE_URL}
                 send_mail(
                     subject="Confirm your new email address",
                     message=(
@@ -145,6 +149,7 @@ def profile(request):
                         f"{confirm_url}\n\n"
                         f"If you didn't request this, you can safely ignore this email."
                     ),
+                    html_message=render_to_string("emails/email_change_confirm.html", _ctx),
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[new_email],
                 )
@@ -177,6 +182,7 @@ def password_forgot(request):
                 user.generate_password_reset_token()
                 user.save(update_fields=["password_reset_token", "password_reset_expires"])
                 reset_url = f"{settings.SITE_URL}/password-reset/{user.password_reset_token}/"
+                _ctx = {"reset_url": reset_url, "first_name": user.first_name, "site_url": settings.SITE_URL}
                 send_mail(
                     subject="Reset your password",
                     message=(
@@ -185,6 +191,7 @@ def password_forgot(request):
                         f"{reset_url}\n\n"
                         f"If you didn't request this, you can safely ignore this email."
                     ),
+                    html_message=render_to_string("emails/password_reset.html", _ctx),
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[user.email],
                 )
