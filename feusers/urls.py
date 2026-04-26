@@ -16,6 +16,7 @@ urlpatterns = [
     path("password-reset/done/", views.password_reset_done, name="password_reset_done"),
     path("password-reset/<str:token>/", views.password_reset, name="password_reset"),
     path("account/delete/", views.account_delete, name="account_delete"),
+    path("account/export/", views.account_export, name="account_export"),
     path("totp/setup/",   views.totp_setup,   name="totp_setup"),
     path("totp/disable/", views.totp_disable, name="totp_disable"),
     path("totp/verify/",  views.totp_verify,  name="totp_verify"),

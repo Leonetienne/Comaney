@@ -234,6 +234,84 @@ def confirm_email_change(request, token):
     return render(request, "feusers/email_change_confirmed.html", {"user": user})
 
 
+def account_export(request):
+    feuser = _get_session_feuser(request)
+    if not feuser:
+        return redirect("login")
+
+    import csv, io, zipfile
+    from django.http import HttpResponse
+    from django.utils import timezone
+    from budget.models import Category, Expense, ScheduledExpense, Tag
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+
+        # profile.csv
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["field", "value"])
+        key = feuser.anthropic_api_key
+        masked_key = ("********" + key[-4:]) if key else ""
+        w.writerows([
+            ["email",        feuser.email],
+            ["first_name",   feuser.first_name],
+            ["last_name",    feuser.last_name],
+            ["currency",     feuser.currency],
+            ["anthropic_api_key", masked_key],
+            ["totp_enabled", feuser.totp_enabled],
+            ["created_at",   feuser.created_at.isoformat()],
+        ])
+        zf.writestr("profile.csv", p.getvalue())
+
+        # categories.csv
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["uid", "title"])
+        for c in Category.objects.filter(owning_feuser=feuser):
+            w.writerow([c.uid, c.title])
+        zf.writestr("categories.csv", p.getvalue())
+
+        # tags.csv
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["uid", "title"])
+        for t in Tag.objects.filter(owning_feuser=feuser):
+            w.writerow([t.uid, t.title])
+        zf.writestr("tags.csv", p.getvalue())
+
+        # expenses.csv
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["uid", "title", "type", "value", "payee", "note", "category", "tags", "date_due", "date_created", "settled"])
+        for e in Expense.objects.filter(owning_feuser=feuser).select_related("category").prefetch_related("tags").order_by("date_created"):
+            w.writerow([
+                e.uid, e.title, e.type, e.value, e.payee, e.note,
+                e.category.title if e.category else "",
+                "|".join(t.title for t in e.tags.all()),
+                e.date_due or "", e.date_created.isoformat(), e.settled,
+            ])
+        zf.writestr("expenses.csv", p.getvalue())
+
+        # scheduled_expenses.csv
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["uid", "title", "type", "value", "payee", "note", "category", "tags", "repeat_base_date", "repeat_every_factor", "repeat_every_unit", "default_settled"])
+        for s in ScheduledExpense.objects.filter(owning_feuser=feuser).select_related("category").prefetch_related("tags"):
+            w.writerow([
+                s.uid, s.title, s.type, s.value, s.payee, s.note,
+                s.category.title if s.category else "",
+                "|".join(t.title for t in s.tags.all()),
+                s.repeat_base_date or "", s.repeat_every_factor or "", s.repeat_every_unit, s.default_settled,
+            ])
+        zf.writestr("scheduled_expenses.csv", p.getvalue())
+
+    filename = f"comaney_export_{timezone.localdate().isoformat()}.zip"
+    response = HttpResponse(buf.getvalue(), content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
 def account_delete(request):
     feuser = _get_session_feuser(request)
     if not feuser:

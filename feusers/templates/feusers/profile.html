@@ -110,10 +110,17 @@
         </form>
     </div>
 
-    <div class="profile-section profile-section--danger">
-        <h2>Danger zone</h2>
-        <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Permanently delete your account and all associated data.</p>
-        <a href="{% url 'account_delete' %}" class="btn btn-danger btn-sm">Delete account</a>
+    <div class="profile-section profile-section--stacked">
+        <div>
+            <h2>Export data</h2>
+            <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Download all your data as a ZIP archive containing CSV files.</p>
+            <a href="{% url 'account_export' %}" class="btn btn-secondary btn-sm">Export as ZIP</a>
+        </div>
+        <div class="profile-section--danger">
+            <h2>Danger zone</h2>
+            <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Permanently delete your account and all associated data.</p>
+            <a href="{% url 'account_delete' %}" class="btn btn-danger btn-sm">Delete account</a>
+        </div>
     </div>
 
 </div>
