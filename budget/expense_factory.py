@@ -19,6 +19,7 @@ def create_expense(
     tags: Optional[list[Tag]] = None,
     date_due: Optional[date] = None,
     settled: bool = True,
+    auto_settle_on_due_date: bool = False,
     source_scheduled: Optional[ScheduledExpense] = None,
 ) -> Expense:
     expense = Expense.objects.create(
@@ -31,6 +32,7 @@ def create_expense(
         category=category,
         date_due=date_due,
         settled=settled,
+        auto_settle_on_due_date=auto_settle_on_due_date,
         source_scheduled=source_scheduled,
     )
     if tags:

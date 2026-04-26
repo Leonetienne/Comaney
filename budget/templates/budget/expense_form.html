@@ -47,10 +47,10 @@
         {{ form.note }}
         {% for e in form.note.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
 
-        <div class="form-row" style="margin-top:16px; align-items:end;">
-            <div style="display:flex; align-items:center; gap:8px; padding-bottom:2px;">
-                {{ form.settled }}
-                <label for="{{ form.settled.id_for_label }}" style="margin:0; font-weight:400;">{{ form.settled.label }}</label>
+        <div class="form-row" style="margin-top:16px; align-items:start;">
+            <div style="display:flex; flex-direction:column; gap:8px; padding-bottom:2px;">
+                <label class="checkbox-inline">{{ form.settled }} {{ form.settled.label }}</label>
+                <label class="checkbox-inline" id="auto-settle-wrap">{{ form.auto_settle_on_due_date }} {{ form.auto_settle_on_due_date.label }}</label>
             </div>
             <div id="due-date-wrap">
                 <label for="{{ form.date_due.id_for_label }}">{{ form.date_due.label }}</label>
@@ -65,4 +65,13 @@
         </div>
     </form>
 </div>
+<script>
+(function () {
+    const settled  = document.getElementById('{{ form.settled.id_for_label }}');
+    const autoWrap = document.getElementById('auto-settle-wrap');
+    function sync() { autoWrap.style.display = settled.checked ? 'none' : ''; }
+    settled.addEventListener('change', sync);
+    sync();
+})();
+</script>
 {% endblock %}

@@ -86,3 +86,12 @@ footer {
   text-align: center;
   background: var(--bg);
 }
+
+.footer-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+
+  &:hover { color: var(--text); text-decoration: none; }
+}

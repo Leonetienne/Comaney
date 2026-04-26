@@ -9,7 +9,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         today = timezone.localdate()
-        qs = Expense.objects.filter(settled=False, date_due__lte=today)
+        qs = Expense.objects.filter(settled=False, auto_settle_on_due_date=True, date_due__lte=today)
         count = qs.count()
         qs.update(settled=True)
         self.stdout.write(self.style.SUCCESS(f"Done — {count} expense(s) auto-settled."))

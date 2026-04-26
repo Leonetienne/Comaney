@@ -114,6 +114,7 @@ class Command(BaseCommand):
                     tags=list(scheduled.tags.all()),
                     date_due=occurrence,
                     settled=scheduled.default_settled,
+                    auto_settle_on_due_date=scheduled.default_auto_settle_on_due_date,
                     source_scheduled=scheduled,
                 )
                 created += 1
