@@ -10,15 +10,15 @@
                 <a href="{% url 'budget:dashboard' %}">Dashboard</a>
             </li>
 
-            <li><span class="sidebar-section-label">Budget</span></li>
-            <li class="{% if active_nav == 'categories_tags' %}active{% endif %}">
-                <a href="{% url 'budget:categories_tags' %}">Categories &amp; Tags</a>
-            </li>
             <li class="{% if active_nav == 'expenses' %}active{% endif %}">
                 <a href="{% url 'budget:expenses_list' %}">Expenses</a>
             </li>
             <li class="{% if active_nav == 'scheduled' %}active{% endif %}">
                 <a href="{% url 'budget:scheduled_list' %}">Scheduled Expenses</a>
+            </li>
+            <li><span class="sidebar-section-label">Budget</span></li>
+            <li class="{% if active_nav == 'categories_tags' %}active{% endif %}">
+                <a href="{% url 'budget:categories_tags' %}">Categories &amp; Tags</a>
             </li>
 
             {% if ai_smart_create_available %}
@@ -30,7 +30,7 @@
 
             <li><span class="sidebar-section-label">Account</span></li>
             <li class="{% if active_nav == 'profile' %}active{% endif %}">
-                <a href="{% url 'profile' %}">Profile</a>
+                <a href="{% url 'profile' %}">Settings</a>
             </li>
         </ul>
     </nav>
