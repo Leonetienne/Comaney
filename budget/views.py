@@ -355,7 +355,7 @@ Your job is to extract expense and income items and return a JSON array of expen
 
 CRITICAL GROUPING RULE — read this carefully:
 All line items that share the same category AND the same tags MUST be merged into a single record.
-Sum their values. Use a short collective title (e.g. "Groceries", "Hygiene", "Drinks").
+Sum their values. Use a short collective title (e.g. "Cola and chips", "Toothpaste and shampoo", "Drinks at the bar").
 This applies without exception — bottle deposits (Pfand), surcharges, or minor add-ons that belong
 to the same category/tag group must be absorbed into that group's record, not given their own entry.
 The goal is one record per (category, tags) combination, never one record per line item.
