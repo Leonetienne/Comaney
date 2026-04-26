@@ -1,11 +1,14 @@
 FROM python:3.12-slim
 
+ARG NODE_VERSION=25.9.0
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     default-libmysqlclient-dev \
     gcc \
     pkg-config \
-    nodejs \
-    npm \
+    curl \
+    && curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz \
+       | tar -xz -C /usr/local --strip-components=1 --no-same-owner \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
