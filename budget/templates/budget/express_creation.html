@@ -1,11 +1,11 @@
 {% extends "budget_base.html" %}
 
-{% block title %}Comaney – Smart Create{% endblock %}
+{% block title %}Comaney – Express Creation{% endblock %}
 
 
 {% block content %}
-<div class="smart-create-wrap">
-    <h1>Smart Create</h1>
+<div class="express-creation-wrap">
+    <h1>Express Creation</h1>
     <p style="color:#555; margin-top:0; margin-bottom:20px;">
         Describe what you bought, attach a receipt photo, or both — Claude will extract and categorise the items for you to review and edit.
     </p>
@@ -14,7 +14,7 @@
     <div class="trial-blocked">
         <strong>Monthly AI limit reached.</strong>
         Your free trial allowance of {{ trial_limit }} ¢ has been used up for this month.
-        To continue using Smart Create, add your own Anthropic API key in <a href="{% url 'profile' %}">your profile</a>.
+        To continue using Express Creation, add your own Anthropic API key in <a href="{% url 'profile' %}">your profile</a>.
         Your allowance resets at the start of next month.
     </div>
     {% else %}
@@ -168,7 +168,7 @@
 
             <div class="confirm-actions">
                 <button type="submit" class="btn" id="confirm-btn">✓ Save selected</button>
-                <a href="{% url 'budget:smart_create' %}" class="btn btn-secondary">✗ Discard</a>
+                <a href="{% url 'budget:express_creation' %}" class="btn btn-secondary">✗ Discard</a>
             </div>
         </form>
     </div>
@@ -178,7 +178,7 @@
 </div>
 
 <script>
-const SESSION_KEY = 'smart_create_img';
+const SESSION_KEY = 'express_creation_img';
 
 // ── Image zone ──────────────────────────────────────────────────────────────
 (function () {

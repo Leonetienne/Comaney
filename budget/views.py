@@ -346,7 +346,7 @@ def scheduled_delete(request, uid):
 
 
 # ---------------------------------------------------------------------------
-# Smart Create (AI)
+# Express Creation (AI)
 # ---------------------------------------------------------------------------
 
 _SMART_CREATE_SYSTEM = """You are a financial data-entry assistant for a budgeting app.
@@ -599,7 +599,7 @@ def _trial_state(feuser):
 
 
 @feuser_required
-def smart_create(request):
+def express_creation(request):
     feuser = request.feuser
     api_key, is_trial, trial_limit, trial_spent, trial_blocked = _trial_state(feuser)
 
@@ -609,7 +609,7 @@ def smart_create(request):
     categories = list(Category.objects.filter(owning_feuser=feuser).values("uid", "title"))
     tags = list(Tag.objects.filter(owning_feuser=feuser).values("uid", "title"))
     context = {
-        "active_nav": "smart_create",
+        "active_nav": "express_creation",
         "description": "",
         "preview_items": None,
         "preview_json": "",
@@ -625,7 +625,7 @@ def smart_create(request):
     }
 
     if trial_blocked:
-        return render(request, "budget/smart_create.html", context)
+        return render(request, "budget/express_creation.html", context)
 
     if request.method == "POST":
         action = request.POST.get("action", "parse")
@@ -750,4 +750,4 @@ def smart_create(request):
             except Exception as exc:
                 context["ai_error"] = f"Could not save expenses: {exc}"
 
-    return render(request, "budget/smart_create.html", context)
+    return render(request, "budget/express_creation.html", context)

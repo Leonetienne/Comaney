@@ -22,5 +22,5 @@ urlpatterns = [
     path("scheduled/new/", views.scheduled_create, name="scheduled_create"),
     path("scheduled/<int:uid>/edit/", views.scheduled_edit, name="scheduled_edit"),
     path("scheduled/<int:uid>/delete/", views.scheduled_delete, name="scheduled_delete"),
-    path("ai/smart-create/", views.smart_create, name="smart_create"),
+    path("ai/express-creation/", views.express_creation, name="express_creation"),
 ]
