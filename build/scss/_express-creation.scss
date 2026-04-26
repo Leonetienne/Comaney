@@ -205,7 +205,7 @@
 
 .pcard-row1, .pcard-row2 { display: grid; gap: 10px; }
 .pcard-row1 { grid-template-columns: 1fr 1fr auto; margin-bottom: 8px; }
-.pcard-row2 { grid-template-columns: auto 1fr; margin-bottom: 20px; }
+.pcard-row2 { grid-template-columns: auto 1fr auto; margin-bottom: 20px; }
 
 .pcard-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 

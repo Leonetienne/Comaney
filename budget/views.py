@@ -373,6 +373,7 @@ Rules:
     "type"         — "expense", "income", "savings_dep", or "savings_wit"
     "value"        — positive decimal, sum of all merged line items in this group
     "payee"        — merchant or person name, or "" if unknown
+    "date_due"     — ISO date string YYYY-MM-DD if the purchase/transaction date is known or can be inferred (e.g. "yesterday", "last Tuesday", a printed date on a receipt or invoice), otherwise null
     "category_uid" — integer uid from the Categories list below, or null if none fits
     "tag_uids"     — array of integer uids from the Tags list below (can be [])
     "note"         — any extra context worth keeping, or ""
@@ -565,12 +566,21 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
 
         tag_uids = [u for u in (raw.get("tag_uids") or []) if u in valid_tag_uids]
 
+        date_due = None
+        date_due_raw = raw.get("date_due")
+        if date_due_raw:
+            try:
+                date_due = date.fromisoformat(str(date_due_raw))
+            except (ValueError, TypeError):
+                pass
+
         items.append({
             "title": str(raw.get("title", "Untitled"))[:255],
             "type": tx_type,
             "value": str(value),
             "payee": str(raw.get("payee", "") or "")[:255],
             "note": str(raw.get("note", "") or ""),
+            "date_due": date_due.isoformat() if date_due else "",
             "category_uid": cat_uid,
             "category_title": category_map.get(cat_uid, "—") if cat_uid else "—",
             "tag_uids": tag_uids,
@@ -646,9 +656,11 @@ def express_creation(request):
                 custom = feuser.ai_custom_instructions.strip()
                 extra = f"\n\nUser's custom instructions (follow these when assigning categories/tags):\n{custom}" if custom else ""
                 system_prompt = _SMART_CREATE_SYSTEM.format(catalog=catalog) + extra
+                today_str = timezone.localdate().isoformat()
+                description_with_date = f"[Today's date: {today_str}]\n\n{description}" if description else f"[Today's date: {today_str}]"
                 try:
                     raw_items, usage = _call_claude(
-                        api_key, system_prompt, description,
+                        api_key, system_prompt, description_with_date,
                         image_b64=image_b64, image_type=image_type,
                     )
                     if not isinstance(raw_items, list):
@@ -733,6 +745,14 @@ def express_creation(request):
                         if tuid in tag_cache:
                             tags.append(tag_cache[tuid])
 
+                    item_date = today
+                    date_due_str = item.get("date_due", "")
+                    if date_due_str:
+                        try:
+                            item_date = date.fromisoformat(date_due_str)
+                        except (ValueError, TypeError):
+                            pass
+
                     create_expense(
                         owning_feuser=feuser,
                         title=item["title"],
@@ -742,7 +762,7 @@ def express_creation(request):
                         note=item.get("note", ""),
                         category=category,
                         tags=tags or None,
-                        date_due=today,
+                        date_due=item_date,
                         settled=True,
                     )
                     count += 1

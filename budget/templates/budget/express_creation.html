@@ -119,7 +119,7 @@
                             </div>
                         </div>
 
-                        <!-- Row 2: type, category -->
+                        <!-- Row 2: type, category, date -->
                         <div class="pcard-row2">
                             <div class="pcard-field pcard-type-wrap type-{{ item.type }}">
                                 <span class="pcard-label">Type</span>
@@ -138,6 +138,10 @@
                                     <option value="{{ cat.uid }}" {% if cat.uid == item.category_uid %}selected{% endif %}>{{ cat.title }}</option>
                                     {% endfor %}
                                 </select>
+                            </div>
+                            <div class="pcard-field">
+                                <span class="pcard-label">Date</span>
+                                <input type="date" class="edit-input edit-date" value="{{ item.date_due }}">
                             </div>
                         </div>
 
@@ -313,11 +317,12 @@ document.getElementById('confirm-form').addEventListener('submit', function () {
         const idx  = parseInt(card.dataset.idx, 10);
         const item = payload[idx];
 
-        item.title  = card.querySelector('.edit-title').value.trim() || item.title;
-        item.type   = card.querySelector('.edit-type').value;
-        item.value  = card.querySelector('.edit-value').value || item.value;
-        item.payee  = card.querySelector('.edit-payee').value.trim();
-        item.note   = card.querySelector('.edit-note').value.trim();
+        item.title    = card.querySelector('.edit-title').value.trim() || item.title;
+        item.type     = card.querySelector('.edit-type').value;
+        item.value    = card.querySelector('.edit-value').value || item.value;
+        item.payee    = card.querySelector('.edit-payee').value.trim();
+        item.note     = card.querySelector('.edit-note').value.trim();
+        item.date_due = card.querySelector('.edit-date').value || "";
 
         const catEl = card.querySelector('.edit-category');
         item.category_uid = catEl.value ? parseInt(catEl.value, 10) : null;
