@@ -14,6 +14,7 @@ urlpatterns = [
     path("tags/<int:uid>/delete/", views.tag_delete, name="tag_delete"),
     path("tags/<int:uid>/rename/", views.tag_rename, name="tag_rename"),
     path("expenses/", views.expenses_list, name="expenses_list"),
+    path("expenses/export/", views.expenses_export, name="expenses_export"),
     path("expenses/new/", views.expense_create, name="expense_create"),
     path("expenses/<int:uid>/edit/", views.expense_edit, name="expense_edit"),
     path("expenses/<int:uid>/delete/", views.expense_delete, name="expense_delete"),

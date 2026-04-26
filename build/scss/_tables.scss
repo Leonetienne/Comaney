@@ -23,6 +23,15 @@ th {
 tr:hover td { background: var(--bg-surface); }
 
 .empty  { color: var(--text-muted); font-style: italic; margin-top: 20px; }
+
+.expenses-export-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  &:hover { color: var(--text); text-decoration: underline; }
+}
 .nowrap { white-space: nowrap; }
 
 @media (max-width: 1200px) {

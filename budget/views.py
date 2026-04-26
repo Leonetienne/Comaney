@@ -206,6 +206,47 @@ def expenses_list(request):
 
 
 @feuser_required
+def expenses_export(request):
+    import csv
+    from django.http import HttpResponse
+
+    feuser = request.feuser
+    year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
+    start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+
+    expenses = (
+        Expense.objects.filter(
+            owning_feuser=feuser,
+            date_created__date__gte=start,
+            date_created__date__lte=end,
+        )
+        .select_related("category")
+        .prefetch_related("tags")
+        .order_by("date_due", "date_created")
+    )
+
+    label = date(year, month, 1).strftime("%B_%Y")
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="expenses_{label}.csv"'
+
+    w = csv.writer(response)
+    w.writerow(["date_due", "title", "type", "value", "payee", "category", "tags", "note", "settled"])
+    for e in expenses:
+        w.writerow([
+            e.date_due or "",
+            e.title,
+            e.type,
+            e.value,
+            e.payee,
+            e.category.title if e.category else "",
+            "|".join(t.title for t in e.tags.all()),
+            e.note,
+            e.settled,
+        ])
+    return response
+
+
+@feuser_required
 def expense_create(request):
     if request.method == "POST":
         form = ExpenseForm(request.POST, feuser=request.feuser)
