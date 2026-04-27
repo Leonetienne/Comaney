@@ -34,9 +34,10 @@
         <div class="form-row-3" style="margin-top:16px;">
             <div style="grid-column: span 2;">
                 <label>Repeat</label>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px;">
-                    {{ form.repeat_every_factor }}
-                    {{ form.repeat_every_unit }}
+                <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                    <span style="white-space:nowrap; color:var(--text-muted); font-size:0.95rem;">Every</span>
+                    <div style="width:72px; flex-shrink:0;">{{ form.repeat_every_factor }}</div>
+                    <div style="flex:1;">{{ form.repeat_every_unit }}</div>
                 </div>
                 {% for e in form.repeat_every_factor.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
                 {% for e in form.repeat_every_unit.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
