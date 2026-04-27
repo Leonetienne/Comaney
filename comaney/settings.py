@@ -47,6 +47,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "feusers.context_processors.current_feuser",
+                "comaney.public_pages.context_processor",
             ],
         },
     },
@@ -101,3 +102,11 @@ ENABLE_REGISTRATION = os.environ.get("ENABLE_REGISTRATION", "").upper() == "TRUE
 
 AI_TRIAL_API_KEY     = os.environ.get("AI_TRIAL_API_KEY", "")
 AI_TRIAL_USAGE_LIMIT = float(os.environ.get("AI_TRIAL_USAGE_LIMIT", "0"))  # cents
+
+# Public static pages rendered from Markdown files.
+# Map URL slug → (md_path, display_label).
+PUBLIC_PAGES = {}
+if _p := os.environ.get("PUBLIC_PAGE_IMPRINT_MD"):
+    PUBLIC_PAGES["impressum"] = (_p, "Impressum")
+if _p := os.environ.get("PUBLIC_PAGE_EUDATENSCHUTZ_MD"):
+    PUBLIC_PAGES["datenschutzerklaerung"] = (_p, "Datenschutzerklärung")

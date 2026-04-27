@@ -1,4 +1,5 @@
 Django==5.0.6
+Markdown>=3.6
 mysqlclient==2.2.4
 anthropic>=0.40.0
 gunicorn==22.0.0
