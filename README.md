@@ -14,3 +14,9 @@ docker buildx build \
   --push \
   .
 ```
+
+### Running tests
+```
+pip install -r requirements-test.txt
+pytest tests/test_e2e.py -v
+```

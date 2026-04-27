@@ -13,7 +13,7 @@
             <span class="user-name">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</span>
             <form method="post" action="{% url 'logout' %}" style="margin:0">
                 {% csrf_token %}
-                <button type="submit">Logout</button>
+                <button type="submit" id="logout-button">Logout</button>
             </form>
         {% else %}
             <a href="{% url 'login' %}">Log In</a>
