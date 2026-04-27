@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt && npm ci
 
 COPY . .
 
-RUN npm run build:css && chmod +x entrypoint.sh
+RUN npm run build:css && chmod +x entrypoint.sh && rm -rf build/ node_modules/
 
 EXPOSE 8000
 
