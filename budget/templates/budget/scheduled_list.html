@@ -20,11 +20,16 @@
 
         <div class="exp-row1">
             <span class="exp-title">{{ s.title }}</span>
+            {% if s.payee %}<span class="exp-payee">{{ s.payee }}</span>{% endif %}
             <span class="exp-amount type-{{ s.type }}">{{ s.value }} {{ current_feuser.currency }}</span>
         </div>
 
         <div class="exp-actions">
             <a href="{% url 'budget:scheduled_edit' s.uid %}" class="btn btn-sm btn-secondary">Edit</a>
+            <form method="post" action="{% url 'budget:scheduled_clone' s.uid %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
+            </form>
             <form method="post" action="{% url 'budget:scheduled_delete' s.uid %}" class="delete-form" data-title="{{ s.title|escapejs }}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>

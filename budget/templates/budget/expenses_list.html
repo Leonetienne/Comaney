@@ -28,6 +28,10 @@
         <!-- Actions column (right, all rows) -->
         <div class="exp-actions">
             <a href="{% url 'budget:expense_edit' exp.uid %}" class="btn btn-sm btn-secondary">Edit</a>
+            <form method="post" action="{% url 'budget:expense_clone' exp.uid %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
+            </form>
             <form method="post" action="{% url 'budget:expense_delete' exp.uid %}" class="delete-form" data-title="{{ exp.title|escapejs }}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>

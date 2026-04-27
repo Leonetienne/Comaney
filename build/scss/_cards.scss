@@ -59,8 +59,11 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  align-items: flex-end;
+  align-items: stretch;
   justify-content: flex-start;
+
+  .btn, form { width: 100%; }
+  .btn, form .btn { width: 100%; box-sizing: border-box; text-align: center; }
 }
 
 .exp-row2 {

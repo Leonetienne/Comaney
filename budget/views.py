@@ -290,6 +290,18 @@ def expense_delete(request, uid):
 
 
 @feuser_required
+@require_POST
+def expense_clone(request, uid):
+    original = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
+    tags = list(original.tags.all())
+    original.pk = None
+    original.title = f"CLONE - {original.title}"
+    original.save()
+    original.tags.set(tags)
+    return redirect("budget:expense_edit", uid=original.pk)
+
+
+@feuser_required
 def scheduled_list(request):
     scheduled = (
         ScheduledExpense.objects.filter(owning_feuser=request.feuser)
@@ -343,6 +355,18 @@ def scheduled_delete(request, uid):
     obj = get_object_or_404(ScheduledExpense, uid=uid, owning_feuser=request.feuser)
     obj.delete()
     return redirect("budget:scheduled_list")
+
+
+@feuser_required
+@require_POST
+def scheduled_clone(request, uid):
+    original = get_object_or_404(ScheduledExpense, uid=uid, owning_feuser=request.feuser)
+    tags = list(original.tags.all())
+    original.pk = None
+    original.title = f"CLONE - {original.title}"
+    original.save()
+    original.tags.set(tags)
+    return redirect("budget:scheduled_edit", uid=original.pk)
 
 
 # ---------------------------------------------------------------------------
