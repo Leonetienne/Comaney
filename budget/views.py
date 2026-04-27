@@ -325,7 +325,7 @@ def scheduled_create(request):
             form.save_m2m()
             return redirect("budget:scheduled_list")
     else:
-        form = ScheduledExpenseForm(feuser=request.feuser, initial={"type": "expense"})
+        form = ScheduledExpenseForm(feuser=request.feuser, initial={"type": "expense", "default_settled": False, "default_auto_settle_on_due_date": True})
     return render(request, "budget/scheduled_form.html", {
         "active_nav": "scheduled",
         "form": form,
