@@ -27,9 +27,9 @@ Nutzer können in den Einstellungen einen eigenen Anthropic-API-Schlüssel hinte
 **Weitergabe an Dritte (gilt für beide Varianten)**
 Die zur Klassifizierung eingegebenen Texte und Medien werden an die API von Anthropic, Inc. (San Francisco, USA) übermittelt und dort verarbeitet. Es gelten die [Datenschutzbestimmungen von Anthropic](https://www.anthropic.com/privacy).
 
-## 4. Hosting
+## 4. Hosting & Übertragung
 
-Die Anwendung wird auf einem selbst betriebenen Server gehostet. Es werden keine externen Analyse- oder Tracking-Dienste eingesetzt.
+Die Anwendung wird auf einem selbst betriebenen Server in Helsinki, Finnland (EU) gehostet. Die Datenübertragung zwischen Ihrem Browser und dem Server erfolgt ausschließlich verschlüsselt über HTTPS. Es werden keine externen Analyse- oder Tracking-Dienste eingesetzt.
 
 ## 5. Cookies & Sessions
 
