@@ -1,0 +1,49 @@
+.bodytext {
+  line-height: 1.7;
+  color: var(--text);
+
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 2em;
+    margin-bottom: 0.4em;
+    line-height: 1.25;
+    color: var(--text);
+
+    &:first-child { margin-top: 0; }
+  }
+
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.35rem; }
+  h3 { font-size: 1.1rem; }
+
+  p {
+    margin-top: 0;
+    margin-bottom: 1em;
+  }
+
+  ul, ol {
+    margin: 0 0 1em 0;
+    padding-left: 1.5em;
+
+    li { margin-bottom: 0.3em; }
+  }
+
+  a {
+    color: var(--accent);
+    &:hover { text-decoration: underline; }
+  }
+
+  strong { font-weight: 600; }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2em 0;
+  }
+
+  blockquote {
+    margin: 1em 0;
+    padding-left: 1em;
+    border-left: 3px solid var(--border);
+    color: var(--text-muted);
+  }
+}
