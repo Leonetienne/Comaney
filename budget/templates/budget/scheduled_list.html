@@ -46,6 +46,10 @@
             {% for tag in s.tags.all %}<span class="badge badge-tag">{{ tag.title }}</span>{% endfor %}
         </div>
 
+        {% if s.note %}
+        <div class="exp-row3">{{ s.note }}</div>
+        {% endif %}
+
     </div>
     {% endfor %}
 </div>
