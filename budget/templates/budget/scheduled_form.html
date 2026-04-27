@@ -55,8 +55,7 @@
                 {% for e in form.category.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
             </div>
             <div style="display:flex; flex-direction:column; gap:8px;">
-                <label class="checkbox-inline">{{ form.default_settled }} {{ form.default_settled.label }}</label>
-                <label class="checkbox-inline" id="auto-settle-wrap">{{ form.default_auto_settle_on_due_date }} {{ form.default_auto_settle_on_due_date.label }}</label>
+                <label class="checkbox-inline">{{ form.default_auto_settle_on_due_date }} {{ form.default_auto_settle_on_due_date.label }}</label>
             </div>
         </div>
 
@@ -74,13 +73,4 @@
         </div>
     </form>
 </div>
-<script>
-(function () {
-    const settled  = document.getElementById('{{ form.default_settled.id_for_label }}');
-    const autoWrap = document.getElementById('auto-settle-wrap');
-    function sync() { autoWrap.style.display = settled.checked ? 'none' : ''; }
-    settled.addEventListener('change', sync);
-    sync();
-})();
-</script>
 {% endblock %}
