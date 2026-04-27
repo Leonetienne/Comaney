@@ -88,7 +88,6 @@ def _scheduled_json(s):
         "category":                        {"id": s.category.uid, "title": s.category.title} if s.category else None,
         "tags":                            [{"id": t.uid, "title": t.title} for t in s.tags.all()],
         "note":                            s.note,
-        "default_settled":                 s.default_settled,
         "default_auto_settle_on_due_date": s.default_auto_settle_on_due_date,
         "repeat_every_factor":             s.repeat_every_factor,
         "repeat_every_unit":               s.repeat_every_unit,
@@ -160,8 +159,6 @@ def _apply_scheduled_fields(obj, data, feuser, creating=False):
         obj.payee = str(data["payee"] or "")[:255]
     if "note" in data:
         obj.note = str(data["note"] or "")
-    if "default_settled" in data:
-        obj.default_settled = bool(data["default_settled"])
     if "default_auto_settle_on_due_date" in data:
         obj.default_auto_settle_on_due_date = bool(data["default_auto_settle_on_due_date"])
 
@@ -320,7 +317,7 @@ def scheduled(request, feuser):
         data = _parse_body(request)
         if data is None:
             return _err("Invalid JSON body.")
-        s = ScheduledExpense(owning_feuser=feuser, default_settled=True, default_auto_settle_on_due_date=False)
+        s = ScheduledExpense(owning_feuser=feuser, default_auto_settle_on_due_date=False)
         err = _apply_scheduled_fields(s, data, feuser, creating=True)
         if err:
             return _err(err)

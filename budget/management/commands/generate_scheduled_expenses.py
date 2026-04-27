@@ -113,7 +113,7 @@ class Command(BaseCommand):
                     category=scheduled.category,
                     tags=list(scheduled.tags.all()),
                     date_due=occurrence,
-                    settled=scheduled.default_settled,
+                    settled=False,
                     auto_settle_on_due_date=scheduled.default_auto_settle_on_due_date,
                     source_scheduled=scheduled,
                 )

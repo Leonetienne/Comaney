@@ -8,6 +8,7 @@
     <h1 style="margin:0">Scheduled Expenses</h1>
     <a href="{% url 'budget:scheduled_create' %}" class="btn">+ New scheduled expense</a>
 </div>
+<p class="page-tip">Register recurring expenses here. Define standard expense data and an interval. At the begin of every financial month, they will create actual, unsettled expenses.</p>
 
 {% if scheduled %}
 <div class="exp-list">
@@ -41,7 +42,6 @@
             {% if s.repeat_every_factor and s.repeat_every_unit %}
             <span class="exp-repeat">every {{ s.repeat_every_factor }} {{ s.get_repeat_every_unit_display|lower }}</span>
             {% endif %}
-            {% if s.default_settled %}<span class="exp-settled yes">✓ settled</span>{% endif %}
             {% if s.category %}<span class="sep">·</span><span class="exp-category">{{ s.category.title }}</span>{% endif %}
             {% for tag in s.tags.all %}<span class="badge badge-tag">{{ tag.title }}</span>{% endfor %}
         </div>

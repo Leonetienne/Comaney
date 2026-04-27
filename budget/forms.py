@@ -49,7 +49,7 @@ class ScheduledExpenseForm(forms.ModelForm):
         fields = [
             "title", "payee", "type", "value",
             "repeat_every_factor", "repeat_every_unit", "repeat_base_date",
-            "category", "tags", "note", "default_settled", "default_auto_settle_on_due_date",
+            "category", "tags", "note", "default_auto_settle_on_due_date",
         ]
         widgets = {
             "type": forms.Select(choices=TransactionType.choices),
@@ -63,6 +63,5 @@ class ScheduledExpenseForm(forms.ModelForm):
             "repeat_every_factor": "Every",
             "repeat_every_unit": "Unit",
             "repeat_base_date": "Starting from",
-            "default_settled": "Mark generated expenses as settled by default",
             "default_auto_settle_on_due_date": "Auto-settle generated expenses when reaching due date",
         }

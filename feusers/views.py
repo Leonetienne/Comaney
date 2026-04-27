@@ -356,13 +356,13 @@ def account_export(request):
         # scheduled_expenses.csv
         p = io.StringIO()
         w = csv.writer(p)
-        w.writerow(["uid", "title", "type", "value", "payee", "note", "category", "tags", "repeat_base_date", "repeat_every_factor", "repeat_every_unit", "default_settled"])
+        w.writerow(["uid", "title", "type", "value", "payee", "note", "category", "tags", "repeat_base_date", "repeat_every_factor", "repeat_every_unit"])
         for s in ScheduledExpense.objects.filter(owning_feuser=feuser).select_related("category").prefetch_related("tags"):
             w.writerow([
                 s.uid, s.title, s.type, s.value, s.payee, s.note,
                 s.category.title if s.category else "",
                 "|".join(t.title for t in s.tags.all()),
-                s.repeat_base_date or "", s.repeat_every_factor or "", s.repeat_every_unit, s.default_settled,
+                s.repeat_base_date or "", s.repeat_every_factor or "", s.repeat_every_unit,
             ])
         zf.writestr("scheduled_expenses.csv", p.getvalue())
 

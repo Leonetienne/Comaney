@@ -10,6 +10,7 @@
 
     <div class="profile-section">
         <h2>Personal info</h2>
+        <p class="in-page-tip">Change your name, currency and your financial cycle. For example, if you're getting paid on the 27th, you may want your financial month to begin on the 27. and end on the 26, to begin with your salary.</p>
         {% if success == "profile" %}<p class="success-msg">Saved.</p>{% endif %}
         <form method="post" novalidate>
             {% csrf_token %}
@@ -32,6 +33,7 @@
 
     <div class="profile-section">
         <h2>AI</h2>
+        <p class="in-page-tip">Use your own API key to remove usage limits and define custom instructions on how to classify your expenses.</p>
         {% if success == "ai" %}<p class="success-msg">Saved.</p>{% endif %}
         <form method="post" novalidate>
             {% csrf_token %}
@@ -66,7 +68,7 @@
         <a href="{% url 'totp_disable' %}" class="btn btn-danger btn-sm">Disable 2FA</a>
         {% else %}
         <p class="totp-status totp-status--off">Not enabled</p>
-        <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Add an extra layer of security to your account.</p>
+        <p class="in-page-tip">Add an extra layer of security to your account.</p>
         <a href="{% url 'totp_setup' %}" class="btn">Set up 2FA</a>
         {% endif %}
     </div>
@@ -94,6 +96,7 @@
     </div>
 
     <div class="profile-section">
+        <p class="page-tip"></p>
         <h2>Change password</h2>
         {% if success == "password" %}<p class="success-msg">Password updated.</p>{% endif %}
         <form method="post" novalidate>
@@ -111,8 +114,9 @@
     </div>
 
     <div class="profile-section">
+        <p class="page-tip"></p>
         <h2>API key</h2>
-        <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Use a Bearer token to access the <a href="/api/v1/" style="color:var(--accent);">REST API</a> programmatically.</p>
+        <p class="in-page-tip">Use a Bearer token to access the REST API programmatically.</p>
         {% if current_feuser.api_key %}
         <div class="pw-wrap" style="margin-bottom:12px;">
             <input type="text" id="api-key-display" value="{{ current_feuser.api_key }}" readonly class="edit-input" style="font-family:monospace;font-size:0.85rem;">
@@ -140,11 +144,13 @@
 
     <div class="profile-section profile-section--stacked">
         <div>
+            <p class="in-page-tip"></p>
             <h2>Export data</h2>
             <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Download all your data as a ZIP archive containing CSV files.</p>
             <a href="{% url 'account_export' %}" class="btn btn-secondary btn-sm">Export as ZIP</a>
         </div>
         <div class="profile-section--danger">
+            <p class="in-page-tip"></p>
             <h2>Danger zone</h2>
             <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Permanently delete your account and all associated data.</p>
             <a href="{% url 'account_delete' %}" class="btn btn-danger btn-sm">Delete account</a>

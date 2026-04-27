@@ -86,7 +86,6 @@ class ScheduledExpense(OwnedModel):
     tags = models.ManyToManyField(Tag, blank=True, related_name="scheduled_expenses")
     type = models.CharField(max_length=12, choices=TransactionType.choices)
     value = models.DecimalField(max_digits=12, decimal_places=2)
-    default_settled = models.BooleanField(default=True)
     default_auto_settle_on_due_date = models.BooleanField(default=False)
     repeat_base_date = models.DateField(null=True, blank=True)
     repeat_every_factor = models.PositiveIntegerField(null=True, blank=True)
