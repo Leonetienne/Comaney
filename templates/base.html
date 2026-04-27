@@ -84,5 +84,16 @@
         });
     };
     </script>
+    <script>
+    document.querySelectorAll('input[required],select[required],textarea[required]').forEach(el => {
+        const label = el.id && document.querySelector(`label[for="${el.id}"]`);
+        if (label && !label.querySelector('.req-star')) {
+            const star = document.createElement('span');
+            star.className = 'req-star';
+            star.textContent = ' *';
+            label.appendChild(star);
+        }
+    });
+    </script>
 </body>
 </html>
