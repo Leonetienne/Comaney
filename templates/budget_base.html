@@ -33,6 +33,15 @@
                 <a href="{% url 'profile' %}">Settings</a>
             </li>
         </ul>
+        {% if current_feuser %}
+        <div class="sidebar-user-actions">
+            <span class="sidebar-user-name">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</span>
+            <form method="post" action="{% url 'logout' %}" style="margin:0">
+                {% csrf_token %}
+                <button type="submit" id="sidebar-logout-button" class="sidebar-logout-btn">Logout</button>
+            </form>
+        </div>
+        {% endif %}
     </nav>
     <main class="app-main">
         <div class="app-content">

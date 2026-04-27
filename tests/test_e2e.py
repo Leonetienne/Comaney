@@ -221,7 +221,7 @@ class TestComaney:
             document.getElementById('id_date_due').value = '{today}';
             document.getElementById('id_settled').checked = true;
         """)
-        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button)")
+        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)")
         # Wait for redirect to the list (URL ends at /budget/expenses/ with no further path)
         w.until(lambda d: d.current_url.rstrip("/").endswith("/budget/expenses"))
         wait_text(driver, w, "Selenium Expense")
@@ -236,7 +236,7 @@ class TestComaney:
         ctx["expense_uid"] = re.search(r'/expenses/(\d+)/edit/', href).group(1)
         link.click()
         fill(w, By.ID, "id_title", "Selenium Expense Edited")
-        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button)")
+        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)")
         wait_url(w, "/budget/expenses/")
         wait_text(driver, w, "Selenium Expense Edited")
 
@@ -250,7 +250,7 @@ class TestComaney:
         w.until(lambda d: "CLONE - Selenium Expense Edited" in d.find_element(By.ID, "id_title").get_attribute("value"))
         # Grab clone UID from URL for later deletion
         ctx["clone_expense_uid"] = re.search(r'/expenses/(\d+)/edit/', driver.current_url).group(1)
-        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button)")
+        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)")
         wait_url(w, "/budget/expenses/")
 
     def test_12_delete_cloned_expense(self, driver, w, ctx):
@@ -279,7 +279,7 @@ class TestComaney:
         driver.execute_script(
             f"document.getElementById('id_repeat_base_date').value = '{today}';"
         )
-        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button)")
+        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)")
         wait_url(w, "/budget/scheduled/")
         wait_text(driver, w, "Selenium Scheduled")
 
@@ -292,7 +292,7 @@ class TestComaney:
         ctx["scheduled_uid"] = re.search(r'/scheduled/(\d+)/edit/', href).group(1)
         link.click()
         fill(w, By.ID, "id_title", "Selenium Scheduled Edited")
-        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button)")
+        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)")
         wait_url(w, "/budget/scheduled/")
         wait_text(driver, w, "Selenium Scheduled Edited")
 
@@ -304,7 +304,7 @@ class TestComaney:
         wait_url(w, "/edit/")
         w.until(lambda d: "CLONE - Selenium Scheduled Edited" in d.find_element(By.ID, "id_title").get_attribute("value"))
         ctx["clone_scheduled_uid"] = re.search(r'/scheduled/(\d+)/edit/', driver.current_url).group(1)
-        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button)")
+        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)")
         wait_url(w, "/budget/scheduled/")
 
     def test_16_delete_cloned_scheduled(self, driver, w, ctx):
@@ -641,7 +641,7 @@ class TestComaney:
 
         code = pyotp.TOTP(ctx["totp_secret"]).now()
         fill(w, By.ID, "id_code", code)
-        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button)")
+        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)")
 
         # Recovery code screen
         recovery_el = w.until(EC.presence_of_element_located((By.ID, "recovery-code")))
@@ -653,20 +653,20 @@ class TestComaney:
         driver.get(_url("/login/"))
         fill(w, By.ID, "id_email", ctx["email"])
         fill(w, By.ID, "id_password", PASSWORD)
-        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button)")
+        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)")
 
         # Should be on TOTP verify page
         wait_url(w, "/totp/verify/")
         code = pyotp.TOTP(ctx["totp_secret"]).now()
         fill(w, By.ID, "id_code", code)
-        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button)")
+        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)")
         wait_url(w, "/budget/")
 
     def test_45_disable_2fa(self, driver, w, ctx):
         driver.get(_url("/totp/disable/"))
         code = pyotp.TOTP(ctx["totp_secret"]).now()
         fill(w, By.ID, "id_code", code)
-        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button)")
+        click(w, By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)")
         wait_url(w, "/profile/")
         # 2FA should now show as disabled
         wait_text(driver, w, "Not enabled")

@@ -10,11 +10,13 @@
     </div>
     <nav>
         {% if current_feuser %}
-            <span class="user-name">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</span>
-            <form method="post" action="{% url 'logout' %}" style="margin:0">
-                {% csrf_token %}
-                <button type="submit" id="logout-button">Logout</button>
-            </form>
+            <span class="header-user-actions">
+                <span class="user-name">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</span>
+                <form method="post" action="{% url 'logout' %}" style="margin:0">
+                    {% csrf_token %}
+                    <button type="submit" id="logout-button">Logout</button>
+                </form>
+            </span>
         {% else %}
             <a href="{% url 'login' %}">Log In</a>
             {% if registration_enabled %}<a href="{% url 'register' %}">Register</a>{% endif %}

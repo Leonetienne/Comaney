@@ -56,6 +56,12 @@ header {
   align-items: center;
 }
 
+.header-user-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .brand-logo {
   width: 28px;
   height: 28px;

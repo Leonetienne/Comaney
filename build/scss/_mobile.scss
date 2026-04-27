@@ -1,7 +1,11 @@
+.sidebar-user-actions { display: none; }
+
 @media (max-width: 768px) {
   header { padding: 0 16px; }
 
   .hamburger { display: flex; }
+
+  .header-user-actions { display: none; }
 
   .sidebar {
     position: fixed;
@@ -15,6 +19,32 @@
     overflow-y: auto;
 
     body.nav-open & { transform: translateX(0); }
+  }
+
+  .sidebar-user-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+  }
+
+  .sidebar-user-name {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .sidebar-logout-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text);
+    text-align: left;
+    &:hover { background: var(--bg-elevated); }
   }
 
   .app-main { padding: 20px 16px; }
