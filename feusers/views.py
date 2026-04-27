@@ -409,6 +409,8 @@ def totp_setup(request):
     import pyotp
     error = None
 
+    recovery_code = None
+
     if request.method == "POST":
         code   = request.POST.get("code", "").strip()
         secret = request.session.get("totp_setup_secret", "")
@@ -416,11 +418,17 @@ def totp_setup(request):
             return redirect("totp_setup")
         totp = pyotp.TOTP(secret)
         if totp.verify(code, valid_window=1):
-            feuser.totp_secret  = secret
-            feuser.totp_enabled = True
-            feuser.save(update_fields=["totp_secret", "totp_enabled"])
+            raw = secrets.token_hex(5).upper()
+            recovery_code = f"{raw[:5]}-{raw[5:]}"
+            feuser.totp_secret        = secret
+            feuser.totp_enabled       = True
+            feuser.totp_recovery_hash = hashlib.sha256(raw.encode()).hexdigest()
+            feuser.save(update_fields=["totp_secret", "totp_enabled", "totp_recovery_hash"])
             del request.session["totp_setup_secret"]
-            return redirect("profile")
+            return render(request, "feusers/totp_setup.html", {
+                "recovery_code": recovery_code,
+                "done": True,
+            })
         error = "Invalid code — please try again."
     else:
         secret = pyotp.random_base32()
@@ -461,17 +469,46 @@ def totp_verify(request):
     import pyotp
     error = None
     if request.method == "POST":
-        code = request.POST.get("code", "").strip()
         try:
             user = FeUser.objects.get(pk=pending_id, is_active=True, totp_enabled=True)
         except FeUser.DoesNotExist:
             return redirect("login")
+
+        code = request.POST.get("code", "").strip()
         if pyotp.TOTP(user.totp_secret).verify(code, valid_window=1):
             del request.session["totp_pending_id"]
             request.session["feuser_id"] = user.pk
             return redirect("hello_world")
         error = "Invalid code — please try again."
+
     return render(request, "feusers/totp_verify.html", {"error": error})
+
+
+def totp_verify_recovery(request):
+    pending_id = request.session.get("totp_pending_id")
+    if not pending_id:
+        return redirect("login")
+
+    error = None
+    if request.method == "POST":
+        try:
+            user = FeUser.objects.get(pk=pending_id, is_active=True, totp_enabled=True)
+        except FeUser.DoesNotExist:
+            return redirect("login")
+
+        recovery = request.POST.get("recovery", "").strip().upper().replace("-", "")
+        digest   = hashlib.sha256(recovery.encode()).hexdigest()
+        if user.totp_recovery_hash and secrets.compare_digest(digest, user.totp_recovery_hash):
+            user.totp_secret        = ""
+            user.totp_enabled       = False
+            user.totp_recovery_hash = ""
+            user.save(update_fields=["totp_secret", "totp_enabled", "totp_recovery_hash"])
+            del request.session["totp_pending_id"]
+            request.session["feuser_id"] = user.pk
+            return redirect("hello_world")
+        error = "Invalid recovery code."
+
+    return render(request, "feusers/totp_verify.html", {"error": error, "recovery_mode": True})
 
 
 def confirm_email(request, token):

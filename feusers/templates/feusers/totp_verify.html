@@ -4,10 +4,28 @@
 
 {% block content %}
 <h1>Two-factor authentication</h1>
-<p>Enter the 6-digit code from your authenticator app.</p>
 
+{% if recovery_mode %}
+<p>Enter your recovery code to disable 2FA and log in.</p>
 {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
-
+<form method="post" novalidate autocomplete="off">
+    {% csrf_token %}
+    <input type="hidden" name="recovery_mode" value="1">
+    <label for="id_recovery">Recovery code</label>
+    <input id="id_recovery" name="recovery" type="text" placeholder="XXXXX-XXXXX"
+           maxlength="11" autofocus autocomplete="off" style="font-family:monospace;letter-spacing:0.05em;"
+           oninput="
+             let v = this.value.toUpperCase().replace(/[^0-9A-F]/g,'');
+             this.value = v.length > 5 ? v.slice(0,5) + '-' + v.slice(5,10) : v;
+           ">
+    <div class="form-actions">
+        <button type="submit" class="btn btn-full">Use recovery code</button>
+    </div>
+</form>
+<p style="margin-top:16px;font-size:0.9rem;"><a href="{% url 'totp_verify' %}">← Back to authenticator code</a></p>
+{% else %}
+<p>Enter the 6-digit code from your authenticator app.</p>
+{% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
 <form method="post" novalidate autocomplete="off">
     {% csrf_token %}
     <label for="id_code">Authentication code</label>
@@ -17,4 +35,6 @@
         <button type="submit" class="btn btn-full">Verify</button>
     </div>
 </form>
+<p style="margin-top:16px;font-size:0.9rem;"><a href="{% url 'totp_verify_recovery' %}">Lost access to your app? Use recovery code</a></p>
+{% endif %}
 {% endblock %}

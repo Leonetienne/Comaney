@@ -88,6 +88,23 @@ main.page-centered { text-align: center; }
   word-break: break-all;
 }
 
+.totp-recovery-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+
+  code {
+    flex: 1;
+    font-size: 1.1rem;
+    letter-spacing: 0.12em;
+  }
+}
+
 .totp-status {
   font-weight: 600;
   margin: 0 0 8px;
