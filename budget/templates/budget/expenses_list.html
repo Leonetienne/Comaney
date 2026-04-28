@@ -63,6 +63,10 @@
 <p class="empty">No expenses yet. <a href="{% url 'budget:expense_create' %}">Add one.</a></p>
 {% endif %}
 {% if expenses %}
+{% if nav_mode == 'year' %}
+<a href="{% url 'budget:expenses_export' %}?view=year&year={{ nav_year }}" class="expenses-export-link">↓ Export CSV</a>
+{% else %}
 <a href="{% url 'budget:expenses_export' %}?year={{ nav_year }}&month={{ nav_month }}" class="expenses-export-link">↓ Export CSV</a>
+{% endif %}
 {% endif %}
 {% endblock %}

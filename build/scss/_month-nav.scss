@@ -3,6 +3,52 @@
   align-items: center;
   gap: 16px;
   margin-bottom: 20px;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+    width: fit-content;
+    gap: 10px;
+  }
+}
+
+.month-nav__controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  order: -1;
+
+  @media (max-width: 600px) {
+    order: 1;
+    margin-top: 4px;
+  }
+}
+
+.period-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+
+  @media (max-width: 600px) {
+    width: 100%;
+    &__opt { flex: 1; text-align: center; }
+  }
+
+  &__opt {
+    padding: 5px 13px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    text-decoration: none !important;
+    background: var(--bg-surface);
+    transition: background .12s, color .12s;
+
+    &:hover { color: var(--text); background: var(--bg-elevated); }
+    &.active { background: #c2478a; color: #fff; }
+  }
 }
 
 .month-nav__label {

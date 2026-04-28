@@ -1,7 +1,23 @@
 <div class="month-nav">
-    <a href="?year={{ nav_prev_year }}&month={{ nav_prev_month }}" class="month-nav__arrow" aria-label="Previous month">&#8249;</a>
-    <span class="month-nav__label">
-        {{ nav_label }}{% if nav_range %}<span class="month-nav__range">{{ nav_range }}</span>{% endif %}
-    </span>
-    <a href="?year={{ nav_next_year }}&month={{ nav_next_month }}" class="month-nav__arrow {% if nav_is_current %}month-nav__arrow--disabled{% endif %}" aria-label="Next month">&#8250;</a>
+    <div class="period-toggle">
+        <a href="?year={{ nav_year }}&month={{ nav_month }}"
+           class="period-toggle__opt{% if nav_mode == 'month' %} active{% endif %}">Months</a>
+        <a href="?view=year&year={{ nav_year }}"
+           class="period-toggle__opt{% if nav_mode == 'year' %} active{% endif %}">Years</a>
+    </div>
+    <div class="month-nav__controls">
+        {% if nav_mode == 'year' %}
+        <a href="?view=year&year={{ nav_prev_year }}" class="month-nav__arrow" aria-label="Previous year">&#8249;</a>
+        {% else %}
+        <a href="?year={{ nav_prev_year }}&month={{ nav_prev_month }}" class="month-nav__arrow" aria-label="Previous month">&#8249;</a>
+        {% endif %}
+        <span class="month-nav__label">
+            {{ nav_label }}{% if nav_range %}<span class="month-nav__range">{{ nav_range }}</span>{% endif %}
+        </span>
+        {% if nav_mode == 'year' %}
+        <a href="?view=year&year={{ nav_next_year }}" class="month-nav__arrow {% if nav_is_current %}month-nav__arrow--disabled{% endif %}" aria-label="Next year">&#8250;</a>
+        {% else %}
+        <a href="?year={{ nav_next_year }}&month={{ nav_next_month }}" class="month-nav__arrow {% if nav_is_current %}month-nav__arrow--disabled{% endif %}" aria-label="Next month">&#8250;</a>
+        {% endif %}
+    </div>
 </div>

@@ -9,11 +9,43 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .date_utils import current_financial_month, financial_month_range
+from .date_utils import current_financial_month, financial_month_range, financial_year_range
 from .decorators import feuser_required
 from .expense_factory import create_expense
 from .forms import ExpenseForm, ScheduledExpenseForm
 from .models import Category, Expense, ScheduledExpense, Tag, TransactionType
+
+
+def _get_period_mode(request) -> str:
+    return "year" if request.GET.get("view") == "year" else "month"
+
+
+def _get_year(request, start_day: int = 1, prev_month: bool = False) -> int:
+    try:
+        year = int(request.GET["year"])
+        if year < 1:
+            raise ValueError
+    except (KeyError, ValueError, TypeError):
+        return current_financial_month(start_day, prev_month)[0]
+    return year
+
+
+def _year_nav_context(year: int, start_day: int = 1, prev_month: bool = False) -> dict:
+    cur_year, cur_month = current_financial_month(start_day, prev_month)
+    is_current = (year == cur_year)
+    start, end = financial_year_range(year, start_day, prev_month)
+    is_default = (start_day == 1 and not prev_month)
+    range_str = f"{start.strftime('%-d %b %Y')} – {end.strftime('%-d %b %Y')}" if not is_default else ""
+    return {
+        "nav_mode": "year",
+        "nav_year": year,
+        "nav_month": cur_month,
+        "nav_label": str(year),
+        "nav_range": range_str,
+        "nav_prev_year": year - 1,
+        "nav_next_year": year + 1,
+        "nav_is_current": is_current,
+    }
 
 
 def _get_month(request, start_day: int = 1, prev_month: bool = False) -> tuple[int, int]:
@@ -38,6 +70,7 @@ def _month_nav_context(year: int, month: int, start_day: int = 1, prev_month: bo
     is_default = (start_day == 1 and not prev_month)
     range_str = f"{start.strftime('%-d %b')} – {end.strftime('%-d %b')}" if not is_default else ""
     return {
+        "nav_mode": "month",
         "nav_year": year,
         "nav_month": month,
         "nav_label": date(year, month, 1).strftime("%B %Y"),
@@ -53,9 +86,18 @@ def _month_nav_context(year: int, month: int, start_day: int = 1, prev_month: bo
 @feuser_required
 def dashboard(request):
     feuser = request.feuser
-    year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
-    start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
-    month_qs = Expense.objects.filter(
+    mode = _get_period_mode(request)
+
+    if mode == "year":
+        year = _get_year(request, feuser.month_start_day, feuser.month_start_prev)
+        start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
+        nav_ctx = _year_nav_context(year, feuser.month_start_day, feuser.month_start_prev)
+    else:
+        year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
+        start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+        nav_ctx = _month_nav_context(year, month, feuser.month_start_day, feuser.month_start_prev)
+
+    period_qs = Expense.objects.filter(
         owning_feuser=feuser,
         date_created__date__gte=start,
         date_created__date__lte=end,
@@ -64,15 +106,15 @@ def dashboard(request):
     def _sum(qs):
         return qs.aggregate(t=Sum("value"))["t"] or Decimal("0")
 
-    income      = _sum(month_qs.filter(type="income"))
-    paid        = _sum(month_qs.filter(type="expense", settled=True))
-    outstanding = _sum(month_qs.filter(type="expense", settled=False))
-    sav_dep     = _sum(month_qs.filter(type="savings_dep"))
-    sav_wit     = _sum(month_qs.filter(type="savings_wit"))
+    income      = _sum(period_qs.filter(type="income"))
+    paid        = _sum(period_qs.filter(type="expense", settled=True))
+    outstanding = _sum(period_qs.filter(type="expense", settled=False))
+    sav_dep     = _sum(period_qs.filter(type="savings_dep"))
+    sav_wit     = _sum(period_qs.filter(type="savings_wit"))
     savings     = sav_dep - sav_wit
     left        = income - paid - outstanding - savings
 
-    expense_qs = month_qs.filter(type="expense")
+    expense_qs = period_qs.filter(type="expense")
 
     cat_rows = list(
         expense_qs.values("category__title")
@@ -102,7 +144,7 @@ def dashboard(request):
         "tag_labels": json.dumps([r["tags__title"] for r in tag_rows]),
         "tag_values": json.dumps([float(r["total"]) for r in tag_rows]),
     }
-    ctx.update(_month_nav_context(year, month, feuser.month_start_day, feuser.month_start_prev))
+    ctx.update(nav_ctx)
     return render(request, "budget/dashboard.html", ctx)
 
 
@@ -185,8 +227,17 @@ def tag_rename(request, uid):
 @feuser_required
 def expenses_list(request):
     feuser = request.feuser
-    year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
-    start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+    mode = _get_period_mode(request)
+
+    if mode == "year":
+        year = _get_year(request, feuser.month_start_day, feuser.month_start_prev)
+        start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
+        nav_ctx = _year_nav_context(year, feuser.month_start_day, feuser.month_start_prev)
+    else:
+        year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
+        start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+        nav_ctx = _month_nav_context(year, month, feuser.month_start_day, feuser.month_start_prev)
+
     expenses = (
         Expense.objects.filter(
             owning_feuser=feuser,
@@ -201,7 +252,7 @@ def expenses_list(request):
         "active_nav": "expenses",
         "expenses": expenses,
     }
-    ctx.update(_month_nav_context(year, month, feuser.month_start_day, feuser.month_start_prev))
+    ctx.update(nav_ctx)
     return render(request, "budget/expenses_list.html", ctx)
 
 
@@ -211,8 +262,16 @@ def expenses_export(request):
     from django.http import HttpResponse
 
     feuser = request.feuser
-    year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
-    start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+    mode = _get_period_mode(request)
+
+    if mode == "year":
+        year = _get_year(request, feuser.month_start_day, feuser.month_start_prev)
+        start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
+        label = str(year)
+    else:
+        year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
+        start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+        label = date(year, month, 1).strftime("%B_%Y")
 
     expenses = (
         Expense.objects.filter(
@@ -224,8 +283,6 @@ def expenses_export(request):
         .prefetch_related("tags")
         .order_by("date_due", "date_created")
     )
-
-    label = date(year, month, 1).strftime("%B_%Y")
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="expenses_{label}.csv"'
 

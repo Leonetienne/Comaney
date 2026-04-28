@@ -28,6 +28,16 @@ def financial_month_range(year: int, month: int, start_day: int, prev_month: boo
     return start, next_start - timedelta(days=1)
 
 
+def financial_year_range(year: int, start_day: int, prev_month: bool) -> tuple[date, date]:
+    """Return (start, end) for the financial year labelled `year`.
+
+    Runs from financial January's first day to financial December's last day.
+    """
+    start, _ = financial_month_range(year, 1, start_day, prev_month)
+    _, end = financial_month_range(year, 12, start_day, prev_month)
+    return start, end
+
+
 def current_financial_month(start_day: int, prev_month: bool) -> tuple[int, int]:
     """Return the (year, month) label whose financial window contains today."""
     today = date.today()

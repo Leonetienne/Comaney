@@ -40,7 +40,7 @@
         {% if cat_labels != "[]" %}
         <canvas id="cat-chart"></canvas>
         {% else %}
-        <p class="chart-empty">No expense data this month.</p>
+        <p class="chart-empty">No expense data this {% if nav_mode == 'year' %}year{% else %}month{% endif %}.</p>
         {% endif %}
     </div>
     <div class="chart-card">
@@ -48,7 +48,7 @@
         {% if tag_labels != "[]" %}
         <canvas id="tag-chart"></canvas>
         {% else %}
-        <p class="chart-empty">No tagged expenses this month.</p>
+        <p class="chart-empty">No tagged expenses this {% if nav_mode == 'year' %}year{% else %}month{% endif %}.</p>
         {% endif %}
     </div>
 </div>
