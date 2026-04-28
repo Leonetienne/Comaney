@@ -8,6 +8,7 @@
 .exp-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
   border-radius: 10px;
   padding: 12px 16px;
   display: grid;
@@ -15,6 +16,9 @@
   grid-template-rows: auto auto auto auto;
   row-gap: 5px;
   column-gap: 16px;
+  &.unsettled {
+    border-left-color: #c2478a;
+  }
 }
 
 .exp-date-label {

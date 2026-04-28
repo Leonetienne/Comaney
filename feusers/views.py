@@ -14,10 +14,10 @@ from .forms import (
 from .models import FeUser
 
 
-def hello_world(request):
+def front_page(request):
     if request.session.get("feuser_id"):
         return redirect("budget:dashboard")
-    return render(request, "feusers/hello_world.html", {"active_nav": "home"})
+    return render(request, "feusers/front_page.html", {"active_nav": "home"})
 
 
 _POW_DIFFICULTY = 18
@@ -126,7 +126,7 @@ def register_success(request):
 
 def login_view(request):
     if request.session.get("feuser_id"):
-        return redirect("hello_world")
+        return redirect("front_page")
 
     error = None
     if request.method == "POST":
@@ -147,7 +147,7 @@ def login_view(request):
                 return redirect("totp_verify")
             else:
                 request.session["feuser_id"] = user.pk
-                return redirect("hello_world")
+                return redirect("front_page")
     else:
         form = LoginForm()
 
@@ -157,7 +157,7 @@ def login_view(request):
 def logout_view(request):
     if request.method == "POST":
         request.session.flush()
-    return redirect("hello_world")
+    return redirect("front_page")
 
 
 def _get_session_feuser(request):
@@ -409,7 +409,7 @@ def account_delete(request):
         else:
             request.session.flush()
             feuser.delete()
-            return redirect("hello_world")
+            return redirect("front_page")
 
     return render(request, "feusers/account_delete.html", {"error": error})
 
@@ -502,7 +502,7 @@ def totp_verify(request):
         if pyotp.TOTP(user.totp_secret).verify(code, valid_window=1):
             del request.session["totp_pending_id"]
             request.session["feuser_id"] = user.pk
-            return redirect("hello_world")
+            return redirect("front_page")
         error = "Invalid code — please try again."
 
     return render(request, "feusers/totp_verify.html", {"error": error})
@@ -529,7 +529,7 @@ def totp_verify_recovery(request):
             user.save(update_fields=["totp_secret", "totp_enabled", "totp_recovery_hash"])
             del request.session["totp_pending_id"]
             request.session["feuser_id"] = user.pk
-            return redirect("hello_world")
+            return redirect("front_page")
         error = "Invalid recovery code."
 
     return render(request, "feusers/totp_verify.html", {"error": error, "recovery_mode": True})

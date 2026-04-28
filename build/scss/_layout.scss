@@ -16,8 +16,8 @@
 .sidebar {
   width: 180px;
   flex-shrink: 0;
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border);
+  background: #0f0f1a;
+  border-right: 1px solid rgba(255, 255, 255, .06);
   padding: 20px 0 20px 12px;
 
   ul {
@@ -30,20 +30,20 @@
         display: block;
         padding: 10px 24px;
         text-decoration: none;
-        color: var(--text-subtle);
+        color: rgba(255, 255, 255, .45);
         font-size: 0.92rem;
         border-left: 3px solid transparent;
 
         &:hover {
-          color: var(--text);
-          background: var(--bg-elevated);
+          color: rgba(255, 255, 255, .85);
+          background: rgba(255, 255, 255, .05);
         }
       }
 
       &.active a {
-        color: var(--text);
-        border-left-color: var(--accent);
-        background: var(--bg-elevated);
+        color: #fff;
+        border-left-color: #c2478a;
+        background: rgba(194, 71, 138, .14);
       }
 
       &:first-child .sidebar-section-label { padding-top: 4px; }
@@ -58,7 +58,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .07em;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, .22);
 }
 
 .app-main {
@@ -66,9 +66,19 @@
   padding: 24px 28px;
   min-width: 0;
   overflow-x: hidden;
+  background: transparent;
 }
 
-.app-content { max-width: 1400px; }
+.app-content {
+  max-width: 1400px;
+
+  > h1 {
+    font-size: 1.85rem;
+    font-weight: 800;
+    letter-spacing: -.025em;
+    margin-bottom: 20px;
+  }
+}
 
 // Auth pages (login, register)
 main {

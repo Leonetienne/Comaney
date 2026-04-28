@@ -1,0 +1,621 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Comaney – Personal Budget Tracking{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ─── Landing page ─────────────────────────────────────────────── */
+.lp { overflow-x: hidden; }
+
+/* Hero */
+.lp-hero {
+  position: relative;
+  min-height: calc(100vh - 56px);
+  background: linear-gradient(140deg, #0d0d1c 0%, #1a0b2e 55%, #0a1a2e 100%);
+  display: flex;
+  align-items: center;
+  padding: 80px 80px 80px 80px;
+  gap: 72px;
+  overflow: hidden;
+}
+
+.lp-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 28% 55%, rgba(194,71,138,.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 82% 20%, rgba(60,120,220,.12) 0%, transparent 45%);
+  pointer-events: none;
+}
+
+.lp-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,.045) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+}
+
+.lp-hero-copy {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  max-width: 500px;
+}
+
+.lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: #c2478a;
+  background: rgba(194,71,138,.12);
+  border: 1px solid rgba(194,71,138,.28);
+  border-radius: 100px;
+  padding: 5px 14px;
+  margin-bottom: 32px;
+}
+
+.lp-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c2478a;
+  animation: lp-pulse 2s ease-in-out infinite;
+}
+
+@keyframes lp-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .4; transform: scale(.7); }
+}
+
+.lp-hero-title {
+  font-size: clamp(2.8rem, 5vw, 4.4rem);
+  font-weight: 800;
+  line-height: 1.08;
+  color: #fff;
+  margin: 0 0 26px;
+  letter-spacing: -.025em;
+}
+
+.lp-accent { color: #c2478a; }
+
+.lp-hero-sub {
+  font-size: 1.12rem;
+  line-height: 1.72;
+  color: rgba(255,255,255,.58);
+  margin: 0 0 44px;
+}
+
+.lp-cta-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.lp-cta-row--center { justify-content: center; }
+
+.lp-btn {
+  display: inline-block;
+  padding: 13px 26px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition: transform .18s, box-shadow .18s, background .18s, border-color .18s;
+}
+
+.lp-btn-primary {
+  background: #c2478a;
+  color: #fff !important;
+  box-shadow: 0 4px 22px rgba(194,71,138,.38);
+}
+.lp-btn-primary:hover {
+  background: #d4569b;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 36px rgba(194,71,138,.48);
+}
+
+.lp-btn-primary--lg {
+  font-size: 1.08rem;
+  padding: 16px 36px;
+}
+
+.lp-btn-ghost {
+  color: rgba(255,255,255,.7) !important;
+  border: 1px solid rgba(255,255,255,.2);
+}
+.lp-btn-ghost:hover {
+  color: #fff !important;
+  border-color: rgba(255,255,255,.5);
+  background: rgba(255,255,255,.06);
+}
+
+.lp-hero-visual {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.lp-hero-img {
+  width: 100%;
+  height: auto;
+  max-width: 660px;
+  border-radius: 16px;
+  box-shadow: 0 40px 100px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.07);
+  transform: rotate(2.5deg);
+  transition: transform .5s cubic-bezier(.25,.46,.45,.94);
+  display: block;
+}
+
+.lp-hero-visual { align-self: center; }
+.lp-hero-img:hover { transform: rotate(0deg) scale(1.015); }
+
+/* Feature sections */
+.lp-features { padding: 0; }
+
+.lp-feature {
+  display: flex;
+  align-items: center;
+  gap: 90px;
+  padding: 110px 100px;
+  max-width: 1350px;
+  margin: 0 auto;
+}
+
+.lp-feature.lp-rev { flex-direction: row-reverse; }
+
+.lp-feature-copy { flex: 1; min-width: 0; }
+
+.lp-feature-num {
+  display: inline-block;
+  font-size: 0.73rem;
+  font-weight: 700;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  color: #c2478a;
+  margin-bottom: 18px;
+}
+
+.lp-feature-title {
+  font-size: clamp(1.9rem, 3vw, 2.9rem);
+  font-weight: 800;
+  line-height: 1.12;
+  color: var(--text);
+  margin: 0 0 18px;
+  letter-spacing: -.022em;
+}
+
+.lp-feature-body {
+  font-size: 1.05rem;
+  line-height: 1.76;
+  color: var(--text-subtle);
+  margin: 0 0 30px;
+}
+
+.lp-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.lp-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 0.96rem;
+  color: var(--text-subtle);
+}
+
+.lp-checklist li::before {
+  content: '✓';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border-radius: 50%;
+  background: rgba(194,71,138,.14);
+  color: #c2478a;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.lp-feature-visual {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.lp-feature-img {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.14);
+  display: block;
+}
+
+.lp-feature:not(.lp-rev) .lp-feature-img { transform: rotate(-2.5deg); }
+.lp-feature.lp-rev      .lp-feature-img { transform: rotate( 2deg);   }
+
+/* Stripe section background */
+.lp-stripe {
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Stats bar */
+.lp-stats {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.lp-stat {
+  flex: 1;
+  max-width: 260px;
+  padding: 48px 32px;
+  text-align: center;
+  border-right: 1px solid var(--border);
+}
+.lp-stat:last-child { border-right: none; }
+
+.lp-stat-value {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #c2478a;
+  line-height: 1;
+  margin-bottom: 8px;
+  letter-spacing: -.03em;
+}
+
+.lp-stat-label {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Bottom CTA */
+.lp-cta-section {
+  background: linear-gradient(140deg, #0d0d1c 0%, #1a0b2e 100%);
+  padding: 130px 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.lp-cta-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 60%, rgba(194,71,138,.22) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.lp-cta-section::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+}
+
+.lp-cta-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.lp-cta-title {
+  font-size: clamp(2.2rem, 4.5vw, 3.4rem);
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 18px;
+  letter-spacing: -.025em;
+  line-height: 1.1;
+}
+
+.lp-cta-sub {
+  font-size: 1.08rem;
+  color: rgba(255,255,255,.52);
+  margin: 0 0 44px;
+  line-height: 1.65;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .lp-hero { padding: 60px 48px; gap: 48px; }
+  .lp-feature { padding: 80px 48px; gap: 60px; }
+}
+
+@media (max-width: 1000px) {
+  .lp-hero {
+    flex-direction: column;
+    padding: 56px 24px 64px;
+    min-height: auto;
+    text-align: center;
+  }
+  .lp-hero-copy { max-width: 100%; }
+  .lp-cta-row { justify-content: center; }
+  .lp-hero-img { transform: rotate(1deg); max-width: 100%; }
+
+  .lp-feature,
+  .lp-feature.lp-rev {
+    flex-direction: column !important;
+    padding: 64px 24px;
+    gap: 36px;
+    text-align: center;
+  }
+  .lp-checklist { align-items: center; }
+  .lp-feature:not(.lp-rev) .lp-feature-img,
+  .lp-feature.lp-rev .lp-feature-img { transform: rotate(1deg); max-width: 100%; }
+
+  .lp-stats { flex-wrap: wrap; }
+  .lp-stat { border-right: none; border-bottom: 1px solid var(--border); flex: 0 0 50%; max-width: 50%; }
+  .lp-stat:nth-child(odd) { border-right: 1px solid var(--border); }
+
+  .lp-cta-section { padding: 80px 24px; }
+}
+
+@media (max-width: 480px) {
+  .lp-stat { flex: 0 0 100%; max-width: 100%; border-right: none; }
+  .lp-stat:nth-child(odd) { border-right: none; }
+}
+</style>
+{% endblock %}
+
+{% block layout %}
+<div class="lp">
+
+  <!-- ── Hero ── -->
+  <section class="lp-hero">
+    <div class="lp-hero-copy">
+      <span class="lp-eyebrow">
+        <span class="lp-eyebrow-dot"></span>
+        Open-source &middot; Self-hostable
+      </span>
+      <h1 class="lp-hero-title">
+        Know <span class="lp-accent">exactly</span><br>
+        where your<br>money goes.
+      </h1>
+      <p class="lp-hero-sub">
+        Log what you spend, let recurring bills manage themselves, and always
+        know exactly how much you have left this month. Simple, self-hosted,
+        no bank sync required.
+      </p>
+      {% if registration_enabled %}
+      <div class="lp-cta-row">
+        <a href="{% url 'register' %}" class="lp-btn lp-btn-primary">Create free account</a>
+        <a href="{% url 'login' %}" class="lp-btn lp-btn-ghost">Sign in &rarr;</a>
+      </div>
+      {% else %}
+      <div class="lp-cta-row">
+        <a href="{% url 'login' %}" class="lp-btn lp-btn-primary">Sign in</a>
+      </div>
+      {% endif %}
+    </div>
+    <div class="lp-hero-visual">
+      <img
+        src="https://picsum.photos/seed/comoney-hero/720/480"
+        alt="App dashboard screenshot"
+        class="lp-hero-img"
+        width="720" height="480"
+      >
+    </div>
+  </section>
+
+  <!-- ── Stats bar ── -->
+  <div class="lp-stats">
+    <div class="lp-stat">
+      <div class="lp-stat-value">100%</div>
+      <div class="lp-stat-label">Self-hosted &amp; open source</div>
+    </div>
+    <div class="lp-stat">
+      <div class="lp-stat-value">AI</div>
+      <div class="lp-stat-label">Powered express entry creation</div>
+    </div>
+    <div class="lp-stat">
+      <div class="lp-stat-value">&infin;</div>
+      <div class="lp-stat-label">Expenses, categories &amp; tags</div>
+    </div>
+    <div class="lp-stat">
+      <div class="lp-stat-value">0</div>
+      <div class="lp-stat-label">Subscriptions, ads, or tracking</div>
+    </div>
+  </div>
+
+  <div class="lp-features">
+
+    <!-- ── Feature 1: Expense tracking ── -->
+    <div class="lp-feature">
+      <div class="lp-feature-copy">
+        <span class="lp-feature-num">01 &mdash; Expense tracking</span>
+        <h2 class="lp-feature-title">Every cent,<br>accounted for.</h2>
+        <p class="lp-feature-body">
+          Log income and expenses with a title, value, due date, payee, and a note.
+          Assign categories and tags to each entry and Comaney tells you exactly
+          where your money went at the end of every month.
+        </p>
+        <ul class="lp-checklist">
+          <li>Categories and tags on every entry</li>
+          <li>Income and expenses side by side</li>
+          <li>Mark entries settled as you pay them</li>
+          <li>Payee and note fields for full context</li>
+        </ul>
+      </div>
+      <div class="lp-feature-visual">
+        <img
+          src="https://picsum.photos/seed/comoney-list/640/430"
+          alt=""
+          class="lp-feature-img"
+          width="640" height="430"
+        >
+      </div>
+    </div>
+
+    <!-- ── Feature 2: AI express creation ── -->
+    <div class="lp-stripe">
+      <div class="lp-feature lp-rev">
+        <div class="lp-feature-copy">
+          <span class="lp-feature-num">02 &mdash; AI Express Creation</span>
+          <h2 class="lp-feature-title">Describe it.<br><span class="lp-accent">Done.</span></h2>
+          <p class="lp-feature-body">
+            Type what you spent in plain language or snap a picture of your receipt
+            and the AI turns it into
+            properly categorised expense entries. Review the preview, adjust
+            if needed, confirm. No tedious form filling, no manual categorisation.
+            Every new user on the official public instance gets a free monthly budget of ai requests so you
+            can try it within minutes of signing up.
+          </p>
+          <ul class="lp-checklist">
+            <li>Plain language input, no forms to fill</li>
+            <li>Scans your receipt</li>
+            <li>Auto-assigns categories and tags</li>
+            <li>Handles multiple expenses at once</li>
+            <li>Free budget included for every account</li>
+            <li>Use your own API key to remove limits</li>
+            <li>Define default instructions</li>
+          </ul>
+        </div>
+        <div class="lp-feature-visual">
+          <img
+            src="https://picsum.photos/seed/comoney-ai/640/430"
+            alt=""
+            class="lp-feature-img"
+            width="640" height="430"
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Feature 3: Scheduled expenses ── -->
+    <div class="lp-feature">
+      <div class="lp-feature-copy">
+        <span class="lp-feature-num">03 &mdash; Scheduled expenses</span>
+        <h2 class="lp-feature-title">Recurring bills,<br>never forgotten.</h2>
+        <p class="lp-feature-body">
+          Define rent, subscriptions, and regular bills once. Comaney generates
+          the entries automatically each financial month. Tick auto-settle and
+          they take care of themselves completely. The less you have to touch it,
+          the better.
+        </p>
+        <ul class="lp-checklist">
+          <li>Weekly, monthly, or custom intervals</li>
+          <li>Auto-generated at the start of each period</li>
+          <li>Auto-settle on due date</li>
+          <li>Never log rent or Netflix manually again</li>
+        </ul>
+      </div>
+      <div class="lp-feature-visual">
+        <img
+          src="https://picsum.photos/seed/comoney-sched/640/430"
+          alt=""
+          class="lp-feature-img"
+          width="640" height="430"
+        >
+      </div>
+    </div>
+
+    <!-- ── Feature 4: Dashboard ── -->
+    <div class="lp-stripe">
+      <div class="lp-feature lp-rev">
+        <div class="lp-feature-copy">
+          <span class="lp-feature-num">04 &mdash; Monthly overview</span>
+          <h2 class="lp-feature-title">Always know<br>where you stand.</h2>
+          <p class="lp-feature-body">
+            At any point in the month Comaney tells you: how much came in, how
+            much went out, what is still outstanding, and exactly how much you
+            have left to spend. It works with your actual pay cycle, not the
+            calendar month, so the numbers always reflect reality.
+          </p>
+          <ul class="lp-checklist">
+            <li>Spending budget and remaining balance, live</li>
+            <li>Set your own financial month start day</li>
+            <li>Breakdown by category and tag</li>
+            <li>Settled vs. outstanding at a glance</li>
+          </ul>
+        </div>
+        <div class="lp-feature-visual">
+          <img
+            src="https://picsum.photos/seed/comoney-dash2/640/430"
+            alt=""
+            class="lp-feature-img"
+            width="640" height="430"
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Feature 5: Open source ── -->
+    <div class="lp-feature">
+      <div class="lp-feature-copy">
+        <span class="lp-feature-num">05 &mdash; Open source</span>
+        <h2 class="lp-feature-title">Your data stays<br><span class="lp-accent">yours.</span></h2>
+        <p class="lp-feature-body">
+          Comaney can run on your own server. If you host yourself, financial data never touches
+          a third party cloud, never gets sold, and is never used to train
+          anything, unless you use the AI feature which uses Anthropics AI service.
+          Export everything as a ZIP of CSVs at any time, and since
+          the code is fully open source, you can read and audit every line of it.
+        </p>
+        <ul class="lp-checklist">
+          <li>100% self-hostable, no cloud required <em>(without ai)</em></li>
+          <li>Full export as ZIP and CSV at any time</li>
+          <li>Open source on <a href="https://github.com/Leonetienne/Comaney" target="_blank">GitHub</a></li>
+          <li>No tracking, no ads, no nonsense</li>
+        </ul>
+      </div>
+      <div class="lp-feature-visual">
+        <img
+          src="https://picsum.photos/seed/comoney-oss/640/430"
+          alt=""
+          class="lp-feature-img"
+          width="640" height="430"
+        >
+      </div>
+    </div>
+
+  </div><!-- /lp-features -->
+
+  <!-- ── Bottom CTA ── -->
+  {% if registration_enabled %}
+  <section class="lp-cta-section">
+    <div class="lp-cta-inner">
+      <h2 class="lp-cta-title">Ready to take control<br>of your finances?</h2>
+      <p class="lp-cta-sub">
+        Sign up in seconds. No credit card, no subscriptions, no nonsense.
+      </p>
+      <div class="lp-cta-row lp-cta-row--center">
+        <a href="{% url 'register' %}" class="lp-btn lp-btn-primary lp-btn-primary--lg">
+          Get started for free
+        </a>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+</div><!-- /lp -->
+{% endblock %}

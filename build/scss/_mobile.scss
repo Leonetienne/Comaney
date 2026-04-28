@@ -26,25 +26,25 @@
     flex-direction: column;
     gap: 8px;
     padding: 16px 24px;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid rgba(255, 255, 255, .08);
     margin-top: 8px;
   }
 
   .sidebar-user-name {
     font-size: 0.85rem;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, .4);
   }
 
   .sidebar-logout-btn {
     background: none;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255, 255, 255, .15);
     border-radius: 4px;
     padding: 5px 12px;
     cursor: pointer;
     font-size: 0.9rem;
-    color: var(--text);
+    color: rgba(255, 255, 255, .6);
     text-align: left;
-    &:hover { background: var(--bg-elevated); }
+    &:hover { background: rgba(255, 255, 255, .07); color: #fff; }
   }
 
   .app-main { padding: 20px 16px; }

@@ -1,11 +1,9 @@
-{% extends "base.html" %}
+{% extends "auth_base.html" %}
 
 {% block title %}Comaney – Log In{% endblock %}
-{% block main_class %}page-narrow{% endblock %}
 
-
-{% block content %}
-<h1>Log In</h1>
+{% block auth_content %}
+<h1>Welcome back.</h1>
 {% if error %}
 <p class="error-msg">{{ error }}</p>
 {% endif %}
@@ -20,9 +18,8 @@
     {% endfor %}
     <div class="form-actions"><button type="submit" class="btn btn-full">Log in</button></div>
 </form>
-<p style="margin-top:16px; font-size:0.9rem;">
+<p class="auth-footer-links">
     <a href="{% url 'password_forgot' %}">Forgot your password?</a>
-    &nbsp;·&nbsp;
-    {% if registration_enabled %}No account yet? <a href="{% url 'register' %}">Register</a>{% endif %}
+    {% if registration_enabled %}<br>No account yet? <a href="{% url 'register' %}">Create one</a>{% endif %}
 </p>
 {% endblock %}

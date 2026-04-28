@@ -14,7 +14,7 @@
 {% if expenses %}
 <div class="exp-list">
     {% for exp in expenses %}
-    <div class="exp-card">
+    <div class="exp-card{% if not exp.settled %} unsettled{% endif %}">
 
         <!-- Date label above title -->
         {% if exp.date_due %}<div class="exp-date-label" style="grid-column:1;grid-row:1;">{{ exp.date_due|date:"Y-m-d" }}</div>{% endif %}

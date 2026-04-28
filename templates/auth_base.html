@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block layout %}
+<div class="auth-wrap">
+
+  <!-- Left: dark branding panel -->
+  <div class="auth-panel-left">
+    <div class="auth-panel-left-inner">
+      <a href="{% url 'front_page' %}" class="auth-brand-link">
+        <img src="{% static 'favicon.svg' %}" alt="" class="auth-brand-icon">
+        <span class="auth-brand-name">Comaney</span>
+      </a>
+      <div class="auth-panel-copy">
+        <h2 class="auth-panel-title">Take control of<br>your <span class="auth-panel-accent">finances.</span></h2>
+        <p class="auth-panel-sub">Track expenses, automate recurring bills, and let AI handle the heavy lifting — all on your own server.</p>
+        <ul class="auth-panel-list">
+          <li>Categories, tags &amp; smart filters</li>
+          <li>AI express entry creation</li>
+          <li>Scheduled &amp; auto-settled expenses</li>
+          <li>Open source &amp; self-hosted</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: form card -->
+  <div class="auth-panel-right">
+    <div class="auth-card">
+      {% block auth_content %}{% endblock %}
+    </div>
+  </div>
+
+</div>
+
+<style>
+/* ── Auth split layout ───────────────────────────────────────── */
+.auth-wrap {
+  display: flex;
+  min-height: calc(100vh - 56px - 45px);
+}
+
+/* Left panel */
+.auth-panel-left {
+  flex: 0 0 420px;
+  position: relative;
+  background: linear-gradient(150deg, #0d0d1c 0%, #1a0b2e 55%, #0a1a2e 100%);
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+}
+
+.auth-panel-left::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 60%, rgba(194,71,138,.28) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 15%, rgba(60,120,220,.15) 0%, transparent 45%);
+  pointer-events: none;
+}
+
+.auth-panel-left::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+}
+
+.auth-panel-left-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 48px 44px;
+  width: 100%;
+}
+
+.auth-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none !important;
+  margin-bottom: auto;
+}
+
+.auth-brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.auth-brand-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.9);
+}
+
+.auth-panel-copy {
+  margin-top: auto;
+  padding-top: 60px;
+}
+
+.auth-panel-title {
+  font-size: clamp(1.9rem, 2.6vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff;
+  margin: 0 0 18px;
+  letter-spacing: -.025em;
+}
+
+.auth-panel-accent { color: #c2478a; }
+
+.auth-panel-sub {
+  font-size: 0.97rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,.52);
+  margin: 0 0 28px;
+}
+
+.auth-panel-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-panel-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,.62);
+}
+
+.auth-panel-list li::before {
+  content: '✓';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 50%;
+  background: rgba(194,71,138,.2);
+  color: #c2478a;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+/* Right panel */
+.auth-panel-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+  background: var(--bg);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-card h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  margin: 0 0 24px;
+  color: var(--text);
+}
+
+/* Make form elements inside auth-card a bit more spacious */
+.auth-card label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-subtle);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.auth-card input[type=text],
+.auth-card input[type=email],
+.auth-card input[type=password] {
+  font-size: 1rem;
+  padding: 11px 14px;
+  border-radius: 8px;
+}
+
+.auth-card .btn {
+  padding: 12px 20px;
+  font-size: 1rem;
+  border-radius: 8px;
+  background: #c2478a;
+  color: #fff;
+  border: none;
+  transition: background .18s, transform .15s, box-shadow .15s;
+  box-shadow: 0 3px 16px rgba(194,71,138,.3);
+}
+
+.auth-card .btn:hover {
+  background: #d4569b;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(194,71,138,.4);
+  opacity: 1;
+}
+
+.auth-footer-links {
+  margin-top: 20px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.8;
+}
+
+/* Mobile: stack vertically, hide left panel */
+@media (max-width: 800px) {
+  .auth-wrap { flex-direction: column; }
+  .auth-panel-left { display: none; }
+  .auth-panel-right { padding: 36px 20px; align-items: flex-start; min-height: calc(100vh - 56px - 45px); }
+  .auth-card { max-width: 100%; }
+}
+</style>
+{% endblock %}

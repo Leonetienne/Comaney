@@ -1,11 +1,9 @@
-{% extends "base.html" %}
+{% extends "auth_base.html" %}
 
 {% block title %}Comaney – Register{% endblock %}
-{% block main_class %}page-narrow{% endblock %}
 
-
-{% block content %}
-<h1>Create an account</h1>
+{% block auth_content %}
+<h1>Create an account.</h1>
 <form method="post" novalidate id="register-form">
     {% csrf_token %}
     <input type="hidden" name="pow_nonce" id="pow-nonce" value="">
@@ -23,6 +21,9 @@
         <button type="submit" class="btn btn-full" id="submit-btn" disabled>Create account</button>
     </div>
 </form>
+<p class="auth-footer-links">
+    Already have an account? <a href="{% url 'login' %}">Log in</a>
+</p>
 
 <script>
 (function () {
@@ -69,10 +70,6 @@ self.onmessage = async function (e) {
             statusEl.textContent = '⏳ Solving captcha, please wait...';
         }
     };
-
-    // On failed submit (server returned pow_error), a fresh challenge is in the DOM.
-    // The worker already stopped after finding the old nonce, so nothing extra needed —
-    // page reload re-runs this script with the new challenge automatically.
 })();
 </script>
 {% endblock %}
