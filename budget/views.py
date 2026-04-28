@@ -691,11 +691,15 @@ def _trial_state(feuser):
 
 @feuser_required
 def express_creation(request):
+    from .ai_trial import disable_trial, notify_admin_billing, trial_is_disabled
+
     feuser = request.feuser
     api_key, is_trial, trial_limit, trial_spent, trial_blocked = _trial_state(feuser)
 
     if not api_key:
         return redirect("profile")
+
+    trial_disabled = is_trial and trial_is_disabled()
 
     categories = list(Category.objects.filter(owning_feuser=feuser).values("uid", "title"))
     tags = list(Tag.objects.filter(owning_feuser=feuser).values("uid", "title"))
@@ -713,9 +717,10 @@ def express_creation(request):
         "trial_limit": trial_limit,
         "trial_spent": round(trial_spent, 1),
         "trial_blocked": trial_blocked,
+        "trial_disabled": trial_disabled,
     }
 
-    if trial_blocked:
+    if trial_disabled or trial_blocked:
         return render(request, "budget/express_creation.html", context)
 
     if request.method == "POST":
@@ -765,6 +770,15 @@ def express_creation(request):
                     context["ai_error"] = f"Claude returned unexpected output (JSONDecodeError: {exc})."
                 except Exception as exc:
                     import anthropic as _anthropic
+
+                    def _handle_billing():
+                        if is_trial:
+                            disable_trial(str(exc))
+                            notify_admin_billing(str(exc))
+                            context["trial_disabled"] = True
+                        else:
+                            context["ai_error"] = "Insufficient Anthropic credits. Please top up your account at console.anthropic.com."
+
                     if isinstance(exc, _anthropic.AuthenticationError):
                         context["ai_error"] = "Invalid API key. Please update it in your profile."
                     elif isinstance(exc, _anthropic.PermissionDeniedError):
@@ -772,7 +786,7 @@ def express_creation(request):
                     elif isinstance(exc, _anthropic.RateLimitError):
                         msg = str(exc).lower()
                         if "credit" in msg or "billing" in msg or "balance" in msg:
-                            context["ai_error"] = "Insufficient Anthropic credits. Please top up your account at console.anthropic.com."
+                            _handle_billing()
                         else:
                             context["ai_error"] = "Anthropic rate limit reached. Please wait a moment and try again."
                     elif isinstance(exc, _anthropic.APIConnectionError):
@@ -780,7 +794,7 @@ def express_creation(request):
                     elif isinstance(exc, _anthropic.APIStatusError):
                         msg = str(exc).lower()
                         if "credit" in msg or "billing" in msg or "balance" in msg:
-                            context["ai_error"] = "Insufficient Anthropic credits. Please top up your account at console.anthropic.com."
+                            _handle_billing()
                         else:
                             context["ai_error"] = f"Anthropic API error {exc.status_code}: {exc.message}"
                     else:

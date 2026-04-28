@@ -100,8 +100,10 @@ SITE_URL = os.environ.get("SITE_URL", "http://localhost:8080")
 
 ENABLE_REGISTRATION = os.environ.get("ENABLE_REGISTRATION", "").upper() == "TRUE"
 
-AI_TRIAL_API_KEY     = os.environ.get("AI_TRIAL_API_KEY", "")
-AI_TRIAL_USAGE_LIMIT = float(os.environ.get("AI_TRIAL_USAGE_LIMIT", "0"))  # cents
+AI_TRIAL_API_KEY      = os.environ.get("AI_TRIAL_API_KEY", "")
+AI_TRIAL_USAGE_LIMIT  = float(os.environ.get("AI_TRIAL_USAGE_LIMIT", "0"))  # cents
+AI_TRIAL_DISABLED_FLAG = os.environ.get("AI_TRIAL_DISABLED_FLAG", str(BASE_DIR / "ai_trial_disabled.flag"))
+ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "")
 
 # Public static pages rendered from Markdown files.
 # Map URL slug → (md_path, display_label).

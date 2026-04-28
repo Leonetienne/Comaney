@@ -14,8 +14,9 @@ def current_feuser(request):
             ctx = {"current_feuser": None}
     ctx["registration_enabled"] = settings.ENABLE_REGISTRATION
     feuser = ctx["current_feuser"]
+    from budget.ai_trial import trial_is_disabled
+    trial_ok = bool(settings.AI_TRIAL_API_KEY and settings.AI_TRIAL_USAGE_LIMIT and not trial_is_disabled())
     ctx["ai_smart_create_available"] = bool(
-        (feuser and feuser.anthropic_api_key) or
-        (settings.AI_TRIAL_API_KEY and settings.AI_TRIAL_USAGE_LIMIT)
+        (feuser and feuser.anthropic_api_key) or trial_ok
     )
     return ctx

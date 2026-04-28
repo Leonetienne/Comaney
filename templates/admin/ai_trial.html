@@ -1,0 +1,32 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Express Creation — Trial API Status</h1>
+
+{% if disabled %}
+<p class="errornote">
+    The shared trial API is currently <strong>DISABLED</strong>.
+</p>
+{% if reason %}
+<p><strong>Reason:</strong> {{ reason }}</p>
+{% endif %}
+<p>Top up the Anthropic account at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>, then click the button below.</p>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="enable">
+    <button type="submit" class="button">Re-enable trial API</button>
+</form>
+{% else %}
+<p style="color: var(--body-fg, #333)">
+    The shared trial API is currently <strong style="color: #28a745;">ENABLED</strong>.
+</p>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="disable">
+    <button type="submit" class="button">Manually disable trial API</button>
+</form>
+{% endif %}
+
+<p style="margin-top: 24px;">
+    <a href="{% url 'admin:index' %}">&larr; Back to admin</a>
+</p>
+{% endblock %}

@@ -8,7 +8,13 @@
     <h1>Express Creation</h1>
     <p class="page-tip">Describe what you bought, attach a receipt photo, or both — Claude will extract and categorise the items for you to review and edit.</p>
 
-    {% if trial_blocked %}
+    {% if trial_disabled %}
+    <div class="trial-blocked">
+        <strong>Express Creation is temporarily unavailable.</strong>
+        The shared AI trial is offline while we top up the API credits — this usually resolves within a day.
+        In the meantime, <a href="{% url 'profile' %}">add your own Anthropic API key</a> in your profile to keep using this feature right away.
+    </div>
+    {% elif trial_blocked %}
     <div class="trial-blocked">
         <strong>Monthly AI limit reached.</strong>
         Your free trial allowance of {{ trial_limit }} ¢ has been used up for this month.

@@ -3,8 +3,10 @@ from django.contrib import admin
 from django.urls import path, include
 
 from .public_pages import make_view
+from budget.admin_views import ai_trial_admin_view
 
 urlpatterns = [
+    path("admin/ai-trial/", admin.site.admin_view(ai_trial_admin_view), name="admin_ai_trial"),
     path("admin/", admin.site.urls),
     path("api/v1/", include("api.urls")),
     path("budget/", include("budget.urls")),
