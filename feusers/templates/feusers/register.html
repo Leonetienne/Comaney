@@ -17,6 +17,7 @@
     {% endfor %}
     {% endfor %}
     {% if pow_error %}<p class="error-msg">{{ pow_error }}</p>{% endif %}
+    {% if email_error %}<p class="error-msg">{{ email_error }}</p>{% endif %}
     <p class="pow-status" id="pow-status">⏳ Solving captcha, please wait...</p>
     <div class="form-actions">
         <button type="submit" class="btn btn-full" id="submit-btn" disabled>Create account</button>

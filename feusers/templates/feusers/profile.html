@@ -78,6 +78,8 @@
         <p style="margin:0 0 12px; font-size:0.95rem;">Current: <strong>{{ current_feuser.email }}</strong></p>
         {% if success == "email" %}
         <p class="success-msg">Confirmation sent to <strong>{{ email_form.cleaned_data.email }}</strong>. Click the link in the email to apply the change.</p>
+        {% elif email_error %}
+        <p class="error-msg">{{ email_error }}</p>
         {% elif current_feuser.pending_email %}
         <p class="success-msg">Pending confirmation for <strong>{{ current_feuser.pending_email }}</strong>.</p>
         {% endif %}

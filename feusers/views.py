@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+from smtplib import SMTPException
 
 from django.conf import settings
 from django.core.mail import send_mail
@@ -81,18 +82,27 @@ def register(request):
 
             confirm_url = f"{settings.SITE_URL}/confirm/{user.confirmation_token}/"
             _ctx = {"confirm_url": confirm_url, "first_name": user.first_name, "site_url": settings.SITE_URL}
-            send_mail(
-                subject="Please confirm your email address",
-                message=(
-                    f"Hi {user.first_name},\n\n"
-                    f"please confirm your Comaney registration:\n\n"
-                    f"{confirm_url}\n\n"
-                    f"If you didn't sign up, you can safely ignore this email."
-                ),
-                html_message=render_to_string("emails/registration_confirm.html", _ctx),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-            )
+            try:
+                send_mail(
+                    subject="Please confirm your email address",
+                    message=(
+                        f"Hi {user.first_name},\n\n"
+                        f"please confirm your Comaney registration:\n\n"
+                        f"{confirm_url}\n\n"
+                        f"If you didn't sign up, you can safely ignore this email."
+                    ),
+                    html_message=render_to_string("emails/registration_confirm.html", _ctx),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                )
+            except (SMTPException, OSError):
+                user.delete()
+                return render(request, "feusers/register.html", {
+                    "form": form,
+                    "pow_challenge": _new_pow_challenge(request),
+                    "pow_difficulty": _POW_DIFFICULTY,
+                    "email_error": "We couldn't send a confirmation email to that address. Please check it and try again.",
+                })
             return redirect("register_success")
         challenge = new_challenge
     else:
@@ -194,19 +204,33 @@ def profile(request):
                 feuser.save(update_fields=["pending_email", "email_change_token"])
                 confirm_url = f"{settings.SITE_URL}/confirm-email-change/{feuser.email_change_token}/"
                 _ctx = {"confirm_url": confirm_url, "first_name": feuser.first_name, "site_url": settings.SITE_URL}
-                send_mail(
-                    subject="Confirm your new email address",
-                    message=(
-                        f"Hi {feuser.first_name},\n\n"
-                        f"please confirm your new email address by clicking the link below:\n\n"
-                        f"{confirm_url}\n\n"
-                        f"If you didn't request this, you can safely ignore this email."
-                    ),
-                    html_message=render_to_string("emails/email_change_confirm.html", _ctx),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[new_email],
-                )
-                success = "email"
+                try:
+                    send_mail(
+                        subject="Confirm your new email address",
+                        message=(
+                            f"Hi {feuser.first_name},\n\n"
+                            f"please confirm your new email address by clicking the link below:\n\n"
+                            f"{confirm_url}\n\n"
+                            f"If you didn't request this, you can safely ignore this email."
+                        ),
+                        html_message=render_to_string("emails/email_change_confirm.html", _ctx),
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[new_email],
+                    )
+                    success = "email"
+                except (SMTPException, OSError):
+                    feuser.pending_email = ""
+                    feuser.email_change_token = ""
+                    feuser.save(update_fields=["pending_email", "email_change_token"])
+                    return render(request, "feusers/profile.html", {
+                        "active_nav": "profile",
+                        "profile_form": profile_form,
+                        "ai_form": ai_form,
+                        "email_form": email_form,
+                        "password_form": password_form,
+                        "success": None,
+                        "email_error": "We couldn't send a confirmation email to that address. Please check it and try again.",
+                    })
 
         elif action == "password":
             password_form = ChangePasswordForm(request.POST, feuser=feuser)
@@ -236,18 +260,24 @@ def password_forgot(request):
                 user.save(update_fields=["password_reset_token", "password_reset_expires"])
                 reset_url = f"{settings.SITE_URL}/password-reset/{user.password_reset_token}/"
                 _ctx = {"reset_url": reset_url, "first_name": user.first_name, "site_url": settings.SITE_URL}
-                send_mail(
-                    subject="Reset your password",
-                    message=(
-                        f"Hi {user.first_name},\n\n"
-                        f"you requested a password reset. Click the link below — it expires in 1 hour:\n\n"
-                        f"{reset_url}\n\n"
-                        f"If you didn't request this, you can safely ignore this email."
-                    ),
-                    html_message=render_to_string("emails/password_reset.html", _ctx),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                )
+                try:
+                    send_mail(
+                        subject="Reset your password",
+                        message=(
+                            f"Hi {user.first_name},\n\n"
+                            f"you requested a password reset. Click the link below — it expires in 1 hour:\n\n"
+                            f"{reset_url}\n\n"
+                            f"If you didn't request this, you can safely ignore this email."
+                        ),
+                        html_message=render_to_string("emails/password_reset.html", _ctx),
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[user.email],
+                    )
+                except (SMTPException, OSError):
+                    return render(request, "feusers/password_forgot.html", {
+                        "form": form,
+                        "email_error": "We couldn't send an email to that address. Please check it and try again.",
+                    })
             except FeUser.DoesNotExist:
                 pass  # intentional: don't reveal whether the email exists
             return redirect("password_forgot_sent")
