@@ -1,8 +1,8 @@
 <header>
     <div class="header-left">
-        <button class="hamburger" id="hamburger" aria-label="Menu">
+        {% if current_feuser %}<button class="hamburger" id="hamburger" aria-label="Menu">
             <span></span><span></span><span></span>
-        </button>
+        </button>{% endif %}
         {% load static %}
         <a class="brand" href="{% url 'front_page' %}">
             <img src="{% static 'favicon.svg' %}" alt="" class="brand-logo">Comaney

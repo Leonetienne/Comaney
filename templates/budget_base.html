@@ -3,7 +3,7 @@
 
 {% block layout %}
 <div class="app-layout">
-    <nav class="sidebar">
+    {% if current_feuser %}<nav class="sidebar">
         <ul>
             <li><span class="sidebar-section-label">Overview</span></li>
             <li class="{% if active_nav == 'dashboard' %}active{% endif %}">
@@ -42,7 +42,7 @@
             </form>
         </div>
         {% endif %}
-    </nav>
+    </nav>{% endif %}
     <main class="app-main">
         <div class="app-content">
             {% block content %}{% endblock %}
