@@ -12,13 +12,15 @@
         <span class="auth-brand-name">Comaney</span>
       </a>
       <div class="auth-panel-copy">
-        <h2 class="auth-panel-title">Take control of<br>your <span class="auth-panel-accent">finances.</span></h2>
-        <p class="auth-panel-sub">Track expenses, automate recurring bills, and let AI handle the heavy lifting — all on your own server.</p>
+        <h2 class="auth-panel-title">{% block auth_panel_title %}Take control of<br>your <span class="auth-panel-accent">finances.</span>{% endblock %}</h2>
+        <p class="auth-panel-sub">{% block auth_panel_sub %}Track expenses, automate recurring bills, and let AI handle the heavy lifting — all on your own server.{% endblock %}</p>
         <ul class="auth-panel-list">
+          {% block auth_panel_list %}
           <li>Categories, tags &amp; smart filters</li>
           <li>AI express entry creation</li>
           <li>Scheduled &amp; auto-settled expenses</li>
           <li>Open source &amp; self-hosted</li>
+          {% endblock %}
         </ul>
       </div>
     </div>

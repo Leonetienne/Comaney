@@ -6,8 +6,11 @@
         </a>
         <span class="footer-copy">&copy; {% now "Y" %} Leon Etienne</span>
     </div>
-    {% if PUBLIC_PAGES %}
+    {% if PUBLIC_PAGES or contact_available %}
     <div class="footer-right">
+        {% if contact_available %}
+        <a href="{% url 'contact' %}">Contact</a>
+        {% endif %}
         {% for slug, page in PUBLIC_PAGES.items %}
         <a href="/{{ slug }}/">{{ page.1 }}</a>
         {% endfor %}

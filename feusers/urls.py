@@ -23,4 +23,5 @@ urlpatterns = [
     path("totp/verify/recovery/",  views.totp_verify_recovery,  name="totp_verify_recovery"),
     path("api-key/generate/", views.api_key_generate, name="api_key_generate"),
     path("api-key/revoke/",   views.api_key_revoke,   name="api_key_revoke"),
+    path("contact/",          views.contact,           name="contact"),
 ]

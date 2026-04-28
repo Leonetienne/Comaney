@@ -4,6 +4,11 @@ A no-BS, zero-effort budgetting software as a self-hostable django web applicati
 Readme to be done.
 
 
+## Admin zone
+If the trial anthropic api key runs out of budget, the trial feature will disable itself.  
+It must be manually re-enabled at `/admin/ai-trial/` using a superuser.  
+Create a superuser with `python manage.py createsuperuser`, potentially executed in the container.
+
 ## Dev zone
 ### Building docker file
 ```

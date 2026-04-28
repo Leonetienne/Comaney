@@ -124,6 +124,94 @@ def register_success(request):
     return render(request, "feusers/register_success.html")
 
 
+def contact(request):
+    from django.http import Http404
+    if not settings.ADMIN_NOTIFICATION_EMAIL or not settings.ENABLE_REGISTRATION:
+        raise Http404
+
+    feuser_id = request.session.get("feuser_id")
+    logged_in_user = None
+    if feuser_id:
+        try:
+            logged_in_user = FeUser.objects.get(pk=feuser_id, is_active=True)
+        except FeUser.DoesNotExist:
+            pass
+
+    pow_error = None
+    sent = request.GET.get("sent") == "1"
+    errors: dict[str, str] = {}
+
+    if request.method == "POST":
+        name    = request.POST.get("name", "").strip()
+        email   = request.POST.get("email", "").strip()
+        subject = request.POST.get("subject", "").strip()
+        message = request.POST.get("message", "").strip()
+
+        challenge = request.session.get("pow_challenge", "")
+        nonce     = request.POST.get("pow_nonce", "")
+        pow_ok    = challenge and _check_pow(challenge, nonce)
+        if pow_ok:
+            del request.session["pow_challenge"]
+        else:
+            pow_error = "Proof-of-work validation failed. Please wait for the captcha to solve and try again."
+        new_challenge = _new_pow_challenge(request)
+
+        if not name:    errors["name"]    = "Name is required."
+        if not email:   errors["email"]   = "Email address is required."
+        if not subject: errors["subject"] = "Subject is required."
+        if not message: errors["message"] = "Message is required."
+
+        send_error = None
+        if pow_ok and not errors:
+            user_line = (
+                f"{logged_in_user.email} (id={logged_in_user.pk})"
+                if logged_in_user else "Not logged in"
+            )
+            body = (
+                f"Name:    {name}\n"
+                f"Email:   {email}\n"
+                f"Account: {user_line}\n\n"
+                f"Subject: {subject}\n\n"
+                f"{message}\n"
+            )
+            try:
+                send_mail(
+                    subject=f"[Comaney Contact] {subject}",
+                    message=body,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[settings.ADMIN_NOTIFICATION_EMAIL],
+                )
+            except (SMTPException, OSError):
+                send_error = "Could not send your message right now. Please try again later."
+
+            if not send_error:
+                return redirect(f"{request.path}?sent=1")
+
+        return render(request, "feusers/contact.html", {
+            "name": name, "email": email, "subject": subject, "message": message,
+            "pow_challenge": new_challenge,
+            "pow_difficulty": _POW_DIFFICULTY,
+            "pow_error": pow_error,
+            "errors": errors,
+            "send_error": send_error,
+            "sent": False,
+            "logged_in_user": logged_in_user,
+        })
+
+    challenge = _new_pow_challenge(request)
+    return render(request, "feusers/contact.html", {
+        "name":    logged_in_user.first_name + " " + logged_in_user.last_name if logged_in_user else "",
+        "email":   logged_in_user.email if logged_in_user else "",
+        "subject": "", "message": "",
+        "pow_challenge": challenge,
+        "pow_difficulty": _POW_DIFFICULTY,
+        "pow_error": None,
+        "errors": {},
+        "sent": sent,
+        "logged_in_user": logged_in_user,
+    })
+
+
 def login_view(request):
     if request.session.get("feuser_id"):
         return redirect("front_page")

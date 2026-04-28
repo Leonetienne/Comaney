@@ -25,5 +25,12 @@ def make_view(md_path: str, title: str):
 
 
 def context_processor(request):
-    """Expose PUBLIC_PAGES to every template for footer links."""
-    return {"PUBLIC_PAGES": getattr(settings, "PUBLIC_PAGES", {})}
+    """Expose PUBLIC_PAGES and contact_available to every template."""
+    contact_available = bool(
+        getattr(settings, "ADMIN_NOTIFICATION_EMAIL", "") and
+        getattr(settings, "ENABLE_REGISTRATION", False)
+    )
+    return {
+        "PUBLIC_PAGES": getattr(settings, "PUBLIC_PAGES", {}),
+        "contact_available": contact_available,
+    }

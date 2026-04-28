@@ -1,0 +1,103 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Comaney – Contact{% endblock %}
+
+{% block auth_panel_title %}We're here<br>to <span class="auth-panel-accent">help.</span>{% endblock %}
+{% block auth_panel_sub %}Have a question or running into an issue? Fill out the form and we'll get back to you.{% endblock %}
+{% block auth_panel_list %}
+<li>Reach a real person</li>
+<li>Response within 24 hours</li>
+<li>Your message stays private</li>
+{% endblock %}
+
+{% block auth_content %}
+<h1>Get in touch.</h1>
+
+{% if sent %}
+<div class="success-banner" style="margin-bottom: 20px;">
+    Your message has been sent. We'll get back to you shortly.
+</div>
+{% endif %}
+
+{% if send_error %}<p class="error-msg">{{ send_error }}</p>{% endif %}
+
+<form method="post" novalidate id="contact-form">
+    {% csrf_token %}
+    <input type="hidden" name="pow_nonce" id="pow-nonce" value="">
+
+    <label for="id_name">Name</label>
+    <input type="text" id="id_name" name="name" value="{{ name }}" required autocomplete="name">
+    {% if errors.name %}<p class="error-msg">{{ errors.name }}</p>{% endif %}
+
+    <label for="id_email">Email address</label>
+    <input type="email" id="id_email" name="email" value="{{ email }}" required autocomplete="email">
+    {% if errors.email %}<p class="error-msg">{{ errors.email }}</p>{% endif %}
+
+    <label for="id_subject">Subject</label>
+    <input type="text" id="id_subject" name="subject" value="{{ subject }}" required>
+    {% if errors.subject %}<p class="error-msg">{{ errors.subject }}</p>{% endif %}
+
+    <label for="id_message">Message</label>
+    <textarea id="id_message" name="message" rows="5" required style="width:100%;resize:vertical;">{{ message }}</textarea>
+    {% if errors.message %}<p class="error-msg">{{ errors.message }}</p>{% endif %}
+
+    {% if pow_error %}<p class="error-msg">{{ pow_error }}</p>{% endif %}
+    <p class="pow-status" id="pow-status">&#x23F3; Solving captcha, please wait...</p>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-full" id="submit-btn" disabled>Send message</button>
+    </div>
+</form>
+
+{% if logged_in_user %}
+<p class="auth-footer-links">Sending as <strong>{{ logged_in_user.email }}</strong></p>
+{% endif %}
+
+<script>
+(function () {
+    const CHALLENGE  = '{{ pow_challenge }}';
+    const DIFFICULTY = {{ pow_difficulty }};
+    const nonceInput = document.getElementById('pow-nonce');
+    const submitBtn  = document.getElementById('submit-btn');
+    const statusEl   = document.getElementById('pow-status');
+
+    const workerSrc = `
+function meetsTarget(bytes, bits) {
+    for (let i = 0; i < bytes.length && bits > 0; i++, bits -= 8) {
+        if (bits >= 8) { if (bytes[i] !== 0) return false; }
+        else           { if (bytes[i] >> (8 - bits) !== 0) return false; }
+    }
+    return true;
+}
+self.onmessage = async function (e) {
+    const { challenge, difficulty } = e.data;
+    const enc = new TextEncoder();
+    let nonce = 0;
+    while (true) {
+        const buf = await crypto.subtle.digest('SHA-256', enc.encode(challenge + ':' + nonce));
+        if (meetsTarget(new Uint8Array(buf), difficulty)) {
+            self.postMessage({ nonce });
+            return;
+        }
+        nonce++;
+        if (nonce % 10000 === 0) self.postMessage({ progress: nonce });
+    }
+};
+`;
+
+    const blob   = new Blob([workerSrc], { type: 'application/javascript' });
+    const worker = new Worker(URL.createObjectURL(blob));
+    worker.postMessage({ challenge: CHALLENGE, difficulty: DIFFICULTY });
+    worker.onmessage = function (e) {
+        if (e.data.nonce !== undefined) {
+            nonceInput.value     = e.data.nonce;
+            statusEl.textContent = '✓ Captcha solved.';
+            statusEl.style.color = 'var(--text-muted)';
+            submitBtn.disabled   = false;
+        } else if (e.data.progress !== undefined) {
+            statusEl.textContent = '⏳ Solving captcha, please wait...';
+        }
+    };
+})();
+</script>
+{% endblock %}
