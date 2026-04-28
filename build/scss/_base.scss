@@ -10,13 +10,5 @@ body {
   margin: 0;
   font-family: sans-serif;
   color: var(--text);
-  background-color: var(--bg);
-  background-image: radial-gradient(ellipse 65% 50% at 30% 0%, rgba(194, 71, 138, .10) 0%, transparent 100%);
-  background-attachment: fixed;
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background-image: radial-gradient(ellipse 65% 50% at 30% 0%, rgba(194, 71, 138, .20) 0%, transparent 100%);
-  }
+  background: var(--bg);
 }
