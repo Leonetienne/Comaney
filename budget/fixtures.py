@@ -30,7 +30,7 @@ DEFAULT_TAGS = [
     "Online",
     "Cash",
     "Reimbursable",
-    "Ax-deductible",
+    "Tax-deductible",
 ]
 
 
