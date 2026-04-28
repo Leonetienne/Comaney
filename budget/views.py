@@ -790,8 +790,13 @@ def express_creation(request):
                         settled=True,
                     )
                     count += 1
+                if not context.get("ai_error"):
+                    return redirect(f"{request.path}?created={count}")
                 context["created_count"] = count
             except Exception as exc:
                 context["ai_error"] = f"Could not save expenses: {exc}"
+
+    if not context["created_count"] and request.GET.get("created", "").isdigit():
+        context["created_count"] = int(request.GET["created"])
 
     return render(request, "budget/express_creation.html", context)

@@ -179,7 +179,8 @@ def profile(request):
     ai_form         = AISettingsForm(instance=feuser)
     email_form      = ChangeEmailForm(feuser=feuser)
     password_form   = ChangePasswordForm(feuser=feuser)
-    success = None
+    success = request.GET.get("success")
+    email_error = None
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -188,13 +189,13 @@ def profile(request):
             profile_form = ProfileForm(request.POST, instance=feuser)
             if profile_form.is_valid():
                 profile_form.save()
-                success = "profile"
+                return redirect(f"{request.path}?success=profile")
 
         elif action == "ai":
             ai_form = AISettingsForm(request.POST, instance=feuser)
             if ai_form.is_valid():
                 ai_form.save()
-                success = "ai"
+                return redirect(f"{request.path}?success=ai")
 
         elif action == "email":
             email_form = ChangeEmailForm(request.POST, feuser=feuser)
@@ -217,27 +218,19 @@ def profile(request):
                         from_email=settings.DEFAULT_FROM_EMAIL,
                         recipient_list=[new_email],
                     )
-                    success = "email"
+                    return redirect(f"{request.path}?success=email")
                 except (SMTPException, OSError):
                     feuser.pending_email = ""
                     feuser.email_change_token = ""
                     feuser.save(update_fields=["pending_email", "email_change_token"])
-                    return render(request, "feusers/profile.html", {
-                        "active_nav": "profile",
-                        "profile_form": profile_form,
-                        "ai_form": ai_form,
-                        "email_form": email_form,
-                        "password_form": password_form,
-                        "success": None,
-                        "email_error": "We couldn't send a confirmation email to that address. Please check it and try again.",
-                    })
+                    email_error = "We couldn't send a confirmation email to that address. Please check it and try again."
 
         elif action == "password":
             password_form = ChangePasswordForm(request.POST, feuser=feuser)
             if password_form.is_valid():
                 feuser.set_password(password_form.cleaned_data["new_password"])
                 feuser.save(update_fields=["password"])
-                success = "password"
+                return redirect(f"{request.path}?success=password")
 
     return render(request, "feusers/profile.html", {
         "active_nav": "profile",
@@ -246,6 +239,7 @@ def profile(request):
         "email_form": email_form,
         "password_form": password_form,
         "success": success,
+        "email_error": email_error,
     })
 
 
