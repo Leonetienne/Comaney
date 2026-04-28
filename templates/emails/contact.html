@@ -1,0 +1,36 @@
+{% extends "emails/base_email.html" %}
+{% block subject %}Contact form message{% endblock %}
+
+{% block content %}
+  <h1 style="margin:0 0 8px;font-size:1.4rem;font-weight:700;color:#e0e0e0;">New contact message</h1>
+  <p style="margin:0 0 28px;font-size:0.95rem;color:#aaa;line-height:1.7;">
+    Someone submitted the contact form on Comaney.
+  </p>
+
+  <!-- Sender details -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-collapse:collapse;">
+    <tr>
+      <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:0.82rem;color:#888;width:90px;vertical-align:top;">Name</td>
+      <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:0.88rem;color:#ddd;">{{ contact_name }}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:0.82rem;color:#888;vertical-align:top;">Email</td>
+      <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:0.88rem;color:#ddd;">
+        <a href="mailto:{{ contact_email }}" style="color:#c2478a;text-decoration:none;">{{ contact_email }}</a>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:0.82rem;color:#888;vertical-align:top;">Account</td>
+      <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:0.88rem;color:#ddd;">{{ account_info }}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 0;font-size:0.82rem;color:#888;vertical-align:top;">Subject</td>
+      <td style="padding:8px 0;font-size:0.88rem;color:#ddd;font-weight:600;">{{ contact_subject }}</td>
+    </tr>
+  </table>
+
+  <!-- Message body -->
+  <div style="background:#161616;border:1px solid #2a2a2a;border-radius:8px;padding:20px 24px;margin:0 0 8px;">
+    <p style="margin:0;font-size:0.9rem;color:#ccc;line-height:1.75;white-space:pre-wrap;">{{ contact_message }}</p>
+  </div>
+{% endblock %}

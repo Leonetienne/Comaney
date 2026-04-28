@@ -174,10 +174,22 @@ def contact(request):
                 f"Subject: {subject}\n\n"
                 f"{message}\n"
             )
+            html_body = render_to_string("emails/contact.html", {
+                "site_url": settings.SITE_URL,
+                "contact_name": name,
+                "contact_email": email,
+                "account_info": (
+                    f"{logged_in_user.email} (id={logged_in_user.pk})"
+                    if logged_in_user else "Not logged in"
+                ),
+                "contact_subject": subject,
+                "contact_message": message,
+            })
             try:
                 send_mail(
                     subject=f"[Comaney Contact] {subject}",
                     message=body,
+                    html_message=html_body,
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[settings.ADMIN_NOTIFICATION_EMAIL],
                 )
