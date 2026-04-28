@@ -384,6 +384,14 @@
   .lp-stat { flex: 0 0 100%; max-width: 100%; border-right: none; }
   .lp-stat:nth-child(odd) { border-right: none; }
 }
+
+.small-hint {
+  font-size: 6pt;
+  transform: rotate(-2deg);
+  margin-top: 1em;
+  opacity: 0.5;
+  padding-left: 2em;
+}
 </style>
 {% endblock %}
 
@@ -419,7 +427,7 @@
     </div>
     <div class="lp-hero-visual">
       <img
-        src="https://picsum.photos/seed/comoney-hero/720/480"
+        src="/static/images/landingpage/dashboard-closeup.png"
         alt="App dashboard screenshot"
         class="lp-hero-img"
         width="720" height="480"
@@ -468,8 +476,8 @@
       </div>
       <div class="lp-feature-visual">
         <img
-          src="https://picsum.photos/seed/comoney-list/640/430"
-          alt=""
+          src="/static/images/landingpage/barchart.png"
+          alt="A bar chart of expenses"
           class="lp-feature-img"
           width="640" height="430"
         >
@@ -502,8 +510,8 @@
         </div>
         <div class="lp-feature-visual">
           <img
-            src="https://picsum.photos/seed/comoney-ai/640/430"
-            alt=""
+            src="/static/images/landingpage/ai-gen.png"
+            alt="The Comaney express creator"
             class="lp-feature-img"
             width="640" height="430"
           >
@@ -531,8 +539,8 @@
       </div>
       <div class="lp-feature-visual">
         <img
-          src="https://picsum.photos/seed/comoney-sched/640/430"
-          alt=""
+          src="static/images/landingpage/recurring-list.png"
+          alt="A screenshot of the recurring tasks list"
           class="lp-feature-img"
           width="640" height="430"
         >
@@ -560,8 +568,8 @@
         </div>
         <div class="lp-feature-visual">
           <img
-            src="https://picsum.photos/seed/comoney-dash2/640/430"
-            alt=""
+            src="static/images/landingpage/income-vs-expenses.png"
+            alt="A screenshot of cells on the Comaney dashboard"
             class="lp-feature-img"
             width="640" height="430"
           >
@@ -577,7 +585,7 @@
         <p class="lp-feature-body">
           Comaney can run on your own server. If you host yourself, financial data never touches
           a third party cloud, never gets sold, and is never used to train
-          anything, unless you use the AI feature which uses Anthropics AI service.
+          anything, unless you use the AI feature which utilizes Anthropics AI services.
           Export everything as a ZIP of CSVs at any time, and since
           the code is fully open source, you can read and audit every line of it.
         </p>
@@ -589,12 +597,15 @@
         </ul>
       </div>
       <div class="lp-feature-visual">
-        <img
-          src="https://picsum.photos/seed/comoney-oss/640/430"
-          alt=""
-          class="lp-feature-img"
-          width="640" height="430"
-        >
+        <div>
+            <img
+              src="static/images/landingpage/docker-compose.png"
+              alt="A screenshot of an examplatory docker compose configuration"
+              class="lp-feature-img"
+              width="640" height="430"
+            >
+            <div class="small-hint">This is obviously an imaginary configuration.</div>
+        </div>
       </div>
     </div>
 
