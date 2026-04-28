@@ -1,0 +1,178 @@
+"""
+Shared fixtures and helpers for the Comaney E2E test suite.
+
+Requirements:
+    pip install selenium pytest pyotp requests
+
+The app must be running at http://localhost:8080 and mailpit at http://localhost:8030.
+All tests share a single browser session and ctx dict (session-scoped fixtures).
+Test files are named with numeric prefixes so pytest runs them in the right order.
+"""
+import re
+import subprocess
+import tempfile
+import time
+
+import pytest
+import requests
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
+BASE_URL    = "http://localhost:8080"
+MAILPIT_API = "http://localhost:8030/api/v1"
+PASSWORD    = "S3l3n!umTest"
+TIMEOUT     = 60  # seconds — generous to accommodate PoW captcha
+DOCKER_WEB  = "comoney-web-1"
+
+# Small post-click pause — acts as a natural pace-setter so the server and browser
+# can breathe between interactions, avoiding most ad-hoc time.sleep() calls.
+CLICK_PACE  = 0.15
+
+
+def _url(path: str) -> str:
+    return f"{BASE_URL}{path}"
+
+
+@pytest.fixture(scope="session")
+def ctx():
+    """Shared mutable context dict passed to every test across all files."""
+    return {}
+
+
+@pytest.fixture(scope="session")
+def driver():
+    tmpdir = tempfile.mkdtemp()
+    opts = Options()
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--window-size=1280,900")
+    opts.add_argument(f"--user-data-dir={tmpdir}")
+    d = webdriver.Chrome(options=opts)
+    d.implicitly_wait(0)
+    yield d
+    d.quit()
+
+
+@pytest.fixture(scope="session")
+def w(driver):
+    return WebDriverWait(driver, TIMEOUT)
+
+
+# ---------------------------------------------------------------------------
+# Browser helpers
+# ---------------------------------------------------------------------------
+
+def wait_url(w, fragment):
+    w.until(EC.url_contains(fragment))
+
+
+def wait_text(driver, w, text):
+    w.until(lambda d: text in d.page_source)
+
+
+def wait_no_text(driver, w, text):
+    w.until(lambda d: text not in d.page_source)
+
+
+def fill(w, by, locator, value):
+    el = w.until(EC.element_to_be_clickable((by, locator)))
+    el.clear()
+    el.send_keys(value)
+    time.sleep(CLICK_PACE)
+
+
+def click(w, by, locator):
+    el = w.until(EC.element_to_be_clickable((by, locator)))
+    el.click()
+    time.sleep(CLICK_PACE)
+
+
+SUBMIT = "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)"
+
+
+def submit(w):
+    click(w, By.CSS_SELECTOR, SUBMIT)
+
+
+# ---------------------------------------------------------------------------
+# Email helpers
+# ---------------------------------------------------------------------------
+
+def fetch_email(to_email: str, subject_fragment: str, timeout: int = 60) -> str:
+    """Poll mailpit until a matching email arrives; return its plain-text body."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])
+            for msg in msgs:
+                recipients = [t.get("Address", "") for t in msg.get("To", [])]
+                if to_email in recipients and subject_fragment.lower() in msg.get("Subject", "").lower():
+                    body = requests.get(f"{MAILPIT_API}/message/{msg['ID']}", timeout=5).json()
+                    return body.get("Text", "") or ""
+        except Exception:
+            pass
+        time.sleep(1)
+    raise TimeoutError(f"Email '{subject_fragment}' for {to_email} never arrived")
+
+
+def extract_link(text: str) -> str:
+    """Pull the first HTTP URL from email text and rewrite the host to BASE_URL."""
+    for raw in re.findall(r'https?://\S+', text):
+        url = raw.rstrip('.,)')
+        return re.sub(r'https?://[^/]+', BASE_URL, url)
+    raise ValueError("No URL found in email body")
+
+
+# ---------------------------------------------------------------------------
+# API helpers
+# ---------------------------------------------------------------------------
+
+def api(method: str, path: str, ctx: dict, **kwargs):
+    return requests.request(
+        method,
+        f"{BASE_URL}{path}",
+        headers={"Authorization": f"Bearer {ctx['api_key']}"},
+        timeout=10,
+        **kwargs,
+    )
+
+
+def api_get(path, ctx, params=None):
+    return api("GET", path, ctx, params=params)
+
+
+def api_post(path, ctx, json):
+    return api("POST", path, ctx, json=json)
+
+
+def api_patch(path, ctx, json):
+    return api("PATCH", path, ctx, json=json)
+
+
+def api_delete(path, ctx):
+    return api("DELETE", path, ctx)
+
+
+# ---------------------------------------------------------------------------
+# Docker / management command helper
+# ---------------------------------------------------------------------------
+
+def run_cmd(*args, timeout: int = 30) -> str:
+    """Run a Django management command inside the running Docker container."""
+    result = subprocess.run(
+        ["docker", "exec", DOCKER_WEB, "python", "manage.py", *args],
+        capture_output=True, text=True, timeout=timeout,
+    )
+    assert result.returncode == 0, f"Command failed:\n{result.stderr}"
+    return result.stdout
+
+
+# ---------------------------------------------------------------------------
+# Session cookie helper (for browser-auth'd CSV downloads)
+# ---------------------------------------------------------------------------
+
+def session_cookies(driver) -> dict:
+    return {c["name"]: c["value"] for c in driver.get_cookies()}
