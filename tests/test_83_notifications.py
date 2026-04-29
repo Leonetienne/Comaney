@@ -470,3 +470,187 @@ class TestEmailActionLinks:
         for key in ("link_settle_eid", "link_mute_eid", "link_muteall_eid"):
             if key in ctx:
                 api_delete(f"/api/v1/expenses/{ctx.pop(key)}/", ctx)
+
+
+# ---------------------------------------------------------------------------
+# 5. Additional coverage: auto_settle_on_due_date flag and API PATCH settle
+# ---------------------------------------------------------------------------
+
+class TestAutoSettleAndApiSettled:
+
+    def test_83_40_auto_settle_expense_gets_no_due_notification(self, driver, w, ctx):
+        """
+        Expense with auto_settle_on_due_date=True must NEVER receive
+        'soon / tomorrow / late' due-date reminders from send_expense_notifications —
+        those reminders only make sense for expenses the user must pay manually.
+        """
+        # Create with IN_10_DAYS so set_initial_notification_class gives "" (no class).
+        resp = api_post("/api/v1/expenses/", ctx, json={
+            "title": "AutoSettle NoDueNotif",
+            "type": "expense", "value": "5.00",
+            "date_due": IN_10_DAYS,
+            "settled": False,
+            "auto_settle_on_due_date": True,
+            "notify": True,
+        })
+        assert resp.status_code == 201
+        eid = resp.json()["id"]
+        ctx["as_no_due_eid"] = eid
+
+        # Patch due date to 3 days — without auto_settle filter the cron would
+        # now send "soon".  last_notification_class_sent stays "" (PATCH doesn't
+        # call set_initial_notification_class).
+        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": IN_3_DAYS})
+        assert _get_expense(ctx, eid)["last_notification_class_sent"] == ""
+
+        _run_notify()
+        time.sleep(1)
+
+        exp = _get_expense(ctx, eid)
+        assert exp["last_notification_class_sent"] == "", (
+            "Due-date notification must NOT be sent for an auto_settle_on_due_date expense"
+        )
+
+    def test_83_41_auto_settle_sends_settled_for_due_today(self, driver, w, ctx):
+        """
+        auto_settle_expenses sends 'settled' notification when the due date is
+        today (just drifted into the past = within the 1-day threshold).
+        """
+        resp = api_post("/api/v1/expenses/", ctx, json={
+            "title": "AutoSettle DueToday",
+            "type": "expense", "value": "3.00",
+            "date_due": TODAY,
+            "settled": False,
+            "auto_settle_on_due_date": True,
+            "notify": True,
+        })
+        assert resp.status_code == 201
+        eid = resp.json()["id"]
+        ctx["as_today_eid"] = eid
+
+        _run_auto_settle()
+        time.sleep(1)
+
+        exp = _get_expense(ctx, eid)
+        assert exp["settled"] is True
+        assert exp["last_notification_class_sent"] == "settled"
+        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30)
+
+    def test_83_42_auto_settle_no_settled_for_old_due(self, driver, w, ctx):
+        """
+        auto_settle_expenses does NOT send 'settled' notification when the due
+        date is more than 1 day in the past (backfill / old debt scenario).
+        """
+        import requests as _req
+        LONG_AGO = (date.today() - timedelta(days=10)).isoformat()
+
+        resp = api_post("/api/v1/expenses/", ctx, json={
+            "title": "AutoSettle OldDue",
+            "type": "expense", "value": "7.00",
+            "date_due": LONG_AGO,
+            "settled": False,
+            "auto_settle_on_due_date": True,
+            "notify": True,
+        })
+        assert resp.status_code == 201
+        eid = resp.json()["id"]
+        ctx["as_old_eid"] = eid
+
+        msgs_before = _req.get(
+            "http://localhost:8030/api/v1/messages", timeout=5
+        ).json().get("messages", [])
+
+        _run_auto_settle()
+        time.sleep(2)
+
+        exp = _get_expense(ctx, eid)
+        assert exp["settled"] is True, "Expense should have been auto-settled"
+
+        msgs_after = _req.get(
+            "http://localhost:8030/api/v1/messages", timeout=5
+        ).json().get("messages", [])
+        new_settled = [
+            m for m in msgs_after
+            if m.get("ID") not in {x.get("ID") for x in msgs_before}
+            and "OldDue" in m.get("Subject", "")
+        ]
+        assert len(new_settled) == 0, (
+            f"Settled notification must NOT fire for an old due date, got: {new_settled}"
+        )
+
+    def test_83_43_settled_via_api_patch_sends_notification(self, driver, w, ctx):
+        """API PATCH that transitions settled=False → True sends 'settled' notification."""
+        d = _create_unsettled(ctx, "ApiPatch Settle", IN_3_DAYS)
+        eid = d["id"]
+        ctx["api_settle_eid"] = eid
+
+        resp = api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"settled": True})
+        assert resp.status_code == 200
+        time.sleep(1)
+
+        exp = _get_expense(ctx, eid)
+        assert exp["settled"] is True
+        assert exp["last_notification_class_sent"] == "settled"
+        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30)
+
+    def test_83_44_no_settled_via_api_when_profile_notis_off(self, driver, w, ctx):
+        """No settled notification when feuser.email_notifications = False."""
+        import requests as _req
+        api_patch("/api/v1/account/", ctx, json={"email_notifications": False})
+
+        d = _create_unsettled(ctx, "ApiSettle ProfileOff", IN_3_DAYS)
+        eid = d["id"]
+        ctx["api_profile_off_eid"] = eid
+
+        msgs_before = _req.get(
+            "http://localhost:8030/api/v1/messages", timeout=5
+        ).json().get("messages", [])
+
+        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"settled": True})
+        time.sleep(2)
+
+        msgs_after = _req.get(
+            "http://localhost:8030/api/v1/messages", timeout=5
+        ).json().get("messages", [])
+        new_msgs = [
+            m for m in msgs_after
+            if m.get("ID") not in {x.get("ID") for x in msgs_before}
+            and "ProfileOff" in m.get("Subject", "")
+        ]
+        assert len(new_msgs) == 0, (
+            f"Settled notification must not fire when email_notifications=False: {new_msgs}"
+        )
+
+        api_patch("/api/v1/account/", ctx, json={"email_notifications": True})
+
+    def test_83_45_no_settled_via_api_when_expense_muted(self, driver, w, ctx):
+        """No settled notification when expense.notify = False."""
+        import requests as _req
+        d = _create_unsettled(ctx, "ApiSettle ExpenseMuted", IN_3_DAYS, notify=False)
+        eid = d["id"]
+        ctx["api_muted_eid"] = eid
+
+        msgs_before = _req.get(
+            "http://localhost:8030/api/v1/messages", timeout=5
+        ).json().get("messages", [])
+
+        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"settled": True})
+        time.sleep(2)
+
+        msgs_after = _req.get(
+            "http://localhost:8030/api/v1/messages", timeout=5
+        ).json().get("messages", [])
+        new_msgs = [
+            m for m in msgs_after
+            if m.get("ID") not in {x.get("ID") for x in msgs_before}
+            and "ExpenseMuted" in m.get("Subject", "")
+        ]
+        assert len(new_msgs) == 0, (
+            f"Settled notification must not fire when expense.notify=False: {new_msgs}"
+        )
+
+    def test_83_46_cleanup(self, driver, w, ctx):
+        for key in ("as_no_due_eid", "as_today_eid", "as_old_eid",
+                    "api_settle_eid", "api_profile_off_eid", "api_muted_eid"):
+            if key in ctx:
+                api_delete(f"/api/v1/expenses/{ctx.pop(key)}/", ctx)

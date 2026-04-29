@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -19,6 +21,9 @@ class Command(BaseCommand):
         for expense in qs:
             expense.settled = True
             expense.save(update_fields=["settled"])
-            send_settled_notification(expense)
+            # Only notify if the due date just crossed the threshold (today or yesterday).
+            # Old overdue expenses that sat unsettled for days are backfill — no notification.
+            if expense.date_due >= today - timedelta(days=1):
+                send_settled_notification(expense)
             count += 1
         self.stdout.write(self.style.SUCCESS(f"Done — {count} expense(s) auto-settled."))

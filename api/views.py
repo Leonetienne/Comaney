@@ -10,7 +10,7 @@ from django.views.decorators.http import require_http_methods
 from budget.date_utils import current_financial_month, financial_month_range, financial_year_range
 from budget.expense_factory import create_expense
 from budget.models import Category, Expense, ScheduledExpense, Tag, TransactionType
-from budget.notifications import set_initial_notification_class
+from budget.notifications import send_settled_notification, set_initial_notification_class
 from .auth import get_api_user
 
 
@@ -304,6 +304,7 @@ def expense_detail(request, feuser, uid):
         return _err("Carry-over entries cannot be modified or deleted.", 403)
 
     if request.method == "PATCH":
+        was_settled = exp.settled
         data = _parse_body(request)
         if data is None:
             return _err("Invalid JSON body.")
@@ -314,6 +315,8 @@ def expense_detail(request, feuser, uid):
         tag_err = _set_tags(exp, data, feuser)
         if tag_err:
             return _err(tag_err)
+        if not was_settled and exp.settled:
+            send_settled_notification(exp)
         exp.refresh_from_db()
         return _ok(_expense_json(exp))
 

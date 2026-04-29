@@ -165,7 +165,13 @@ def process_due_notifications() -> tuple[int, int]:
     sent = skipped = 0
     qs = (
         Expense.objects
-        .filter(settled=False, notify=True, deactivated=False, date_due__isnull=False)
+        .filter(
+            settled=False,
+            notify=True,
+            deactivated=False,
+            date_due__isnull=False,
+            auto_settle_on_due_date=False,  # auto-settle expenses need no manual-payment reminders
+        )
         .select_related("owning_feuser")
     )
     for expense in qs:
