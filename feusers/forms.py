@@ -6,10 +6,11 @@ from .models import FeUser
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = FeUser
-        fields = ["first_name", "last_name", "currency", "month_start_day", "month_start_prev"]
+        fields = ["first_name", "last_name", "currency", "month_start_day", "month_start_prev", "unspent_allowance_action"]
         labels = {
             "month_start_day": "Month starts on day",
             "month_start_prev": "In the previous calendar month",
+            "unspent_allowance_action": "At month end, unspent allowance should",
         }
         widgets = {
             "month_start_day": forms.NumberInput(attrs={"min": 1, "max": 31}),

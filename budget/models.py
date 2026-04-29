@@ -8,6 +8,7 @@ class TransactionType(models.TextChoices):
     EXPENSE = "expense", "Expense"
     SAVINGS_DEPOSIT = "savings_dep", "Savings Deposit"
     SAVINGS_WITHDRAWAL = "savings_wit", "Savings Withdrawal"
+    CARRY_OVER = "carry_over", "Carry-Over"
 
 
 class RepeatUnit(models.TextChoices):

@@ -31,6 +31,16 @@ class FeUser(models.Model):
     pending_email = models.EmailField(blank=True)
     email_change_token = models.CharField(max_length=64, blank=True, db_index=True)
     api_key = models.CharField(max_length=64, blank=True, null=True, unique=True, db_index=True)
+    unspent_allowance_action = models.CharField(
+        max_length=20,
+        default="do_nothing",
+        choices=[
+            ("do_nothing", "be dropped"),
+            ("deposit_savings", "be deposited as savings"),
+            ("carry_over", "carry over to next month"),
+        ],
+    )
+    allowance_transition_month = models.CharField(max_length=10, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

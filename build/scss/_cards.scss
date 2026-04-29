@@ -50,10 +50,12 @@
   &.type-expense     { color: #721c24; }
   &.type-savings_dep { color: var(--sav-dep-fg); }
   &.type-savings_wit { color: var(--sav-wit-fg); }
+  &.type-carry_over  { color: #5a9e6f; }
 
   @media (prefers-color-scheme: dark) {
-    &.type-income  { color: #6ecf8a; }
-    &.type-expense { color: #cf7075; }
+    &.type-income     { color: #6ecf8a; }
+    &.type-expense    { color: #cf7075; }
+    &.type-carry_over { color: #7dbf94; }
   }
 }
 

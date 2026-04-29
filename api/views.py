@@ -275,6 +275,9 @@ def expense_detail(request, feuser, uid):
     if request.method == "GET":
         return _ok(_expense_json(exp))
 
+    if exp.type == "carry_over":
+        return _err("Carry-over entries cannot be modified or deleted.", 403)
+
     if request.method == "PATCH":
         data = _parse_body(request)
         if data is None:
@@ -376,12 +379,14 @@ def scheduled_detail(request, feuser, uid):
 def account(request, feuser):
     if request.method == "GET":
         return _ok({
-            "email":            feuser.email,
-            "first_name":       feuser.first_name,
-            "last_name":        feuser.last_name,
-            "currency":         feuser.currency,
-            "month_start_day":  feuser.month_start_day,
-            "month_start_prev": feuser.month_start_prev,
+            "email":                      feuser.email,
+            "first_name":                 feuser.first_name,
+            "last_name":                  feuser.last_name,
+            "currency":                   feuser.currency,
+            "month_start_day":            feuser.month_start_day,
+            "month_start_prev":           feuser.month_start_prev,
+            "unspent_allowance_action":   feuser.unspent_allowance_action,
+            "allowance_transition_month": feuser.allowance_transition_month,
         })
 
     if request.method == "PATCH":
@@ -410,15 +415,27 @@ def account(request, feuser):
         if "month_start_prev" in data:
             feuser.month_start_prev = bool(data["month_start_prev"])
             update_fields.append("month_start_prev")
+        if "unspent_allowance_action" in data:
+            valid = {"do_nothing", "deposit_savings", "carry_over"}
+            val = str(data["unspent_allowance_action"])
+            if val not in valid:
+                return _err(f"'unspent_allowance_action' must be one of: {', '.join(sorted(valid))}.")
+            feuser.unspent_allowance_action = val
+            update_fields.append("unspent_allowance_action")
+        if "allowance_transition_month" in data:
+            feuser.allowance_transition_month = str(data["allowance_transition_month"])[:10]
+            update_fields.append("allowance_transition_month")
         if update_fields:
             feuser.save(update_fields=update_fields)
         return _ok({
-            "email":            feuser.email,
-            "first_name":       feuser.first_name,
-            "last_name":        feuser.last_name,
-            "currency":         feuser.currency,
-            "month_start_day":  feuser.month_start_day,
-            "month_start_prev": feuser.month_start_prev,
+            "email":                      feuser.email,
+            "first_name":                 feuser.first_name,
+            "last_name":                  feuser.last_name,
+            "currency":                   feuser.currency,
+            "month_start_day":            feuser.month_start_day,
+            "month_start_prev":           feuser.month_start_prev,
+            "unspent_allowance_action":   feuser.unspent_allowance_action,
+            "allowance_transition_month": feuser.allowance_transition_month,
         })
 
     return _err("Method not allowed.", 405)

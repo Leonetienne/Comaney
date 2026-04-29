@@ -23,7 +23,9 @@ class ExpenseForm(forms.ModelForm):
         model = Expense
         fields = ["title", "payee", "type", "value", "category", "tags", "note", "date_due", "settled", "auto_settle_on_due_date"]
         widgets = {
-            "type": forms.Select(choices=TransactionType.choices),
+            "type": forms.Select(choices=[
+                c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER
+            ]),
             "value": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             "note": forms.Textarea(attrs={"rows": 3}),
             "date_due": forms.DateInput(attrs={"type": "date"}),
@@ -52,7 +54,9 @@ class ScheduledExpenseForm(forms.ModelForm):
             "category", "tags", "note", "default_auto_settle_on_due_date",
         ]
         widgets = {
-            "type": forms.Select(choices=TransactionType.choices),
+            "type": forms.Select(choices=[
+                c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER
+            ]),
             "value": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             "repeat_base_date": forms.DateInput(attrs={"type": "date"}),
             "repeat_every_factor": forms.NumberInput(attrs={"min": "1"}),

@@ -99,20 +99,21 @@ def dashboard(request):
 
     period_qs = Expense.objects.filter(
         owning_feuser=feuser,
-        date_created__date__gte=start,
-        date_created__date__lte=end,
+        date_due__gte=start,
+        date_due__lte=end,
     )
 
     def _sum(qs):
         return qs.aggregate(t=Sum("value"))["t"] or Decimal("0")
 
     income      = _sum(period_qs.filter(type="income"))
+    carry_over  = _sum(period_qs.filter(type="carry_over"))
     paid        = _sum(period_qs.filter(type="expense", settled=True))
     outstanding = _sum(period_qs.filter(type="expense", settled=False))
     sav_dep     = _sum(period_qs.filter(type="savings_dep"))
     sav_wit     = _sum(period_qs.filter(type="savings_wit"))
     savings     = sav_dep - sav_wit
-    left        = income - paid - outstanding - savings
+    left        = income + carry_over - paid - outstanding - savings
 
     expense_qs = period_qs.filter(type="expense")
 
@@ -241,8 +242,8 @@ def expenses_list(request):
     expenses = (
         Expense.objects.filter(
             owning_feuser=feuser,
-            date_created__date__gte=start,
-            date_created__date__lte=end,
+            date_due__gte=start,
+            date_due__lte=end,
         )
         .select_related("category")
         .prefetch_related("tags")
@@ -276,8 +277,8 @@ def expenses_export(request):
     expenses = (
         Expense.objects.filter(
             owning_feuser=feuser,
-            date_created__date__gte=start,
-            date_created__date__lte=end,
+            date_due__gte=start,
+            date_due__lte=end,
         )
         .select_related("category")
         .prefetch_related("tags")
@@ -324,6 +325,8 @@ def expense_create(request):
 @feuser_required
 def expense_edit(request, uid):
     expense = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
+    if expense.type == TransactionType.CARRY_OVER:
+        return redirect("budget:expenses_list")
     if request.method == "POST":
         form = ExpenseForm(request.POST, instance=expense, feuser=request.feuser)
         if form.is_valid():
@@ -342,6 +345,8 @@ def expense_edit(request, uid):
 @require_POST
 def expense_delete(request, uid):
     expense = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
+    if expense.type == TransactionType.CARRY_OVER:
+        return redirect("budget:expenses_list")
     expense.delete()
     return redirect("budget:expenses_list")
 
@@ -350,6 +355,8 @@ def expense_delete(request, uid):
 @require_POST
 def expense_clone(request, uid):
     original = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
+    if original.type == TransactionType.CARRY_OVER:
+        return redirect("budget:expenses_list")
     tags = list(original.tags.all())
     original.pk = None
     original.title = f"CLONE - {original.title}"
