@@ -101,6 +101,7 @@ def dashboard(request):
         owning_feuser=feuser,
         date_due__gte=start,
         date_due__lte=end,
+        deactivated=False,
     )
 
     def _sum(qs):
@@ -375,6 +376,7 @@ def scheduled_list(request):
     return render(request, "budget/scheduled_list.html", {
         "active_nav": "scheduled",
         "scheduled": scheduled,
+        "today": date.today(),
     })
 
 

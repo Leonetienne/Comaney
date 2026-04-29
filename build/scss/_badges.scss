@@ -12,6 +12,7 @@
   &-savings_wit { background: var(--sav-wit-bg); color: var(--sav-wit-fg); }
   &-carry_over  { background: #e8e0f7; color: #4a2d8a; }
   &-tag         { background: var(--bg-elevated); color: var(--text-subtle); margin: 1px; }
+  &-deactivated { background: var(--bg-elevated); color: var(--text-muted); }
 
   @media (prefers-color-scheme: dark) {
     &-income      { background: #1a3326; color: #6ecf8a; }

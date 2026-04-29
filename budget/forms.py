@@ -21,7 +21,7 @@ class ExpenseForm(forms.ModelForm):
 
     class Meta:
         model = Expense
-        fields = ["title", "payee", "type", "value", "category", "tags", "note", "date_due", "settled", "auto_settle_on_due_date"]
+        fields = ["title", "payee", "type", "value", "category", "tags", "note", "date_due", "settled", "auto_settle_on_due_date", "deactivated"]
         widgets = {
             "type": forms.Select(choices=[
                 c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER
@@ -34,6 +34,7 @@ class ExpenseForm(forms.ModelForm):
         labels = {
             "date_due": "Due date",
             "auto_settle_on_due_date": "Auto-settle when reaching due date",
+            "deactivated": "Deactivated",
         }
 
 
@@ -50,8 +51,8 @@ class ScheduledExpenseForm(forms.ModelForm):
         model = ScheduledExpense
         fields = [
             "title", "payee", "type", "value",
-            "repeat_every_factor", "repeat_every_unit", "repeat_base_date",
-            "category", "tags", "note", "default_auto_settle_on_due_date",
+            "repeat_every_factor", "repeat_every_unit", "repeat_base_date", "end_on",
+            "category", "tags", "note", "default_auto_settle_on_due_date", "deactivated",
         ]
         widgets = {
             "type": forms.Select(choices=[
@@ -59,6 +60,7 @@ class ScheduledExpenseForm(forms.ModelForm):
             ]),
             "value": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             "repeat_base_date": forms.DateInput(attrs={"type": "date"}),
+            "end_on": forms.DateInput(attrs={"type": "date"}),
             "repeat_every_factor": forms.NumberInput(attrs={"min": "1"}),
             "note": forms.Textarea(attrs={"rows": 3}),
             "tags": forms.CheckboxSelectMultiple(),
@@ -67,5 +69,7 @@ class ScheduledExpenseForm(forms.ModelForm):
             "repeat_every_factor": "Every",
             "repeat_every_unit": "Unit",
             "repeat_base_date": "Starting from",
+            "end_on": "End on",
             "default_auto_settle_on_due_date": "Auto-settle generated expenses when reaching due date",
+            "deactivated": "Deactivated",
         }

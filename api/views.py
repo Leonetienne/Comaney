@@ -74,6 +74,7 @@ def _expense_json(exp):
         "date_due":                exp.date_due.isoformat() if exp.date_due else None,
         "settled":                 exp.settled,
         "auto_settle_on_due_date": exp.auto_settle_on_due_date,
+        "deactivated":             exp.deactivated,
         "date_created":            exp.date_created.isoformat(),
     }
 
@@ -92,6 +93,8 @@ def _scheduled_json(s):
         "repeat_every_factor":             s.repeat_every_factor,
         "repeat_every_unit":               s.repeat_every_unit,
         "repeat_base_date":                s.repeat_base_date.isoformat() if s.repeat_base_date else None,
+        "end_on":                          s.end_on.isoformat() if s.end_on else None,
+        "deactivated":                     s.deactivated,
     }
 
 
@@ -110,6 +113,8 @@ def _apply_expense_fields(obj, data, feuser, creating=False):
         obj.settled = bool(data["settled"])
     if "auto_settle_on_due_date" in data:
         obj.auto_settle_on_due_date = bool(data["auto_settle_on_due_date"])
+    if "deactivated" in data:
+        obj.deactivated = bool(data["deactivated"])
 
     if "type" in data:
         if data["type"] not in ("expense", "income", "savings_dep", "savings_wit"):
@@ -161,6 +166,8 @@ def _apply_scheduled_fields(obj, data, feuser, creating=False):
         obj.note = str(data["note"] or "")
     if "default_auto_settle_on_due_date" in data:
         obj.default_auto_settle_on_due_date = bool(data["default_auto_settle_on_due_date"])
+    if "deactivated" in data:
+        obj.deactivated = bool(data["deactivated"])
 
     if "type" in data:
         if data["type"] not in ("expense", "income", "savings_dep", "savings_wit"):
@@ -196,6 +203,14 @@ def _apply_scheduled_fields(obj, data, feuser, creating=False):
                 return "'repeat_base_date' must be ISO date (YYYY-MM-DD) or null."
         else:
             obj.repeat_base_date = None
+    if "end_on" in data:
+        if data["end_on"]:
+            try:
+                obj.end_on = date.fromisoformat(str(data["end_on"]))
+            except ValueError:
+                return "'end_on' must be ISO date (YYYY-MM-DD) or null."
+        else:
+            obj.end_on = None
 
     if "category_id" in data:
         if data["category_id"]:
@@ -454,7 +469,7 @@ def dashboard(request, feuser):
     year, month = _parse_month(request, feuser)
     start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
 
-    qs = Expense.objects.filter(owning_feuser=feuser, date_due__gte=start, date_due__lte=end)
+    qs = Expense.objects.filter(owning_feuser=feuser, date_due__gte=start, date_due__lte=end, deactivated=False)
 
     def _sum(fqs):
         return sum(e.value for e in fqs) or Decimal("0.00")

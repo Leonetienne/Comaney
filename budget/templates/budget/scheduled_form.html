@@ -42,10 +42,18 @@
                 {% for e in form.repeat_every_factor.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
                 {% for e in form.repeat_every_unit.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
             </div>
+        </div>
+
+        <div class="form-row">
             <div>
                 <label for="{{ form.repeat_base_date.id_for_label }}">{{ form.repeat_base_date.label }}</label>
                 {{ form.repeat_base_date }}
                 {% for e in form.repeat_base_date.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+            </div>
+            <div>
+                <label for="{{ form.end_on.id_for_label }}">{{ form.end_on.label }}</label>
+                {{ form.end_on }}
+                {% for e in form.end_on.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
             </div>
         </div>
 
@@ -68,10 +76,37 @@
         {{ form.note }}
         {% for e in form.note.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
 
+        <label class="checkbox-inline">{{ form.deactivated }} {{ form.deactivated.label }}</label>
+        {% for e in form.deactivated.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+
         <div class="form-actions">
             <button type="submit" class="btn">{% if scheduled %}Save changes{% else %}Create{% endif %}</button>
             <a href="{% url 'budget:scheduled_list' %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
+<script>
+(function () {
+    const startEl = document.getElementById('{{ form.repeat_base_date.id_for_label }}');
+    const endEl   = document.getElementById('{{ form.end_on.id_for_label }}');
+    const btn     = document.querySelector('.form-actions .btn[type=submit]');
+    const errEl   = document.createElement('p');
+    errEl.className = 'error-msg';
+    errEl.style.display = 'none';
+    errEl.textContent = 'End date must be after start date.';
+    endEl.parentNode.insertBefore(errEl, endEl.nextSibling);
+
+    btn.addEventListener('click', function (e) {
+        if (startEl.value && endEl.value && endEl.value <= startEl.value) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            errEl.style.display = '';
+        } else {
+            errEl.style.display = 'none';
+        }
+    });
+
+    endEl.addEventListener('input', function () { errEl.style.display = 'none'; });
+})();
+</script>
 {% endblock %}

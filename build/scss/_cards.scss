@@ -19,6 +19,9 @@
   &.unsettled {
     border-left-color: #c2478a;
   }
+  &--deactivated {
+    opacity: 0.45;
+  }
 }
 
 .exp-date-label {

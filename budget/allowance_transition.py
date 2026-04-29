@@ -18,6 +18,7 @@ def _compute_left(feuser, start, end) -> Decimal:
         owning_feuser=feuser,
         date_due__gte=start,
         date_due__lte=end,
+        deactivated=False,
     )
 
     def _sum(q):

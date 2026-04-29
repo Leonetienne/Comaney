@@ -73,6 +73,9 @@ class Command(BaseCommand):
         created = skipped = 0
 
         for scheduled in ScheduledExpense.objects.select_related("owning_feuser", "category").prefetch_related("tags"):
+            if scheduled.deactivated:
+                continue
+
             feuser = scheduled.owning_feuser
 
             if override_year:
@@ -82,6 +85,8 @@ class Command(BaseCommand):
 
             start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
             occurrences = occurrences_in_range(scheduled, start, end)
+            if scheduled.end_on:
+                occurrences = [d for d in occurrences if d <= scheduled.end_on]
 
             if not occurrences:
                 continue

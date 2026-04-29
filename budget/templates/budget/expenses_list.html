@@ -14,7 +14,7 @@
 {% if expenses %}
 <div class="exp-list">
     {% for exp in expenses %}
-    <div class="exp-card{% if not exp.settled %} unsettled{% endif %}">
+    <div class="exp-card{% if not exp.settled %} unsettled{% endif %}{% if exp.deactivated %} exp-card--deactivated{% endif %}">
 
         <!-- Date label above title -->
         {% if exp.date_due %}<div class="exp-date-label" style="grid-column:1;grid-row:1;">{{ exp.date_due|date:"Y-m-d" }}</div>{% endif %}
@@ -44,6 +44,7 @@
         <!-- Row 2: type, settled, category, tags, date -->
         <div class="exp-row2">
             <span class="badge badge-{{ exp.type }}">{{ exp.get_type_display }}</span>
+            {% if exp.deactivated %}<span class="badge badge-deactivated">Deactivated</span>{% endif %}
             {% if exp.settled %}
             <span class="exp-settled yes">✓ settled</span>
             {% else %}

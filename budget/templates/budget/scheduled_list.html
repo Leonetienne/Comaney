@@ -13,10 +13,13 @@
 {% if scheduled %}
 <div class="exp-list">
     {% for s in scheduled %}
-    <div class="exp-card">
+    <div class="exp-card{% if s.deactivated %} exp-card--deactivated{% endif %}{% if not s.deactivated and s.end_on and s.end_on < today %} exp-card--deactivated{% endif %}">
 
-        {% if s.repeat_base_date %}
-        <div class="exp-date-label">Starting {{ s.repeat_base_date|date:"Y-m-d" }}</div>
+        {% if s.repeat_base_date or s.end_on %}
+        <div class="exp-date-label">
+            {% if s.repeat_base_date %}Starting {{ s.repeat_base_date|date:"Y-m-d" }}{% endif %}
+            {% if s.end_on %}<span style="margin-left:{% if s.repeat_base_date %}12px{% else %}0{% endif %}">End on {{ s.end_on|date:"Y-m-d" }}</span>{% endif %}
+        </div>
         {% endif %}
 
         <div class="exp-row1">
@@ -39,6 +42,8 @@
 
         <div class="exp-row2">
             <span class="badge badge-{{ s.type }}">{{ s.get_type_display }}</span>
+            {% if s.deactivated %}<span class="badge badge-deactivated">Deactivated</span>
+            {% elif s.end_on and s.end_on < today %}<span class="badge badge-deactivated">Ended</span>{% endif %}
             {% if s.repeat_every_factor and s.repeat_every_unit %}
             <span class="exp-repeat">every {{ s.repeat_every_factor }} {{ s.get_repeat_every_unit_display|lower }}</span>
             {% endif %}
