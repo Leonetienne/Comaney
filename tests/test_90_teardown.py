@@ -52,43 +52,6 @@ class TestTeardown:
         ok_btn.click()
         w.until(EC.invisibility_of_element_located((By.ID, item_id)))
 
-    def test_92_delete_scheduled_expense(self, driver, w, ctx):
-        """Delete the browser-created scheduled expense before account deletion."""
-        if "scheduled_uid" not in ctx:
-            return
-        driver.get(_url("/budget/scheduled/"))
-        delete_form = w.until(EC.presence_of_element_located(
-            (By.XPATH, f"//form[contains(@action,'/scheduled/{ctx['scheduled_uid']}/delete/')]")))
-        driver.execute_script("arguments[0].querySelector('button').click()", delete_form)
-        ok_btn = w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok")))
-        ok_btn.click()
-        w.until(lambda d: d.current_url.rstrip("/").endswith("/budget/scheduled"))
-
-    def test_93_delete_expense(self, driver, w, ctx):
-        """Delete the browser-created expense before account deletion."""
-        if "expense_uid" not in ctx:
-            return
-        driver.get(_url("/budget/expenses/"))
-        try:
-            delete_form = w.until(EC.presence_of_element_located(
-                (By.XPATH, f"//form[contains(@action,'/expenses/{ctx['expense_uid']}/delete/')]")))
-            driver.execute_script("arguments[0].querySelector('button').click()", delete_form)
-            ok_btn = w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok")))
-            ok_btn.click()
-        except Exception:
-            pass  # may already be deleted
-
-    def test_94_delete_full_field_scheduled(self, driver, w, ctx):
-        """Delete the full-field scheduled expense created in test_40."""
-        if "full_field_scheduled_id" not in ctx:
-            return
-        cookies = session_cookies(driver)
-        resp = requests.delete(
-            _url(f"/budget/scheduled/{ctx['full_field_scheduled_id']}/delete/"),
-            cookies=cookies, timeout=10,
-        )
-        # Ignore errors — account deletion will cascade anyway
-
     def test_46_delete_category(self, driver, w, ctx):
         driver.get(_url("/budget/categories-tags/"))
         self._delete_ct_item(driver, w, f"category-{ctx['category_uid']}")

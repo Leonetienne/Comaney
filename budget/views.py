@@ -449,6 +449,8 @@ Sum their values. Use a short collective title (e.g. "Cola and chips", "Toothpas
 This applies without exception — bottle deposits (Pfand), surcharges, or minor add-ons that belong
 to the same category/tag group must be absorbed into that group's record, not given their own entry.
 The goal is one record per (category, tags) combination, never one record per line item.
+If a user says that they withdrew savings to buy something, they mean that they either paid completely out of savings OR that they want to SPLIT the expense into "expense" and "savings wit", depending on whether the withdrawn amount covers the item.
+All generated items IN SUM must match the value stated by the user!
 
 If an image is provided:
 - Read every line item, assign each a category and tags, then apply the grouping rule above.

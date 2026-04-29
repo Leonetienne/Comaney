@@ -4,6 +4,7 @@
 DEFAULT_CATEGORIES = [
     "Housing",
     "Groceries",
+    "Snacks",
     "Dining & Bars",
     "Transport",
     "Health & Pharmacy",
