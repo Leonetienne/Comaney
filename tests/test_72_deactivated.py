@@ -80,7 +80,7 @@ class TestDeactivated:
 
     def test_73_deactivated_scheduler_generates_nothing(self, driver, w, ctx):
         """Running the cron for a deactivated scheduler must produce zero expense entries."""
-        run_cmd("generate_scheduled_expenses", "--year", "2026", "--month", "4")
+        run_cmd("generate_scheduled_expenses", "--year", "2026")
         time.sleep(1)
 
         driver.get(_url("/budget/expenses/?year=2026&month=4"))
@@ -128,7 +128,7 @@ class TestDeactivated:
         """
         Cron for April 2026 should create entries on Apr 1, 8, 15 only — not Apr 22 or 29.
         """
-        run_cmd("generate_scheduled_expenses", "--year", "2026", "--month", "4")
+        run_cmd("generate_scheduled_expenses", "--year", "2026")
         time.sleep(1)
 
         driver.get(_url("/budget/expenses/?year=2026&month=4"))

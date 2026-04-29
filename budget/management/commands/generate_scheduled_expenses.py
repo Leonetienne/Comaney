@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand
 
-from budget.date_utils import current_financial_month, financial_month_range
+from budget.date_utils import current_financial_month, financial_year_range
 from budget.expense_factory import create_expense
 from budget.models import Expense, ScheduledExpense
 
@@ -55,21 +55,15 @@ def occurrences_in_range(scheduled: ScheduledExpense, start: date, end: date) ->
 
 
 class Command(BaseCommand):
-    help = "Generate expenses from scheduled expenses for each user's current financial month."
+    help = "Generate expenses from scheduled expenses for each user's current financial year."
 
     def add_arguments(self, parser):
-        parser.add_argument("--year",  type=int, default=None, help="Override financial month year  (applies to all users)")
-        parser.add_argument("--month", type=int, default=None, help="Override financial month (applies to all users)")
+        parser.add_argument("--year", type=int, default=None, help="Override financial year (applies to all users)")
 
     def handle(self, *args, **options):
-        override_year  = options["year"]
-        override_month = options["month"]
+        override_year = options["year"]
 
-        if bool(override_year) != bool(override_month):
-            self.stderr.write("Provide both --year and --month or neither.")
-            return
-
-        self.stdout.write(f"Generating scheduled expenses…")
+        self.stdout.write("Generating scheduled expenses…")
         created = skipped = 0
 
         for scheduled in ScheduledExpense.objects.select_related("owning_feuser", "category").prefetch_related("tags"):
@@ -77,13 +71,9 @@ class Command(BaseCommand):
                 continue
 
             feuser = scheduled.owning_feuser
+            year = override_year or current_financial_month(feuser.month_start_day, feuser.month_start_prev)[0]
+            start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
 
-            if override_year:
-                year, month = override_year, override_month
-            else:
-                year, month = current_financial_month(feuser.month_start_day, feuser.month_start_prev)
-
-            start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
             occurrences = occurrences_in_range(scheduled, start, end)
             if scheduled.end_on:
                 occurrences = [d for d in occurrences if d <= scheduled.end_on]

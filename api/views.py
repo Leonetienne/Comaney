@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from budget.date_utils import current_financial_month, financial_month_range
+from budget.date_utils import current_financial_month, financial_month_range, financial_year_range
 from budget.expense_factory import create_expense
 from budget.models import Category, Expense, ScheduledExpense, Tag, TransactionType
 from .auth import get_api_user
@@ -247,7 +247,11 @@ def _set_tags(obj, data, feuser):
 def expenses(request, feuser):
     if request.method == "GET":
         year, month = _parse_month(request, feuser)
-        start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+        view = request.GET.get("view")
+        if view == "year":
+            start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
+        else:
+            start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
         qs = (
             Expense.objects
             .filter(owning_feuser=feuser, date_due__gte=start, date_due__lte=end)

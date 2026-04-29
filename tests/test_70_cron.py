@@ -1,5 +1,5 @@
 """
-Cron command tests: financial month interpretation, scheduled expense generation,
+Cron command tests: financial year interpretation, scheduled expense generation,
 duplicate prevention, and auto-settle behaviour.
 
 All setup/teardown is done via the API so these tests don't depend on browser state.
@@ -40,17 +40,23 @@ def _create_expense(ctx, **kwargs):
     return resp.json()["id"]
 
 
-def _expenses_by_title(ctx, title, year=None, month=None):
-    """Return all expenses matching title in the given (or current) financial month."""
-    params = {"year": year, "month": month} if year and month else None
-    resp = api_get("/api/v1/expenses/", ctx, params=params)
+def _expenses_by_title(ctx, title, year=None, month=None, view=None):
+    """Return expenses matching title, optionally scoped to a financial month or year."""
+    params = {}
+    if year:
+        params["year"] = year
+    if month:
+        params["month"] = month
+    if view:
+        params["view"] = view
+    resp = api_get("/api/v1/expenses/", ctx, params=params or None)
     assert resp.status_code == 200
     return [e for e in resp.json()["expenses"] if e["title"] == title]
 
 
-def _run_generate(year=None, month=None):
-    if year and month:
-        return run_cmd("generate_scheduled_expenses", "--year", str(year), "--month", str(month))
+def _run_generate(year=None):
+    if year:
+        return run_cmd("generate_scheduled_expenses", "--year", str(year))
     return run_cmd("generate_scheduled_expenses")
 
 
@@ -59,67 +65,63 @@ def _run_auto_settle():
 
 
 # ---------------------------------------------------------------------------
-# Financial month range interpretation
+# Financial year range interpretation
 # ---------------------------------------------------------------------------
 
-class TestFinancialMonthInterpretation:
+class TestFinancialYearInterpretation:
     """
-    Verify that financial month boundaries are interpreted correctly by checking
-    which occurrences the cron generates for a given --year/--month override.
+    Verify that financial year boundaries are computed correctly by checking
+    which occurrences the cron generates for a given --year override.
     """
 
-    def test_70_standard_month_start_day_1(self, driver, w, ctx):
+    def test_70_standard_year_start_day_1(self, driver, w, ctx):
         """
-        With month_start_day=1, prev_month=False (the default for this test user),
-        April 2026 financial month = Apr 1 – Apr 30.
-        A scheduled expense with base_date = Apr 1 should fire in April.
-        A base_date = May 1 should NOT fire for April.
+        With month_start_day=1, prev_month=False:
+        financial year 2026 = Jan 1 – Dec 31, 2026.
+        A yearly schedule with base Jan 1 2026 fires; one with base Jan 1 2027 does not.
         """
         api_patch("/api/v1/account/", ctx, json={"month_start_day": 1, "month_start_prev": False})
 
-        sid_in  = _create_scheduled(ctx, title="Cron FM Standard IN",
-                                    repeat_base_date="2026-04-01", repeat_every_unit="months")
-        sid_out = _create_scheduled(ctx, title="Cron FM Standard OUT",
-                                    repeat_base_date="2026-05-01", repeat_every_unit="months")
+        sid_in  = _create_scheduled(ctx, title="Cron FY Std IN",
+                                    repeat_base_date="2026-01-01", repeat_every_unit="years")
+        sid_out = _create_scheduled(ctx, title="Cron FY Std OUT",
+                                    repeat_base_date="2027-01-01", repeat_every_unit="years")
 
-        _run_generate(year=2026, month=4)
+        _run_generate(year=2026)
 
-        hits_in  = _expenses_by_title(ctx, "Cron FM Standard IN")
-        hits_out = _expenses_by_title(ctx, "Cron FM Standard OUT")
+        hits_in  = _expenses_by_title(ctx, "Cron FY Std IN",  year=2026, view="year")
+        hits_out = _expenses_by_title(ctx, "Cron FY Std OUT", year=2026, view="year")
 
-        assert len(hits_in) == 1, f"Expected 1 expense for April base, got {hits_in}"
-        assert hits_in[0]["date_due"] == "2026-04-01"
-        assert len(hits_out) == 0, f"Expected 0 for May base in April run, got {hits_out}"
+        assert len(hits_in) == 1, f"Expected 1 occurrence for Jan 1 2026 in year 2026, got {hits_in}"
+        assert hits_in[0]["date_due"] == "2026-01-01"
+        assert len(hits_out) == 0, f"Jan 1 2027 base should not fire in year 2026, got {hits_out}"
 
         api_delete(f"/api/v1/scheduled/{sid_in}/", ctx)
         api_delete(f"/api/v1/scheduled/{sid_out}/", ctx)
         for e in hits_in:
             api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
 
-    def test_71_month_start_day_15(self, driver, w, ctx):
+    def test_71_year_start_day_15(self, driver, w, ctx):
         """
         With month_start_day=15, prev_month=False:
-        April 2026 financial month = Apr 15 – May 14.
-        base_date = Apr 15 fires in April FM.
-        base_date = May 15 does NOT fire in April FM (first occurrence is May 15, in May FM).
-        Note: Apr 14 is a bad OUT candidate — its next monthly occurrence is May 14,
-        which lands inside April FM (Apr 15 – May 14).
+        financial year 2026 = Jan 15, 2026 – Jan 14, 2027.
+        A yearly base on Jan 14 2027 (last day) fires; Jan 15 2027 (next year start) does not.
         """
         api_patch("/api/v1/account/", ctx, json={"month_start_day": 15, "month_start_prev": False})
 
-        sid_in  = _create_scheduled(ctx, title="Cron FM15 IN",
-                                    repeat_base_date="2026-04-15", repeat_every_unit="months")
-        sid_out = _create_scheduled(ctx, title="Cron FM15 OUT",
-                                    repeat_base_date="2026-05-15", repeat_every_unit="months")
+        sid_in  = _create_scheduled(ctx, title="Cron FY15 IN",
+                                    repeat_base_date="2027-01-14", repeat_every_unit="years")
+        sid_out = _create_scheduled(ctx, title="Cron FY15 OUT",
+                                    repeat_base_date="2027-01-15", repeat_every_unit="years")
 
-        _run_generate(year=2026, month=4)
+        _run_generate(year=2026)
 
-        hits_in  = _expenses_by_title(ctx, "Cron FM15 IN")
-        hits_out = _expenses_by_title(ctx, "Cron FM15 OUT")
+        hits_in  = _expenses_by_title(ctx, "Cron FY15 IN",  year=2026, view="year")
+        hits_out = _expenses_by_title(ctx, "Cron FY15 OUT", year=2026, view="year")
 
-        assert len(hits_in) == 1, f"Expected 1 for Apr 15 base, got {hits_in}"
-        assert hits_in[0]["date_due"] == "2026-04-15"
-        assert len(hits_out) == 0, f"May 15 base should not fire in April FM, got {hits_out}"
+        assert len(hits_in) == 1, f"Jan 14 2027 should be last day of FY2026, got {hits_in}"
+        assert hits_in[0]["date_due"] == "2027-01-14"
+        assert len(hits_out) == 0, f"Jan 15 2027 is start of FY2027, should not fire, got {hits_out}"
 
         api_delete(f"/api/v1/scheduled/{sid_in}/", ctx)
         api_delete(f"/api/v1/scheduled/{sid_out}/", ctx)
@@ -128,28 +130,27 @@ class TestFinancialMonthInterpretation:
 
         api_patch("/api/v1/account/", ctx, json={"month_start_day": 1, "month_start_prev": False})
 
-    def test_72_prev_month_flag(self, driver, w, ctx):
+    def test_72_prev_month_flag_year(self, driver, w, ctx):
         """
         With month_start_day=27, prev_month=True:
-        April 2026 financial month = Mar 27 – Apr 26.
-        base_date = Mar 27 fires; base_date = Apr 27 does NOT (it's in May FM).
+        financial year 2026 = Dec 27, 2025 – Dec 26, 2026.
+        Base Dec 27 2025 (first day) fires; base Dec 27 2026 (first day of FY2027) does not.
         """
         api_patch("/api/v1/account/", ctx, json={"month_start_day": 27, "month_start_prev": True})
 
-        sid_in  = _create_scheduled(ctx, title="Cron FMprev IN",
-                                    repeat_base_date="2026-03-27", repeat_every_unit="months")
-        sid_out = _create_scheduled(ctx, title="Cron FMprev OUT",
-                                    repeat_base_date="2026-04-27", repeat_every_unit="months")
+        sid_in  = _create_scheduled(ctx, title="Cron FYprev IN",
+                                    repeat_base_date="2025-12-27", repeat_every_unit="years")
+        sid_out = _create_scheduled(ctx, title="Cron FYprev OUT",
+                                    repeat_base_date="2026-12-27", repeat_every_unit="years")
 
-        _run_generate(year=2026, month=4)
+        _run_generate(year=2026)
 
-        # Apr 29 falls in May FM with these settings; explicitly query April FM
-        hits_in  = _expenses_by_title(ctx, "Cron FMprev IN",  year=2026, month=4)
-        hits_out = _expenses_by_title(ctx, "Cron FMprev OUT", year=2026, month=4)
+        hits_in  = _expenses_by_title(ctx, "Cron FYprev IN",  year=2026, view="year")
+        hits_out = _expenses_by_title(ctx, "Cron FYprev OUT", year=2026, view="year")
 
-        assert len(hits_in) == 1, f"Expected 1 for Mar 27 base in April FM, got {hits_in}"
-        assert hits_in[0]["date_due"] == "2026-03-27"
-        assert len(hits_out) == 0, f"Apr 27 should be May FM, got {hits_out}"
+        assert len(hits_in) == 1, f"Dec 27 2025 should be first day of FY2026, got {hits_in}"
+        assert hits_in[0]["date_due"] == "2025-12-27"
+        assert len(hits_out) == 0, f"Dec 27 2026 is first day of FY2027, should not fire, got {hits_out}"
 
         api_delete(f"/api/v1/scheduled/{sid_in}/", ctx)
         api_delete(f"/api/v1/scheduled/{sid_out}/", ctx)
@@ -166,7 +167,7 @@ class TestFinancialMonthInterpretation:
 class TestScheduledGeneration:
 
     def test_73_cron_generates_expense_from_scheduled(self, driver, w, ctx):
-        """Running the cron creates exactly one expense for the matching period."""
+        """Running the cron creates at least one expense for the current period."""
         today = date.today()
         _create_scheduled(ctx,
             title="Cron Gen Test",
@@ -178,6 +179,7 @@ class TestScheduledGeneration:
         out = _run_generate()
         assert "Cron Gen Test" in out or "created" in out.lower()
 
+        # Query current financial month — today's occurrence should be there
         expenses = _expenses_by_title(ctx, "Cron Gen Test")
         assert len(expenses) == 1
         e = expenses[0]
@@ -233,18 +235,20 @@ class TestScheduledGeneration:
             value="9.99",
         )
 
-        _run_generate(year=2026, month=2)
+        _run_generate(year=2026)
 
-        expenses = _expenses_by_title(ctx, "Cron Jan31 Clamp", year=2026, month=2)
-        assert len(expenses) == 1, f"Expected 1 expense in Feb 2026, got {expenses}"
-        assert expenses[0]["date_due"] == "2026-02-28", (
-            f"Expected Feb 28 (clamped), got {expenses[0]['date_due']}")
+        feb_expenses = _expenses_by_title(ctx, "Cron Jan31 Clamp", year=2026, month=2)
+        assert len(feb_expenses) == 1, f"Expected 1 expense in Feb 2026, got {feb_expenses}"
+        assert feb_expenses[0]["date_due"] == "2026-02-28", (
+            f"Expected Feb 28 (clamped), got {feb_expenses[0]['date_due']}")
 
-        api_delete(f"/api/v1/expenses/{expenses[0]['id']}/", ctx)
+        all_expenses = _expenses_by_title(ctx, "Cron Jan31 Clamp", year=2026, view="year")
+        for e in all_expenses:
+            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
         api_delete(f"/api/v1/scheduled/{sid}/", ctx)
 
     def test_77_weekly_repeat_multiple_occurrences(self, driver, w, ctx):
-        """A weekly schedule produces multiple occurrences within one month."""
+        """A weekly schedule produces multiple occurrences; April 2026 gets exactly 5."""
         sid = _create_scheduled(ctx,
             title="Cron Weekly",
             repeat_base_date="2026-04-01",
@@ -253,22 +257,22 @@ class TestScheduledGeneration:
             value="5.00",
         )
 
-        _run_generate(year=2026, month=4)
+        _run_generate(year=2026)
 
         # Apr 1, 8, 15, 22, 29 — 5 occurrences in April 2026
-        expenses = _expenses_by_title(ctx, "Cron Weekly")
-        assert len(expenses) == 5, f"Expected 5 weekly occurrences in April, got {len(expenses)}"
-        due_dates = sorted(e["date_due"] for e in expenses)
+        april_expenses = _expenses_by_title(ctx, "Cron Weekly", year=2026, month=4)
+        assert len(april_expenses) == 5, f"Expected 5 weekly occurrences in April, got {len(april_expenses)}"
+        due_dates = sorted(e["date_due"] for e in april_expenses)
         assert due_dates == ["2026-04-01", "2026-04-08", "2026-04-15", "2026-04-22", "2026-04-29"]
 
-        for e in expenses:
+        all_expenses = _expenses_by_title(ctx, "Cron Weekly", year=2026, view="year")
+        for e in all_expenses:
             api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
         api_delete(f"/api/v1/scheduled/{sid}/", ctx)
 
     def test_78_cleanup_cron_gen_data(self, driver, w, ctx):
         if "cron_gen_expense_id" in ctx:
             api_delete(f"/api/v1/expenses/{ctx['cron_gen_expense_id']}/", ctx)
-        # Clean up the "Cron Gen Test" scheduled (created without storing sid)
         resp = api_get("/api/v1/scheduled/", ctx)
         if resp.status_code == 200:
             for s in resp.json()["scheduled"]:

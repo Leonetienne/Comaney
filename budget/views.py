@@ -65,7 +65,7 @@ def _month_nav_context(year: int, month: int, start_day: int = 1, prev_month: bo
     nav_next_month = month % 12 + 1
     nav_next_year  = year + 1 if month == 12 else year
     cur_year, cur_month = current_financial_month(start_day, prev_month)
-    is_current = (year == cur_year and month == cur_month)
+    is_current = year > cur_year or (year == cur_year and month == 12)
     start, end = financial_month_range(year, month, start_day, prev_month)
     is_default = (start_day == 1 and not prev_month)
     range_str = f"{start.strftime('%-d %b')} – {end.strftime('%-d %b')}" if not is_default else ""
