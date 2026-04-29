@@ -643,6 +643,20 @@ def confirm_email(request, token):
     user.save(update_fields=["is_confirmed", "is_active", "confirmation_token"])
     from budget.fixtures import create_defaults
     create_defaults(user)
+    admin_email = getattr(settings, "ADMIN_NOTIFICATION_EMAIL", "")
+    if admin_email:
+        try:
+            _ctx = {"first_name": user.first_name, "last_name": user.last_name, "email": user.email, "site_url": settings.SITE_URL}
+            send_mail(
+                subject="New user registered",
+                message=f"New user: {user.first_name} {user.last_name} <{user.email}>",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[admin_email],
+                html_message=render_to_string("emails/new_user_registered.html", _ctx),
+                fail_silently=True,
+            )
+        except Exception:
+            pass
     return render(request, "feusers/confirmed.html", {"user": user})
 
 

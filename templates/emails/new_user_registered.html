@@ -1,0 +1,22 @@
+{% extends "emails/base_email.html" %}
+{% block subject %}New user registered{% endblock %}
+
+{% block content %}
+  <h1 style="margin:0 0 8px;font-size:1.4rem;font-weight:700;color:#e0e0e0;">New account confirmed</h1>
+  <p style="margin:0 0 28px;font-size:0.95rem;color:#aaa;line-height:1.7;">
+    A new user has registered and confirmed their email address on Comaney.
+  </p>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;border-collapse:collapse;">
+    <tr>
+      <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:0.82rem;color:#888;width:90px;vertical-align:top;">Name</td>
+      <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:0.88rem;color:#ddd;">{{ first_name }} {{ last_name }}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 0;font-size:0.82rem;color:#888;vertical-align:top;">Email</td>
+      <td style="padding:8px 0;font-size:0.88rem;color:#ddd;">
+        <a href="mailto:{{ email }}" style="color:#c2478a;text-decoration:none;">{{ email }}</a>
+      </td>
+    </tr>
+  </table>
+{% endblock %}
