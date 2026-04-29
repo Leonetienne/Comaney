@@ -25,5 +25,8 @@ class Command(BaseCommand):
         self.stdout.write("\n-- apply_allowance_transitions --")
         call_command("apply_allowance_transitions", stdout=self.stdout)
 
+        self.stdout.write("\n-- send_expense_notifications --")
+        call_command("send_expense_notifications", stdout=self.stdout)
+
         self.stdout.write(self.style.SUCCESS("\n=== done ==="))
 

@@ -21,7 +21,7 @@ class ExpenseForm(forms.ModelForm):
 
     class Meta:
         model = Expense
-        fields = ["title", "payee", "type", "value", "category", "tags", "note", "date_due", "settled", "auto_settle_on_due_date", "deactivated"]
+        fields = ["title", "payee", "type", "value", "category", "tags", "note", "date_due", "settled", "auto_settle_on_due_date", "deactivated", "notify"]
         widgets = {
             "type": forms.Select(choices=[
                 c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER
@@ -35,6 +35,7 @@ class ExpenseForm(forms.ModelForm):
             "date_due": "Due date",
             "auto_settle_on_due_date": "Auto-settle when reaching due date",
             "deactivated": "Deactivated",
+            "notify": "Send email notifications for this expense",
         }
 
 
@@ -52,7 +53,7 @@ class ScheduledExpenseForm(forms.ModelForm):
         fields = [
             "title", "payee", "type", "value",
             "repeat_every_factor", "repeat_every_unit", "repeat_base_date", "end_on",
-            "category", "tags", "note", "default_auto_settle_on_due_date", "deactivated",
+            "category", "tags", "note", "default_auto_settle_on_due_date", "deactivated", "notify",
         ]
         widgets = {
             "type": forms.Select(choices=[
@@ -72,4 +73,5 @@ class ScheduledExpenseForm(forms.ModelForm):
             "end_on": "End on",
             "default_auto_settle_on_due_date": "Auto-settle generated expenses when reaching due date",
             "deactivated": "Deactivated",
+            "notify": "Send email notifications for generated expenses",
         }

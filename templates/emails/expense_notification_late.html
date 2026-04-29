@@ -1,0 +1,38 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+  <h1 style="margin:0 0 8px;font-size:1.4rem;font-weight:700;color:#e0e0e0;">Payment overdue!</h1>
+  <p style="margin:0 0 24px;font-size:0.95rem;color:#aaa;line-height:1.7;">
+    The following payment was <strong style="color:#e05252;">due yesterday</strong> and is still unpaid.
+  </p>
+
+  <!-- Expense detail card -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#111;border:1px solid #3a2020;border-radius:8px;padding:16px 20px;margin:0 0 28px;">
+    <tr><td>
+      <p style="margin:0 0 4px;font-size:1rem;font-weight:600;color:#e0e0e0;">{{ expense.title }}</p>
+      {% if expense.payee %}<p style="margin:0 0 4px;font-size:0.85rem;color:#888;">{{ expense.payee }}</p>{% endif %}
+      <p style="margin:8px 0 0;font-size:1.1rem;font-weight:700;color:{% if expense.type == 'income' or expense.type == 'savings_wit' %}#6ecf8a{% else %}#e05252{% endif %};">{{ expense.value }} {{ feuser.currency }}</p>
+      <p style="margin:4px 0 0;font-size:0.82rem;color:#666;">Was due {{ expense.date_due }}</p>
+    </td></tr>
+  </table>
+
+  <!-- CTA: settle -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+    <tr>
+      <td align="center">
+        <a href="{{ settle_url }}"
+           style="display:inline-block;padding:13px 28px;background:#6ecf8a;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:0.92rem;">
+          Yes, it's been paid!
+        </a>
+      </td>
+    </tr>
+  </table>
+
+  <hr style="border:none;border-top:1px solid #2a2a2a;margin:24px 0;">
+
+  <p style="margin:0 0 6px;font-size:0.78rem;color:#555;line-height:1.6;">
+    <a href="{{ mute_url }}" style="color:#555;text-decoration:underline;">Disable notifications for this expense</a>
+    &nbsp;·&nbsp;
+    <a href="{{ mute_all_url }}" style="color:#555;text-decoration:underline;">Disable all email notifications</a>
+  </p>
+{% endblock %}

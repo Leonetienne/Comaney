@@ -79,6 +79,9 @@
         <label class="checkbox-inline">{{ form.deactivated }} {{ form.deactivated.label }}</label>
         {% for e in form.deactivated.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
 
+        <label class="checkbox-inline">{{ form.notify }} {{ form.notify.label }}</label>
+        {% for e in form.notify.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+
         <div class="form-actions">
             <button type="submit" class="btn">{% if scheduled %}Save changes{% else %}Create{% endif %}</button>
             <a href="{% url 'budget:scheduled_list' %}" class="btn btn-secondary">Cancel</a>

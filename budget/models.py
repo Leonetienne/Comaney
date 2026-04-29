@@ -62,6 +62,8 @@ class Expense(OwnedModel):
     settled = models.BooleanField(default=True)
     deactivated = models.BooleanField(default=False)
     auto_settle_on_due_date = models.BooleanField(default=False)
+    notify = models.BooleanField(default=True)
+    last_notification_class_sent = models.CharField(max_length=10, blank=True, default="")
     source_scheduled = models.ForeignKey(
         "ScheduledExpense", null=True, blank=True, on_delete=models.SET_NULL,
         related_name="generated_expenses",
@@ -89,6 +91,7 @@ class ScheduledExpense(OwnedModel):
     type = models.CharField(max_length=12, choices=TransactionType.choices)
     value = models.DecimalField(max_digits=12, decimal_places=2)
     default_auto_settle_on_due_date = models.BooleanField(default=False)
+    notify = models.BooleanField(default=True)
     repeat_base_date = models.DateField(null=True, blank=True)
     end_on = models.DateField(null=True, blank=True)
     repeat_every_factor = models.PositiveIntegerField(null=True, blank=True)

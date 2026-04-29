@@ -98,7 +98,7 @@ class Command(BaseCommand):
                     skipped += 1
                     continue
 
-                create_expense(
+                expense = create_expense(
                     owning_feuser=feuser,
                     title=scheduled.title,
                     type=scheduled.type,
@@ -110,8 +110,11 @@ class Command(BaseCommand):
                     date_due=occurrence,
                     settled=False,
                     auto_settle_on_due_date=scheduled.default_auto_settle_on_due_date,
+                    notify=scheduled.notify,
                     source_scheduled=scheduled,
                 )
+                from budget.notifications import set_initial_notification_class
+                set_initial_notification_class(expense)
                 created += 1
                 self.stdout.write(f"  + [{feuser.email}] {scheduled.title} on {occurrence}")
 

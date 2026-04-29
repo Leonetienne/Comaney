@@ -10,6 +10,7 @@ from django.views.decorators.http import require_http_methods
 from budget.date_utils import current_financial_month, financial_month_range, financial_year_range
 from budget.expense_factory import create_expense
 from budget.models import Category, Expense, ScheduledExpense, Tag, TransactionType
+from budget.notifications import set_initial_notification_class
 from .auth import get_api_user
 
 
@@ -72,10 +73,12 @@ def _expense_json(exp):
         "tags":                    [{"id": t.uid, "title": t.title} for t in exp.tags.all()],
         "note":                    exp.note,
         "date_due":                exp.date_due.isoformat() if exp.date_due else None,
-        "settled":                 exp.settled,
-        "auto_settle_on_due_date": exp.auto_settle_on_due_date,
-        "deactivated":             exp.deactivated,
-        "date_created":            exp.date_created.isoformat(),
+        "settled":                      exp.settled,
+        "auto_settle_on_due_date":      exp.auto_settle_on_due_date,
+        "deactivated":                  exp.deactivated,
+        "notify":                       exp.notify,
+        "last_notification_class_sent": exp.last_notification_class_sent,
+        "date_created":                 exp.date_created.isoformat(),
     }
 
 
@@ -115,6 +118,8 @@ def _apply_expense_fields(obj, data, feuser, creating=False):
         obj.auto_settle_on_due_date = bool(data["auto_settle_on_due_date"])
     if "deactivated" in data:
         obj.deactivated = bool(data["deactivated"])
+    if "notify" in data:
+        obj.notify = bool(data["notify"])
 
     if "type" in data:
         if data["type"] not in ("expense", "income", "savings_dep", "savings_wit"):
@@ -273,6 +278,7 @@ def expenses(request, feuser):
         tag_err = _set_tags(exp, data, feuser)
         if tag_err:
             return _err(tag_err)
+        set_initial_notification_class(exp)
         return _ok(_expense_json(exp), 201)
 
     return _err("Method not allowed.", 405)
@@ -406,6 +412,7 @@ def account(request, feuser):
             "month_start_prev":           feuser.month_start_prev,
             "unspent_allowance_action":   feuser.unspent_allowance_action,
             "allowance_transition_month": feuser.allowance_transition_month,
+            "email_notifications":        feuser.email_notifications,
         })
 
     if request.method == "PATCH":
@@ -444,6 +451,9 @@ def account(request, feuser):
         if "allowance_transition_month" in data:
             feuser.allowance_transition_month = str(data["allowance_transition_month"])[:10]
             update_fields.append("allowance_transition_month")
+        if "email_notifications" in data:
+            feuser.email_notifications = bool(data["email_notifications"])
+            update_fields.append("email_notifications")
         if update_fields:
             feuser.save(update_fields=update_fields)
         return _ok({
@@ -455,6 +465,7 @@ def account(request, feuser):
             "month_start_prev":           feuser.month_start_prev,
             "unspent_allowance_action":   feuser.unspent_allowance_action,
             "allowance_transition_month": feuser.allowance_transition_month,
+            "email_notifications":        feuser.email_notifications,
         })
 
     return _err("Method not allowed.", 405)

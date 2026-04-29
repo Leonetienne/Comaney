@@ -14,6 +14,7 @@ from .decorators import feuser_required
 from .expense_factory import create_expense
 from .forms import ExpenseForm, ScheduledExpenseForm
 from .models import Category, Expense, ScheduledExpense, Tag, TransactionType
+from .notifications import send_settled_notification, set_initial_notification_class
 
 
 def _get_period_mode(request) -> str:
@@ -314,6 +315,7 @@ def expense_create(request):
             expense.owning_feuser = request.feuser
             expense.save()
             form.save_m2m()
+            set_initial_notification_class(expense)
             return redirect("budget:expenses_list")
     else:
         form = ExpenseForm(feuser=request.feuser, initial={"type": "expense", "settled": True})
@@ -329,9 +331,13 @@ def expense_edit(request, uid):
     if expense.type == TransactionType.CARRY_OVER:
         return redirect("budget:expenses_list")
     if request.method == "POST":
+        was_settled = expense.settled
         form = ExpenseForm(request.POST, instance=expense, feuser=request.feuser)
         if form.is_valid():
             form.save()
+            set_initial_notification_class(expense)
+            if not was_settled and expense.settled:
+                send_settled_notification(expense)
             return redirect("budget:expenses_list")
     else:
         form = ExpenseForm(instance=expense, feuser=request.feuser)
@@ -366,7 +372,14 @@ def expense_bulk_action(request):
     if uids and action in ("settle", "unsettle", "delete"):
         qs = Expense.objects.filter(owning_feuser=feuser, uid__in=uids)
         if action == "settle":
-            qs.update(settled=True)
+            if len(uids) == 1:
+                single = qs.filter(settled=False).select_related("owning_feuser").first()
+                qs.update(settled=True)
+                if single:
+                    single.settled = True
+                    send_settled_notification(single)
+            else:
+                qs.update(settled=True)
         elif action == "unsettle":
             qs.update(settled=False)
         elif action == "delete":
@@ -376,6 +389,34 @@ def expense_bulk_action(request):
     referer = request.META.get("HTTP_REFERER")
     if referer:
         return HttpResponseRedirect(referer)
+    return redirect("budget:expenses_list")
+
+
+@feuser_required
+def expense_settle_via_email(request, uid):
+    """Settle an expense via a link in a notification email (GET, session-protected)."""
+    expense = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
+    if not expense.settled:
+        expense.settled = True
+        expense.save(update_fields=["settled"])
+        send_settled_notification(expense)
+    return redirect("budget:expenses_list")
+
+
+@feuser_required
+def expense_mute_notifications(request, uid):
+    """Disable notifications for a single expense via a link in a notification email."""
+    expense = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
+    expense.notify = False
+    expense.save(update_fields=["notify"])
+    return redirect("budget:expenses_list")
+
+
+@feuser_required
+def mute_all_notifications(request):
+    """Disable all email notifications for the current user."""
+    request.feuser.email_notifications = False
+    request.feuser.save(update_fields=["email_notifications"])
     return redirect("budget:expenses_list")
 
 

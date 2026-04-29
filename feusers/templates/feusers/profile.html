@@ -16,10 +16,12 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="profile">
             {% for field in profile_form %}
-            {% if field.html_name != "month_start_prev" %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{% endif %}
+            {% if field.html_name != "month_start_prev" and field.html_name != "email_notifications" %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{% endif %}
             {% if field.html_name == "month_start_prev" %}
             <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
             <p class="month-offset-preview" id="month-offset-preview"></p>
+            {% elif field.html_name == "email_notifications" %}
+            <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
             {% else %}
             {{ field }}
             {% endif %}

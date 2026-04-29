@@ -31,6 +31,7 @@ class FeUser(models.Model):
     pending_email = models.EmailField(blank=True)
     email_change_token = models.CharField(max_length=64, blank=True, db_index=True)
     api_key = models.CharField(max_length=64, blank=True, null=True, unique=True, db_index=True)
+    email_notifications = models.BooleanField(default=True)
     unspent_allowance_action = models.CharField(
         max_length=20,
         default="do_nothing",
