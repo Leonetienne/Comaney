@@ -354,6 +354,33 @@ def expense_delete(request, uid):
 
 @feuser_required
 @require_POST
+def expense_bulk_action(request):
+    feuser = request.feuser
+    action = request.POST.get("action")
+    uids_raw = request.POST.getlist("uid")
+    try:
+        uids = [int(u) for u in uids_raw if u]
+    except (ValueError, TypeError):
+        uids = []
+
+    if uids and action in ("settle", "unsettle", "delete"):
+        qs = Expense.objects.filter(owning_feuser=feuser, uid__in=uids)
+        if action == "settle":
+            qs.update(settled=True)
+        elif action == "unsettle":
+            qs.update(settled=False)
+        elif action == "delete":
+            qs.delete()
+
+    from django.http import HttpResponseRedirect
+    referer = request.META.get("HTTP_REFERER")
+    if referer:
+        return HttpResponseRedirect(referer)
+    return redirect("budget:expenses_list")
+
+
+@feuser_required
+@require_POST
 def expense_clone(request, uid):
     original = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
     if original.type == TransactionType.CARRY_OVER:

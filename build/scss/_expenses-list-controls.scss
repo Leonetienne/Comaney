@@ -1,0 +1,96 @@
+.exp-controls {
+  margin-top: 12px;
+
+  .exp-search {
+    width: 100%;
+    max-width: 400px;
+    padding: 7px 12px;
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    background: var(--bg-input);
+    color: var(--text);
+    font-size: 0.9rem;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    &::placeholder { color: var(--text-muted); }
+  }
+}
+
+.exp-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+
+  @media (max-width: 600px) { flex-wrap: wrap; }
+}
+
+.exp-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  @media (max-width: 600px) { flex-wrap: wrap; }
+
+  #exp-bulk-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+
+    #exp-bulk-uids { display: none; }
+  }
+}
+
+.exp-toolbar-right {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+
+  span {
+    font-weight: 600;
+    color: var(--text);
+  }
+}
+
+.exp-bulk-select {
+  margin-top: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+// Checkbox — absolut positioniert unten links in der Card
+.exp-card {
+  position: relative;
+}
+
+.exp-checkbox-wrap {
+  position: absolute;
+  bottom: 10px;
+  left: 16px;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.exp-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--link);
+}
+
+// Note bekommt links Platz für die Checkbox
+.exp-row3 {
+  padding-left: 24px;
+}

@@ -12,9 +12,37 @@
 {% include "partials/_month_nav.html" %}
 
 {% if expenses %}
-<div class="exp-list">
+<div class="exp-controls">
+    <input type="text" id="exp-search" class="exp-search" placeholder="Search title, payee, value, note…" autocomplete="off">
+</div>
+
+<div class="exp-toolbar">
+    <div class="exp-toolbar-left">
+        <button type="button" id="exp-select-all" class="btn btn-sm btn-secondary">Select all</button>
+        <form id="exp-bulk-form" method="post" action="{% url 'budget:expense_bulk_action' %}">
+            {% csrf_token %}
+            <div id="exp-bulk-uids"></div>
+            <select name="action" id="exp-bulk-action" class="exp-bulk-select">
+                <option value="">— Bulk action —</option>
+                <option value="settle">Settle</option>
+                <option value="unsettle">Unsettle</option>
+                <option value="delete">Delete</option>
+            </select>
+            <button type="submit" class="btn btn-sm btn-secondary">Go</button>
+        </form>
+    </div>
+    <div class="exp-toolbar-right">
+        Visible total: <span id="exp-sum-value">–</span> {{ current_feuser.currency }}
+    </div>
+</div>
+
+<div class="exp-list" id="exp-list">
     {% for exp in expenses %}
-    <div class="exp-card{% if not exp.settled %} unsettled{% endif %}{% if exp.deactivated %} exp-card--deactivated{% endif %}">
+    <div class="exp-card{% if not exp.settled %} unsettled{% endif %}{% if exp.deactivated %} exp-card--deactivated{% endif %}"
+         data-uid="{{ exp.uid }}"
+         data-value="{{ exp.value }}"
+         data-type="{{ exp.type }}"
+         data-search="{{ exp.title|lower }} {{ exp.payee|lower }} {{ exp.value }} {{ exp.note|lower }}">
 
         <!-- Date label above title -->
         {% if exp.date_due %}<div class="exp-date-label" style="grid-column:1;grid-row:1;">{{ exp.date_due|date:"Y-m-d" }}</div>{% endif %}
@@ -41,7 +69,7 @@
             {% endif %}
         </div>
 
-        <!-- Row 2: type, settled, category, tags, date -->
+        <!-- Row 2: type, settled, category, tags -->
         <div class="exp-row2">
             <span class="badge badge-{{ exp.type }}">{{ exp.get_type_display }}</span>
             {% if exp.deactivated %}<span class="badge badge-deactivated">Deactivated</span>{% endif %}
@@ -59,17 +87,132 @@
         <div class="exp-row3">{{ exp.note }}</div>
         {% endif %}
 
+        <!-- Checkbox bottom-left -->
+        <label class="exp-checkbox-wrap" title="Select">
+            <input type="checkbox" class="exp-checkbox">
+        </label>
+
     </div>
     {% endfor %}
 </div>
-{% else %}
-<p class="empty">No expenses yet. <a href="{% url 'budget:expense_create' %}">Add one.</a></p>
-{% endif %}
-{% if expenses %}
+
 {% if nav_mode == 'year' %}
 <a href="{% url 'budget:expenses_export' %}?view=year&year={{ nav_year }}" class="expenses-export-link">↓ Export CSV</a>
 {% else %}
 <a href="{% url 'budget:expenses_export' %}?year={{ nav_year }}&month={{ nav_month }}" class="expenses-export-link">↓ Export CSV</a>
 {% endif %}
+
+{% else %}
+<p class="empty">No expenses yet. <a href="{% url 'budget:expense_create' %}">Add one.</a></p>
+{% endif %}
+{% endblock %}
+
+
+{% block extra_scripts %}
+{% if expenses %}
+<script>
+(function () {
+    var searchInput  = document.getElementById('exp-search');
+    var selectAllBtn = document.getElementById('exp-select-all');
+    var sumEl        = document.getElementById('exp-sum-value');
+    var bulkForm     = document.getElementById('exp-bulk-form');
+    var bulkUids     = document.getElementById('exp-bulk-uids');
+    var bulkAction   = document.getElementById('exp-bulk-action');
+    var cards        = Array.from(document.querySelectorAll('#exp-list .exp-card'));
+
+    function matchesQuery(card, query) {
+        if (!query) return true;
+        var text = card.dataset.search || '';
+        return query.trim().split(/\s+/).every(function (term) { return text.indexOf(term) !== -1; });
+    }
+
+    function visibleCards() {
+        return cards.filter(function (c) { return c.style.display !== 'none'; });
+    }
+
+    function checkedCards() {
+        return visibleCards().filter(function (c) {
+            return c.querySelector('.exp-checkbox').checked;
+        });
+    }
+
+    function signedValue(card) {
+        var val = Math.abs(parseFloat(card.dataset.value) || 0);
+        var type = card.dataset.type;
+        return (type === 'income' || type === 'savings_wit') ? -val : val;
+    }
+
+    function updateSum() {
+        var visible = visibleCards();
+        if (!visible.length) { sumEl.textContent = '–'; return; }
+        var sum = visible.reduce(function (acc, c) { return acc + signedValue(c); }, 0);
+        sumEl.textContent = sum.toFixed(2);
+    }
+
+    function updateSelectAllBtn() {
+        var visible = visibleCards();
+        if (!visible.length) { selectAllBtn.textContent = 'Select all'; return; }
+        var allChecked = visible.every(function (c) {
+            return c.querySelector('.exp-checkbox').checked;
+        });
+        selectAllBtn.textContent = allChecked ? 'Deselect all' : 'Select all';
+    }
+
+    function filterCards() {
+        var query = searchInput.value.toLowerCase();
+        cards.forEach(function (card) {
+            var visible = matchesQuery(card, query);
+            card.style.display = visible ? '' : 'none';
+            if (!visible) card.querySelector('.exp-checkbox').checked = false;
+        });
+        updateSum();
+        updateSelectAllBtn();
+    }
+
+    searchInput.addEventListener('input', filterCards);
+
+    selectAllBtn.addEventListener('click', function () {
+        var visible = visibleCards();
+        var allChecked = visible.every(function (c) {
+            return c.querySelector('.exp-checkbox').checked;
+        });
+        visible.forEach(function (c) {
+            c.querySelector('.exp-checkbox').checked = !allChecked;
+        });
+        updateSelectAllBtn();
+    });
+
+    cards.forEach(function (card) {
+        card.querySelector('.exp-checkbox').addEventListener('change', updateSelectAllBtn);
+    });
+
+    bulkForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var action = bulkAction.value;
+        if (!action) { alert('Bitte eine Aktion auswählen.'); return; }
+        var selected = checkedCards();
+        if (!selected.length) { alert('Keine Einträge ausgewählt.'); return; }
+
+        var labels = { settle: 'Settle', unsettle: 'Unsettle', 'delete': 'Delete' };
+        var label  = labels[action] || action;
+        var count  = selected.length;
+        var msg    = label + ' ' + count + ' expense' + (count !== 1 ? 's' : '') + '?';
+
+        confirmDialog(msg, label).then(function () {
+            bulkUids.innerHTML = '';
+            selected.forEach(function (c) {
+                var inp = document.createElement('input');
+                inp.type  = 'hidden';
+                inp.name  = 'uid';
+                inp.value = c.dataset.uid;
+                bulkUids.appendChild(inp);
+            });
+            bulkForm.submit();
+        }).catch(function () {});
+    });
+
+    updateSum();
+})();
+</script>
 {% endif %}
 {% endblock %}

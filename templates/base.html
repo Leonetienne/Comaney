@@ -59,14 +59,16 @@
             const msg      = document.getElementById('cdialog-msg');
             const okBtn    = document.getElementById('cdialog-ok');
             const cancelBtn = document.getElementById('cdialog-cancel');
+            const defaultOkLabel = 'Delete';
 
             msg.textContent = message;
-            if (okLabel) okBtn.textContent = okLabel;
+            okBtn.textContent = okLabel || defaultOkLabel;
             backdrop.classList.add('cdialog-visible');
             okBtn.focus();
 
             function cleanup() {
                 backdrop.classList.remove('cdialog-visible');
+                okBtn.textContent = defaultOkLabel;
                 okBtn.removeEventListener('click', onOk);
                 cancelBtn.removeEventListener('click', onCancel);
                 backdrop.removeEventListener('click', onBackdrop);
@@ -95,5 +97,6 @@
         }
     });
     </script>
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>
