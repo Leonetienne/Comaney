@@ -216,7 +216,16 @@ if (copyBtn) {
         return d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3);
     }
 
+    function clamp() {
+        const v = parseInt(dayInput.value, 10);
+        if (!isNaN(v)) {
+            if (v < 0)  dayInput.value = 0;
+            if (v > 31) dayInput.value = 31;
+        }
+    }
+
     function update() {
+        clamp();
         const startDay = parseInt(dayInput.value, 10);
         const prevMonth = prevCheck.checked;
         if (isNaN(startDay) || startDay < 1) { preview.textContent = ''; return; }

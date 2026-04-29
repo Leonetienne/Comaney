@@ -13,7 +13,7 @@ class ProfileForm(forms.ModelForm):
             "unspent_allowance_action": "At month end, unspent allowance should",
         }
         widgets = {
-            "month_start_day": forms.NumberInput(attrs={"min": 1, "max": 31}),
+            "month_start_day": forms.NumberInput(attrs={"min": 0, "max": 31}),
         }
 
 
