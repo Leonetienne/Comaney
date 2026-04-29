@@ -139,7 +139,7 @@
     function signedValue(card) {
         var val = Math.abs(parseFloat(card.dataset.value) || 0);
         var type = card.dataset.type;
-        return (type === 'income' || type === 'savings_wit') ? -val : val;
+        return (type === 'expense' || type === 'savings_dep') ? -val : val;
     }
 
     function updateSum() {
