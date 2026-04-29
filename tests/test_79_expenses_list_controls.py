@@ -208,6 +208,41 @@ class TestExpensesListControls:
         for key in ("bulk_uid_a", "bulk_uid_b", "bulk_uid_c"):
             ctx.pop(key, None)
 
+    def test_79_42b_bulk_action_only_affects_filtered_items(self, driver, w, ctx):
+        """Filtering to a subset and doing bulk settle must NOT touch unfiltered expenses.
+        This guards against the fatal bug: filter + select all + action = acts on everything.
+        """
+        # Re-create all three (42 deleted them)
+        a = api_post("/api/v1/expenses/", ctx, json={
+            "title": TITLE_A, "type": "expense", "value": "100.00",
+            "date_due": TODAY, "settled": False,
+        })
+        assert a.status_code == 201
+        ctx["bulk_uid_a"] = a.json()["id"]
+
+        b = api_post("/api/v1/expenses/", ctx, json={
+            "title": TITLE_B, "type": "expense", "value": "200.00",
+            "date_due": TODAY, "settled": False,
+        })
+        assert b.status_code == 201
+        ctx["bulk_uid_b"] = b.json()["id"]
+
+        driver.get(_url("/budget/expenses/"))
+        wait_text(driver, w, TITLE_A)
+
+        # Filter to Alpha only, select all, settle
+        search_type(driver, TITLE_A)
+        click(w, By.ID, "exp-select-all")
+        self._bulk_action_and_wait(driver, w, "settle")
+
+        # Alpha must be settled, Beta must still be unsettled
+        assert api_get(f"/api/v1/expenses/{ctx['bulk_uid_a']}/", ctx).json()["settled"] is True
+        assert api_get(f"/api/v1/expenses/{ctx['bulk_uid_b']}/", ctx).json()["settled"] is False
+
+        # Cleanup
+        api_delete(f"/api/v1/expenses/{ctx.pop('bulk_uid_a')}/", ctx)
+        api_delete(f"/api/v1/expenses/{ctx.pop('bulk_uid_b')}/", ctx)
+
     def test_79_43_bulk_delete_cancel_keeps_expenses(self, driver, w, ctx):
         """Cancelling the confirmation dialog leaves expenses untouched."""
         e = api_post("/api/v1/expenses/", ctx, json={
