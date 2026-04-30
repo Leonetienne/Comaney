@@ -4,12 +4,34 @@ A no-BS, zero-effort budgetting software as a self-hostable django web applicati
 Readme to be done.
 
 
-## Admin zone
+## For admins
 If the trial anthropic api key runs out of budget, the trial feature will disable itself.  
 It must be manually re-enabled at `/admin/ai-trial/` using a superuser.  
 Create a superuser with `python manage.py createsuperuser`, potentially executed in the container.
 
-## Dev zone
+## Environment variables
+| Variable | Default | Description                                                                                                                                       |
+|---|---|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| `DJANGO_SECRET_KEY` | — | Django secret key. Generate one with `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` |
+| `DB_HOST` | `db` | MySQL host                                                                                                                                        |
+| `DB_PORT` | `3306` | MySQL port                                                                                                                                        |
+| `DB_NAME` | `comaney` | MySQL database name                                                                                                                               |
+| `DB_USER` | `comoney` | MySQL user                                                                                                                                        |
+| `DB_PASSWORD` | `comaney` | MySQL password                                                                                                                                    |
+| `SITE_URL` | `http://localhost:8080` | Public base URL of the instance; used in outgoing emails and links                                                                                |
+| `DEBUG` | `FALSE` | Set to `TRUE` to enable Django debug mode                                                                                                         |
+| `ENABLE_REGISTRATION` | `FALSE` | Set to `TRUE` to allow new users to register. Disable on closed/private instances after setting up your account.                                  |
+| `DISABLE_EMAILING` | *(unset)* | Set to `TRUE` to suppress all outgoing emails and to disable email verification. Useful when no SMTP server is available.                         |
+| `EMAIL_HOST` | — | SMTP hostname                                                                                                                                     |
+| `EMAIL_PORT` | `25` | SMTP port                                                                                                                                         |
+| `AI_TRIAL_API_KEY` | *(unset)* | Anthropic API key used for the limited AI trial feature available to users without their own key                                                  |
+| `AI_TRIAL_USAGE_LIMIT` | `5` | Per-user, per-month spending cap for the trial key, in US cents                                                                                   |
+| `PUBLIC_PAGE_IMPRINT_MD` | *(unset)* | Path to a Markdown file. If set, a legal imprint page is added to the footer.                                                                     |
+| `PUBLIC_PAGE_EUDATENSCHUTZ_MD` | *(unset)* | Path to a Markdown file. If set, a Datenschutzerklärung page is added to the footer.                                                              |
+| `ADMIN_NOTIFICATION_EMAIL` | *(unset)* | Email address that receives system notifications                                                                                                  |
+
+
+## For devs
 ### Building docker file
 ```
 docker buildx build \
