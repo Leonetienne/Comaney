@@ -101,7 +101,7 @@ footer {
 }
 
 footer a {
-  color: white;
+  color: var(--text);
   opacity: 0.5;
   transition: opacity 0.2s;
   text-decoration: none !important;
@@ -110,8 +110,15 @@ footer a {
   }
 }
 
+@media (prefers-color-scheme: dark) {
+  footer a {
+    color: white;
+  }
+}
+
 .footer-left {
   display: flex;
+  flex-direction: row-reverse;
   align-items: center;
   gap: 12px;
 }
