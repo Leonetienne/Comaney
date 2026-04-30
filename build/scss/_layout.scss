@@ -16,8 +16,8 @@
 .sidebar {
   width: 180px;
   flex-shrink: 0;
-  background: #0f0f1a;
-  border-right: 1px solid rgba(255, 255, 255, .06);
+  background: var(--sidebar-bg, #0f0f1a);
+  border-right: 1px solid var(--sidebar-border, rgba(255, 255, 255, .06));
   padding: 20px 0 20px 12px;
 
   ul {
@@ -30,18 +30,18 @@
         display: block;
         padding: 10px 24px;
         text-decoration: none;
-        color: rgba(255, 255, 255, .45);
+        color: var(--sidebar-link, rgba(255, 255, 255, .45));
         font-size: 0.92rem;
         border-left: 3px solid transparent;
 
         &:hover {
-          color: rgba(255, 255, 255, .85);
-          background: rgba(255, 255, 255, .05);
+          color: var(--sidebar-link-hover, rgba(255, 255, 255, .85));
+          background: var(--sidebar-hover-bg, rgba(255, 255, 255, .05));
         }
       }
 
       &.active a {
-        color: #fff;
+        color: var(--sidebar-active-fg, #fff);
         border-left-color: #c2478a;
         background: rgba(194, 71, 138, .14);
       }
@@ -58,7 +58,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .07em;
-  color: rgba(255, 255, 255, .22);
+  color: var(--sidebar-label, rgba(255, 255, 255, .22));
 }
 
 .app-main {
