@@ -7,10 +7,6 @@
   <!-- Left: dark branding panel -->
   <div class="auth-panel-left">
     <div class="auth-panel-left-inner">
-      <a href="{% url 'landing_page' %}" class="auth-brand-link">
-        <img src="{% static 'favicon.svg' %}" alt="" class="auth-brand-icon">
-        <span class="auth-brand-name">Comaney</span>
-      </a>
       <div class="auth-panel-copy">
         <h2 class="auth-panel-title">{% block auth_panel_title %}Take control of<br>your <span class="auth-panel-accent">finances.</span>{% endblock %}</h2>
         <p class="auth-panel-sub">{% block auth_panel_sub %}Track expenses, automate recurring bills, and let AI handle the heavy lifting — all on your own server.{% endblock %}</p>
