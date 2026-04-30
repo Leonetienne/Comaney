@@ -33,6 +33,8 @@ Source files live in `build/scss/`. The compiled output at `static/dist/main.css
 The test suite is split into files by topic and runs in numeric prefix order.
 The app must be running at `http://localhost:8080` and mailpit at `http://localhost:8030`.
 Cron tests require the web container to be reachable via `docker exec comoney-web-1`.
+Running individual test files or individual tests is untested and will probably not work
+as some are dependent on each other :(. A PR to make tests self-reliant would be a banger.
 
 ```
 pip install -r requirements-test.txt
@@ -40,11 +42,6 @@ pip install -r requirements-test.txt
 # Run the full suite
 pytest tests/ -vsx
 
-# Run a single topic file
-pytest tests/test_30_expenses.py -vsx
-
-# Run a single test by name
-pytest tests/ -vsx -k test_70_standard_month_start_day_1
 ```
 
 Test files:
