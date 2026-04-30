@@ -335,9 +335,10 @@ def expense_edit(request, uid):
         form = ExpenseForm(request.POST, instance=expense, feuser=request.feuser)
         if form.is_valid():
             form.save()
-            set_initial_notification_class(expense)
             if not was_settled and expense.settled:
                 send_settled_notification(expense)
+            else:
+                set_initial_notification_class(expense)
             return redirect("budget:expenses_list")
     else:
         form = ExpenseForm(instance=expense, feuser=request.feuser)
