@@ -88,7 +88,19 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+DISABLE_EMAILING = os.environ.get("DISABLE_EMAILING", "").upper() in ("1", "TRUE", "YES")
+
+if DISABLE_EMAILING:
+    EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
+else:
+    if not os.environ.get("EMAIL_HOST") or not os.environ.get("EMAIL_PORT"):
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured(
+            "Set DISABLE_EMAILING=true to run without email, "
+            "or provide both EMAIL_HOST and EMAIL_PORT."
+        )
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 1025))
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "").upper() == "TRUE"

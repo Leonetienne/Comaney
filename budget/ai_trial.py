@@ -42,6 +42,8 @@ def enable_trial() -> None:
 
 
 def notify_admin_billing(reason: str) -> None:
+    if getattr(settings, "DISABLE_EMAILING", False):
+        return
     email = getattr(settings, "ADMIN_NOTIFICATION_EMAIL", "")
     if not email:
         return

@@ -70,6 +70,21 @@ def register(request):
         # always issue a fresh challenge for the next attempt
         new_challenge = _new_pow_challenge(request)
         if form.is_valid() and pow_ok:
+            if settings.DISABLE_EMAILING:
+                user = FeUser(
+                    email=form.cleaned_data["email"],
+                    first_name=form.cleaned_data["first_name"],
+                    last_name=form.cleaned_data["last_name"],
+                    is_confirmed=True,
+                    is_active=True,
+                )
+                user.set_password(form.cleaned_data["password"])
+                user.save()
+                from budget.fixtures import create_defaults
+                create_defaults(user)
+                request.session["feuser_id"] = user.pk
+                return redirect("budget:dashboard")
+
             user = FeUser(
                 email=form.cleaned_data["email"],
                 first_name=form.cleaned_data["first_name"],
@@ -301,6 +316,10 @@ def profile(request):
             email_form = ChangeEmailForm(request.POST, feuser=feuser)
             if email_form.is_valid():
                 new_email = email_form.cleaned_data["email"]
+                if settings.DISABLE_EMAILING:
+                    feuser.email = new_email
+                    feuser.save(update_fields=["email"])
+                    return redirect(f"{request.path}?success=email_direct")
                 feuser.generate_email_change_token(new_email)
                 feuser.save(update_fields=["pending_email", "email_change_token"])
                 confirm_url = f"{settings.SITE_URL}/confirm-email-change/{feuser.email_change_token}/"
@@ -344,6 +363,8 @@ def profile(request):
 
 
 def password_forgot(request):
+    if settings.DISABLE_EMAILING:
+        return render(request, "feusers/password_forgot.html", {"emailing_disabled": True})
     if request.method == "POST":
         form = PasswordForgotForm(request.POST)
         if form.is_valid():
@@ -644,7 +665,7 @@ def confirm_email(request, token):
     from budget.fixtures import create_defaults
     create_defaults(user)
     admin_email = getattr(settings, "ADMIN_NOTIFICATION_EMAIL", "")
-    if admin_email:
+    if admin_email and not settings.DISABLE_EMAILING:
         try:
             _ctx = {"first_name": user.first_name, "last_name": user.last_name, "email": user.email, "site_url": settings.SITE_URL}
             send_mail(

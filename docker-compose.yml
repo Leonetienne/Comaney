@@ -49,6 +49,7 @@ services:
       SITE_URL: http://localhost:8080
       DEBUG: "TRUE"
       ENABLE_REGISTRATION: "TRUE"
+      #DISABLE_EMAILING: TRUE
       EMAIL_HOST: mailpit
       EMAIL_PORT: 1025
     depends_on:

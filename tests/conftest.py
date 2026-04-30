@@ -27,6 +27,43 @@ PASSWORD    = "S3l3n!umTest"
 TIMEOUT     = 60  # seconds — generous to accommodate PoW captcha
 DOCKER_WEB  = "comoney-web-1"
 
+
+def pytest_configure(config):
+    """Abort immediately if the server isn't wired up to Mailpit."""
+    try:
+        result = subprocess.run(
+            ["docker", "exec", DOCKER_WEB, "python", "-c",
+             "import os\n"
+             "print(os.environ.get('DISABLE_EMAILING','').upper())\n"
+             "print(os.environ.get('EMAIL_HOST',''))"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode != 0:
+            return  # container not ready yet — let tests fail naturally
+        lines = result.stdout.splitlines()
+        if len(lines) < 2:
+            return  # unexpected output — don't block
+        disable_emailing = lines[0].strip()
+        email_host       = lines[1].strip()
+    except Exception:
+        return  # container unreachable — let tests fail naturally
+
+    if disable_emailing in ("1", "TRUE", "YES"):
+        pytest.exit(
+            "\nABORT: DISABLE_EMAILING is set on the server.\n"
+            "Please configure Mailpit as the mail server (EMAIL_HOST=mailpit, EMAIL_PORT=1025)\n"
+            "and remove DISABLE_EMAILING before running the test suite.\n",
+            returncode=1,
+        )
+
+    if email_host.lower() != "mailpit":
+        pytest.exit(
+            f"\nABORT: EMAIL_HOST is '{email_host}' — expected 'mailpit'.\n"
+            "Please set up Mailpit as the mail server (EMAIL_HOST=mailpit, EMAIL_PORT=1025)\n"
+            "before running the test suite.\n",
+            returncode=1,
+        )
+
 # Small post-click pause — acts as a natural pace-setter so the server and browser
 # can breathe between interactions, avoiding most ad-hoc time.sleep() calls.
 CLICK_PACE  = 0.15

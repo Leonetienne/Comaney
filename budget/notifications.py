@@ -118,6 +118,8 @@ def _subject(expense, notification_class: str, ctx: dict) -> str:
 
 def send_expense_notification(expense, notification_class: str) -> bool:
     """Send an email for the given notification class. Returns True on success."""
+    if settings.DISABLE_EMAILING:
+        return False
     if notification_class not in CLASS_ORDER or not notification_class:
         return False
     feuser = expense.owning_feuser
@@ -161,6 +163,8 @@ def process_due_notifications() -> tuple[int, int]:
     Scan all active unsettled expenses and send any pending due-date notifications.
     Returns (sent, skipped).
     """
+    if settings.DISABLE_EMAILING:
+        return 0, 0
     from .models import Expense
     sent = skipped = 0
     qs = (
