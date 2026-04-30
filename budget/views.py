@@ -318,7 +318,7 @@ def expense_create(request):
             set_initial_notification_class(expense)
             return redirect("budget:expenses_list")
     else:
-        form = ExpenseForm(feuser=request.feuser, initial={"type": "expense", "settled": True})
+        form = ExpenseForm(feuser=request.feuser, initial={"type": "expense", "settled": True, "notify": True})
     return render(request, "budget/expense_form.html", {
         "active_nav": "expenses",
         "form": form,
@@ -460,7 +460,7 @@ def scheduled_create(request):
             form.save_m2m()
             return redirect("budget:scheduled_list")
     else:
-        form = ScheduledExpenseForm(feuser=request.feuser, initial={"type": "expense", "default_auto_settle_on_due_date": True})
+        form = ScheduledExpenseForm(feuser=request.feuser, initial={"type": "expense", "default_auto_settle_on_due_date": True, "notify": True})
     return render(request, "budget/scheduled_form.html", {
         "active_nav": "scheduled",
         "form": form,

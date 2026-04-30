@@ -1,7 +1,5 @@
 """API CRUD tests for account, categories, tags, expenses, and scheduled expenses."""
-from datetime import date
-
-from conftest import BASE_URL, api_get, api_post, api_patch, api_delete
+from conftest import BASE_URL, api_get, api_post, api_patch, api_delete, server_today
 import requests
 
 
@@ -90,7 +88,7 @@ class TestApi:
     def test_32_api_expense_create(self, driver, w, ctx):
         resp = api_post("/api/v1/expenses/", ctx, json={
             "title": "API Expense", "type": "expense", "value": "12.34",
-            "date_due": date.today().isoformat(), "settled": True,
+            "date_due": server_today(), "settled": True,
         })
         assert resp.status_code == 201
         data = resp.json()
@@ -128,7 +126,7 @@ class TestApi:
         resp = api_post("/api/v1/scheduled/", ctx, json={
             "title": "API Scheduled", "type": "expense", "value": "50.00",
             "repeat_every_factor": 1, "repeat_every_unit": "months",
-            "repeat_base_date": date.today().isoformat(),
+            "repeat_base_date": server_today(),
         })
         assert resp.status_code == 201
         data = resp.json()

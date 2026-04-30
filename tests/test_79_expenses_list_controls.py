@@ -8,11 +8,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select as SeleniumSelect
 
-from conftest import _url, click, wait_text, api_post, api_get, api_delete, CLICK_PACE
+from conftest import _url, click, wait_text, server_today, api_post, api_get, api_delete, CLICK_PACE
 import time
 
 
-TODAY = date.today().isoformat()
+TODAY = server_today()
 
 TITLE_A = "BulkCtrl Alpha"
 TITLE_B = "BulkCtrl Beta"

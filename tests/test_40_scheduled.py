@@ -1,12 +1,10 @@
 """Scheduled expense CRUD via browser."""
 import re
-from datetime import date
-
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 
-from conftest import _url, fill, submit, wait_url, wait_text
+from conftest import _url, fill, server_today, submit, wait_url, wait_text
 
 
 class TestScheduled:
@@ -14,7 +12,7 @@ class TestScheduled:
     # ── Basic CRUD (browser) ────────────────────────────────────────────────
 
     def test_13_create_scheduled(self, driver, w, ctx):
-        today = date.today().isoformat()
+        today = server_today()
         driver.get(_url("/budget/scheduled/new/"))
         fill(w, By.ID, "id_title", "Selenium Scheduled")
         fill(w, By.ID, "id_value", "99.00")

@@ -6,7 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 
-from conftest import _url, fill, submit, wait_url, wait_text
+from conftest import _url, fill, server_today, submit, wait_url, wait_text
 
 
 class TestExpenses:
@@ -14,7 +14,7 @@ class TestExpenses:
     # ── Basic CRUD (browser) ────────────────────────────────────────────────
 
     def test_09_create_expense(self, driver, w, ctx):
-        today = date.today().isoformat()
+        today = server_today()
         driver.get(_url("/budget/expenses/new/"))
         fill(w, By.ID, "id_title", "Selenium Expense")
         fill(w, By.ID, "id_value", "42.00")

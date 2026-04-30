@@ -2,13 +2,11 @@
 Detailed expense field validation, dashboard totals, list view, and CSV export.
 Requires the API key set up in test_50_profile.py.
 """
-from datetime import date
-
 import requests
 from selenium.webdriver.common.by import By
 
 from conftest import (
-    _url, wait_text,
+    _url, wait_text, server_today,
     api_post, api_get, api_delete, session_cookies,
 )
 
@@ -17,7 +15,7 @@ class TestExpensesAdvanced:
 
     def test_53_expense_all_fields_stored(self, driver, w, ctx):
         """Create expense with every field set; verify all values round-trip correctly."""
-        today = date.today().isoformat()
+        today = server_today()
         resp = api_post("/api/v1/expenses/", ctx, json={
             "title": "Full Field Expense",
             "type": "expense",
@@ -52,7 +50,7 @@ class TestExpensesAdvanced:
             "title": "Income Entry",
             "type": "income",
             "value": "500.00",
-            "date_due": date.today().isoformat(),
+            "date_due": server_today(),
             "settled": True,
         })
         assert resp.status_code == 201
@@ -60,7 +58,7 @@ class TestExpensesAdvanced:
         ctx["income_expense_id"] = resp.json()["id"]
 
     def test_55_savings_deposit_and_withdrawal(self, driver, w, ctx):
-        today = date.today().isoformat()
+        today = server_today()
         dep = api_post("/api/v1/expenses/", ctx, json={
             "title": "Savings Deposit",
             "type": "savings_dep",

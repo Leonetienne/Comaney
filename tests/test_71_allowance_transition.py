@@ -2,11 +2,11 @@
 Allowance-transition cron tests.
 
 Setup: standard month (start_day=1, prev_month=False).
-Current financial month = April 2026 (Apr 1 – Apr 30).
-Previous financial month = March 2026 (Mar 1 – Mar 31).
+Months are derived dynamically from server_today() so tests remain valid
+regardless of when they run.
 
-We create a 1000 income + 600 expense in March, leaving 400 unspent.
-For each action we:
+We create a 1000 income + 600 expense in the previous financial month,
+leaving 400 unspent.  For each action we:
   1. Set the action via API PATCH.
   2. Clear allowance_transition_month so the cron thinks the month is new.
   3. Run apply_allowance_transitions.
@@ -14,19 +14,26 @@ For each action we:
   5. Clean up between tests.
 """
 import time
+from datetime import date
 
 import pytest
 
-from conftest import api_get, api_post, api_patch, api_delete, run_cmd
+from conftest import api_get, api_post, api_patch, api_delete, run_cmd, server_today
 
-INCOME_TITLE  = "AT Income March"
-EXPENSE_TITLE = "AT Expense March"
-PREV_INCOME   = "2026-03-15"
-PREV_EXPENSE  = "2026-03-20"
-PREV_YEAR     = 2026
-PREV_MONTH    = 3
-CUR_YEAR      = 2026
-CUR_MONTH     = 4
+_today = date.fromisoformat(server_today())
+CUR_YEAR  = _today.year
+CUR_MONTH = _today.month
+if CUR_MONTH == 1:
+    PREV_YEAR  = CUR_YEAR - 1
+    PREV_MONTH = 12
+else:
+    PREV_YEAR  = CUR_YEAR
+    PREV_MONTH = CUR_MONTH - 1
+
+INCOME_TITLE  = "AT Income Prev"
+EXPENSE_TITLE = "AT Expense Prev"
+PREV_INCOME   = date(PREV_YEAR, PREV_MONTH, 15).isoformat()
+PREV_EXPENSE  = date(PREV_YEAR, PREV_MONTH, 20).isoformat()
 LEFT          = "400.00"
 
 
@@ -108,7 +115,7 @@ class TestAllowanceTransition:
         time.sleep(1)
 
     def test_72_deposit_savings(self, driver, w, ctx):
-        """With 'deposit_savings', the unspent 400 must appear as a savings_dep in the previous month."""
+        """With 'deposit_savings', the unspent 400 must appear as a savings_dep in the previous month (PREV_MONTH)."""
         inc_id, exp_id = _setup_prev_month(ctx)
         time.sleep(1)
 

@@ -14,13 +14,12 @@ Cleanup is done via the API.
 """
 import time
 import re
-from datetime import date
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 
-from conftest import _url, fill, submit, wait_url, wait_text, api_delete, api_patch, run_cmd
+from conftest import _url, fill, server_today, submit, wait_url, wait_text, api_delete, api_patch, run_cmd
 
 
 def _read_panel_amount(driver, panel_class):
@@ -160,7 +159,7 @@ class TestDeactivated:
         with a Deactivated badge, and have no Edit button.
         """
         _reset_month_settings(ctx)
-        today = date.today().isoformat()
+        today = server_today()
 
         driver.get(_url("/budget/expenses/new/"))
         fill(w, By.ID, "id_title", "Deact Expense Test")
@@ -200,7 +199,7 @@ class TestDeactivated:
         an active settled expense of the same huge value we confirm the panel
         jumps by exactly that amount (not double).
         """
-        today = date.today().isoformat()
+        today = server_today()
         from conftest import api_post, api_get
 
         # Read the current dashboard paid baseline (whatever prior tests left).

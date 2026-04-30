@@ -2,16 +2,14 @@
 Detailed scheduled expense field validation and list view checks.
 Requires the API key set up in test_50_profile.py.
 """
-from datetime import date
-
-from conftest import _url, wait_text, api_post, api_get
+from conftest import _url, wait_text, server_today, api_post, api_get
 
 
 class TestScheduledAdvanced:
 
     def test_61_scheduled_all_fields_stored(self, driver, w, ctx):
         """All scheduled expense fields should round-trip correctly through the API."""
-        today = date.today().isoformat()
+        today = server_today()
         resp = api_post("/api/v1/scheduled/", ctx, json={
             "title": "Full Field Scheduled",
             "type": "income",

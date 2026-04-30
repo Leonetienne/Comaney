@@ -101,13 +101,30 @@ def submit(w):
 # Email helpers
 # ---------------------------------------------------------------------------
 
-def fetch_email(to_email: str, subject_fragment: str, timeout: int = 60) -> str:
-    """Poll mailpit until a matching email arrives; return its plain-text body."""
+def mailpit_seen_ids() -> set:
+    """Return the set of message IDs currently in Mailpit (call before triggering an action)."""
+    try:
+        msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])
+        return {m["ID"] for m in msgs}
+    except Exception:
+        return set()
+
+
+def fetch_email(to_email: str, subject_fragment: str, timeout: int = 60,
+                ignore_ids=None) -> str:
+    """
+    Poll Mailpit until a matching email arrives; return its plain-text body.
+    Pass ignore_ids=mailpit_seen_ids() before triggering an action to ensure
+    only freshly delivered emails are matched (prevents false passes from
+    leftover messages with the same subject).
+    """
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
             msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])
             for msg in msgs:
+                if ignore_ids and msg["ID"] in ignore_ids:
+                    continue
                 recipients = [t.get("Address", "") for t in msg.get("To", [])]
                 if to_email in recipients and subject_fragment.lower() in msg.get("Subject", "").lower():
                     body = requests.get(f"{MAILPIT_API}/message/{msg['ID']}", timeout=5).json()
@@ -168,6 +185,16 @@ def run_cmd(*args, timeout: int = 30) -> str:
     )
     assert result.returncode == 0, f"Command failed:\n{result.stderr}"
     return result.stdout
+
+
+def server_today() -> str:
+    """Return the server's current date as YYYY-MM-DD (may differ from host when timezones diverge)."""
+    result = subprocess.run(
+        ["docker", "exec", DOCKER_WEB, "python", "-c",
+         "from datetime import date; print(date.today().isoformat())"],
+        capture_output=True, text=True, timeout=5,
+    )
+    return result.stdout.strip()
 
 
 # ---------------------------------------------------------------------------

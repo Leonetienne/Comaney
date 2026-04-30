@@ -8,7 +8,7 @@ Management commands are executed via docker exec.
 import time
 from datetime import date, timedelta
 
-from conftest import api_post, api_get, api_patch, api_delete, run_cmd
+from conftest import api_post, api_get, api_patch, api_delete, run_cmd, server_today
 
 
 # ---------------------------------------------------------------------------
@@ -168,10 +168,10 @@ class TestScheduledGeneration:
 
     def test_73_cron_generates_expense_from_scheduled(self, driver, w, ctx):
         """Running the cron creates at least one expense for the current period."""
-        today = date.today()
+        today = server_today()
         _create_scheduled(ctx,
             title="Cron Gen Test",
-            repeat_base_date=today.isoformat(),
+            repeat_base_date=today,
             repeat_every_unit="months",
             value="55.55",
         )
@@ -185,7 +185,7 @@ class TestScheduledGeneration:
         e = expenses[0]
         assert e["value"] == "55.55"
         assert e["settled"] is False
-        assert e["date_due"] == today.isoformat()
+        assert e["date_due"] == today
         ctx["cron_gen_expense_id"] = e["id"]
 
     def test_74_cron_no_duplicate_on_second_run(self, driver, w, ctx):
@@ -196,7 +196,6 @@ class TestScheduledGeneration:
 
     def test_75_generated_expense_inherits_all_fields(self, driver, w, ctx):
         """Verify that payee, note, and auto_settle_on_due_date are inherited."""
-        today = date.today()
         resp = api_post("/api/v1/scheduled/", ctx, json={
             "title": "Cron Inherit Test",
             "type": "expense",
@@ -205,7 +204,7 @@ class TestScheduledGeneration:
             "note": "Cron Note",
             "repeat_every_factor": 1,
             "repeat_every_unit": "months",
-            "repeat_base_date": today.isoformat(),
+            "repeat_base_date": server_today(),
             "default_auto_settle_on_due_date": True,
         })
         assert resp.status_code == 201

@@ -17,14 +17,15 @@ import requests
 
 from conftest import (
     BASE_URL, api_delete, api_get, api_patch, api_post,
-    extract_link, fetch_email, run_cmd,
+    extract_link, fetch_email, mailpit_seen_ids, run_cmd, server_today,
 )
 
-TODAY      = date.today().isoformat()
-YESTERDAY  = (date.today() - timedelta(days=1)).isoformat()
-TOMORROW   = (date.today() + timedelta(days=1)).isoformat()
-IN_3_DAYS  = (date.today() + timedelta(days=3)).isoformat()
-IN_10_DAYS = (date.today() + timedelta(days=10)).isoformat()
+_today     = date.fromisoformat(server_today())
+TODAY      = _today.isoformat()
+YESTERDAY  = (_today - timedelta(days=1)).isoformat()
+TOMORROW   = (_today + timedelta(days=1)).isoformat()
+IN_3_DAYS  = (_today + timedelta(days=3)).isoformat()
+IN_10_DAYS = (_today + timedelta(days=10)).isoformat()
 
 
 # ---------------------------------------------------------------------------
@@ -81,10 +82,10 @@ def _post_form(driver, url, data):
                   headers={"Referer": BASE_URL + "/"}, allow_redirects=False)
 
 
-def _fetch_notification_email(ctx, subject_fragment, timeout=30):
+def _fetch_notification_email(ctx, subject_fragment, timeout=30, ignore_ids=None):
     """Poll mailpit for a notification email to the test user."""
     email_addr = ctx.get("email", "")
-    return fetch_email(email_addr, subject_fragment, timeout=timeout)
+    return fetch_email(email_addr, subject_fragment, timeout=timeout, ignore_ids=ignore_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -183,45 +184,53 @@ class TestDueDateNotifications:
         api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": IN_3_DAYS})
         assert _get_expense(ctx, eid)["last_notification_class_sent"] == ""
 
+        seen = mailpit_seen_ids()
         _run_notify()
         time.sleep(1)
 
         exp = _get_expense(ctx, eid)
         assert exp["last_notification_class_sent"] == "soon"
-        _fetch_notification_email(ctx, "Payment due in", timeout=30)
+        _fetch_notification_email(ctx, "Payment due in", timeout=30, ignore_ids=seen)
 
     def test_83_11_no_duplicate_on_second_run(self, driver, w, ctx):
         """Running the cron a second time does not send another 'soon' email."""
+        seen = mailpit_seen_ids()
         _run_notify()
         time.sleep(1)
         exp = _get_expense(ctx, ctx["cron_soon_eid"])
+        # Class must stay at "soon" — cron should not advance or re-send
         assert exp["last_notification_class_sent"] == "soon"
-        # No second email — we just check the class didn't regress
-        # (email count check would require Mailpit message ID tracking)
+        # No new messages should have arrived
+        msgs_after = {m["ID"] for m in requests.get(
+            "http://localhost:8030/api/v1/messages", timeout=5
+        ).json().get("messages", [])}
+        assert not (msgs_after - seen), "Second cron run must not send a duplicate email"
 
     def test_83_12_tomorrow_notification_fires(self, driver, w, ctx):
         """When class is 'soon' and due date becomes tomorrow, cron sends 'tomorrow'."""
         eid = ctx["cron_soon_eid"]
         api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": TOMORROW})
 
+        seen = mailpit_seen_ids()
         _run_notify()
         time.sleep(1)
 
         exp = _get_expense(ctx, eid)
         assert exp["last_notification_class_sent"] == "tomorrow"
-        _fetch_notification_email(ctx, "Payment due tomorrow", timeout=30)
+        _fetch_notification_email(ctx, "Payment due tomorrow", timeout=30, ignore_ids=seen)
 
     def test_83_13_late_notification_fires(self, driver, w, ctx):
         """When class is 'tomorrow' and due date passes, cron sends 'late'."""
         eid = ctx["cron_soon_eid"]
         api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": YESTERDAY})
 
+        seen = mailpit_seen_ids()
         _run_notify()
         time.sleep(1)
 
         exp = _get_expense(ctx, eid)
         assert exp["last_notification_class_sent"] == "late"
-        _fetch_notification_email(ctx, "Payment overdue", timeout=30)
+        _fetch_notification_email(ctx, "Payment overdue", timeout=30, ignore_ids=seen)
 
     def test_83_14_no_notification_when_feuser_disabled(self, driver, w, ctx):
         """No email if feuser.email_notifications = False."""
@@ -277,13 +286,14 @@ class TestSettledNotifications:
         eid = resp.json()["id"]
         ctx["settle_auto_eid"] = eid
 
+        seen = mailpit_seen_ids()
         _run_auto_settle()
         time.sleep(1)
 
         exp = _get_expense(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
-        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30)
+        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30, ignore_ids=seen)
 
     def test_83_21_settled_on_manual_edit(self, driver, w, ctx):
         """Editing an expense from unsettled to settled via web form sends notification."""
@@ -291,6 +301,7 @@ class TestSettledNotifications:
         eid = d["id"]
         ctx["settle_manual_eid"] = eid
 
+        seen = mailpit_seen_ids()
         _post_form(driver, f"{BASE_URL}/budget/expenses/{eid}/edit/", {
             "title": "ManualSettle Notify", "type": "expense", "value": "42.00",
             "date_due": IN_3_DAYS, "settled": "on", "notify": "on",
@@ -300,7 +311,7 @@ class TestSettledNotifications:
         exp = _get_expense(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
-        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30)
+        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30, ignore_ids=seen)
 
     def test_83_22_no_settled_notification_on_create_already_settled(self, driver, w, ctx):
         """Creating an expense with settled=True does NOT send settled notification email."""
@@ -359,6 +370,7 @@ class TestSettledNotifications:
         eid = d["id"]
         ctx["bulk_single_eid"] = eid
 
+        seen = mailpit_seen_ids()
         _post_form(driver, f"{BASE_URL}/budget/expenses/bulk-action/", {
             "action": "settle", "uid": [str(eid)],
         })
@@ -367,7 +379,7 @@ class TestSettledNotifications:
         exp = _get_expense(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
-        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30)
+        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30, ignore_ids=seen)
 
     def test_83_25_cleanup_settled_expenses(self, driver, w, ctx):
         for key in ("settle_auto_eid", "settle_manual_eid", "no_notify_settled_eid",
@@ -392,14 +404,16 @@ class TestEmailActionLinks:
         # Patch to yesterday to set target class = "late" without resetting class
         api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": YESTERDAY})
 
+        seen_before_notify = mailpit_seen_ids()
         _run_notify()
         time.sleep(1)
 
-        body = _fetch_notification_email(ctx, "Payment overdue", timeout=30)
+        body = _fetch_notification_email(ctx, "Payment overdue", timeout=30, ignore_ids=seen_before_notify)
         settle_url = extract_link(body)
         assert "/settle-via-email/" in settle_url
 
         # Click the link using auth session (requires login)
+        seen_before_settle = mailpit_seen_ids()
         s = _auth_session(driver)
         resp = s.get(settle_url, allow_redirects=True)
         assert resp.status_code == 200
@@ -408,7 +422,7 @@ class TestEmailActionLinks:
         exp = _get_expense(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
-        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30)
+        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30, ignore_ids=seen_before_settle)
 
     def test_83_31_mute_expense_via_link(self, driver, w, ctx):
         """The mute-notifications link sets expense.notify = False."""
@@ -528,13 +542,14 @@ class TestAutoSettleAndApiSettled:
         eid = resp.json()["id"]
         ctx["as_today_eid"] = eid
 
+        seen = mailpit_seen_ids()
         _run_auto_settle()
         time.sleep(1)
 
         exp = _get_expense(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
-        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30)
+        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30, ignore_ids=seen)
 
     def test_83_42_auto_settle_no_settled_for_old_due(self, driver, w, ctx):
         """
@@ -584,6 +599,7 @@ class TestAutoSettleAndApiSettled:
         eid = d["id"]
         ctx["api_settle_eid"] = eid
 
+        seen = mailpit_seen_ids()
         resp = api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"settled": True})
         assert resp.status_code == 200
         time.sleep(1)
@@ -591,7 +607,7 @@ class TestAutoSettleAndApiSettled:
         exp = _get_expense(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
-        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30)
+        _fetch_notification_email(ctx, "Payment marked as paid", timeout=30, ignore_ids=seen)
 
     def test_83_44_no_settled_via_api_when_profile_notis_off(self, driver, w, ctx):
         """No settled notification when feuser.email_notifications = False."""
