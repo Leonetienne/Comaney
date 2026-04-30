@@ -28,6 +28,7 @@ class OwnedModel(models.Model):
 
 class Category(OwnedModel):
     title = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name_plural = "categories"
@@ -39,6 +40,7 @@ class Category(OwnedModel):
 
 class Tag(OwnedModel):
     title = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["title"]
@@ -97,6 +99,7 @@ class ScheduledExpense(OwnedModel):
     repeat_every_factor = models.PositiveIntegerField(null=True, blank=True)
     repeat_every_unit = models.CharField(max_length=10, choices=RepeatUnit.choices, blank=True)
     deactivated = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["title"]
