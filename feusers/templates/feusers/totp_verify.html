@@ -1,12 +1,19 @@
-{% extends "base.html" %}
+{% extends "auth_base.html" %}
+
 {% block title %}Comaney – Two-factor authentication{% endblock %}
-{% block main_class %}page-narrow{% endblock %}
 
-{% block content %}
-<h1>Two-factor authentication</h1>
+{% block auth_panel_title %}One last<br>step. <span class="auth-panel-accent">Almost there.</span>{% endblock %}
+{% block auth_panel_sub %}Enter the code from your authenticator app to complete sign-in.{% endblock %}
+{% block auth_panel_list %}
+<li>Time-based one-time password</li>
+<li>Opens in your authenticator app</li>
+<li>Or use a recovery code</li>
+{% endblock %}
 
+{% block auth_content %}
 {% if recovery_mode %}
-<p>Enter your recovery code to disable 2FA and log in.</p>
+<h1>Recovery code</h1>
+<p style="font-size:0.9rem;color:var(--text-muted);margin:-8px 0 20px;">Enter your recovery code to disable 2FA and log in.</p>
 {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
 <form method="post" novalidate autocomplete="off">
     {% csrf_token %}
@@ -22,9 +29,10 @@
         <button type="submit" class="btn btn-full">Use recovery code</button>
     </div>
 </form>
-<p style="margin-top:16px;font-size:0.9rem;"><a href="{% url 'totp_verify' %}">← Back to authenticator code</a></p>
+<p class="auth-footer-links"><a href="{% url 'totp_verify' %}">← Back to authenticator code</a></p>
 {% else %}
-<p>Enter the 6-digit code from your authenticator app.</p>
+<h1>Two-factor authentication</h1>
+<p style="font-size:0.9rem;color:var(--text-muted);margin:-8px 0 20px;">Enter the 6-digit code from your authenticator app.</p>
 {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
 <form method="post" novalidate autocomplete="off">
     {% csrf_token %}
@@ -35,6 +43,6 @@
         <button type="submit" class="btn btn-full">Verify</button>
     </div>
 </form>
-<p style="margin-top:16px;font-size:0.9rem;"><a href="{% url 'totp_verify_recovery' %}">Lost access to your app? Use recovery code</a></p>
+<p class="auth-footer-links"><a href="{% url 'totp_verify_recovery' %}">Lost access to your app? Use a recovery code</a></p>
 {% endif %}
 {% endblock %}
