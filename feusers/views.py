@@ -603,7 +603,7 @@ def totp_disable(request):
             feuser.save(update_fields=["totp_secret", "totp_enabled"])
             return redirect("profile")
         error = "Invalid code."
-    return render(request, "feusers/totp_disable.html", {"error": error})
+    return render(request, "feusers/totp_verify.html", {"error": error, "disable_mode": True})
 
 
 def totp_verify(request):
