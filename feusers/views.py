@@ -594,16 +594,32 @@ def totp_disable(request):
         return redirect("profile")
 
     import pyotp
+    recovery_mode = request.GET.get("recovery") == "1" or request.POST.get("recovery_mode") == "1"
     error = None
     if request.method == "POST":
-        code = request.POST.get("code", "").strip()
-        if pyotp.TOTP(feuser.totp_secret).verify(code, valid_window=1):
-            feuser.totp_secret  = ""
-            feuser.totp_enabled = False
-            feuser.save(update_fields=["totp_secret", "totp_enabled"])
-            return redirect("profile")
-        error = "Invalid code."
-    return render(request, "feusers/totp_verify.html", {"error": error, "disable_mode": True})
+        if recovery_mode:
+            recovery = request.POST.get("recovery", "").strip().upper().replace("-", "")
+            digest   = hashlib.sha256(recovery.encode()).hexdigest()
+            if feuser.totp_recovery_hash and secrets.compare_digest(digest, feuser.totp_recovery_hash):
+                feuser.totp_secret        = ""
+                feuser.totp_enabled       = False
+                feuser.totp_recovery_hash = ""
+                feuser.save(update_fields=["totp_secret", "totp_enabled", "totp_recovery_hash"])
+                return redirect("profile")
+            error = "Invalid recovery code."
+        else:
+            code = request.POST.get("code", "").strip()
+            if pyotp.TOTP(feuser.totp_secret).verify(code, valid_window=1):
+                feuser.totp_secret  = ""
+                feuser.totp_enabled = False
+                feuser.save(update_fields=["totp_secret", "totp_enabled"])
+                return redirect("profile")
+            error = "Invalid code."
+    return render(request, "feusers/totp_verify.html", {
+        "error": error,
+        "disable_mode": True,
+        "recovery_mode": recovery_mode,
+    })
 
 
 def totp_verify(request):

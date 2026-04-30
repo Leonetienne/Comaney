@@ -11,7 +11,29 @@
 {% endblock %}
 
 {% block auth_content %}
-{% if disable_mode %}
+{% if disable_mode and recovery_mode %}
+<h1>Recovery code</h1>
+<p style="font-size:0.9rem;color:var(--text-muted);margin:-8px 0 20px;">Enter your recovery code to disable 2FA.</p>
+{% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
+<form method="post" novalidate autocomplete="off">
+    {% csrf_token %}
+    <input type="hidden" name="recovery_mode" value="1">
+    <label for="id_recovery">Recovery code</label>
+    <input id="id_recovery" name="recovery" type="text" placeholder="XXXXX-XXXXX"
+           maxlength="11" autofocus autocomplete="off" style="font-family:monospace;letter-spacing:0.05em;"
+           oninput="
+             let v = this.value.toUpperCase().replace(/[^0-9A-F]/g,'');
+             this.value = v.length > 5 ? v.slice(0,5) + '-' + v.slice(5,10) : v;
+           ">
+    <div class="form-actions">
+        <button type="submit" class="btn btn-danger">Disable 2FA</button>
+    </div>
+</form>
+<p class="auth-footer-links">
+    <a href="{% url 'totp_disable' %}">← Back to authenticator code</a><br>
+    Lost your recovery code too? <a href="{% url 'contact' %}">Shoot us a message</a> and we'll see what we can do!
+</p>
+{% elif disable_mode %}
 <h1>Disable 2FA</h1>
 <p style="font-size:0.9rem;color:var(--text-muted);margin:-8px 0 20px;">Enter your current authenticator code to confirm.</p>
 {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
@@ -24,7 +46,10 @@
         <button type="submit" class="btn btn-danger">Disable 2FA</button>
     </div>
 </form>
-<p class="auth-footer-links"><a href="{% url 'profile' %}">← Cancel</a></p>
+<p class="auth-footer-links">
+    <a href="{% url 'totp_disable' %}?recovery=1">Lost access to your app? Use a recovery code</a><br>
+    <a href="{% url 'profile' %}">← Cancel</a>
+</p>
 {% elif recovery_mode %}
 <h1>Recovery code</h1>
 <p style="font-size:0.9rem;color:var(--text-muted);margin:-8px 0 20px;">Enter your recovery code to disable 2FA and log in.</p>
@@ -43,7 +68,10 @@
         <button type="submit" class="btn btn-full">Use recovery code</button>
     </div>
 </form>
-<p class="auth-footer-links"><a href="{% url 'totp_verify' %}">← Back to authenticator code</a></p>
+<p class="auth-footer-links">
+    <a href="{% url 'totp_verify' %}">← Back to authenticator code</a><br>
+    Lost your recovery code too? <a href="{% url 'contact' %}">Shoot us a message</a> and we'll see what we can do!
+</p>
 {% else %}
 <h1>Two-factor authentication</h1>
 <p style="font-size:0.9rem;color:var(--text-muted);margin:-8px 0 20px;">Enter the 6-digit code from your authenticator app.</p>
