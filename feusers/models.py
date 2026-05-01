@@ -10,8 +10,8 @@ PASSWORD_RESET_TOKEN_EXPIRY_HOURS = 1
 
 class FeUser(models.Model):
     email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=150, blank=True)
-    last_name = models.CharField(max_length=150, blank=True)
+    first_name = models.CharField(max_length=128, blank=True)
+    last_name = models.CharField(max_length=128, blank=True)
     password = models.CharField(max_length=255, default="!")
     is_active = models.BooleanField(default=True)
     is_confirmed = models.BooleanField(default=False)
@@ -20,7 +20,7 @@ class FeUser(models.Model):
     password_reset_expires = models.DateTimeField(null=True, blank=True)
     currency = models.CharField(max_length=10, blank=True, default="€")
     anthropic_api_key = models.CharField(max_length=255, blank=True)
-    ai_custom_instructions = models.TextField(blank=True)
+    ai_custom_instructions = models.TextField(blank=True, max_length=1024)
     totp_secret = models.CharField(max_length=64, blank=True)
     totp_enabled = models.BooleanField(default=False)
     totp_recovery_hash = models.CharField(max_length=128, blank=True)

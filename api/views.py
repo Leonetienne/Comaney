@@ -104,14 +104,23 @@ def _scheduled_json(s):
 def _apply_expense_fields(obj, data, feuser, creating=False):
     """Apply fields from request data onto an Expense or dict. Returns error string or None."""
     if "title" in data:
-        obj.title = str(data["title"])[:255]
+        title = str(data["title"])
+        if len(title) > 128:
+            return "'title' must be 128 characters or fewer."
+        obj.title = title
     elif creating and not getattr(obj, "title", None):
         return "'title' is required."
 
     if "payee" in data:
-        obj.payee = str(data["payee"] or "")[:255]
+        payee = str(data["payee"] or "")
+        if len(payee) > 128:
+            return "'payee' must be 128 characters or fewer."
+        obj.payee = payee
     if "note" in data:
-        obj.note = str(data["note"] or "")
+        note = str(data["note"] or "")
+        if len(note) > 1024:
+            return "'note' must be 1024 characters or fewer."
+        obj.note = note
     if "settled" in data:
         obj.settled = bool(data["settled"])
     if "auto_settle_on_due_date" in data:
@@ -161,14 +170,23 @@ def _apply_expense_fields(obj, data, feuser, creating=False):
 
 def _apply_scheduled_fields(obj, data, feuser, creating=False):
     if "title" in data:
-        obj.title = str(data["title"])[:255]
+        title = str(data["title"])
+        if len(title) > 128:
+            return "'title' must be 128 characters or fewer."
+        obj.title = title
     elif creating and not getattr(obj, "title", None):
         return "'title' is required."
 
     if "payee" in data:
-        obj.payee = str(data["payee"] or "")[:255]
+        payee = str(data["payee"] or "")
+        if len(payee) > 128:
+            return "'payee' must be 128 characters or fewer."
+        obj.payee = payee
     if "note" in data:
-        obj.note = str(data["note"] or "")
+        note = str(data["note"] or "")
+        if len(note) > 1024:
+            return "'note' must be 1024 characters or fewer."
+        obj.note = note
     if "default_auto_settle_on_due_date" in data:
         obj.default_auto_settle_on_due_date = bool(data["default_auto_settle_on_due_date"])
     if "deactivated" in data:
@@ -424,13 +442,22 @@ def account(request, feuser):
             return _err("Invalid JSON body.")
         update_fields = []
         if "first_name" in data:
-            feuser.first_name = str(data["first_name"])[:150]
+            v = str(data["first_name"])
+            if len(v) > 128:
+                return _err("'first_name' must be 128 characters or fewer.")
+            feuser.first_name = v
             update_fields.append("first_name")
         if "last_name" in data:
-            feuser.last_name = str(data["last_name"])[:150]
+            v = str(data["last_name"])
+            if len(v) > 128:
+                return _err("'last_name' must be 128 characters or fewer.")
+            feuser.last_name = v
             update_fields.append("last_name")
         if "currency" in data:
-            feuser.currency = str(data["currency"])[:10]
+            v = str(data["currency"])
+            if len(v) > 10:
+                return _err("'currency' must be 10 characters or fewer.")
+            feuser.currency = v
             update_fields.append("currency")
         if "month_start_day" in data:
             try:
@@ -527,9 +554,11 @@ def categories(request, feuser):
         data = _parse_body(request)
         if data is None:
             return _err("Invalid JSON body.")
-        title = str(data.get("title", "")).strip()[:255]
+        title = str(data.get("title", "")).strip()
         if not title:
             return _err("'title' is required.")
+        if len(title) > 128:
+            return _err("'title' must be 128 characters or fewer.")
         cat = Category.objects.create(owning_feuser=feuser, title=title)
         return _ok({"id": cat.uid, "title": cat.title}, 201)
 
@@ -552,9 +581,11 @@ def category_detail(request, feuser, uid):
         if data is None:
             return _err("Invalid JSON body.")
         if "title" in data:
-            title = str(data["title"]).strip()[:255]
+            title = str(data["title"]).strip()
             if not title:
                 return _err("'title' must not be empty.")
+            if len(title) > 128:
+                return _err("'title' must be 128 characters or fewer.")
             cat.title = title
             cat.save(update_fields=["title"])
         return _ok({"id": cat.uid, "title": cat.title})
@@ -581,9 +612,11 @@ def tags(request, feuser):
         data = _parse_body(request)
         if data is None:
             return _err("Invalid JSON body.")
-        title = str(data.get("title", "")).strip()[:255]
+        title = str(data.get("title", "")).strip()
         if not title:
             return _err("'title' is required.")
+        if len(title) > 128:
+            return _err("'title' must be 128 characters or fewer.")
         tag = Tag.objects.create(owning_feuser=feuser, title=title)
         return _ok({"id": tag.uid, "title": tag.title}, 201)
 
@@ -606,9 +639,11 @@ def tag_detail(request, feuser, uid):
         if data is None:
             return _err("Invalid JSON body.")
         if "title" in data:
-            title = str(data["title"]).strip()[:255]
+            title = str(data["title"]).strip()
             if not title:
                 return _err("'title' must not be empty.")
+            if len(title) > 128:
+                return _err("'title' must be 128 characters or fewer.")
             tag.title = title
             tag.save(update_fields=["title"])
         return _ok({"id": tag.uid, "title": tag.title})

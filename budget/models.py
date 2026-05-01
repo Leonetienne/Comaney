@@ -27,7 +27,7 @@ class OwnedModel(models.Model):
 
 
 class Category(OwnedModel):
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -39,7 +39,7 @@ class Category(OwnedModel):
 
 
 class Tag(OwnedModel):
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -50,9 +50,9 @@ class Tag(OwnedModel):
 
 
 class Expense(OwnedModel):
-    title = models.CharField(max_length=255)
-    payee = models.CharField(max_length=255, blank=True)
-    note = models.TextField(blank=True)
+    title = models.CharField(max_length=128)
+    payee = models.CharField(max_length=128, blank=True)
+    note = models.TextField(blank=True, max_length=1024)
     category = models.ForeignKey(
         Category, null=True, blank=True, on_delete=models.SET_NULL, related_name="expenses"
     )
@@ -83,9 +83,9 @@ class Expense(OwnedModel):
 
 
 class ScheduledExpense(OwnedModel):
-    title = models.CharField(max_length=255)
-    payee = models.CharField(max_length=255, blank=True)
-    note = models.TextField(blank=True)
+    title = models.CharField(max_length=128)
+    payee = models.CharField(max_length=128, blank=True)
+    note = models.TextField(blank=True, max_length=1024)
     category = models.ForeignKey(
         Category, null=True, blank=True, on_delete=models.SET_NULL, related_name="scheduled_expenses"
     )

@@ -14,8 +14,14 @@ class ProfileForm(forms.ModelForm):
             "email_notifications": "Send email notifications for upcoming and settled expenses",
         }
         widgets = {
-            "month_start_day": forms.NumberInput(attrs={"min": 0, "max": 31}),
+            "month_start_day": forms.NumberInput(attrs={"min": 1, "max": 31}),
         }
+
+    def clean_month_start_day(self):
+        day = self.cleaned_data.get("month_start_day")
+        if day is not None and not (1 <= day <= 31):
+            raise forms.ValidationError("Month start day must be between 1 and 31.")
+        return day
 
 
 class AISettingsForm(forms.ModelForm):
@@ -28,7 +34,7 @@ class AISettingsForm(forms.ModelForm):
         }
         widgets = {
             "anthropic_api_key": forms.PasswordInput(render_value=True, attrs={"autocomplete": "off"}),
-            "ai_custom_instructions": forms.Textarea(attrs={"rows": 5, "placeholder": "e.g. Always assign groceries to the 'Food' category and tag with 'Rewe' when the payee is Rewe."}),
+            "ai_custom_instructions": forms.Textarea(attrs={"rows": 5, "maxlength": 1024, "placeholder": "e.g. Always assign groceries to the 'Food' category and tag with 'Rewe' when the payee is Rewe."}),
         }
 
     def __init__(self, *args, **kwargs):

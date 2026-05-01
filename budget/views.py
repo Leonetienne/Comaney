@@ -170,6 +170,8 @@ def category_create(request):
     title = data.get("title", "").strip()
     if not title:
         return JsonResponse({"error": "Title required."}, status=400)
+    if len(title) > 128:
+        return JsonResponse({"error": "Title must be 128 characters or fewer."}, status=400)
     category = Category.objects.create(owning_feuser=request.feuser, title=title)
     return JsonResponse({"uid": category.uid, "title": category.title})
 
@@ -190,6 +192,8 @@ def category_rename(request, uid):
     title = data.get("title", "").strip()
     if not title:
         return JsonResponse({"error": "Title required."}, status=400)
+    if len(title) > 128:
+        return JsonResponse({"error": "Title must be 128 characters or fewer."}, status=400)
     category.title = title
     category.save(update_fields=["title"])
     return JsonResponse({"uid": category.uid, "title": category.title})
@@ -202,6 +206,8 @@ def tag_create(request):
     title = data.get("title", "").strip()
     if not title:
         return JsonResponse({"error": "Title required."}, status=400)
+    if len(title) > 128:
+        return JsonResponse({"error": "Title must be 128 characters or fewer."}, status=400)
     tag = Tag.objects.create(owning_feuser=request.feuser, title=title)
     return JsonResponse({"uid": tag.uid, "title": tag.title})
 
@@ -222,6 +228,8 @@ def tag_rename(request, uid):
     title = data.get("title", "").strip()
     if not title:
         return JsonResponse({"error": "Title required."}, status=400)
+    if len(title) > 128:
+        return JsonResponse({"error": "Title must be 128 characters or fewer."}, status=400)
     tag.title = title
     tag.save(update_fields=["title"])
     return JsonResponse({"uid": tag.uid, "title": tag.title})
