@@ -1,12 +1,17 @@
-{% extends "base.html" %}
+{% extends "auth_base.html" %}
 
 {% block title %}Comaney – Almost there!{% endblock %}
-{% block main_class %}page-narrow page-centered{% endblock %}
 
+{% block auth_panel_title %}One more<br>step. <span class="auth-panel-accent">Check your inbox.</span>{% endblock %}
+{% block auth_panel_sub %}You're almost in — just confirm your email address to activate your account.{% endblock %}
+{% block auth_panel_list %}
+<li>Confirmation email sent</li>
+<li>Click the link inside to activate</li>
+<li>Check your spam folder if needed</li>
+{% endblock %}
 
-{% block content %}
+{% block auth_content %}
 <h1>Almost there!</h1>
-<p>We've sent you a confirmation email.<br>
-Please click the link inside to activate your account.</p>
-<a href="{% url 'landing_page' %}" class="btn">← Back to home</a>
+<p style="font-size:0.9rem;color:var(--text-muted);margin:-8px 0 20px;">We've sent you a confirmation email.<br>Please click the link inside to activate your account.</p>
+<a href="{% url 'landing_page' %}" class="btn btn-full">← Back to home</a>
 {% endblock %}
