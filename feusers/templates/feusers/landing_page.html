@@ -228,32 +228,101 @@
 
         <details class="lp-faq-item">
           <summary class="lp-faq-q">Is Comaney really free?</summary>
-          <p class="lp-faq-a">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus imperdiet, nulla et dictum interdum, nisi lorem egestas odio, vitae scelerisque enim ligula venenatis dolor. Pellentesque nisl ante, commodo vitae velit vel, ornare fringilla lorem.</p>
-        </details>
-
-        <details class="lp-faq-item">
-          <summary class="lp-faq-q">Do I need my own server to run it?</summary>
-          <p class="lp-faq-a">Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur.</p>
+          <p class="lp-faq-a">
+            Yes, Comaney is free for everyone. If that ever changes, existing accounts will be grandfathered in; only new sign-ups would be affected.
+            You can also self-host your own instance at any time for complete control.
+            The AI Express Creation feature can incur costs if you supply your own Anthropic API key, but nothing happens by accident, you have to explicitly configure it.
+            As long as you're on the built-in AI trial, it's completely free.
+          </p>
         </details>
 
         <details class="lp-faq-item">
           <summary class="lp-faq-q">What is Express Creation and how does it work?</summary>
-          <p class="lp-faq-a">At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia.</p>
-        </details>
-
-        <details class="lp-faq-item">
-          <summary class="lp-faq-q">Can I import data from my bank or another app?</summary>
-          <p class="lp-faq-a">Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores.</p>
+          <p class="lp-faq-a">
+            Filling in expense forms is almost as painful as spending money in the first place.
+            With Express Creation, you snap a photo of your receipt or just describe what you bought in plain language, and the AI fills in the title, payee, category, tags, and amount for you.
+            You always get to review and adjust everything before anything is saved.
+          </p>
         </details>
 
         <details class="lp-faq-item">
           <summary class="lp-faq-q">Is my financial data private and secure?</summary>
-          <p class="lp-faq-a">Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis.</p>
+          <p class="lp-faq-a">
+            Your data is never sold or shared with third parties.
+            The one exception worth knowing about: if you use Express Creation, the details of that entry are sent to Anthropic to power the AI analysis.
+            That's a technical requirement of the feature. If you don't use Express Creation, your data never leaves the server.
+          </p>
+        </details>
+
+        <details class="lp-faq-item">
+          <summary class="lp-faq-q">What insights does the dashboard give me?</summary>
+          <p class="lp-faq-a">
+            The dashboard summarises your month (or year) at a glance: total income, total savings, what you've already paid, and what's still outstanding.
+            The most useful number is your <em>available balance</em>, income minus everything paid and outstanding, so you always know what you can safely spend without surprises at the end of the month.
+            A category pie chart and a tag bar chart let you see exactly where your money is going.
+          </p>
+        </details>
+
+        <details class="lp-faq-item">
+          <summary class="lp-faq-q">How do expenses work?</summary>
+          <p class="lp-faq-a">
+            An expense records any movement of money. There are four types:
+            <br><br>
+            <strong>Expense</strong>, money leaving your account<br>
+            <strong>Income</strong>, money coming in<br>
+            <strong>Savings deposit</strong>, money set aside into savings<br>
+            <strong>Savings withdrawal</strong>, money taken back out of savings
+            <br><br>
+            Each entry can have a payee, a category, and any number of tags.
+            Categories are mutually exclusive, an expense belongs to exactly one (e.g. <em>Housing</em> or <em>Food</em>).
+            Tags can overlap freely, a dinner shop could be both <em>Groceries</em> and <em>Date night</em>.
+            <br><br>
+            Expenses can be <strong>settled</strong> (paid) or <strong>unsettled</strong> (still outstanding), with an optional due date.
+            Enable auto-settle and Comaney will mark the expense as paid automatically when the due date arrives.
+          </p>
         </details>
 
         <details class="lp-faq-item">
           <summary class="lp-faq-q">How do scheduled expenses work?</summary>
-          <p class="lp-faq-a">Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur? Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam.</p>
+          <p class="lp-faq-a">
+            Scheduled expenses are templates that generate real expenses on a repeating interval, daily, weekly, monthly, or yearly.
+            Set up a "Rent" schedule starting 01 January and Comaney will create all twelve rent entries for the year automatically, a few minutes after you save.
+            You can optionally set an end date, which is handy for instalment payments that run for a fixed number of months.
+            <br><br>
+            Keep in mind: editing a schedule doesn't retroactively update already-generated expenses. To apply changes to existing entries, either edit them individually or delete and regenerate them.
+          </p>
+        </details>
+
+        <details class="lp-faq-item">
+          <summary class="lp-faq-q">What is a financial month, and can I customise it?</summary>
+          <p class="lp-faq-a">
+            By default, a financial month follows the calendar month (1st to 31st).
+            But if your salary lands on the 25th, it makes more sense for your "month" to run from the 25th to the 24th, so income and expenses line up naturally.
+            <br><br>
+            In your profile settings you can set any day (1–31) as your month start.
+            You can also shift the start into the <em>previous</em> calendar month, which is useful when your cycle crosses a month boundary (e.g. a start day of 25 that should mean the 25th of last month to the 24th of this one).
+            The dashboard and all totals respect your custom cycle automatically.
+          </p>
+        </details>
+
+        <details class="lp-faq-item">
+          <summary class="lp-faq-q">Can I export my data?</summary>
+          <p class="lp-faq-a">
+            Yes. From your profile page you can download a full export of your account as a ZIP archive containing CSV files. One each for expenses, scheduled expenses, categories, and tags, plus a profile summary.
+            The files open in any spreadsheet app and are straightforward to process programmatically.
+            <br><br>
+            A REST API is also available if you want to read or write your data from external tools or scripts.
+          </p>
+        </details>
+
+        <details class="lp-faq-item">
+          <summary class="lp-faq-q">Can I import data from my bank or another app?</summary>
+          <p class="lp-faq-a">Not yet, but it's on the roadmap.</p>
+        </details>
+
+        <details class="lp-faq-item">
+          <summary class="lp-faq-q">Do I need my own server to use Comaney?</summary>
+          <p class="lp-faq-a">No, you can use the official hosted instance without any setup. Self-hosting is available if you want full control over your data and infrastructure.</p>
         </details>
 
       </div>
