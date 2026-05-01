@@ -13,7 +13,7 @@
 
 {% if expenses %}
 <div class="exp-controls">
-    <input type="text" id="exp-search" class="exp-search" placeholder="Search title, payee, value, note…" autocomplete="off">
+    <input type="text" id="exp-search" class="exp-search" placeholder="Search title, payee, amount… or tag:label  cat:label  payee:name" autocomplete="off">
 </div>
 
 <div class="exp-toolbar">
@@ -42,7 +42,10 @@
          data-uid="{{ exp.uid }}"
          data-value="{{ exp.value }}"
          data-type="{{ exp.type }}"
-         data-search="{{ exp.title|lower }} {{ exp.payee|lower }} {{ exp.value }} {{ exp.note|lower }}">
+         data-search="{{ exp.title|lower }} {{ exp.payee|lower }} {{ exp.value }} {{ exp.note|lower }}"
+         data-payee="{{ exp.payee|lower }}"
+         data-cat="{{ exp.category.title|lower }}"
+         data-tags="{% for tag in exp.tags.all %}{{ tag.title|lower }}{% if not forloop.last %}|{% endif %}{% endfor %}">
 
         <!-- Date label above title -->
         {% if exp.date_due %}<div class="exp-date-label" style="grid-column:1;grid-row:1;">{{ exp.date_due|date:"Y-m-d" }}</div>{% endif %}
@@ -120,10 +123,40 @@
     var bulkAction   = document.getElementById('exp-bulk-action');
     var cards        = Array.from(document.querySelectorAll('#exp-list .exp-card'));
 
+    function parseQuery(raw) {
+        var re = /(\w+):"([^"]*)"|\b(\w+):(\S+)|"([^"]*)"|(\S+)/g;
+        var known = { tag: [], cat: [], payee: [] };
+        var terms = [];
+        var m;
+        while ((m = re.exec(raw)) !== null) {
+            if (m[1] !== undefined) {
+                var k = m[1], v = m[2];
+                if (k in known) known[k].push(v); else terms.push(v);
+            } else if (m[3] !== undefined) {
+                var k = m[3], v = m[4];
+                if (k in known) known[k].push(v); else terms.push(k + ':' + v);
+            } else {
+                terms.push(m[5] !== undefined ? m[5] : m[6]);
+            }
+        }
+        return { filters: known, terms: terms };
+    }
+
     function matchesQuery(card, query) {
         if (!query) return true;
-        var text = card.dataset.search || '';
-        return query.trim().split(/\s+/).every(function (term) { return text.indexOf(term) !== -1; });
+        var parsed = parseQuery(query.toLowerCase());
+        var search  = card.dataset.search  || '';
+        var tags    = (card.dataset.tags   || '').split('|').filter(Boolean);
+        var cat     = card.dataset.cat     || '';
+        var payee   = card.dataset.payee   || '';
+
+        if (!parsed.terms.every(function (t) { return search.indexOf(t) !== -1; })) return false;
+        if (!parsed.filters.tag.every(function (f) {
+            return tags.some(function (t) { return t.indexOf(f) !== -1; });
+        })) return false;
+        if (!parsed.filters.cat.every(function (f) { return cat.indexOf(f) !== -1; })) return false;
+        if (!parsed.filters.payee.every(function (f) { return payee.indexOf(f) !== -1; })) return false;
+        return true;
     }
 
     function visibleCards() {
