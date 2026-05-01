@@ -344,3 +344,19 @@ class TestAutoSettle:
         resp = api_get(f"/api/v1/expenses/{eid}/", ctx)
         assert resp.json()["settled"] is True
         api_delete(f"/api/v1/expenses/{eid}/", ctx)
+
+    def test_83_auto_settle_skips_deactivated(self, driver, w, ctx):
+        """Deactivated expense with auto_settle flag and past due date must NOT be settled."""
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        eid = _create_expense(ctx,
+            title="AutoSettle Deactivated",
+            date_due=yesterday,
+            auto_settle_on_due_date=True,
+            settled=False,
+            deactivated=True,
+        )
+        _run_auto_settle()
+        time.sleep(1)
+        resp = api_get(f"/api/v1/expenses/{eid}/", ctx)
+        assert resp.json()["settled"] is False, "Deactivated expense must not be auto-settled"
+        api_delete(f"/api/v1/expenses/{eid}/", ctx)

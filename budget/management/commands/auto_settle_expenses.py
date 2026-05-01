@@ -14,7 +14,7 @@ class Command(BaseCommand):
         today = timezone.localdate()
         qs = (
             Expense.objects
-            .filter(settled=False, auto_settle_on_due_date=True, date_due__lte=today)
+            .filter(settled=False, auto_settle_on_due_date=True, date_due__lte=today, deactivated=False)
             .select_related("owning_feuser")
         )
         count = 0
