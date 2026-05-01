@@ -169,7 +169,13 @@
         updateSelectAllBtn();
     }
 
-    searchInput.addEventListener('input', filterCards);
+    var savedQuery = sessionStorage.getItem('expSearch');
+    if (savedQuery) { searchInput.value = savedQuery; filterCards(); }
+
+    searchInput.addEventListener('input', function () {
+        sessionStorage.setItem('expSearch', searchInput.value);
+        filterCards();
+    });
 
     selectAllBtn.addEventListener('click', function () {
         var visible = visibleCards();

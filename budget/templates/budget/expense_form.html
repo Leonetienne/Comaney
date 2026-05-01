@@ -62,7 +62,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn">{% if expense %}Save changes{% else %}Create expense{% endif %}</button>
-            <a href="{% url 'budget:expenses_list' %}" class="btn btn-secondary">Cancel</a>
+            <a href="{% url 'budget:expenses_list' %}" class="btn btn-secondary" onclick="if(history.length>1){history.back();return false;}">Cancel</a>
         </div>
     </form>
 </div>
