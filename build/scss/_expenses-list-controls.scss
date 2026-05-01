@@ -70,17 +70,11 @@
   cursor: pointer;
 }
 
-// Checkbox — absolut positioniert unten links in der Card
-.exp-card {
-  position: relative;
-}
-
 .exp-checkbox-wrap {
-  position: absolute;
-  bottom: 10px;
-  left: 16px;
   cursor: pointer;
   line-height: 0;
+  display: block;
+  padding-top: 6px;
 }
 
 .exp-checkbox {
@@ -88,9 +82,4 @@
   height: 15px;
   cursor: pointer;
   accent-color: var(--link);
-}
-
-// Note bekommt links Platz für die Checkbox
-.exp-row3 {
-  padding-left: 24px;
 }
