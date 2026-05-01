@@ -798,6 +798,7 @@ def express_creation(request):
         "trial_spent": round(trial_spent, 1),
         "trial_blocked": trial_blocked,
         "trial_disabled": trial_disabled,
+        "trial_just_exhausted": False,
     }
 
     if trial_disabled or trial_blocked:
@@ -817,6 +818,7 @@ def express_creation(request):
             context["description"] = description
             if not description and not image_b64:
                 context["ai_error"] = "Please enter a description or attach an image."
+                context["ai_error_is_validation"] = True
             else:
                 catalog = _build_catalog(feuser)
                 custom = feuser.ai_custom_instructions.strip()
@@ -843,7 +845,8 @@ def express_creation(request):
                         feuser.ai_trial_budget_spent = (feuser.ai_trial_budget_spent or _Dec(0)) + _Dec(str(usage["cost_cents"]))
                         feuser.save(update_fields=["ai_trial_budget_spent"])
                         context["trial_spent"] = round(float(feuser.ai_trial_budget_spent), 1)
-                        context["trial_blocked"] = float(feuser.ai_trial_budget_spent) >= trial_limit
+                        if float(feuser.ai_trial_budget_spent) >= trial_limit:
+                            context["trial_just_exhausted"] = True
                 except json.JSONDecodeError as exc:
                     import logging
                     logging.getLogger(__name__).error("smart_create JSON parse failure: %s", exc)

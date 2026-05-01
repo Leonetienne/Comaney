@@ -75,8 +75,10 @@
     </div>
     {% endif %}
 
-    {% if ai_error %}
-    Did that not work? Try again! Sometimes clankers do silly things.
+    {% if trial_just_exhausted %}
+    <div class="ai-error">Your trial budget is now used up. You can review and save the result below, but no further AI requests are possible. Add your own Anthropic API key in <a href="{% url 'profile' %}">your profile</a> to keep going.</div>
+    {% elif ai_error %}
+    {% if not ai_error_is_validation %}Did that not work? Try again! Sometimes clankers do silly things.{% endif %}
     <div class="ai-error">{{ ai_error }}</div>
     {% endif %}
 

@@ -13,6 +13,7 @@ Assertions are intentionally lenient: tests only fail when the AI really
 screws up (zero results, completely wrong types, wildly wrong totals).
 """
 import re
+import subprocess
 import time
 import warnings
 from pathlib import Path
@@ -27,6 +28,8 @@ from conftest import (
     api_delete,
     api_get,
     api_post,
+    run_cmd,
+    DOCKER_WEB,
 )
 
 AI_TIMEOUT = 120  # seconds — AI calls can be slow
@@ -389,3 +392,83 @@ class TestExpressCreation:
                 f"Trial meter should have increased after a parse call; "
                 f"before={spent_before}, after={spent_after}"
             )
+
+    # ── 6. Trial budget enforcement ───────────────────────────────────────────
+
+    def test_83_trial_budget_enforcement(self, driver, w, ctx):
+        """
+        Set the user's trial spend to (limit - 0.1 ¢), then:
+          - First request:  succeeds, preview appears, "budget used up" warning shown.
+          - Second request: blocked before processing, block screen shown.
+        The user's original spend is restored in the finally block.
+        """
+        if not ctx.get("express_trial_ok"):
+            pytest.skip("Trial not available")
+
+        def _shell(code, timeout=10):
+            r = subprocess.run(
+                ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
+                capture_output=True, text=True, timeout=timeout,
+            )
+            assert r.returncode == 0, f"shell command failed:\n{r.stderr}"
+            return r.stdout.strip()
+
+        limit_raw = _shell("from django.conf import settings; print(settings.AI_TRIAL_USAGE_LIMIT)")
+        trial_limit = float(limit_raw)
+        if trial_limit <= 0:
+            pytest.skip("AI_TRIAL_USAGE_LIMIT not configured")
+
+        near_limit = trial_limit - 0.1
+        email = ctx["email"]
+
+        def _set_spent(value):
+            _shell(
+                f"from feusers.models import FeUser; "
+                f"u = FeUser.objects.get(email='{email}'); "
+                f"u.ai_trial_budget_spent = {value}; "
+                f"u.save(update_fields=['ai_trial_budget_spent'])"
+            )
+
+        def _get_spent():
+            return float(_shell(
+                f"from feusers.models import FeUser; "
+                f"print(FeUser.objects.get(email='{email}').ai_trial_budget_spent)"
+            ))
+
+        original_spent = _get_spent()
+
+        try:
+            # ── First request: budget almost full ────────────────────────────
+            _set_spent(near_limit)
+
+            cards = _parse(driver, "Coffee 3€")
+            assert cards, "First request should succeed and return preview items"
+
+            src = driver.page_source
+            assert "trial budget is now used up" in src.lower(), (
+                "Expected 'budget used up' warning after last allowed request"
+            )
+            assert "Monthly AI limit reached" not in src, (
+                "Block screen must NOT appear on the request that exhausts the budget"
+            )
+
+            # Cleanup any expenses that might have been auto-submitted
+            all_exp = api_get("/api/v1/expenses/", ctx).json().get("expenses", [])
+            for e in all_exp:
+                if "coffee" in e.get("title", "").lower():
+                    api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+
+            # ── Second request: budget now exhausted ─────────────────────────
+            driver.get(_url("/budget/ai/express-creation/"))
+            time.sleep(1)
+
+            src = driver.page_source
+            assert "Monthly AI limit reached" in src, (
+                "Block screen must appear when budget is already exhausted"
+            )
+            assert driver.find_elements(By.CSS_SELECTOR, ".trial-blocked"), (
+                "Expected .trial-blocked element on the block screen"
+            )
+
+        finally:
+            _set_spent(original_spent)
