@@ -1,10 +1,23 @@
+from decimal import Decimal, InvalidOperation
+
 from django import forms
 from django.utils import timezone
 
 from .models import Category, Expense, ScheduledExpense, Tag, TransactionType
 
 
+class CommaDecimalField(forms.DecimalField):
+    def to_python(self, value):
+        return super().to_python(str(value or "").replace(",", "."))
+
+
+def _clean_note(value):
+    return (value or "").replace("\r\n", "\n").replace("\r", "\n")
+
+
 class ExpenseForm(forms.ModelForm):
+    value = CommaDecimalField(min_value=Decimal("0.01"), widget=forms.TextInput(attrs={"inputmode": "decimal"}))
+
     def __init__(self, *args, feuser=None, **kwargs):
         super().__init__(*args, **kwargs)
         allowed = [c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER]
@@ -14,6 +27,9 @@ class ExpenseForm(forms.ModelForm):
             self.fields["tags"].queryset = Tag.objects.filter(owning_feuser=feuser)
         if not self.initial.get("date_due") and not self.instance.pk:
             self.fields["date_due"].initial = timezone.localdate()
+
+    def clean_note(self):
+        return _clean_note(self.cleaned_data.get("note"))
 
     def clean(self):
         cleaned = super().clean()
@@ -28,7 +44,6 @@ class ExpenseForm(forms.ModelForm):
             "type": forms.Select(choices=[
                 c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER
             ]),
-            "value": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             "note": forms.Textarea(attrs={"rows": 3, "maxlength": 1024}),
             "date_due": forms.DateInput(attrs={"type": "date"}),
             "tags": forms.CheckboxSelectMultiple(),
@@ -42,6 +57,8 @@ class ExpenseForm(forms.ModelForm):
 
 
 class ScheduledExpenseForm(forms.ModelForm):
+    value = CommaDecimalField(min_value=Decimal("0.01"), widget=forms.TextInput(attrs={"inputmode": "decimal"}))
+
     def __init__(self, *args, feuser=None, **kwargs):
         super().__init__(*args, **kwargs)
         allowed = [c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER]
@@ -51,6 +68,9 @@ class ScheduledExpenseForm(forms.ModelForm):
             self.fields["tags"].queryset = Tag.objects.filter(owning_feuser=feuser)
         if not self.instance.pk:
             self.fields["repeat_base_date"].initial = timezone.localdate()
+
+    def clean_note(self):
+        return _clean_note(self.cleaned_data.get("note"))
 
     class Meta:
         model = ScheduledExpense
@@ -63,7 +83,6 @@ class ScheduledExpenseForm(forms.ModelForm):
             "type": forms.Select(choices=[
                 c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER
             ]),
-            "value": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             "repeat_base_date": forms.DateInput(attrs={"type": "date"}),
             "end_on": forms.DateInput(attrs={"type": "date"}),
             "repeat_every_factor": forms.NumberInput(attrs={"min": "1"}),
