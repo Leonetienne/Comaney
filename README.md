@@ -1,15 +1,155 @@
-# [[EXPERIMENTAL / IN-DEV]]
-# Comaney
-A no-BS, zero-effort budgetting software as a self-hostable django web application.  
-Readme to be done.
+# Comaney 💸
+Budgeting that actually fits into your life.
+
+## Why Comaney?
+Every self-hostable budgeting app I tried either gave me too little to work with, or demanded so much setup and daily effort that I gave up within a week. So I built my own, *with blackjack and hookers*. Comaney's goal is simple: maximum financial insight for minimum effort.
+
+Comaney is fully self-hostable 🏠. There's also a public instance if you just want to get started.
+
+## What makes Comaney different?
+Comaney doesn't try to be everything. It focuses on answering the two questions that actually matter day-to-day:
+
+Where is my money going? 🔍 How much do I have left to spend this month?
+
+Comaney works on a clean month-to-month basis, each month starting at $0 before income. No baggage from previous months unless you want it. *(You can aggregate across months too, more on that below.)*
+
+## Features ✨
+Everything you need to stay on top of your finances, nothing you don't.
+
+**The essentials:**
+* Expenses for spending, income, savings, and savings withdrawals
+* Recurring expenses with custom schedules
+* Reminders for outstanding payments and auto-settling them
+* Tags and categories to group your expenses (categories are mutually exclusive, tags can overlap freely)
+* Full CSV export
+* REST API for complete control
+* Custom currency names
+* Two-Factor Authentication 🔒
+
+**The good stuff:**
+* 📊 A dashboard packed with insights: total income, spending, outstanding payments, savings, and how much you have left to spend. View any of it per month or across entire years, with a pie chart for category distribution and a bar chart for tags.
+* 📅 Salary-cycle aware months. If you get paid on the 25th, your month can run from the 25th to the 24th, so it always kicks off with your income already in.
+* 🤖 Zero-effort expense recognition powered by Claude. Snap a photo of your receipt or just describe what you bought and it books it for you. It's fast enough that I log my entire grocery haul on the walk back to my car. You can always review and adjust before saving. Bring your own API key, or use the built-in free tier on the public instance (limited by monthly request count). You can also define a custom pre-prompt to tailor it to your habits.
+* 💰 Flexible end-of-month rollover: start fresh (recommended for most), move leftovers into savings automatically, or carry them over as extra spending room next month.
+
+Questions or feedback? Reach out through the [contact form](https://comaney.app/contact) 💌
+
+## What Comaney doesn't do 🚫
+A few intentional omissions. These aren't oversights, they add significant complexity without enough payoff, or have design issues that would compromise the simplicity Comaney is built around:
+* Bank account integration
+* File imports
+* Multiple accounts per user
+
+---
 
 
 ## For admins
-If the trial anthropic api key runs out of budget, the trial feature will disable itself.  
-It must be manually re-enabled at `/admin/ai-trial/` using a superuser.  
-Create a superuser with `python manage.py createsuperuser`, potentially executed in the container.
+Self-hosting comaney is as easy as any other database-driven application.
+All it needs is a mariadb database. A minimal docker-compose could look like this:
 
-## Environment variables
+```yml
+services:
+  web:
+    image: leonetienne/comaney:latest
+    restart: unless-stopped
+    ports:
+      - "80:8000"
+    depends_on:
+      - mariadb
+    environment:
+      # Gen with python -c "import secrets; print(secrets.token_hex(50))" 
+      DJANGO_SECRET_KEY: 647d117c611f<...>0bdcc4
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: comaney
+      DB_USER: comaney
+      DB_PASSWORD: f773b7ff09263e8
+      SITE_URL: http://localhost:80
+      ALLOWED_HOSTS: localhost:80
+      CSRF_TRUSTED_ORIGINS: localhost:80
+      # Might want to disable again after setting up your account
+      ENABLE_REGISTRATION: TRUE
+      # This also disables email verification.
+      # If you want notifications for outstanding payments, you need emailing.
+      DISABLE_EMAILING: TRUE
+      GUNICORN_WORKERS: 1
+
+  mariadb:
+    image: mariadb:lts
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: comaney
+      MARIADB_USER: comaney
+      MARIADB_PASSWORD: f773b7ff09263e8
+      MARIADB_ROOT_PASSWORD: changeme
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+volumes:
+  mariadb_data:
+```
+
+### Some gotchas
+#### Cronjobs
+Comaney depends on cronjobs to handle its data correctly.
+If you are hosting comaney, you **must** install these cronjobs for the web container:
+```sh
+# Scrubs data (notifications, recurring expense instantiations, auto-settling)
+*/5 * * * * python manage.py run_cron
+# Once a month, reset all users ai trial budgets to 0
+0 0 1 * * python manage.py reset_trial_budgets
+```
+
+Example setup:
+```sh
+# Please adjust your username
+*/5 * * * * comaney docker-compose -f /home/comaney/configs/comaney_prod/docker-compose.yml exec -T web python manage.py run_cron
+
+0 0 1 * * comaney docker-compose -f /home/comaney/configs/comaney_prod/docker-compose.yml exec -T web python manage.py reset_trial_budgets
+```
+
+#### Anthropic API
+If you're the only user, you don't need to set a trial API key. Just add your own key in your account's user settings and you're good to go.
+
+If you do set a trial key for other users and it runs out of budget, the AI trial feature will disable itself globally and needs to be re-enabled manually at `/admin/ai-trial/` using a superuser account.
+
+You can create a superuser with:
+```
+python manage.py createsuperuser
+```
+If Comaney is running in Docker, execute this inside the container:
+```
+docker exec -it <container_name> python manage.py createsuperuser
+```
+
+#### Emails
+Comaney **will** refuse to launch if you do not provide a good mailing configuration or disable mailing alltogether. You can use mailpit.
+```yml
+EMAIL_HOST: mailpit
+EMAIL_PORT: 1025
+```
+Emailing is a feature used for
+- Accounts registering
+- Accounts changing their email
+- Admin notifications
+  - On user creation
+  - On the api trial key running out of funds
+  - On contact form submissions
+- User notifications
+  - Outstanding expenses that require manual actions
+  - If something has been settled
+
+#### The contact form
+The contact page is only enabled if the instance has new registrations enabled **and** has an admin notification email set.
+
+#### EU / DE Legality
+To be able to host a public instance in germany, you need an imprint and a privacy policy.
+Both can be enabled by passing paths to markdown files with environment variables.
+This system is trivially expandable should more such legal pages be required.
+
+---
+
+#### Environment variables
 | Variable | Default | Description                                                                                                                                       |
 |---|---|---------------------------------------------------------------------------------------------------------------------------------------------------|
 | `DJANGO_SECRET_KEY` | — | Django secret key. Generate one with `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` |
@@ -32,7 +172,7 @@ Create a superuser with `python manage.py createsuperuser`, potentially executed
 
 
 ## For devs
-### Building docker file
+### Building the docker image
 ```
 docker buildx build \
   --platform linux/amd64 \
