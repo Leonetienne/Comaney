@@ -28,6 +28,7 @@ def context_processor(request):
     """Expose PUBLIC_PAGES and contact_available to every template."""
     contact_available = bool(
         getattr(settings, "ADMIN_NOTIFICATION_EMAIL", "") and
+        not getattr(settings, "DISABLE_EMAILING", False) and
         getattr(settings, "ENABLE_REGISTRATION", False)
     )
     return {

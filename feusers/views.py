@@ -141,7 +141,7 @@ def register_success(request):
 
 def contact(request):
     from django.http import Http404
-    if not settings.ADMIN_NOTIFICATION_EMAIL or not settings.ENABLE_REGISTRATION:
+    if not settings.ADMIN_NOTIFICATION_EMAIL or not settings.ENABLE_REGISTRATION or settings.DISABLE_EMAILING:
         raise Http404
 
     feuser_id = request.session.get("feuser_id")
