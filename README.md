@@ -1,5 +1,6 @@
 # Comaney 💸
-Budgeting that actually fits into your life.
+Budgeting that actually fits into your life.  
+[Check it out now!](https://comaney.app)
 
 ## Why Comaney?
 Every self-hostable budgeting app I tried either gave me too little to work with, or demanded so much setup and daily effort that I gave up within a week. So I built my own, *with blackjack and hookers*. Comaney's goal is simple: maximum financial insight for minimum effort.
