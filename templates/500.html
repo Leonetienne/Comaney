@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 – Server Error · Comaney</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        :root {
+            --bg: #fff; --text: #333; --text-muted: #888;
+            --border: #ddd; --link: #c2478a;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg: #141414; --text: #e0e0e0; --text-muted: #666; --border: #333; --link: #e06aaa; }
+        }
+        body { margin: 0; font-family: sans-serif; background: var(--bg); color: var(--text); }
+        header {
+            display: flex; align-items: center; padding: 0 24px; height: 56px;
+            border-bottom: 1px solid var(--border); background: var(--bg);
+        }
+        header a { font-weight: 700; font-size: 1.1rem; text-decoration: none; color: var(--text); }
+        .error-page {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; text-align: center; padding: 80px 24px;
+            min-height: calc(100vh - 57px);
+        }
+        .error-page-code {
+            font-size: clamp(6rem, 20vw, 10rem); font-weight: 700; line-height: 1;
+            color: var(--border); letter-spacing: -4px; margin-bottom: 16px; user-select: none;
+        }
+        .error-page-title { font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 600; margin: 0 0 12px; }
+        .error-page-message { font-size: 1rem; color: var(--text-muted); max-width: 380px; margin: 0 0 32px; line-height: 1.6; }
+        .btn {
+            display: inline-block; padding: 10px 20px; border-radius: 6px; font-size: 0.95rem;
+            font-weight: 500; text-decoration: none; background: var(--text); color: var(--bg);
+        }
+        .btn:hover { opacity: 0.85; text-decoration: none; }
+    </style>
+</head>
+<body>
+<header><a href="/">Comaney</a></header>
+<div class="error-page">
+    <div class="error-page-code">500</div>
+    <h1 class="error-page-title">Something went wrong</h1>
+    <p class="error-page-message">An unexpected error occurred on our end. Please try again in a moment.</p>
+    <a href="/" class="btn">Go home</a>
+</div>
+</body>
+</html>

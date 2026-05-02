@@ -15,3 +15,8 @@ urlpatterns = [
 
 for _slug, (_md_path, _label) in getattr(settings, "PUBLIC_PAGES", {}).items():
     urlpatterns.append(path(f"{_slug}/", make_view(_md_path, _label), name=f"public_{_slug}"))
+
+handler400 = "django.views.defaults.bad_request"
+handler403 = "django.views.defaults.permission_denied"
+handler404 = "django.views.defaults.page_not_found"
+handler500 = "django.views.defaults.server_error"

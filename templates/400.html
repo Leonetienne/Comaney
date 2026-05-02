@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}400 – Bad Request · Comaney{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="error-page-code">400</div>
+    <h1 class="error-page-title">Bad request</h1>
+    <p class="error-page-message">
+        The request couldn't be understood. Please check the URL and try again.
+    </p>
+    <a href="/" class="btn btn-primary">Go home</a>
+</div>
+{% endblock %}
