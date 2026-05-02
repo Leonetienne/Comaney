@@ -26,6 +26,7 @@ Everything you need to stay on top of your finances, nothing you don't.
 * REST API for complete control
 * Custom currency names
 * Two-Factor Authentication 🔒
+* Light- and Dark mode
 
 **The good stuff:**
 * 📊 A dashboard packed with insights: total income, spending, outstanding payments, savings, and how much you have left to spend. View any of it per month or across entire years, with a pie chart for category distribution and a bar chart for tags.
@@ -204,5 +205,4 @@ pip install -r requirements-test.txt
 
 # Run the full suite
 pytest tests/ -vsx
-
 ```
