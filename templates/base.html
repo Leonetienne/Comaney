@@ -6,6 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}Comaney{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Comaney is a self-hostable budgeting app that gives you maximum financial insight for minimum effort. Track expenses, automate recurring bills, and let AI handle the data entry.{% endblock %}">
+    <!-- Open Graph -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="Comaney">
+    <meta property="og:title"       content="{% block og_title %}Comaney - Budgeting that actually fits into your life{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Track spending, automate recurring bills, and let AI handle the data entry. Self-hostable, open source, and free.{% endblock %}">
+    <meta property="og:image"       content="{% block og_image %}{% static 'images/landingpage/dashboard-closeup.png' %}{% endblock %}">
+    <meta property="og:image:alt"   content="Comaney dashboard">
+    <!-- Twitter / X -->
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="{% block twitter_title %}Comaney - Budgeting that actually fits into your life{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Track spending, automate recurring bills, and let AI handle the data entry. Self-hostable, open source, and free.{% endblock %}">
+    <meta name="twitter:image"       content="{% block twitter_image %}{% static 'images/landingpage/dashboard-closeup.png' %}{% endblock %}">
     <link rel="icon" type="image/png" href="{% static 'favicon-96x96.png' %}" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}" />
     <link rel="shortcut icon" href="{% static 'favicon.ico' %}" />
