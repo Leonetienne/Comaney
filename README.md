@@ -166,13 +166,17 @@ This system is trivially expandable should more such legal pages be required.
 | `DEBUG` | `FALSE` | Set to `TRUE` to enable Django debug mode                                                                                                         |
 | `ENABLE_REGISTRATION` | `FALSE` | Set to `TRUE` to allow new users to register. Disable on closed/private instances after setting up your account.                                  |
 | `DISABLE_EMAILING` | *(unset)* | Set to `TRUE` to suppress all outgoing emails and to disable email verification. Useful when no SMTP server is available.                         |
-| `EMAIL_HOST` | — | SMTP hostname                                                                                                                                     |
+| `EMAIL_HOST` | *(unset)* | SMTP hostname                                                                                                                                     |
 | `EMAIL_PORT` | `25` | SMTP port                                                                                                                                         |
+| `EMAIL_USE_TLS` | *(unset)* | Use TLS for emails                                                                                                                                         |
+| `EMAIL_HOST_USER` | *(unset)* | Login username for the smtp host                                                                                                                                         |
+| `EMAIL_HOST_PASSWORD` | *(unset)* | Login password for the smtp host                                                                                                                                         |
+| `DEFAULT_FROM_EMAIL` | *(unset)* | The default sender address for outgoing emails                                                                                                                                         |
+| `ADMIN_NOTIFICATION_EMAIL` | *(unset)* | Email address that receives system notifications                                                                                                  |
 | `AI_TRIAL_API_KEY` | *(unset)* | Anthropic API key used for the limited AI trial feature available to users without their own key                                                  |
 | `AI_TRIAL_USAGE_LIMIT` | `5` | Per-user, per-month spending cap for the trial key, in US cents                                                                                   |
 | `PUBLIC_PAGE_IMPRINT_MD` | *(unset)* | Path to a Markdown file. If set, a legal imprint page is added to the footer.                                                                     |
 | `PUBLIC_PAGE_EUDATENSCHUTZ_MD` | *(unset)* | Path to a Markdown file. If set, a Datenschutzerklärung page is added to the footer.                                                              |
-| `ADMIN_NOTIFICATION_EMAIL` | *(unset)* | Email address that receives system notifications                                                                                                  |
 
 
 ## For devs
