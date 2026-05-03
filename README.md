@@ -185,7 +185,8 @@ This system is trivially expandable should more such legal pages be required.
 docker buildx build \
   --platform linux/amd64 \
   -f Deployment/Dockerfile \
-  -t leonetienne/comaney:0.1.0<change version!!> \
+  -t leonetienne/comaney:0.1.0/<change version!!, could also be "latest"> \
+  --build-arg APP_VERSION=0.1.0<change version!!> \
   --push \
   .
 ```
