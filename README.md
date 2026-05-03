@@ -193,6 +193,10 @@ docker buildx build \
 
 ### Building SCSS
 ```
+# If node version is not already 25, install NVM and do
+nvm install
+
+# Building
 npm install
 npm run build:css      # one-off compile → static/dist/main.css
 npm run watch:css      # recompile on every save
