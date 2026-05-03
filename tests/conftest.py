@@ -25,7 +25,7 @@ BASE_URL    = "http://localhost:8080"
 MAILPIT_API = "http://localhost:8030/api/v1"
 PASSWORD    = "S3l3n!umTest"
 TIMEOUT     = 60  # seconds — generous to accommodate PoW captcha
-DOCKER_WEB  = "comoney-web-1"
+DOCKER_WEB  = "comaney-web-1"
 
 
 def pytest_configure(config):

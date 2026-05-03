@@ -212,6 +212,10 @@ Running individual test files or individual tests is untested and will probably 
 as some are dependent on each other :(. A PR to make tests self-reliant would be a banger.
 
 ```
+# Might need to install this:
+brew install pkg-config mysql-client
+
+# Install python deps
 pip install -r requirements-test.txt
 
 # Run the full suite

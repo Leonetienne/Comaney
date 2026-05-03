@@ -23,6 +23,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "comaney.middleware.SystemMisconfiguredMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -88,17 +89,18 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+SYSTEM_MISCONFIGURED = False
+SYSTEM_MISCONFIGURED_MSG = ""
+
 DISABLE_EMAILING = os.environ.get("DISABLE_EMAILING", "").upper() in ("1", "TRUE", "YES")
 
 if DISABLE_EMAILING:
     EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
+elif not os.environ.get("EMAIL_HOST") or not os.environ.get("EMAIL_PORT"):
+    SYSTEM_MISCONFIGURED = True
+    SYSTEM_MISCONFIGURED_MSG = "Email is not configured. Set EMAIL_HOST and EMAIL_PORT, or set DISABLE_EMAILING=true to run without email."
+    EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
 else:
-    if not os.environ.get("EMAIL_HOST") or not os.environ.get("EMAIL_PORT"):
-        from django.core.exceptions import ImproperlyConfigured
-        raise ImproperlyConfigured(
-            "Set DISABLE_EMAILING=true to run without email, "
-            "or provide both EMAIL_HOST and EMAIL_PORT."
-        )
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
