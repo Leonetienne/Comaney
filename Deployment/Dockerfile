@@ -1,6 +1,8 @@
 FROM python:3.12-slim
 
 ARG NODE_VERSION=25.9.0
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     default-libmysqlclient-dev \

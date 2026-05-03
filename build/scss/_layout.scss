@@ -127,6 +127,11 @@ footer a {
   color: var(--text-muted);
 }
 
+.footer-version {
+  color: var(--text-muted);
+  font-size: 0.75em;
+}
+
 .footer-github {
   display: inline-flex;
   align-items: center;

@@ -34,4 +34,5 @@ def context_processor(request):
     return {
         "PUBLIC_PAGES": getattr(settings, "PUBLIC_PAGES", {}),
         "contact_available": contact_available,
+        "APP_VERSION": getattr(settings, "APP_VERSION", "dev"),
     }

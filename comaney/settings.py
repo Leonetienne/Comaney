@@ -117,6 +117,8 @@ AI_TRIAL_USAGE_LIMIT  = float(os.environ.get("AI_TRIAL_USAGE_LIMIT", "0"))  # ce
 AI_TRIAL_DISABLED_FLAG = os.environ.get("AI_TRIAL_DISABLED_FLAG", str(BASE_DIR / "ai_trial_disabled.flag"))
 ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "")
 
+APP_VERSION = os.environ.get("APP_VERSION", "dev")
+
 # Public static pages rendered from Markdown files.
 # Map URL slug → (md_path, display_label).
 PUBLIC_PAGES = {}
