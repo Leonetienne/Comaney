@@ -43,6 +43,8 @@ class FeUser(models.Model):
     )
     allowance_transition_month = models.CharField(max_length=10, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    last_login = models.DateTimeField(null=True, blank=True)
+    last_seen = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["email"]

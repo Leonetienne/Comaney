@@ -1,10 +1,20 @@
 """Registration, email confirmation, and login."""
+import subprocess
 import uuid
 import requests
 import pytest
 from selenium.webdriver.common.by import By
 
-from conftest import _url, fill, click, submit, fetch_email, extract_link, wait_url, wait_text, PASSWORD, MAILPIT_API
+from conftest import _url, fill, click, submit, fetch_email, extract_link, wait_url, wait_text, PASSWORD, MAILPIT_API, DOCKER_WEB
+
+
+def _get_feuser_field(email, field):
+    result = subprocess.run(
+        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c",
+         f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}'); print(getattr(u, '{field}'))"],
+        capture_output=True, text=True, timeout=10,
+    )
+    return result.stdout.strip()
 
 
 class TestAuth:
@@ -38,3 +48,13 @@ class TestAuth:
         fill(w, By.ID, "id_password", PASSWORD)
         click(w, By.CSS_SELECTOR, "button[type=submit]")
         wait_url(w, "/budget/")
+
+    def test_04_last_login_set(self, driver, w, ctx):
+        value = _get_feuser_field(ctx["email"], "last_login")
+        assert value and value != "None", "last_login should be set after login"
+
+    def test_05_last_seen_set(self, driver, w, ctx):
+        driver.get(_url("/budget/"))
+        import time; time.sleep(1)
+        value = _get_feuser_field(ctx["email"], "last_seen")
+        assert value and value != "None", "last_seen should be set after an authenticated request"

@@ -6,12 +6,18 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
+from django.utils import timezone
 
 from .forms import (
     AISettingsForm, ChangeEmailForm, ChangePasswordForm, LoginForm,
     PasswordForgotForm, PasswordResetForm, ProfileForm, RegistrationForm,
 )
 from .models import FeUser
+
+
+def _record_login(user: FeUser) -> None:
+    user.last_login = timezone.now()
+    user.save(update_fields=["last_login"])
 
 
 def landing_page(request):
@@ -261,6 +267,7 @@ def login_view(request):
                 request.session["totp_pending_id"] = user.pk
                 return redirect("totp_verify")
             else:
+                _record_login(user)
                 request.session["feuser_id"] = user.pk
                 return redirect("landing_page")
     else:
@@ -637,6 +644,7 @@ def totp_verify(request):
 
         code = request.POST.get("code", "").strip()
         if pyotp.TOTP(user.totp_secret).verify(code, valid_window=1):
+            _record_login(user)
             del request.session["totp_pending_id"]
             request.session["feuser_id"] = user.pk
             return redirect("landing_page")
@@ -663,7 +671,8 @@ def totp_verify_recovery(request):
             user.totp_secret        = ""
             user.totp_enabled       = False
             user.totp_recovery_hash = ""
-            user.save(update_fields=["totp_secret", "totp_enabled", "totp_recovery_hash"])
+            user.last_login         = timezone.now()
+            user.save(update_fields=["totp_secret", "totp_enabled", "totp_recovery_hash", "last_login"])
             del request.session["totp_pending_id"]
             request.session["feuser_id"] = user.pk
             return redirect("landing_page")
