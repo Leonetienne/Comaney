@@ -41,6 +41,33 @@ def enable_trial() -> None:
         log.exception("Could not delete AI trial disabled flag at %s", _flag_path())
 
 
+def notify_admin_invalid_trial_key() -> None:
+    if getattr(settings, "DISABLE_EMAILING", False):
+        return
+    email = getattr(settings, "ADMIN_NOTIFICATION_EMAIL", "")
+    if not email:
+        return
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+
+    site_url = getattr(settings, "SITE_URL", "")
+    subject = "[Comaney] Trial API key is invalid — action required"
+    html_body = render_to_string("emails/trial_key_invalid.html", {"site_url": site_url})
+    text_body = (
+        "The shared Anthropic trial API key is invalid (authentication error).\n\n"
+        "Express Creation is returning errors to trial users.\n\n"
+        "Steps to fix:\n"
+        "  1. Set a valid AI_TRIAL_API_KEY in your environment\n"
+        "  2. Restart the container\n"
+    )
+    try:
+        msg = EmailMultiAlternatives(subject, text_body, settings.DEFAULT_FROM_EMAIL, [email])
+        msg.attach_alternative(html_body, "text/html")
+        msg.send()
+    except (SMTPException, OSError):
+        log.exception("Could not send invalid trial key notification to %s", email)
+
+
 def notify_admin_billing(reason: str) -> None:
     if getattr(settings, "DISABLE_EMAILING", False):
         return

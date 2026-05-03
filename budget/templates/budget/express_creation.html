@@ -77,9 +77,15 @@
 
     {% if trial_just_exhausted %}
     <div class="ai-error">Your trial budget is now used up. You can review and save the result below, but no further AI requests are possible. Add your own Anthropic API key in <a href="{% url 'profile' %}">your profile</a> to keep going.</div>
-    {% elif ai_error %}
-    {% if not ai_error_is_validation %}Did that not work? Try again! Sometimes clankers do silly things.{% endif %}
-    <div class="ai-error">{{ ai_error }}</div>
+    {% elif ai_error or ai_raw_output %}
+    <div class="ai-refusal-modal">
+        <span class="ai-refusal-icon">?</span>
+        <p class="ai-refusal-msg">{% if ai_error %}{{ ai_error }}{% else %}I don't know what to do &gt;.&lt;! I am sorry :c{% endif %}</p>
+        {% if ai_raw_output %}
+        <a class="ai-refusal-details-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.textContent=this.nextElementSibling.style.display==='block'?'hide AI output':'show AI output'">show AI output</a>
+        <pre class="ai-refusal-raw" style="display:none">{{ ai_raw_output }}</pre>
+        {% endif %}
+    </div>
     {% endif %}
 
     {% if preview_items %}

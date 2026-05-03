@@ -1,0 +1,36 @@
+{% extends "emails/base_email.html" %}
+{% block subject %}Trial API key is invalid — action required{% endblock %}
+
+{% block content %}
+  <h1 style="margin:0 0 8px;font-size:1.4rem;font-weight:700;color:#e0e0e0;">Trial API key is invalid</h1>
+  <p style="margin:0 0 28px;font-size:0.95rem;color:#aaa;line-height:1.7;">
+    The shared Anthropic trial API key is invalid. Trial users are currently seeing an error when using Express Creation.
+  </p>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;border-collapse:collapse;">
+    <tr>
+      <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:0.82rem;color:#888;width:110px;vertical-align:top;">Error</td>
+      <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:0.88rem;color:#ddd;">Authentication error — the key was rejected by Anthropic.</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 0;font-size:0.82rem;color:#888;vertical-align:top;">Affected users</td>
+      <td style="padding:8px 0;font-size:0.88rem;color:#ddd;">All trial users (users without a personal API key)</td>
+    </tr>
+  </table>
+
+  <p style="margin:0 0 12px;font-size:0.82rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;">Steps to fix</p>
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+    <tr>
+      <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:0.88rem;color:#ddd;vertical-align:top;">
+        <span style="color:#c2478a;font-weight:600;margin-right:8px;">1.</span>
+        Set a valid <code style="background:#2a2a2a;padding:2px 6px;border-radius:4px;font-size:0.85rem;">AI_TRIAL_API_KEY</code> in your environment
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:8px 0;font-size:0.88rem;color:#ddd;vertical-align:top;">
+        <span style="color:#c2478a;font-weight:600;margin-right:8px;">2.</span>
+        Restart the container
+      </td>
+    </tr>
+  </table>
+{% endblock %}

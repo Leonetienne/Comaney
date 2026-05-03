@@ -27,6 +27,7 @@
   --sidebar-hover-bg:    rgba(0, 0, 0, .05);
   --sidebar-active-fg:   #1a1a1a;
   --sidebar-label:       rgba(0, 0, 0, .3);
+  --ai-refusal-color: #2db0ff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -59,5 +60,6 @@
     --sidebar-hover-bg:    rgba(255, 255, 255, .05);
     --sidebar-active-fg:   #fff;
     --sidebar-label:       rgba(255, 255, 255, .22);
+    --ai-refusal-color: #2db0ff;
   }
 }

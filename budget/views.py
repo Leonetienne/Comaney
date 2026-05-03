@@ -516,9 +516,24 @@ def scheduled_clone(request, uid):
 # Express Creation (AI)
 # ---------------------------------------------------------------------------
 
+class AIRefusalError(Exception):
+    """AI returned {"result": "fail", "msg": "..."}"""
+    def __init__(self, msg: str, raw: str = ""):
+        super().__init__(msg)
+        self.raw = raw
+
+
+class AIInvalidResponseError(Exception):
+    """AI returned unparseable or structurally unexpected output."""
+    def __init__(self, raw: str, cause: Exception | None = None):
+        super().__init__("Invalid response")
+        self.raw = raw
+        self.cause = cause
+
+
 _SMART_CREATE_SYSTEM = """You are a financial data-entry assistant for a budgeting app.
 The user may provide an image (receipt, invoice, order confirmation, etc.), a text description, or both.
-Your job is to extract expense and income items and return a JSON array of expense objects.
+Your job is to extract expense and income items and return a single JSON object.
 
 CRITICAL GROUPING RULE — read this carefully:
 All line items that share the same category AND the same tags MUST be merged into a single record.
@@ -535,9 +550,16 @@ If an image is provided:
 - The payee is the store or vendor name from the receipt header.
 - Use the user's text (if any) as additional context or filtering instructions.
 
-Rules:
-- Return ONLY a valid JSON array. Your entire response must start with [ and end with ]. No prose, no reasoning, no markdown, no code fences — just the raw JSON array.
-- Each object must have exactly these keys:
+Response format — your entire response must be one of these two JSON objects, no prose, no markdown, no code fences, never produce any output that's not json! Never produce a leading text or summary!:
+Only produce one of the following two json formats as your ENTIRE message:
+
+Success:
+{{"result": "good", "items": [ ... ]}}
+
+Failure (Use ONLY when the input contains no financial information you can extract. Never ask questions. Make the msg sound cute-ish and friendly, maybe a bit insecure. Add cute emoticons such as >.< >_< <_< >_> ^_^ ^.^ ^^ :3 :>. But NEVER use emojis! Cut the response short, it is shown as a small error message.):
+{{"result": "fail", "msg": "ahh - how am i supposed to know what your drill cost >.<"}}
+
+Each item in the "items" array must have exactly these keys:
     "title"        — collective name for the group, as short as possible (1–3 words)
     "type"         — "expense", "income", "savings_dep", or "savings_wit"
     "value"        — positive decimal, sum of all merged line items in this group
@@ -546,9 +568,9 @@ Rules:
     "category_uid" — integer uid from the Categories list below, or null if none fits
     "tag_uids"     — array of integer uids from the Tags list below (can be [])
     "note"         — any extra context worth keeping, or ""
-- Only use category_uid and tag_uids values that appear in the lists below.
-- If the user describes a lump sum for categorically different things, split by category/tag group.
-- Default type to "expense" unless the description clearly indicates income or savings movement.
+Only use category_uid and tag_uids values that appear in the lists below.
+If the user describes a lump sum for categorically different things, split by category/tag group.
+Default type to "expense" unless the description clearly indicates income or savings movement.
 
 {catalog}"""
 
@@ -656,21 +678,34 @@ def _call_claude(
         raw = raw.split("\n", 1)[-1]
         raw = raw.rsplit("```", 1)[0].strip()
 
-    # Extract JSON array even if the model prepended reasoning prose
-    if not raw.startswith("["):
-        start = raw.find("[")
-        end   = raw.rfind("]")
-        if start != -1 and end != -1 and end > start:
-            raw = raw[start:end + 1]
+    # Strip prose preamble — find the start of our {"result": ...} envelope
+    if not raw.startswith('{"result":'):
+        idx = raw.find('{"result":')
+        if idx == -1:
+            idx = raw.find('{ "result":')
+        if idx != -1:
+            raw = raw[idx:]
 
     if not raw:
         raise ValueError("Claude returned only a code fence with no content inside.")
 
     try:
-        items = json.loads(raw)
+        parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
         _log.error("smart_create JSON parse failure. raw=%r exc=%s", raw, exc)
-        raise ValueError(f"JSON parse failed ({exc}) — raw response was: {raw!r}") from exc
+        raise AIInvalidResponseError(raw, exc) from exc
+
+    if isinstance(parsed, dict):
+        if parsed.get("result") == "fail":
+            raise AIRefusalError(parsed.get("msg", ""), raw)
+        if parsed.get("result") == "good":
+            items = parsed.get("items", [])
+        else:
+            raise AIInvalidResponseError(raw)
+    elif isinstance(parsed, list):
+        items = parsed
+    else:
+        raise AIInvalidResponseError(raw)
 
     u = response.usage
     input_tok        = getattr(u, "input_tokens", 0)
@@ -779,7 +814,7 @@ def _trial_state(feuser):
 
 @feuser_required
 def express_creation(request):
-    from .ai_trial import disable_trial, notify_admin_billing, trial_is_disabled
+    from .ai_trial import disable_trial, notify_admin_billing, notify_admin_invalid_trial_key, trial_is_disabled
 
     feuser = request.feuser
     api_key, is_trial, trial_limit, trial_spent, trial_blocked = _trial_state(feuser)
@@ -839,8 +874,6 @@ def express_creation(request):
                         api_key, system_prompt, description_with_date,
                         image_b64=image_b64, image_type=image_type,
                     )
-                    if not isinstance(raw_items, list):
-                        raise ValueError("Expected a JSON array.")
                     items, errors = _validate_items(raw_items, feuser)
                     if errors:
                         context["ai_error"] = " | ".join(errors)
@@ -855,10 +888,14 @@ def express_creation(request):
                         context["trial_spent"] = round(float(feuser.ai_trial_budget_spent), 1)
                         if float(feuser.ai_trial_budget_spent) >= trial_limit:
                             context["trial_just_exhausted"] = True
-                except json.JSONDecodeError as exc:
+                except AIRefusalError as exc:
+                    context["ai_error"] = str(exc)
+                    context["ai_raw_output"] = exc.raw
+                except AIInvalidResponseError as exc:
                     import logging
-                    logging.getLogger(__name__).error("smart_create JSON parse failure: %s", exc)
-                    context["ai_error"] = f"Claude returned unexpected output (JSONDecodeError: {exc})."
+                    logging.getLogger(__name__).error("smart_create invalid response: cause=%s raw=%r", exc.cause, exc.raw)
+                    context["ai_error"] = ""
+                    context["ai_raw_output"] = exc.raw
                 except Exception as exc:
                     import anthropic as _anthropic
 
@@ -871,7 +908,11 @@ def express_creation(request):
                             context["ai_error"] = "Insufficient Anthropic credits. Please top up your account at console.anthropic.com."
 
                     if isinstance(exc, _anthropic.AuthenticationError):
-                        context["ai_error"] = "Invalid API key. Please update it in your profile."
+                        if is_trial:
+                            notify_admin_invalid_trial_key()
+                            context["ai_error"] = "The server is misconfigured: the trial API key is invalid. Please contact the server administrator."
+                        else:
+                            context["ai_error"] = "Invalid API key. Please update it in your profile."
                     elif isinstance(exc, _anthropic.PermissionDeniedError):
                         context["ai_error"] = "API key does not have permission to use this model. Please check your Anthropic account."
                     elif isinstance(exc, _anthropic.RateLimitError):

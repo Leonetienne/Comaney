@@ -90,9 +90,19 @@ def _trial_meter_value(driver):
     return float(m.group(1)) if m else None
 
 
-def _parse(driver, description="", image_path=None):
+def _parse(driver, description="", image_path=None, clear_image=False):
     """Submit the parse form and return the .preview-card elements."""
+    if clear_image:
+        driver.execute_script(f"try {{ sessionStorage.removeItem('express_creation_img'); }} catch(_) {{}}")
     driver.get(_url("/budget/ai/express-creation/"))
+
+    if clear_image:
+        driver.execute_script(
+            "const w = document.getElementById('image-preview-wrap');"
+            "if (w) w.style.display = 'none';"
+            "const p = document.getElementById('image-placeholder');"
+            "if (p) p.style.display = '';"
+        )
 
     if description:
         ta = WebDriverWait(driver, 10).until(
@@ -139,6 +149,28 @@ def _card_note(card):
 
 def _checked_tag_count(card):
     return len(card.find_elements(By.CSS_SELECTOR, ".edit-tag-cb:checked"))
+
+
+def _parse_await_outcome(driver, description):
+    """Submit the parse form and wait for EITHER a refusal modal OR preview cards."""
+    driver.get(_url("/budget/ai/express-creation/"))
+    ta = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.CSS_SELECTOR, "textarea[name=description]"))
+    )
+    ta.clear()
+    ta.send_keys(description)
+    driver.find_element(By.ID, "parse-btn").click()
+
+    WebDriverWait(driver, AI_TIMEOUT).until(
+        lambda d: (
+            d.find_elements(By.CSS_SELECTOR, ".ai-refusal-modal")
+            or d.find_elements(By.CSS_SELECTOR, ".preview-card")
+        )
+    )
+    return {
+        "modal": driver.find_elements(By.CSS_SELECTOR, ".ai-refusal-modal"),
+        "cards": driver.find_elements(By.CSS_SELECTOR, ".preview-card"),
+    }
 
 
 # ── Test class ────────────────────────────────────────────────────────────────
@@ -346,7 +378,7 @@ class TestExpressCreation:
         time.sleep(0.5)
         spent_before = _trial_meter_value(driver)
 
-        cards = _parse(driver, "Coffee 3.50€ and a croissant for 2€")
+        cards = _parse(driver, "Coffee 3.50€ and a croissant for 2€", clear_image=True)
         assert cards, "AI produced zero items"
 
         # Usage pill should appear right after parse
@@ -472,3 +504,27 @@ class TestExpressCreation:
 
         finally:
             _set_spent(original_spent)
+
+    # ── 7. Refusal modal on non-financial input ───────────────────────────────
+
+    def test_84_express_refusal_on_non_financial_input(self, driver, w, ctx):
+        """
+        'poster vom hofverkauf' contains no amount — the AI must return a
+        {"result": "fail", ...} response, which the frontend renders as the
+        .ai-refusal-modal.  No .preview-card must appear.
+        """
+        if not ctx.get("express_trial_ok"):
+            pytest.skip("Trial not available")
+
+        outcome = _parse_await_outcome(driver, "poster vom hofverkauf")
+
+        assert outcome["modal"], (
+            "Expected .ai-refusal-modal to appear for non-financial input, but it did not"
+        )
+        assert not outcome["cards"], (
+            f"Expected no preview cards for non-financial input, got {len(outcome['cards'])}"
+        )
+
+        msg_el = outcome["modal"][0].find_elements(By.CSS_SELECTOR, ".ai-refusal-msg")
+        assert msg_el, ".ai-refusal-modal is present but contains no .ai-refusal-msg element"
+        assert msg_el[0].text.strip(), ".ai-refusal-msg is empty"
