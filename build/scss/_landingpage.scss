@@ -6,6 +6,7 @@
     position: relative;
     min-height: calc(100vh - 56px);
     background: linear-gradient(140deg, #0d0d1c 0%, #1a0b2e 55%, #0a1a2e 100%);
+    color: #fff;
     display: flex;
     align-items: center;
     padding: 80px 80px 80px 80px;
@@ -383,6 +384,7 @@
   /* Bottom CTA */
   .lp-cta-section {
     background: linear-gradient(140deg, #0d0d1c 0%, #1a0b2e 100%);
+    color: #fff;
     padding: 130px 40px;
     text-align: center;
     position: relative;
