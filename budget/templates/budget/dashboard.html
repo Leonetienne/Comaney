@@ -82,11 +82,18 @@ new Chart(document.getElementById('cat-chart'), {
 {% endif %}
 
 {% if tag_labels != "[]" %}
+document.getElementById('tag-chart').height = {{ tag_labels|safe }}.length * 20;
 new Chart(document.getElementById('tag-chart'), {
     type: 'bar',
     data: {
         labels: {{ tag_labels|safe }},
-        datasets: [{ data: {{ tag_values|safe }}, backgroundColor: pal({{ tag_labels|safe }}.length), borderRadius: 4, borderSkipped: false }]
+        datasets: [{
+            data: {{ tag_values|safe }},
+            backgroundColor: pal({{ tag_labels|safe }}.length),
+            borderRadius: 4,
+            borderSkipped: false,
+            barThickness: 16
+        }]
     },
     options: {
         indexAxis: 'y',
@@ -94,9 +101,9 @@ new Chart(document.getElementById('tag-chart'), {
             legend: { display: false },
             tooltip: { callbacks: { label: c => ` ${c.parsed.x.toFixed(2)} {{ current_feuser.currency }}` } }
         },
-        scales: {
-            x: { grid: { color: dark ? '#2a2a2a' : '#f0f0f0' }, ticks: { font: { size: 11 } } },
-            y: { grid: { display: false }, ticks: { font: { size: 12 } } }
+        y: {
+            grid: { display: false },
+            ticks: { font: { size: 12 }, autoSkip: false }
         }
     }
 });
