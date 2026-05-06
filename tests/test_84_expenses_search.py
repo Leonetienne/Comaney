@@ -194,6 +194,68 @@ class TestExpensesSearch:
         assert any(TITLE_ALPHA in t for t in titles)
         assert any(TITLE_BETA in t for t in titles)
 
+    # ── ?search URL parameter ────────────────────────────────────────────────
+
+    def test_84_60_url_param_tag_filter(self, driver, w, ctx):
+        """?search=tag:"..." pre-fills the input and filters to matching expenses."""
+        from urllib.parse import urlencode
+        driver.execute_script("sessionStorage.removeItem('expSearch')")
+        url = _url("/budget/expenses/") + "?" + urlencode({"search": f'tag:"{TAG_TITLE}"'})
+        driver.get(url)
+        wait_text(driver, w, TITLE_ALPHA)
+        time.sleep(CLICK_PACE)
+
+        val = driver.find_element(By.ID, "exp-search").get_attribute("value")
+        assert "tag:" in val.lower() and "kreditkarte" in val.lower(), (
+            f"Expected tag filter in search input, got: {val!r}"
+        )
+
+        titles = visible_titles(driver)
+        assert any(TITLE_ALPHA in t for t in titles)
+        assert not any(TITLE_BETA in t for t in titles)
+
+    def test_84_61_url_param_cat_filter(self, driver, w, ctx):
+        """?search=cat:"..." pre-fills the input and filters to matching expenses."""
+        from urllib.parse import urlencode
+        driver.execute_script("sessionStorage.removeItem('expSearch')")
+        url = _url("/budget/expenses/") + "?" + urlencode({"search": f'cat:"{CAT_TITLE}"'})
+        driver.get(url)
+        wait_text(driver, w, TITLE_ALPHA)
+        time.sleep(CLICK_PACE)
+
+        val = driver.find_element(By.ID, "exp-search").get_attribute("value")
+        assert "cat:" in val.lower() and "haushalt" in val.lower(), (
+            f"Expected cat filter in search input, got: {val!r}"
+        )
+
+        titles = visible_titles(driver)
+        assert any(TITLE_ALPHA in t for t in titles)
+        assert not any(TITLE_BETA in t for t in titles)
+
+    def test_84_62_url_param_overwrites_session_storage(self, driver, w, ctx):
+        """?search URL param takes precedence over any existing sessionStorage value."""
+        from urllib.parse import urlencode
+        driver.get(_url("/budget/expenses/"))
+        wait_text(driver, w, TITLE_ALPHA)
+        # Seed sessionStorage with Beta's title so it would normally hide Alpha
+        driver.execute_script("sessionStorage.setItem('expSearch', arguments[0])", TITLE_BETA)
+
+        url = _url("/budget/expenses/") + "?" + urlencode({"search": f'tag:"{TAG_TITLE}"'})
+        driver.get(url)
+        wait_text(driver, w, TITLE_ALPHA)
+        time.sleep(CLICK_PACE)
+
+        # URL param must win — Alpha visible, Beta hidden
+        titles = visible_titles(driver)
+        assert any(TITLE_ALPHA in t for t in titles)
+        assert not any(TITLE_BETA in t for t in titles)
+
+        # sessionStorage must now reflect the URL param value
+        stored = driver.execute_script("return sessionStorage.getItem('expSearch')")
+        assert stored and "tag:" in stored.lower(), (
+            f"Expected sessionStorage updated by URL param, got: {stored!r}"
+        )
+
     # ── Cleanup ──────────────────────────────────────────────────────────────
 
     def test_84_99_cleanup(self, driver, w, ctx):

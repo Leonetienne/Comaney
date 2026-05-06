@@ -202,16 +202,23 @@
         updateSelectAllBtn();
     }
 
-    var ref = '';
-    try { ref = document.referrer ? new URL(document.referrer).pathname : ''; } catch (e) {}
-    var expBase = "{% url 'budget:expenses_list' %}".replace(/\/$/, '');
-    var fromExpensesArea = ref === expBase + '/' || ref.startsWith(expBase + '/');
-
-    if (fromExpensesArea) {
-        var savedQuery = sessionStorage.getItem('expSearch');
-        if (savedQuery) { searchInput.value = savedQuery; filterCards(); }
+    var urlSearch = new URLSearchParams(window.location.search).get('search');
+    if (urlSearch !== null) {
+        sessionStorage.setItem('expSearch', urlSearch);
+        searchInput.value = urlSearch;
+        filterCards();
     } else {
-        sessionStorage.removeItem('expSearch');
+        var ref = '';
+        try { ref = document.referrer ? new URL(document.referrer).pathname : ''; } catch (e) {}
+        var expBase = "{% url 'budget:expenses_list' %}".replace(/\/$/, '');
+        var fromExpensesArea = ref === expBase + '/' || ref.startsWith(expBase + '/');
+
+        if (fromExpensesArea) {
+            var savedQuery = sessionStorage.getItem('expSearch');
+            if (savedQuery) { searchInput.value = savedQuery; filterCards(); }
+        } else {
+            sessionStorage.removeItem('expSearch');
+        }
     }
 
     searchInput.addEventListener('input', function () {

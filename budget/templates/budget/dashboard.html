@@ -65,6 +65,8 @@ const PALETTE = [
 ];
 const pal = n => Array.from({length: n}, (_, i) => PALETTE[i % PALETTE.length]);
 
+const expensesUrl = "{% url 'budget:expenses_list' %}";
+
 {% if cat_labels != "[]" %}
 new Chart(document.getElementById('cat-chart'), {
     type: 'pie',
@@ -73,6 +75,12 @@ new Chart(document.getElementById('cat-chart'), {
         datasets: [{ data: {{ cat_values|safe }}, backgroundColor: pal({{ cat_labels|safe }}.length), borderWidth: 2, borderColor: dark ? '#1c1c1c' : '#fff' }]
     },
     options: {
+        onClick: (evt, elements) => {
+            if (!elements.length) return;
+            const label = {{ cat_labels|safe }}[elements[0].index];
+            window.location.href = expensesUrl + '?search=' + encodeURIComponent('cat:"' + label + '"');
+        },
+        onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
         plugins: {
             legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14, font: { size: 12 } } },
             tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed.toFixed(2)} {{ current_feuser.currency }}` } }
@@ -97,6 +105,12 @@ new Chart(document.getElementById('tag-chart'), {
     },
     options: {
         indexAxis: 'y',
+        onClick: (evt, elements) => {
+            if (!elements.length) return;
+            const label = {{ tag_labels|safe }}[elements[0].index];
+            window.location.href = expensesUrl + '?search=' + encodeURIComponent('tag:"' + label + '"');
+        },
+        onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
         plugins: {
             legend: { display: false },
             tooltip: { callbacks: { label: c => ` ${c.parsed.x.toFixed(2)} {{ current_feuser.currency }}` } }
