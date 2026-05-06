@@ -459,63 +459,76 @@ def account_export(request):
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
 
-        # profile.csv
+        # profile.csv — dynamic: all concrete fields except internal security tokens
+        _SKIP_FIELDS = {
+            "password", "confirmation_token", "password_reset_token",
+            "password_reset_expires", "totp_secret", "totp_recovery_hash",
+            "email_change_token",
+        }
+        _MASK_FIELDS = {"anthropic_api_key"}
         p = io.StringIO()
         w = csv.writer(p)
         w.writerow(["field", "value"])
-        key = feuser.anthropic_api_key
-        masked_key = ("********" + key[-4:]) if key else ""
-        w.writerows([
-            ["email",        feuser.email],
-            ["first_name",   feuser.first_name],
-            ["last_name",    feuser.last_name],
-            ["currency",     feuser.currency],
-            ["anthropic_api_key", masked_key],
-            ["totp_enabled", feuser.totp_enabled],
-            ["created_at",   feuser.created_at.isoformat()],
-        ])
+        for field in feuser._meta.concrete_fields:
+            if field.name in _SKIP_FIELDS:
+                continue
+            value = getattr(feuser, field.name)
+            if field.name in _MASK_FIELDS:
+                value = ("********" + value[-4:]) if value else ""
+            elif hasattr(value, "isoformat"):
+                value = value.isoformat()
+            w.writerow([field.name, value])
         zf.writestr("profile.csv", p.getvalue())
+
+        def _write_model_csv(p, qs, *, skip=(), extra=()):
+            """All concrete fields (minus skip), plus extra=(col, fn) M2M columns."""
+            fields = [f for f in qs.model._meta.concrete_fields if f.name not in skip]
+            w = csv.writer(p)
+            w.writerow([f.attname for f in fields] + [col for col, _ in extra])
+            for obj in qs:
+                row = []
+                for field in fields:
+                    value = getattr(obj, field.attname)
+                    if hasattr(value, "isoformat"):
+                        value = value.isoformat()
+                    row.append("" if value is None else value)
+                for _, fn in extra:
+                    row.append(fn(obj))
+                w.writerow(row)
+
+        _TAGS = ("tags", lambda obj: "|".join(t.title for t in obj.tags.all()))
+        _CATEGORY = ("category", lambda obj: obj.category.title if obj.category else "")
 
         # categories.csv
         p = io.StringIO()
-        w = csv.writer(p)
-        w.writerow(["uid", "title"])
-        for c in Category.objects.filter(owning_feuser=feuser):
-            w.writerow([c.uid, c.title])
+        _write_model_csv(p, Category.objects.filter(owning_feuser=feuser), skip={"owning_feuser"})
         zf.writestr("categories.csv", p.getvalue())
 
         # tags.csv
         p = io.StringIO()
-        w = csv.writer(p)
-        w.writerow(["uid", "title"])
-        for t in Tag.objects.filter(owning_feuser=feuser):
-            w.writerow([t.uid, t.title])
+        _write_model_csv(p, Tag.objects.filter(owning_feuser=feuser), skip={"owning_feuser"})
         zf.writestr("tags.csv", p.getvalue())
 
         # expenses.csv
         p = io.StringIO()
-        w = csv.writer(p)
-        w.writerow(["uid", "title", "type", "value", "payee", "note", "category", "tags", "date_due", "date_created", "settled"])
-        for e in Expense.objects.filter(owning_feuser=feuser).select_related("category").prefetch_related("tags").order_by("date_created"):
-            w.writerow([
-                e.uid, e.title, e.type, e.value, e.payee, e.note,
-                e.category.title if e.category else "",
-                "|".join(t.title for t in e.tags.all()),
-                e.date_due or "", e.date_created.isoformat(), e.settled,
-            ])
+        _write_model_csv(
+            p,
+            Expense.objects.filter(owning_feuser=feuser)
+                .select_related("category").prefetch_related("tags").order_by("date_created"),
+            skip={"owning_feuser", "category"},
+            extra=[_CATEGORY, _TAGS],
+        )
         zf.writestr("expenses.csv", p.getvalue())
 
         # scheduled_expenses.csv
         p = io.StringIO()
-        w = csv.writer(p)
-        w.writerow(["uid", "title", "type", "value", "payee", "note", "category", "tags", "repeat_base_date", "repeat_every_factor", "repeat_every_unit"])
-        for s in ScheduledExpense.objects.filter(owning_feuser=feuser).select_related("category").prefetch_related("tags"):
-            w.writerow([
-                s.uid, s.title, s.type, s.value, s.payee, s.note,
-                s.category.title if s.category else "",
-                "|".join(t.title for t in s.tags.all()),
-                s.repeat_base_date or "", s.repeat_every_factor or "", s.repeat_every_unit,
-            ])
+        _write_model_csv(
+            p,
+            ScheduledExpense.objects.filter(owning_feuser=feuser)
+                .select_related("category").prefetch_related("tags"),
+            skip={"owning_feuser", "category"},
+            extra=[_CATEGORY, _TAGS],
+        )
         zf.writestr("scheduled_expenses.csv", p.getvalue())
 
     filename = f"comaney_export_{timezone.localdate().isoformat()}.zip"
