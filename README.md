@@ -31,10 +31,11 @@ Everything you need to stay on top of your finances, nothing you don't.
 * Light- and Dark mode
 
 **The good stuff:**
-* 📊 A dashboard packed with insights: total income, spending, outstanding payments, savings, and how much you have left to spend. View any of it per month or across entire years, with a pie chart for category distribution and a bar chart for tags.
+* 📊 A dashboard packed with insights: total income, spending, outstanding payments, savings, and how much you have left to spend. View any of it per month or across entire years, with a pie chart for category distribution and a bar chart for tags. All clickable for even more details!
 * 📅 Salary-cycle aware months. If you get paid on the 25th, your month can run from the 25th to the 24th, so it always kicks off with your income already in.
 * 🤖 Zero-effort expense recognition powered by Claude. Snap a photo of your receipt or just describe what you bought and it books it for you. It's fast enough that I log my entire grocery haul on the walk back to my car. You can always review and adjust before saving. Bring your own API key, or use the built-in free tier on the public instance (limited by monthly request count). You can also define a custom pre-prompt to tailor it to your habits.
 * 💰 Flexible end-of-month rollover: start fresh (recommended for most), move leftovers into savings automatically, or carry them over as extra spending room next month.
+* 🔍 Advanced search filters for expenses. Get exactly the information you need!
 
 Questions or feedback? Reach out through the [contact form](https://comaney.app/contact) 💌
 

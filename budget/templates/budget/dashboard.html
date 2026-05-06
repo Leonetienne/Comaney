@@ -8,22 +8,22 @@
 {% include "partials/_month_nav.html" %}
 
 <div class="panels">
-    <div class="panel panel-income">
+    <div class="panel panel-income" id="panel-income">
         <div class="label">Income</div>
         <div class="amount">{{ income }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
 
-    <div class="panel panel-paid">
+    <div class="panel panel-paid" id="panel-paid">
         <div class="label">Paid expenses</div>
         <div class="amount">{{ paid }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
 
-    <div class="panel panel-outstanding">
+    <div class="panel panel-outstanding" id="panel-outstanding">
         <div class="label">Outstanding</div>
         <div class="amount">{{ outstanding }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
 
-    <div class="panel {% if savings < 0 %}panel-savings-neg{% else %}panel-savings{% endif %}">
+    <div class="panel {% if savings < 0 %}panel-savings-neg{% else %}panel-savings{% endif %}" id="panel-savings">
         <div class="label">Savings</div>
         <div class="amount">{{ savings }}<span class="currency">{{ current_feuser.currency }}</span></div>
     </div>
@@ -66,6 +66,7 @@ const PALETTE = [
 const pal = n => Array.from({length: n}, (_, i) => PALETTE[i % PALETTE.length]);
 
 const expensesUrl = "{% url 'budget:expenses_list' %}";
+const periodParams = {% if nav_mode == 'year' %}'&view=year&year={{ nav_year }}'{% else %}''{% endif %};
 
 {% if cat_labels != "[]" %}
 new Chart(document.getElementById('cat-chart'), {
@@ -78,7 +79,7 @@ new Chart(document.getElementById('cat-chart'), {
         onClick: (evt, elements) => {
             if (!elements.length) return;
             const label = {{ cat_labels|safe }}[elements[0].index];
-            window.location.href = expensesUrl + '?search=' + encodeURIComponent('cat:"' + label + '"');
+            window.location.href = expensesUrl + '?search=' + encodeURIComponent('cat="' + label + '"') + periodParams;
         },
         onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
         plugins: {
@@ -108,7 +109,7 @@ new Chart(document.getElementById('tag-chart'), {
         onClick: (evt, elements) => {
             if (!elements.length) return;
             const label = {{ tag_labels|safe }}[elements[0].index];
-            window.location.href = expensesUrl + '?search=' + encodeURIComponent('tag:"' + label + '"');
+            window.location.href = expensesUrl + '?search=' + encodeURIComponent('tag="' + label + '"') + periodParams;
         },
         onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
         plugins: {
@@ -122,5 +123,23 @@ new Chart(document.getElementById('tag-chart'), {
     }
 });
 {% endif %}
+
+// ── Panel links ───────────────────────────────────────────────────────────
+(function() {
+    function panelLink(search) {
+        return expensesUrl + '?search=' + encodeURIComponent(search) + periodParams;
+    }
+    [
+        ['panel-income',      'type=income'],
+        ['panel-paid',        'type=expense settled=yes'],
+        ['panel-outstanding', 'type=expense settled=no'],
+        ['panel-savings',     'type="savings withdrawal" || type="savings deposit"'],
+    ].forEach(function(p) {
+        var el = document.getElementById(p[0]);
+        if (!el) return;
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', function() { window.location.href = panelLink(p[1]); });
+    });
+}());
 </script>
 {% endblock %}

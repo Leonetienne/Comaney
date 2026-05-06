@@ -2,8 +2,8 @@
 Expense list – extended search and filter persistence.
 
 Tests:
-  - tag:, cat:, payee: prefix filters (with and without quotes)
-  - combined prefix + free-text
+  - tag=, cat=, payee= filters (with and without quotes)
+  - combined filter + free-text
   - sessionStorage restores search after navigation away and back
 """
 from datetime import date
@@ -17,8 +17,11 @@ from conftest import _url, click, wait_text, server_today, api_post, api_get, ap
 
 TODAY = server_today()
 
-TITLE_ALPHA = "SearchTest Alpha"
-TITLE_BETA  = "SearchTest Beta"
+TITLE_ALPHA   = "SearchTest Alpha"
+TITLE_BETA    = "SearchTest Beta"
+TITLE_INCOME  = "SearchTest Income"
+TITLE_SETTLED = "SearchTest Settled"
+TITLE_BIG     = "SearchTest Big"
 PAYEE_ALPHA = "Rainer Winkler"
 PAYEE_BETA  = "Hans Dampf"
 CAT_TITLE   = "SearchTest Haushalt"
@@ -76,52 +79,52 @@ class TestExpensesSearch:
         assert b.status_code == 201
         ctx["s84_uid_b"] = b.json()["id"]
 
-    # ── tag: filter ──────────────────────────────────────────────────────────
+    # ── tag= filter ──────────────────────────────────────────────────────────
 
-    def test_84_10_tag_prefix_shows_only_tagged(self, driver, w, ctx):
+    def test_84_10_tag_filter_shows_only_tagged(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/"))
         wait_text(driver, w, TITLE_ALPHA)
 
-        search_type(driver, "tag:searchtest")
+        search_type(driver, "tag=searchtest")
 
         titles = visible_titles(driver)
         assert any(TITLE_ALPHA in t for t in titles), "Alpha (tagged) should be visible"
         assert not any(TITLE_BETA in t for t in titles), "Beta (no tag) should be hidden"
 
     def test_84_11_tag_quoted_multiword(self, driver, w, ctx):
-        search_type(driver, f'tag:"{TAG_TITLE.lower()}"')
+        search_type(driver, f'tag="{TAG_TITLE.lower()}"')
 
         titles = visible_titles(driver)
         assert any(TITLE_ALPHA in t for t in titles)
         assert not any(TITLE_BETA in t for t in titles)
 
-    # ── cat: filter ──────────────────────────────────────────────────────────
+    # ── cat= filter ──────────────────────────────────────────────────────────
 
-    def test_84_20_cat_prefix_shows_only_categorised(self, driver, w, ctx):
-        search_type(driver, "cat:searchtest")
+    def test_84_20_cat_filter_shows_only_categorised(self, driver, w, ctx):
+        search_type(driver, "cat=searchtest")
 
         titles = visible_titles(driver)
         assert any(TITLE_ALPHA in t for t in titles)
         assert not any(TITLE_BETA in t for t in titles)
 
     def test_84_21_cat_quoted_multiword(self, driver, w, ctx):
-        search_type(driver, f'cat:"{CAT_TITLE.lower()}"')
+        search_type(driver, f'cat="{CAT_TITLE.lower()}"')
 
         titles = visible_titles(driver)
         assert any(TITLE_ALPHA in t for t in titles)
         assert not any(TITLE_BETA in t for t in titles)
 
-    # ── payee: filter ────────────────────────────────────────────────────────
+    # ── payee= filter ────────────────────────────────────────────────────────
 
-    def test_84_30_payee_prefix_single_word(self, driver, w, ctx):
-        search_type(driver, "payee:rainer")
+    def test_84_30_payee_filter_single_word(self, driver, w, ctx):
+        search_type(driver, "payee=rainer")
 
         titles = visible_titles(driver)
         assert any(TITLE_ALPHA in t for t in titles)
         assert not any(TITLE_BETA in t for t in titles)
 
     def test_84_31_payee_quoted_full_name(self, driver, w, ctx):
-        search_type(driver, f'payee:"{PAYEE_ALPHA.lower()}"')
+        search_type(driver, f'payee="{PAYEE_ALPHA.lower()}"')
 
         titles = visible_titles(driver)
         assert any(TITLE_ALPHA in t for t in titles)
@@ -129,9 +132,9 @@ class TestExpensesSearch:
 
     # ── combined filters ─────────────────────────────────────────────────────
 
-    def test_84_40_combined_prefix_and_freetext(self, driver, w, ctx):
-        """tag: filter combined with a plain term must both have to match."""
-        search_type(driver, "tag:searchtest alpha")
+    def test_84_40_combined_filter_and_freetext(self, driver, w, ctx):
+        """tag= filter combined with a plain term must both have to match."""
+        search_type(driver, "tag=searchtest alpha")
 
         titles = visible_titles(driver)
         assert any(TITLE_ALPHA in t for t in titles)
@@ -139,7 +142,7 @@ class TestExpensesSearch:
 
     def test_84_41_no_match_combination(self, driver, w, ctx):
         """A tag filter that doesn't match anything should hide all our cards."""
-        search_type(driver, "tag:searchtest payee:dampf")
+        search_type(driver, "tag=searchtest payee=dampf")
 
         titles = visible_titles(driver)
         assert not any(TITLE_ALPHA in t for t in titles)
@@ -197,16 +200,16 @@ class TestExpensesSearch:
     # ── ?search URL parameter ────────────────────────────────────────────────
 
     def test_84_60_url_param_tag_filter(self, driver, w, ctx):
-        """?search=tag:"..." pre-fills the input and filters to matching expenses."""
+        """?search=tag="..." pre-fills the input and filters to matching expenses."""
         from urllib.parse import urlencode
         driver.execute_script("sessionStorage.removeItem('expSearch')")
-        url = _url("/budget/expenses/") + "?" + urlencode({"search": f'tag:"{TAG_TITLE}"'})
+        url = _url("/budget/expenses/") + "?" + urlencode({"search": f'tag="{TAG_TITLE}"'})
         driver.get(url)
         wait_text(driver, w, TITLE_ALPHA)
         time.sleep(CLICK_PACE)
 
         val = driver.find_element(By.ID, "exp-search").get_attribute("value")
-        assert "tag:" in val.lower() and "kreditkarte" in val.lower(), (
+        assert "tag=" in val.lower() and "kreditkarte" in val.lower(), (
             f"Expected tag filter in search input, got: {val!r}"
         )
 
@@ -215,16 +218,16 @@ class TestExpensesSearch:
         assert not any(TITLE_BETA in t for t in titles)
 
     def test_84_61_url_param_cat_filter(self, driver, w, ctx):
-        """?search=cat:"..." pre-fills the input and filters to matching expenses."""
+        """?search=cat="..." pre-fills the input and filters to matching expenses."""
         from urllib.parse import urlencode
         driver.execute_script("sessionStorage.removeItem('expSearch')")
-        url = _url("/budget/expenses/") + "?" + urlencode({"search": f'cat:"{CAT_TITLE}"'})
+        url = _url("/budget/expenses/") + "?" + urlencode({"search": f'cat="{CAT_TITLE}"'})
         driver.get(url)
         wait_text(driver, w, TITLE_ALPHA)
         time.sleep(CLICK_PACE)
 
         val = driver.find_element(By.ID, "exp-search").get_attribute("value")
-        assert "cat:" in val.lower() and "haushalt" in val.lower(), (
+        assert "cat=" in val.lower() and "haushalt" in val.lower(), (
             f"Expected cat filter in search input, got: {val!r}"
         )
 
@@ -240,7 +243,7 @@ class TestExpensesSearch:
         # Seed sessionStorage with Beta's title so it would normally hide Alpha
         driver.execute_script("sessionStorage.setItem('expSearch', arguments[0])", TITLE_BETA)
 
-        url = _url("/budget/expenses/") + "?" + urlencode({"search": f'tag:"{TAG_TITLE}"'})
+        url = _url("/budget/expenses/") + "?" + urlencode({"search": f'tag="{TAG_TITLE}"'})
         driver.get(url)
         wait_text(driver, w, TITLE_ALPHA)
         time.sleep(CLICK_PACE)
@@ -252,9 +255,112 @@ class TestExpensesSearch:
 
         # sessionStorage must now reflect the URL param value
         stored = driver.execute_script("return sessionStorage.getItem('expSearch')")
-        assert stored and "tag:" in stored.lower(), (
+        assert stored and "tag=" in stored.lower(), (
             f"Expected sessionStorage updated by URL param, got: {stored!r}"
         )
+
+    # ── type= / settled= / value comparison / || / () ───────────────────────
+
+    def test_84_70_setup_typed(self, driver, w, ctx):
+        income = api_post("/api/v1/expenses/", ctx, json={
+            "title": TITLE_INCOME, "type": "income", "value": "500.00",
+            "date_due": TODAY, "settled": False,
+        })
+        assert income.status_code == 201
+        ctx["s84_uid_income"] = income.json()["id"]
+
+        settled = api_post("/api/v1/expenses/", ctx, json={
+            "title": TITLE_SETTLED, "type": "expense", "value": "77.00",
+            "date_due": TODAY, "settled": True,
+        })
+        assert settled.status_code == 201
+        ctx["s84_uid_settled"] = settled.json()["id"]
+
+        big = api_post("/api/v1/expenses/", ctx, json={
+            "title": TITLE_BIG, "type": "expense", "value": "999.00",
+            "date_due": TODAY, "settled": False,
+        })
+        assert big.status_code == 201
+        ctx["s84_uid_big"] = big.json()["id"]
+
+    def test_84_71_type_income(self, driver, w, ctx):
+        driver.get(_url("/budget/expenses/"))
+        wait_text(driver, w, TITLE_INCOME)
+        search_type(driver, "type=income")
+        titles = visible_titles(driver)
+        assert any(TITLE_INCOME in t for t in titles)
+        assert not any(TITLE_ALPHA in t for t in titles)
+        assert not any(TITLE_BETA in t for t in titles)
+        assert not any(TITLE_SETTLED in t for t in titles)
+
+    def test_84_72_type_expense(self, driver, w, ctx):
+        search_type(driver, "type=expense")
+        titles = visible_titles(driver)
+        assert any(TITLE_ALPHA in t for t in titles)
+        assert any(TITLE_SETTLED in t for t in titles)
+        assert not any(TITLE_INCOME in t for t in titles)
+
+    def test_84_73_settled_yes(self, driver, w, ctx):
+        search_type(driver, "settled=yes")
+        titles = visible_titles(driver)
+        assert any(TITLE_SETTLED in t for t in titles)
+        assert not any(TITLE_ALPHA in t for t in titles)
+        assert not any(TITLE_INCOME in t for t in titles)
+
+    def test_84_74_settled_no(self, driver, w, ctx):
+        search_type(driver, "settled=no")
+        titles = visible_titles(driver)
+        assert any(TITLE_ALPHA in t for t in titles)
+        assert any(TITLE_INCOME in t for t in titles)
+        assert not any(TITLE_SETTLED in t for t in titles)
+
+    def test_84_75_value_gte(self, driver, w, ctx):
+        search_type(driver, "value>=500")
+        titles = visible_titles(driver)
+        assert any(TITLE_INCOME in t for t in titles)
+        assert any(TITLE_BIG in t for t in titles)
+        assert not any(TITLE_ALPHA in t for t in titles)
+        assert not any(TITLE_SETTLED in t for t in titles)
+
+    def test_84_76_value_lt(self, driver, w, ctx):
+        search_type(driver, "value<100")
+        titles = visible_titles(driver)
+        assert any(TITLE_SETTLED in t for t in titles)
+        assert not any(TITLE_ALPHA in t for t in titles)
+        assert not any(TITLE_BIG in t for t in titles)
+
+    def test_84_77_implicit_and(self, driver, w, ctx):
+        """type=expense settled=yes ANDs both conditions."""
+        search_type(driver, "type=expense settled=yes")
+        titles = visible_titles(driver)
+        assert any(TITLE_SETTLED in t for t in titles)
+        assert not any(TITLE_ALPHA in t for t in titles)
+        assert not any(TITLE_INCOME in t for t in titles)
+        assert not any(TITLE_BIG in t for t in titles)
+
+    def test_84_78_or_operator(self, driver, w, ctx):
+        """type=income || settled=yes matches either condition independently."""
+        search_type(driver, "type=income || settled=yes")
+        titles = visible_titles(driver)
+        assert any(TITLE_INCOME in t for t in titles)
+        assert any(TITLE_SETTLED in t for t in titles)
+        assert not any(TITLE_ALPHA in t for t in titles)
+        assert not any(TITLE_BIG in t for t in titles)
+
+    def test_84_78b_grouping(self, driver, w, ctx):
+        """(type=expense settled=yes) || type=income: left group ANDs before OR."""
+        search_type(driver, "(type=expense settled=yes) || type=income")
+        titles = visible_titles(driver)
+        assert any(TITLE_INCOME in t for t in titles)
+        assert any(TITLE_SETTLED in t for t in titles)
+        assert not any(TITLE_ALPHA in t for t in titles)
+        assert not any(TITLE_BIG in t for t in titles)
+
+    def test_84_79_cleanup_typed(self, driver, w, ctx):
+        for key in ("s84_uid_income", "s84_uid_settled", "s84_uid_big"):
+            if key in ctx:
+                api_delete(f"/api/v1/expenses/{ctx.pop(key)}/", ctx)
+        driver.execute_script("sessionStorage.removeItem('expSearch')")
 
     # ── Cleanup ──────────────────────────────────────────────────────────────
 

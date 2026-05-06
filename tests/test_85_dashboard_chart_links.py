@@ -3,9 +3,9 @@ Dashboard chart click-links.
 
 Tests:
   - Clicking a category slice on the pie chart navigates to /budget/expenses/
-    with a cat: search filter pre-applied.
+    with a cat= search filter pre-applied.
   - Clicking a tag bar on the bar chart navigates to /budget/expenses/
-    with a tag: search filter pre-applied.
+    with a tag= search filter pre-applied.
   - After each navigation the search input is filled and expenses are filtered.
 
 Chart clicks are simulated via Chart.js's public onClick handler so the test
@@ -95,7 +95,7 @@ class TestDashboardChartLinks:
     # ── Category pie chart ───────────────────────────────────────────────────
 
     def test_85_10_cat_chart_click_navigates(self, driver, w, ctx):
-        """Clicking a pie slice navigates to /budget/expenses/ with cat: filter."""
+        """Clicking a pie slice navigates to /budget/expenses/ with cat= filter."""
         driver.execute_script("sessionStorage.removeItem('expSearch')")
         driver.get(_url("/budget/"))
         w.until(EC.url_contains("/budget/"))
@@ -110,8 +110,8 @@ class TestDashboardChartLinks:
         time.sleep(CLICK_PACE)
 
         val = driver.find_element(By.ID, "exp-search").get_attribute("value")
-        assert "cat:" in val.lower() and "chartlink haushalt" in val.lower(), (
-            f"Expected cat: filter in search input, got: {val!r}"
+        assert "cat=" in val.lower() and "chartlink haushalt" in val.lower(), (
+            f"Expected cat= filter in search input, got: {val!r}"
         )
 
         titles = visible_titles(driver)
@@ -121,7 +121,7 @@ class TestDashboardChartLinks:
     # ── Tag bar chart ────────────────────────────────────────────────────────
 
     def test_85_20_tag_chart_click_navigates(self, driver, w, ctx):
-        """Clicking a bar segment navigates to /budget/expenses/ with tag: filter."""
+        """Clicking a bar segment navigates to /budget/expenses/ with tag= filter."""
         driver.execute_script("sessionStorage.removeItem('expSearch')")
         driver.get(_url("/budget/"))
         w.until(EC.url_contains("/budget/"))
@@ -136,13 +136,61 @@ class TestDashboardChartLinks:
         time.sleep(CLICK_PACE)
 
         val = driver.find_element(By.ID, "exp-search").get_attribute("value")
-        assert "tag:" in val.lower() and "chartlink kreditkarte" in val.lower(), (
-            f"Expected tag: filter in search input, got: {val!r}"
+        assert "tag=" in val.lower() and "chartlink kreditkarte" in val.lower(), (
+            f"Expected tag= filter in search input, got: {val!r}"
         )
 
         titles = visible_titles(driver)
         assert any(TITLE_A in t for t in titles), "Alpha (tagged) should be visible"
         assert not any(TITLE_B in t for t in titles), "Beta (untagged) should be hidden"
+
+    # ── Panel click-links ────────────────────────────────────────────────────
+
+    def test_85_30_panel_income_click(self, driver, w, ctx):
+        """Clicking the Income panel navigates to expenses with type=income filter."""
+        driver.execute_script("sessionStorage.removeItem('expSearch')")
+        driver.get(_url("/budget/"))
+        w.until(EC.element_to_be_clickable((By.ID, 'panel-income'))).click()
+        w.until(EC.url_contains("/budget/expenses/"))
+        time.sleep(CLICK_PACE)
+        val = driver.find_element(By.ID, "exp-search").get_attribute("value")
+        assert "type=income" in val.lower(), f"Expected type=income filter, got: {val!r}"
+
+    def test_85_40_panel_paid_click(self, driver, w, ctx):
+        """Clicking Paid expenses navigates with type=expense settled=yes."""
+        driver.execute_script("sessionStorage.removeItem('expSearch')")
+        driver.get(_url("/budget/"))
+        w.until(EC.element_to_be_clickable((By.ID, 'panel-paid'))).click()
+        w.until(EC.url_contains("/budget/expenses/"))
+        time.sleep(CLICK_PACE)
+        val = driver.find_element(By.ID, "exp-search").get_attribute("value")
+        assert "type=expense" in val.lower() and "settled=yes" in val.lower(), (
+            f"Expected type=expense settled=yes filter, got: {val!r}"
+        )
+
+    def test_85_50_panel_outstanding_click(self, driver, w, ctx):
+        """Clicking Outstanding navigates with type=expense settled=no."""
+        driver.execute_script("sessionStorage.removeItem('expSearch')")
+        driver.get(_url("/budget/"))
+        w.until(EC.element_to_be_clickable((By.ID, 'panel-outstanding'))).click()
+        w.until(EC.url_contains("/budget/expenses/"))
+        time.sleep(CLICK_PACE)
+        val = driver.find_element(By.ID, "exp-search").get_attribute("value")
+        assert "type=expense" in val.lower() and "settled=no" in val.lower(), (
+            f"Expected type=expense settled=no filter, got: {val!r}"
+        )
+
+    def test_85_60_panel_savings_click(self, driver, w, ctx):
+        """Clicking Savings navigates with savings-type OR filter."""
+        driver.execute_script("sessionStorage.removeItem('expSearch')")
+        driver.get(_url("/budget/"))
+        w.until(EC.element_to_be_clickable((By.ID, 'panel-savings'))).click()
+        w.until(EC.url_contains("/budget/expenses/"))
+        time.sleep(CLICK_PACE)
+        val = driver.find_element(By.ID, "exp-search").get_attribute("value")
+        assert "savings" in val.lower() and "||" in val, (
+            f"Expected savings OR filter, got: {val!r}"
+        )
 
     # ── Cleanup ──────────────────────────────────────────────────────────────
 

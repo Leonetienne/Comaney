@@ -13,7 +13,7 @@
 
 {% if expenses %}
 <div class="exp-controls">
-    <input type="text" id="exp-search" class="exp-search" placeholder="Search title, payee, amount… or tag:label  cat:label  payee:name" autocomplete="off">
+    <input type="text" id="exp-search" class="exp-search" placeholder="Search… type=expense  settled=yes  value&lt;100  tag=label  cat=label  payee=name  (A || B)" autocomplete="off">
 </div>
 
 <div class="exp-toolbar">
@@ -41,7 +41,8 @@
     <div class="exp-card{% if not exp.settled %} unsettled{% endif %}{% if exp.deactivated %} exp-card--deactivated{% endif %}"
          data-uid="{{ exp.uid }}"
          data-value="{{ exp.value }}"
-         data-type="{{ exp.type }}"
+         data-type="{{ exp.get_type_display|lower }}"
+         data-settled="{{ exp.settled|yesno:'true,false' }}"
          data-search="{{ exp.title|lower }} {{ exp.payee|lower }} {{ exp.value }} {{ exp.note|lower }}"
          data-payee="{{ exp.payee|lower }}"
          data-cat="{{ exp.category.title|lower }}"
@@ -123,80 +124,161 @@
     var bulkAction   = document.getElementById('exp-bulk-action');
     var cards        = Array.from(document.querySelectorAll('#exp-list .exp-card'));
 
-    function parseQuery(raw) {
-        var re = /(\w+):"([^"]*)"|\b(\w+):(\S+)|"([^"]*)"|(\S+)/g;
-        var known = { tag: [], cat: [], payee: [] };
-        var terms = [];
-        var m;
+    // ── Predicate primitives ──────────────────────────────────────────────
+    // makeSubstringPred / makeExactPred return *factories*: val → (card → bool).
+    // Use them to populate the registries below; no parser changes needed.
+    function makeSubstringPred(field) {
+        return function(val) { return function(c) { return (c.dataset[field]||'').indexOf(val) !== -1; }; };
+    }
+    function makeExactPred(field) {
+        return function(val) { return function(c) { return c.dataset[field] === val; }; };
+    }
+    // Returns a predicate directly (tags are pipe-separated, need special split).
+    function makeTagFilter(val) {
+        return function(c) { return (c.dataset.tags||'').split('|').some(function(t){ return t.indexOf(val) !== -1; }); };
+    }
+    // Returns a predicate directly (normalises true/yes/1 vs false/no/0).
+    function makeSettledFilter(val) {
+        var want = (val === 'true' || val === 'yes' || val === '1') ? 'true' : 'false';
+        return function(c) { return c.dataset.settled === want; };
+    }
+    // Returns a predicate for a numeric comparison on any dataset field.
+    function makeNumericFilter(field, op, num) {
+        return function(c) {
+            var v = parseFloat(c.dataset[field]) || 0;
+            if (op === '<')  return v < num;   if (op === '<=') return v <= num;
+            if (op === '>')  return v > num;   if (op === '>=') return v >= num;
+            return Math.abs(v - num) < 0.001;
+        };
+    }
+    function makeTermFilter(val) {
+        return function(c) { return (c.dataset.search||'').indexOf(val) !== -1; };
+    }
+
+    // ── Filter registries ─────────────────────────────────────────────────
+    // To add a new filter, add one entry here. No parser changes needed.
+    // Both key=val and key:val syntax resolve through EQUALS_FILTERS —
+    // the operator is just stylistic preference for the user.
+    //   EQUALS_FILTERS — key=val / key:val   entry: val → predicate
+    //   CMP_FILTERS    — key</>= num         entry: (op, num) → predicate
+    var EQUALS_FILTERS = {
+        type:    makeExactPred('type'),
+        settled: makeSettledFilter,
+        value:   function(val) { return makeNumericFilter('value', '=', parseFloat(val) || 0); },
+        tag:     makeTagFilter,
+        cat:     makeSubstringPred('cat'),
+        payee:   makeSubstringPred('payee'),
+    };
+    var CMP_FILTERS = {
+        value: function(op, num) { return makeNumericFilter('value', op, num); },
+    };
+
+    // ── Query compiler ────────────────────────────────────────────────────
+    // Tokenises the raw (lowercased) search string into a flat token list.
+    // Token shapes:
+    //   {t:'or'}                              — ||
+    //   {t:'lp'} / {t:'rp'}                  — ( / )
+    //   {t:'cmp', key, op, num}              — key < / <= / > / >= num
+    //   {t:'kv',  key, val}                  — key=val
+    //   {t:'str', val}                        — "phrase" or bare word
+    function tokenize(raw) {
+        var re = /\|\||\(|\)|(\w+)\s*([<>]=?)\s*(\d+(?:\.\d+)?)|(\w+)=(?:"([^"]*)"|([^\s()|"]+))|"([^"]*)"|([^\s()|"]+)/g;
+        var out = [], m;
         while ((m = re.exec(raw)) !== null) {
-            if (m[1] !== undefined) {
-                var k = m[1], v = m[2];
-                if (k in known) known[k].push(v); else terms.push(v);
-            } else if (m[3] !== undefined) {
-                var k = m[3], v = m[4];
-                if (k in known) known[k].push(v); else terms.push(k + ':' + v);
-            } else {
-                terms.push(m[5] !== undefined ? m[5] : m[6]);
-            }
+            if      (m[0] === '||')        out.push({t: 'or'});
+            else if (m[0] === '(')         out.push({t: 'lp'});
+            else if (m[0] === ')')         out.push({t: 'rp'});
+            else if (m[1])                 out.push({t: 'cmp', key: m[1], op: m[2], num: parseFloat(m[3])});
+            else if (m[4])                 out.push({t: 'kv',  key: m[4], val: m[5] !== undefined ? m[5] : m[6]});
+            else if (m[7] !== undefined)   out.push({t: 'str', val: m[7]});
+            else                           out.push({t: 'str', val: m[8]});
         }
-        return { filters: known, terms: terms };
+        return out;
     }
 
-    function matchesQuery(card, query) {
-        if (!query) return true;
-        var parsed = parseQuery(query.toLowerCase());
-        var search  = card.dataset.search  || '';
-        var tags    = (card.dataset.tags   || '').split('|').filter(Boolean);
-        var cat     = card.dataset.cat     || '';
-        var payee   = card.dataset.payee   || '';
+    // Compiles a token list into a card predicate (card → bool).
+    // Grammar: expr = group ('||' group)* ; group = atom* ; atom = '(' expr ')' | filter
+    function compile(tokens) {
+        var i = 0;
+        function peek() { return i < tokens.length ? tokens[i] : null; }
+        function next() { return tokens[i++]; }
 
-        if (!parsed.terms.every(function (t) { return search.indexOf(t) !== -1; })) return false;
-        if (!parsed.filters.tag.every(function (f) {
-            return tags.some(function (t) { return t.indexOf(f) !== -1; });
-        })) return false;
-        if (!parsed.filters.cat.every(function (f) { return cat.indexOf(f) !== -1; })) return false;
-        if (!parsed.filters.payee.every(function (f) { return payee.indexOf(f) !== -1; })) return false;
-        return true;
+        function parseExpr() {
+            var groups = [parseGroup()];
+            while (peek() && peek().t === 'or') { next(); groups.push(parseGroup()); }
+            if (groups.length === 1) return groups[0];
+            return function(c) { for (var g = 0; g < groups.length; g++) if (groups[g](c)) return true; return false; };
+        }
+        function parseGroup() {
+            var ps = [];
+            while (peek() && peek().t !== 'or' && peek().t !== 'rp') ps.push(parseAtom());
+            if (!ps.length) return function() { return true; };
+            if (ps.length === 1) return ps[0];
+            return function(c) { for (var p = 0; p < ps.length; p++) if (!ps[p](c)) return false; return true; };
+        }
+        function parseAtom() {
+            if (peek() && peek().t === 'lp') {
+                next();
+                var inner = parseExpr();
+                if (peek() && peek().t === 'rp') next();
+                return inner;
+            }
+            return makeFilter(next());
+        }
+        function makeFilter(tok) {
+            if (!tok) return function() { return true; };
+            if (tok.t === 'cmp') {
+                var cmpH = CMP_FILTERS[tok.key];
+                if (cmpH) return cmpH(tok.op, tok.num);
+            }
+            if (tok.t === 'kv') {
+                var kvH = EQUALS_FILTERS[tok.key];
+                if (kvH) return kvH(tok.val);
+            }
+            // Unrecognised token → fold back into free-text search.
+            var term = tok.t === 'str' ? tok.val
+                     : tok.t === 'cmp' ? tok.key + tok.op + tok.num
+                     :                   tok.key + '=' + tok.val;
+            return makeTermFilter(term);
+        }
+        return parseExpr();
     }
 
+    function compileQuery(raw) {
+        var s = raw ? raw.trim() : '';
+        return s ? compile(tokenize(s)) : null;
+    }
+
+    // ── Card helpers ──────────────────────────────────────────────────────
     function visibleCards() {
-        return cards.filter(function (c) { return c.style.display !== 'none'; });
+        return cards.filter(function(c) { return c.style.display !== 'none'; });
     }
-
     function checkedCards() {
-        return visibleCards().filter(function (c) {
-            return c.querySelector('.exp-checkbox').checked;
-        });
+        return visibleCards().filter(function(c) { return c.querySelector('.exp-checkbox').checked; });
     }
-
     function signedValue(card) {
-        var val = Math.abs(parseFloat(card.dataset.value) || 0);
-        var type = card.dataset.type;
-        return (type === 'expense' || type === 'savings_dep') ? -val : val;
+        var v = parseFloat(card.dataset.value) || 0;
+        var t = card.dataset.type;
+        return (t === 'expense' || t === 'savings deposit') ? -v : v;
     }
-
     function updateSum() {
-        var visible = visibleCards();
-        if (!visible.length) { sumEl.textContent = '–'; return; }
-        var sum = visible.reduce(function (acc, c) { return acc + signedValue(c); }, 0);
-        sumEl.textContent = sum.toFixed(2);
+        var vis = visibleCards();
+        if (!vis.length) { sumEl.textContent = '–'; return; }
+        sumEl.textContent = vis.reduce(function(a, c) { return a + signedValue(c); }, 0).toFixed(2);
     }
-
     function updateSelectAllBtn() {
-        var visible = visibleCards();
-        if (!visible.length) { selectAllBtn.textContent = 'Select all'; return; }
-        var allChecked = visible.every(function (c) {
+        var vis = visibleCards();
+        if (!vis.length) { selectAllBtn.textContent = 'Select all'; return; }
+        selectAllBtn.textContent = vis.every(function(c) {
             return c.querySelector('.exp-checkbox').checked;
-        });
-        selectAllBtn.textContent = allChecked ? 'Deselect all' : 'Select all';
+        }) ? 'Deselect all' : 'Select all';
     }
-
     function filterCards() {
-        var query = searchInput.value.toLowerCase();
-        cards.forEach(function (card) {
-            var visible = matchesQuery(card, query);
-            card.style.display = visible ? '' : 'none';
-            if (!visible) card.querySelector('.exp-checkbox').checked = false;
+        var pred = compileQuery(searchInput.value.toLowerCase());
+        cards.forEach(function(card) {
+            var vis = !pred || pred(card);
+            card.style.display = vis ? '' : 'none';
+            if (!vis) card.querySelector('.exp-checkbox').checked = false;
         });
         updateSum();
         updateSelectAllBtn();
