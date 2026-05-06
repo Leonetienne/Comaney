@@ -174,23 +174,25 @@ class TestExpensesSearch:
         assert any(TITLE_ALPHA in t for t in titles)
         assert not any(TITLE_BETA in t for t in titles)
 
-    def test_84_51_search_persists_across_plain_navigation(self, driver, w, ctx):
-        """Search term stored in sessionStorage survives a full page load of the same URL."""
+    def test_84_51_search_clears_on_plain_navigation(self, driver, w, ctx):
+        """Search term is cleared when navigating fresh to the expenses list (no expenses-area referrer)."""
         driver.get(_url("/budget/expenses/"))
         wait_text(driver, w, TITLE_ALPHA)
         search_type(driver, "SearchTest Beta")
 
-        # Hard reload via driver.get (not back-button)
+        # Hard reload via driver.get — referrer is not within the expenses area,
+        # so the search should be reset.
+        driver.get(_url("/budget/dashboard/"))
         driver.get(_url("/budget/expenses/"))
         wait_text(driver, w, TITLE_ALPHA)
         time.sleep(CLICK_PACE)
 
         val = driver.find_element(By.ID, "exp-search").get_attribute("value")
-        assert "SearchTest Beta" in val, f"Expected term after reload, got: {val!r}"
+        assert val == "", f"Expected empty search after plain navigation, got: {val!r}"
 
         titles = visible_titles(driver)
+        assert any(TITLE_ALPHA in t for t in titles)
         assert any(TITLE_BETA in t for t in titles)
-        assert not any(TITLE_ALPHA in t for t in titles)
 
     # ── Cleanup ──────────────────────────────────────────────────────────────
 
