@@ -161,8 +161,15 @@ class TestInitialNotificationClass:
         assert resp.status_code in (302, 200), f"Edit returned {resp.status_code}"
         assert _get_expense(ctx, eid)["last_notification_class_sent"] == ""
 
+    def test_83_08_create_today_class_today(self, driver, w, ctx):
+        """Expense due today gets last_notification_class_sent = 'today'."""
+        d = _create_unsettled(ctx, "NotifyClass Today", TODAY)
+        eid = d["id"]
+        ctx["nc_today_eid"] = eid
+        assert _get_expense(ctx, eid)["last_notification_class_sent"] == "today"
+
     def test_83_07_cleanup_initial_class_expenses(self, driver, w, ctx):
-        for key in ("nc_far_eid", "nc_soon_eid", "nc_tomorrow_eid", "nc_late_eid", "nc_settled_eid"):
+        for key in ("nc_far_eid", "nc_soon_eid", "nc_tomorrow_eid", "nc_today_eid", "nc_late_eid", "nc_settled_eid"):
             if key in ctx:
                 api_delete(f"/api/v1/expenses/{ctx.pop(key)}/", ctx)
 
@@ -219,8 +226,21 @@ class TestDueDateNotifications:
         assert exp["last_notification_class_sent"] == "tomorrow"
         _fetch_notification_email(ctx, "Payment due tomorrow", timeout=30, ignore_ids=seen)
 
+    def test_83_12b_today_notification_fires(self, driver, w, ctx):
+        """When class is 'tomorrow' and due date reaches today, cron sends 'today'."""
+        eid = ctx["cron_soon_eid"]
+        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": TODAY})
+
+        seen = mailpit_seen_ids()
+        _run_notify()
+        time.sleep(1)
+
+        exp = _get_expense(ctx, eid)
+        assert exp["last_notification_class_sent"] == "today"
+        _fetch_notification_email(ctx, "Payment due today", timeout=30, ignore_ids=seen)
+
     def test_83_13_late_notification_fires(self, driver, w, ctx):
-        """When class is 'tomorrow' and due date passes, cron sends 'late'."""
+        """When class is 'today' and due date passes, cron sends 'late'."""
         eid = ctx["cron_soon_eid"]
         api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": YESTERDAY})
 

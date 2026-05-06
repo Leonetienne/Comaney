@@ -4,7 +4,8 @@ Expense notification helpers.
 Notification classes (in order of precedence):
   ""        – no notification sent yet / not due soon
   "soon"    – due in 2–4 days
-  "tomorrow"– due today or tomorrow
+  "tomorrow"– due tomorrow (1 day)
+  "today"   – due today
   "late"    – past due date
   "settled" – expense has been paid
 """
@@ -15,7 +16,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
-CLASS_ORDER = {"": 0, "soon": 1, "tomorrow": 2, "late": 3, "settled": 4}
+CLASS_ORDER = {"": 0, "soon": 1, "tomorrow": 2, "today": 3, "late": 4, "settled": 5}
 
 
 def compute_initial_class(expense) -> str:
@@ -30,7 +31,9 @@ def compute_initial_class(expense) -> str:
     days = (expense.date_due - date.today()).days
     if days < 0:
         return "late"
-    if days <= 1:
+    if days == 0:
+        return "today"
+    if days == 1:
         return "tomorrow"
     if days < 5:
         return "soon"
@@ -51,7 +54,9 @@ def _target_class(expense) -> str:
     days = (expense.date_due - date.today()).days
     if days < 0:
         return "late"
-    if days <= 1:
+    if days == 0:
+        return "today"
+    if days == 1:
         return "tomorrow"
     if days < 5:
         return "soon"
@@ -82,6 +87,8 @@ def _build_plain_text(expense, notification_class: str, ctx: dict) -> str:
         intro = f'Your payment "{expense.title}" is due in {days} days ({expense.value} {currency}, on {expense.date_due}).'
     elif notification_class == "tomorrow":
         intro = f'Your payment "{expense.title}" is due tomorrow ({expense.value} {currency}, on {expense.date_due}).'
+    elif notification_class == "today":
+        intro = f'Your payment "{expense.title}" is due today ({expense.value} {currency}).'
     elif notification_class == "late":
         intro = f'Your payment "{expense.title}" was due on {expense.date_due} ({expense.value} {currency}) and is still unpaid.'
     else:
@@ -111,6 +118,8 @@ def _subject(expense, notification_class: str, ctx: dict) -> str:
         return f"Payment due in {days} days: {title}"
     if notification_class == "tomorrow":
         return f"Payment due tomorrow: {title}"
+    if notification_class == "today":
+        return f"Payment due today: {title}"
     if notification_class == "late":
         return f"Payment overdue – still unpaid: {title}"
     return f"Payment marked as paid: {title}"
