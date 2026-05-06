@@ -39,6 +39,60 @@ Everything you need to stay on top of your finances, nothing you don't.
 
 Questions or feedback? Reach out through the [contact form](https://comaney.app/contact) 💌
 
+## Advanced Search Filters
+The expense list has a search bar that goes well beyond plain text. You can combine filters freely using the syntax below.
+
+### Free text
+Typing anything without a prefix searches across title, payee, value, and note, all at once.
+```
+grocery run
+```
+
+### Key filters (`key=value`)
+| Filter | Matches |
+|---|---|
+| `type=expense` | Expenses (also: `income`, `savings deposit`, `savings withdrawal`, `carry-over`) |
+| `settled=yes` | Settled expenses (`yes` / `true` / `1` → settled; `no` / `false` / `0` → unsettled) |
+| `cat=Haushalt` | Category contains "Haushalt" (substring, case-insensitive) |
+| `tag=Kreditkarte` | Any tag contains "Kreditkarte" (substring, case-insensitive) |
+| `payee=Amazon` | Payee contains "Amazon" (substring, case-insensitive) |
+
+Use double quotes for values that contain spaces:
+```
+cat="Fixed costs"   tag="credit card"   type="savings deposit"
+```
+
+### Numeric comparisons
+```
+value<100       value>=500      value=77.00
+```
+Operators: `<` `<=` `>` `>=` `=`
+
+### Combining filters
+Terms separated by a space are **AND**-ed (all must match):
+```
+type=expense settled=no value<200
+```
+
+Use `||` for **OR** (either side may match):
+```
+type=income || type="savings withdrawal"
+```
+
+Use `()` to group before combining:
+```
+(type=expense settled=yes) || type=income
+```
+
+### Examples
+| Query | Meaning |
+|---|---|
+| `settled=no value>500` | Unsettled expenses over 500 |
+| `cat=Food payee=Rewe` | Categorised as Food **and** payee contains Rewe |
+| `type=income \|\| settled=yes` | All income **or** any settled expense |
+| `tag="credit card" settled=no` | Unmatured credit-card expenses |
+
+
 ## What Comaney doesn't do 🚫
 A few intentional omissions. These aren't oversights, they add significant complexity without enough payoff, or have design issues that would compromise the simplicity Comaney is built around:
 * Bank account integration

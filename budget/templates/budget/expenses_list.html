@@ -13,7 +13,7 @@
 
 {% if expenses %}
 <div class="exp-controls">
-    <input type="text" id="exp-search" class="exp-search" placeholder="Search… type=expense  settled=yes  value&lt;100  tag=label  cat=label  payee=name  (A || B)" autocomplete="off">
+    <input type="text" id="exp-search" class="exp-search" placeholder="Search… coffee type=expense  settled=yes  value&lt;100" autocomplete="off">
 </div>
 
 <div class="exp-toolbar">
@@ -35,6 +35,7 @@
         Visible total: <span id="exp-sum-value">–</span> {{ current_feuser.currency }}
     </div>
 </div>
+<a href="https://github.com/Leonetienne/Comaney#advanced-search-filters" target="_blank" rel="noopener" style="display:block;margin-top:6px;font-size:0.75rem;font-style:italic;text-decoration:underline;color:var(--text-muted);">Advanced search filters</a>
 
 <div class="exp-list" id="exp-list">
     {% for exp in expenses %}
