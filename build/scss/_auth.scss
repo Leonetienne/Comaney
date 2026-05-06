@@ -7,30 +7,123 @@ main.page-centered { text-align: center; }
   margin: 4px 0 0;
 }
 
-.profile-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  max-width: 900px;
+.settings-wrap {
+  max-width: 680px;
 
-  @media (max-width: 700px) { grid-template-columns: 1fr; gap: 28px; }
+  > h1 {
+    font-size: 1.85rem;
+    font-weight: 800;
+    letter-spacing: -.025em;
+    margin: 0 0 24px;
+  }
 }
 
-.profile-section--stacked {
+.settings-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 16px;
+
+  &--danger {
+    border-color: rgba(204, 0, 0, .2);
+  }
+
+  @media (max-width: 600px) { padding: 18px 16px; }
+}
+
+.settings-card-head {
   display: flex;
-  flex-direction: column;
-  gap: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.profile-section h2 {
-  font-size: 1rem;
+.settings-card-title {
+  font-size: 0.95rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .05em;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: .01em;
+}
+
+.settings-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 99px;
+  white-space: nowrap;
+
+  &--on {
+    background: rgba(46, 160, 67, .15);
+    color: #2a7a3b;
+
+    @media (prefers-color-scheme: dark) {
+      background: rgba(110, 207, 138, .15);
+      color: #6ecf8a;
+    }
+  }
+
+  &--off {
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+  }
+}
+
+.settings-current-value {
+  font-size: 0.92rem;
   color: var(--text-subtle);
   margin: 0 0 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+.settings-apikey-wrap {
+  margin-bottom: 12px;
+}
+
+.settings-apikey-input {
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+.settings-apikey-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.settings-bottom-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  .settings-card { margin-bottom: 0; }
+
+  @media (max-width: 560px) { grid-template-columns: 1fr; }
+}
+
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+
+  input[type=checkbox] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
 }
 
 .pw-wrap {

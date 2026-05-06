@@ -1,83 +1,96 @@
 {% extends "budget_base.html" %}
 
-{% block title %}Comaney – Profile{% endblock %}
+{% block title %}Comaney – Settings{% endblock %}
 
 
 {% block content %}
-<h1>Profile</h1>
+<div class="settings-wrap">
 
-<div class="profile-grid">
+    <h1>Settings</h1>
 
-    <div class="profile-section">
-        <h2>Personal info</h2>
-        <p class="in-page-tip">Change your name, currency and your financial cycle. For example, if you're getting paid on the 27th, you may want your financial month to begin on the 27. and end on the 26, to begin with your salary.</p>
+    <div class="settings-card" id="section-profile">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Personal info</h2>
+        </div>
+        <p class="in-page-tip">Change your name, currency, and financial cycle. For example, if you're paid on the 27th, you may want your month to start on the 27th so it aligns with your salary.</p>
         {% if success == "profile" %}<p class="success-msg">Saved.</p>{% endif %}
         <form method="post" novalidate>
             {% csrf_token %}
             <input type="hidden" name="action" value="profile">
             {% for field in profile_form %}
-            {% if field.html_name != "month_start_prev" and field.html_name != "email_notifications" %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{% endif %}
-            {% if field.html_name == "month_start_prev" %}
-            <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
-            <p class="month-offset-preview" id="month-offset-preview"></p>
-            {% elif field.html_name == "email_notifications" %}
-            <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
-            {% else %}
-            {{ field }}
-            {% endif %}
-            {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+                {% if field.html_name != "month_start_prev" and field.html_name != "email_notifications" %}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {% endif %}
+                {% if field.html_name == "month_start_prev" %}
+                    <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
+                    <p class="month-offset-preview" id="month-offset-preview"></p>
+                {% elif field.html_name == "email_notifications" %}
+                    <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
+                {% else %}
+                    {{ field }}
+                {% endif %}
+                {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
             {% endfor %}
             <div class="form-actions">
-                <button type="submit" class="btn">Save</button>
+                <button type="submit" class="btn">Save changes</button>
             </div>
         </form>
     </div>
 
-    <div class="profile-section">
-        <h2>AI</h2>
-        <p class="in-page-tip">Use your own API key to remove usage limits and define custom instructions on how to classify your expenses.</p>
+    <div class="settings-card" id="section-ai">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">AI</h2>
+        </div>
+        <p class="in-page-tip">Use your own Anthropic API key to remove usage limits and define custom instructions for how expenses are classified.</p>
         {% if success == "ai" %}<p class="success-msg">Saved.</p>{% endif %}
         <form method="post" novalidate>
             {% csrf_token %}
             <input type="hidden" name="action" value="ai">
             {% for field in ai_form %}
-            {% if field.html_name != "anthropic_api_key" %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{% endif %}
-            {% if field.html_name == "anthropic_api_key" %}
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            <div class="pw-wrap">
-                {{ field }}
-                <button type="button" class="pw-eye" aria-label="Toggle visibility" tabindex="-1">
-                    <svg class="eye-show" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path d="M10 3C5 3 1.73 7.11 1.05 8.63a1 1 0 0 0 0 .74C1.73 10.89 5 15 10 15s8.27-4.11 8.95-5.63a1 1 0 0 0 0-.74C18.27 7.11 15 3 10 3Zm0 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg>
-                    <svg class="eye-hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18" height="18" style="display:none"><path d="M2.22 2.22a.75.75 0 0 0-1.06 1.06l2.42 2.42A10.6 10.6 0 0 0 1.05 8.63a1 1 0 0 0 0 .74C1.73 10.89 5 15 10 15c1.5 0 2.9-.38 4.12-1.02l2.66 2.66a.75.75 0 0 0 1.06-1.06L2.22 2.22Zm6.13 6.13 3.3 3.3A2 2 0 0 1 8.35 8.35ZM10 3c-1.08 0-2.1.22-3.04.6l1.55 1.55a4 4 0 0 1 4.34 4.34l2.23 2.23C16.4 10.46 18 9 18.95 9.37a1 1 0 0 0 0-.74C18.27 7.11 15 3 10 3Z"/></svg>
-                </button>
-            </div>
-            {% else %}
-            {{ field }}
-            {% endif %}
-            {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+                {% if field.html_name == "anthropic_api_key" %}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    <div class="pw-wrap">
+                        {{ field }}
+                        <button type="button" class="pw-eye" aria-label="Toggle visibility" tabindex="-1">
+                            <svg class="eye-show" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path d="M10 3C5 3 1.73 7.11 1.05 8.63a1 1 0 0 0 0 .74C1.73 10.89 5 15 10 15s8.27-4.11 8.95-5.63a1 1 0 0 0 0-.74C18.27 7.11 15 3 10 3Zm0 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg>
+                            <svg class="eye-hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18" height="18" style="display:none"><path d="M2.22 2.22a.75.75 0 0 0-1.06 1.06l2.42 2.42A10.6 10.6 0 0 0 1.05 8.63a1 1 0 0 0 0 .74C1.73 10.89 5 15 10 15c1.5 0 2.9-.38 4.12-1.02l2.66 2.66a.75.75 0 0 0 1.06-1.06L2.22 2.22Zm6.13 6.13 3.3 3.3A2 2 0 0 1 8.35 8.35ZM10 3c-1.08 0-2.1.22-3.04.6l1.55 1.55a4 4 0 0 1 4.34 4.34l2.23 2.23C16.4 10.46 18 9 18.95 9.37a1 1 0 0 0 0-.74C18.27 7.11 15 3 10 3Z"/></svg>
+                        </button>
+                    </div>
+                {% else %}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                {% endif %}
+                {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
             {% endfor %}
             <div class="form-actions">
-                <button type="submit" class="btn">Save</button>
+                <button type="submit" class="btn">Save changes</button>
             </div>
         </form>
     </div>
 
-    <div class="profile-section">
-        <h2>Two-factor authentication</h2>
+    <div class="settings-card" id="section-2fa">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Two-factor authentication</h2>
+            {% if current_feuser.totp_enabled %}
+            <span class="settings-badge settings-badge--on">Enabled</span>
+            {% else %}
+            <span class="settings-badge settings-badge--off">Not enabled</span>
+            {% endif %}
+        </div>
         {% if current_feuser.totp_enabled %}
-        <p class="totp-status totp-status--on">✓ Enabled</p>
-        <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Your account is protected with an authenticator app.</p>
+        <p class="in-page-tip">Your account is protected with an authenticator app.</p>
         <a href="{% url 'totp_disable' %}" class="btn btn-danger btn-sm">Disable 2FA</a>
         {% else %}
-        <p class="totp-status totp-status--off">Not enabled</p>
-        <p class="in-page-tip">Add an extra layer of security to your account.</p>
+        <p class="in-page-tip">Add an extra layer of security by requiring a one-time code from your authenticator app on each login.</p>
         <a href="{% url 'totp_setup' %}" class="btn">Set up 2FA</a>
         {% endif %}
     </div>
 
-    <div class="profile-section">
-        <h2>Change email</h2>
-        <p style="margin:0 0 12px; font-size:0.95rem;">Current: <strong>{{ current_feuser.email }}</strong></p>
+    <div class="settings-card" id="section-email">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Email address</h2>
+        </div>
+        <p class="settings-current-value">{{ current_feuser.email }}</p>
         {% if success == "email_direct" %}
         <p class="success-msg">Email address updated.</p>
         {% elif success == "email" %}
@@ -91,9 +104,9 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="email">
             {% for field in email_form %}
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
             {% endfor %}
             <div class="form-actions">
                 <button type="submit" class="btn">Update email</button>
@@ -101,17 +114,18 @@
         </form>
     </div>
 
-    <div class="profile-section">
-        <p class="page-tip"></p>
-        <h2>Change password</h2>
+    <div class="settings-card" id="section-password">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Password</h2>
+        </div>
         {% if success == "password" %}<p class="success-msg">Password updated.</p>{% endif %}
         <form method="post" novalidate>
             {% csrf_token %}
             <input type="hidden" name="action" value="password">
             {% for field in password_form %}
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
             {% endfor %}
             <div class="form-actions">
                 <button type="submit" class="btn">Update password</button>
@@ -119,18 +133,19 @@
         </form>
     </div>
 
-    <div class="profile-section">
-        <p class="page-tip"></p>
-        <h2>API key</h2>
+    <div class="settings-card" id="section-apikey">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">API key</h2>
+        </div>
         <p class="in-page-tip">Use a Bearer token to access the REST API programmatically.</p>
         {% if current_feuser.api_key %}
-        <div class="pw-wrap" style="margin-bottom:12px;">
-            <input type="text" id="api-key-display" value="{{ current_feuser.api_key }}" readonly class="edit-input" style="font-family:monospace;font-size:0.85rem;">
+        <div class="pw-wrap settings-apikey-wrap">
+            <input type="text" id="api-key-display" value="{{ current_feuser.api_key }}" readonly class="edit-input settings-apikey-input">
             <button type="button" class="pw-eye" aria-label="Copy to clipboard" id="api-key-copy" tabindex="-1" title="Copy">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h3.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12A1.5 1.5 0 0 1 17 6.622V12.5a1.5 1.5 0 0 1-1.5 1.5h-1v-3.379a3 3 0 0 0-.879-2.121L10.5 5.379A3 3 0 0 0 8.379 4.5H7v-1Zm-2 2A1.5 1.5 0 0 0 3.5 7v9A1.5 1.5 0 0 0 5 17.5h7a1.5 1.5 0 0 0 1.5-1.5V9.621a1.5 1.5 0 0 0-.44-1.06L9.94 5.439A1.5 1.5 0 0 0 8.878 5H5Z"/></svg>
             </button>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="settings-apikey-actions">
             <form method="post" action="{% url 'api_key_generate' %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-secondary btn-sm">Regenerate</button>
@@ -148,22 +163,26 @@
         {% endif %}
     </div>
 
-    <div class="profile-section profile-section--stacked">
-        <div>
-            <p class="in-page-tip"></p>
-            <h2>Export data</h2>
-            <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Download all your data as a ZIP archive containing CSV files.</p>
+    <div class="settings-bottom-row">
+        <div class="settings-card" id="section-export">
+            <div class="settings-card-head">
+                <h2 class="settings-card-title">Export data</h2>
+            </div>
+            <p class="in-page-tip">Download all your data as a ZIP archive containing CSV files.</p>
             <a href="{% url 'account_export' %}" class="btn btn-secondary btn-sm">Export as ZIP</a>
         </div>
-        <div class="profile-section--danger">
-            <p class="in-page-tip"></p>
-            <h2>Danger zone</h2>
-            <p style="font-size:0.9rem;color:var(--text-subtle);margin:0 0 16px;">Permanently delete your account and all associated data.</p>
+
+        <div class="settings-card settings-card--danger" id="section-danger">
+            <div class="settings-card-head">
+                <h2 class="settings-card-title">Danger zone</h2>
+            </div>
+            <p class="in-page-tip">Permanently delete your account and all associated data. This cannot be undone.</p>
             <a href="{% url 'account_delete' %}" class="btn btn-danger btn-sm">Delete account</a>
         </div>
     </div>
 
 </div>
+
 <script>
 document.querySelectorAll('.pw-eye').forEach(btn => {
     const input = btn.closest('.pw-wrap').querySelector('input');
