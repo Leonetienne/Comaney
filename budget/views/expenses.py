@@ -1,4 +1,5 @@
 import csv
+import urllib.parse
 from datetime import date
 
 from django.http import HttpResponse, HttpResponseRedirect
@@ -11,6 +12,18 @@ from ..forms import ExpenseForm
 from ..models import Expense, TransactionType
 from ..notifications import send_settled_notification, set_initial_notification_class
 from ._period import _get_month, _get_period_mode, _get_year, _month_nav_context, _year_nav_context
+
+
+def _safe_back_url(url):
+    """Validate that a back-URL is a relative path (prevents open redirect)."""
+    if not url:
+        return None
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme or parsed.netloc:
+        return None
+    if not parsed.path.startswith("/"):
+        return None
+    return url
 
 
 @feuser_required
@@ -118,13 +131,15 @@ def expense_edit(request, uid):
                 send_settled_notification(expense)
             else:
                 set_initial_notification_class(expense)
-            return redirect("budget:expenses_list")
+            back = _safe_back_url(request.POST.get("back", ""))
+            return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
     else:
         form = ExpenseForm(instance=expense, feuser=request.feuser)
     return render(request, "budget/expense_form.html", {
         "active_nav": "expenses",
         "form": form,
         "expense": expense,
+        "back_url": request.GET.get("back", ""),
     })
 
 

@@ -60,7 +60,7 @@
         <!-- Actions column (right, all rows) -->
         <div class="exp-actions">
             {% if exp.type != "carry_over" %}
-            <a href="{% url 'budget:expense_edit' exp.uid %}" class="btn btn-sm btn-secondary">Edit</a>
+            <a href="{% url 'budget:expense_edit' exp.uid %}?back={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-secondary">Edit</a>
             <form method="post" action="{% url 'budget:expense_clone' exp.uid %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
@@ -202,8 +202,17 @@
         updateSelectAllBtn();
     }
 
-    var savedQuery = sessionStorage.getItem('expSearch');
-    if (savedQuery) { searchInput.value = savedQuery; filterCards(); }
+    var ref = '';
+    try { ref = document.referrer ? new URL(document.referrer).pathname : ''; } catch (e) {}
+    var expBase = "{% url 'budget:expenses_list' %}".replace(/\/$/, '');
+    var fromExpensesArea = ref === expBase + '/' || ref.startsWith(expBase + '/');
+
+    if (fromExpensesArea) {
+        var savedQuery = sessionStorage.getItem('expSearch');
+        if (savedQuery) { searchInput.value = savedQuery; filterCards(); }
+    } else {
+        sessionStorage.removeItem('expSearch');
+    }
 
     searchInput.addEventListener('input', function () {
         sessionStorage.setItem('expSearch', searchInput.value);
