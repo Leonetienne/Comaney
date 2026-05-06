@@ -1,6 +1,26 @@
 {% extends "budget_base.html" %}
+{% load static %}
 
 {% block title %}Comaney – Expenses{% endblock %}
+
+{% block extra_head %}
+<script>
+window.EXPENSE_CONFIG = {
+    apiUrl:        "/api/v1/expenses/",
+    year:          "{{ nav_year }}",
+    month:         "{{ nav_month }}",
+    mode:          "{{ nav_mode }}",
+    currency:      "{{ current_feuser.currency|escapejs }}",
+    urlEdit:       "{% url 'budget:expense_edit'   1 %}",
+    urlClone:      "{% url 'budget:expense_clone'  1 %}",
+    urlDelete:     "{% url 'budget:expense_delete' 1 %}",
+    urlExpenses:   "{% url 'budget:expenses_list' %}",
+    urlBulkAction: "{% url 'budget:expense_bulk_action' %}",
+    urlExport:     "{% url 'budget:expenses_export' %}",
+};
+</script>
+<script src="{% static 'dist/expenses.js' %}" defer></script>
+{% endblock %}
 
 
 {% block content %}
@@ -11,346 +31,107 @@
 <p class="page-tip">Expenses are items that describe transactions. A transaction is you getting paid, receiving money, paying money, depositing savings or withdrawing from savings.</p>
 {% include "partials/_month_nav.html" %}
 
-{% if expenses %}
-<div class="exp-controls">
-    <input type="text" id="exp-search" class="exp-search" placeholder="Search… coffee type=expense  settled=yes  value&lt;100" autocomplete="off">
-</div>
-
-<div class="exp-toolbar">
-    <div class="exp-toolbar-left">
-        <button type="button" id="exp-select-all" class="btn btn-sm btn-secondary">Select all</button>
-        <form id="exp-bulk-form" method="post" action="{% url 'budget:expense_bulk_action' %}">
-            {% csrf_token %}
-            <div id="exp-bulk-uids"></div>
-            <select name="action" id="exp-bulk-action" class="exp-bulk-select">
-                <option value="">— Bulk action —</option>
-                <option value="settle">Settle</option>
-                <option value="unsettle">Unsettle</option>
-                <option value="delete">Delete</option>
-            </select>
-            <button type="submit" class="btn btn-sm btn-secondary">Go</button>
-        </form>
+<div x-data="expenseList">
+    <div class="exp-controls">
+        <input type="text" id="exp-search" class="exp-search"
+               x-model="query" @input="onInput()"
+               placeholder="Search… coffee type=expense  settled=yes  value&lt;100"
+               autocomplete="off">
     </div>
-    <div class="exp-toolbar-right">
-        Visible total: <span id="exp-sum-value">–</span> {{ current_feuser.currency }}
+
+    <div class="exp-toolbar">
+        <div class="exp-toolbar-left">
+            <button type="button" id="exp-select-all" class="btn btn-sm btn-secondary"
+                    @click="toggleSelectAll()"
+                    x-text="allSelected ? 'Deselect all' : 'Select all'"></button>
+            <div style="display:contents">
+                <select id="exp-bulk-action" x-model="bulkAction" class="exp-bulk-select">
+                    <option value="">— Bulk action —</option>
+                    <option value="settle">Settle</option>
+                    <option value="unsettle">Unsettle</option>
+                    <option value="delete">Delete</option>
+                </select>
+                <button type="button" id="exp-bulk-go" class="btn btn-sm btn-secondary" @click="submitBulk()">Go</button>
+            </div>
+        </div>
+        <div class="exp-toolbar-right">
+            Visible total: <span id="exp-sum-value" x-text="visibleSum"></span> {{ current_feuser.currency }}
+        </div>
     </div>
-</div>
-<a href="https://github.com/Leonetienne/Comaney#advanced-search-filters" target="_blank" rel="noopener" style="display:block;margin-top:6px;font-size:0.75rem;font-style:italic;text-decoration:underline;color:var(--text-muted);">Advanced search filters</a>
+    <a href="https://github.com/Leonetienne/Comaney#advanced-search-filters" target="_blank" rel="noopener" style="display:block;margin-top:6px;font-size:0.75rem;font-style:italic;text-decoration:underline;color:var(--text-muted);">Advanced search filters</a>
 
-<div class="exp-list" id="exp-list">
-    {% for exp in expenses %}
-    <div class="exp-card{% if not exp.settled %} unsettled{% endif %}{% if exp.deactivated %} exp-card--deactivated{% endif %}"
-         data-uid="{{ exp.uid }}"
-         data-value="{{ exp.value }}"
-         data-type="{{ exp.get_type_display|lower }}"
-         data-settled="{{ exp.settled|yesno:'true,false' }}"
-         data-search="{{ exp.title|lower }} {{ exp.payee|lower }} {{ exp.value }} {{ exp.note|lower }}"
-         data-payee="{{ exp.payee|lower }}"
-         data-cat="{{ exp.category.title|lower }}"
-         data-tags="{% for tag in exp.tags.all %}{{ tag.title|lower }}{% if not forloop.last %}|{% endif %}{% endfor %}">
+    <style>
+    #exp-list[data-search-loading] { opacity: 0.5; pointer-events: none; transition: opacity 0.1s; }
+    </style>
 
-        <!-- Date label above title -->
-        {% if exp.date_due %}<div class="exp-date-label" style="grid-column:1;grid-row:1;">{{ exp.date_due|date:"Y-m-d" }}</div>{% endif %}
+    <div class="exp-list" id="exp-list"
+         :data-search-loading="fetching ? '' : null"
+         :data-search-pending="pending ? '' : null">
 
-        <!-- Row 1: title, payee, amount -->
-        <div class="exp-row1" style="grid-row:2;">
-            <span class="exp-title">{{ exp.title }}</span>
-            {% if exp.payee %}<span class="exp-payee">{{ exp.payee }}</span>{% endif %}
-            <span class="exp-amount type-{{ exp.type }}">{{ exp.value }} {{ current_feuser.currency }}</span>
-        </div>
+        <template x-for="exp in expenses" :key="exp.id">
+            <div class="exp-card"
+                 :class="{ unsettled: !exp.settled, 'exp-card--deactivated': exp.deactivated }"
+                 :data-uid="exp.id"
+                 :data-value="exp.value"
+                 :data-type="exp.type"
+                 :data-settled="exp.settled ? 'true' : 'false'"
+                 :data-payee="exp.payee ? exp.payee.toLowerCase() : ''"
+                 :data-cat="catStr(exp)"
+                 :data-tags="tagStr(exp)">
 
-        <!-- Actions column (right, all rows) -->
-        <div class="exp-actions">
-            {% if exp.type != "carry_over" %}
-            <a href="{% url 'budget:expense_edit' exp.uid %}?back={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-secondary">Edit</a>
-            <form method="post" action="{% url 'budget:expense_clone' exp.uid %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
-            </form>
-            <form method="post" action="{% url 'budget:expense_delete' exp.uid %}" class="delete-form" data-title="{{ exp.title|escapejs }}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-            </form>
-            {% endif %}
-        </div>
+                <div x-show="exp.date_due" class="exp-date-label" style="grid-column:1;grid-row:1;" x-text="exp.date_due"></div>
 
-        <!-- Row 2: type, settled, category, tags -->
-        <div class="exp-row2">
-            <span class="badge badge-{{ exp.type }}">{{ exp.get_type_display }}</span>
-            {% if exp.deactivated %}<span class="badge badge-deactivated">Deactivated</span>{% endif %}
-            {% if exp.settled %}
-            <span class="exp-settled yes">✓ settled</span>
-            {% else %}
-            <span class="exp-settled">unsettled</span>
-            {% endif %}
-            {% if exp.category %}<span class="sep">·</span><span class="exp-category">{{ exp.category.title }}</span>{% endif %}
-            {% for tag in exp.tags.all %}<span class="badge badge-tag">{{ tag.title }}</span>{% endfor %}
-        </div>
+                <div class="exp-row1" style="grid-row:2;">
+                    <span class="exp-title" x-text="exp.title"></span>
+                    <span x-show="exp.payee" class="exp-payee" x-text="exp.payee"></span>
+                    <span class="exp-amount" :class="'type-' + exp.type" x-text="exp.value + ' ' + currency"></span>
+                </div>
 
-        <!-- Row 3: note (only if set) -->
-        {% if exp.note %}
-        <div class="exp-row3">{{ exp.note }}</div>
-        {% endif %}
+                <div class="exp-actions">
+                    <template x-if="exp.type !== 'carry_over'">
+                        <div style="display:contents">
+                            <a :href="editUrl(exp.id) + '?back=' + encodedBackUrl()" class="btn btn-sm btn-secondary">Edit</a>
+                            <form method="post" :action="cloneUrl(exp.id)">
+                                <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
+                                <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
+                            </form>
+                            <form method="post" :action="deleteUrl(exp.id)" class="delete-form" :data-title="exp.title">
+                                <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </div>
+                    </template>
+                </div>
 
-        <!-- Checkbox bottom-left -->
-        <label class="exp-checkbox-wrap" title="Select">
-            <input type="checkbox" class="exp-checkbox">
-        </label>
+                <div class="exp-row2">
+                    <span class="badge" :class="'badge-' + exp.type" x-text="typeDisplay(exp.type)"></span>
+                    <span x-show="exp.deactivated" class="badge badge-deactivated">Deactivated</span>
+                    <span x-show="exp.settled" class="exp-settled yes">&#10003; settled</span>
+                    <span x-show="!exp.settled" class="exp-settled">unsettled</span>
+                    <template x-if="exp.category">
+                        <span style="display:contents">
+                            <span class="sep">·</span>
+                            <span class="exp-category" x-text="exp.category.title"></span>
+                        </span>
+                    </template>
+                    <template x-for="tag in (exp.tags || [])" :key="tag.id">
+                        <span class="badge badge-tag" x-text="tag.title"></span>
+                    </template>
+                </div>
 
+                <div x-show="exp.note" class="exp-row3" x-text="exp.note"></div>
+
+                <label class="exp-checkbox-wrap" title="Select">
+                    <input type="checkbox" class="exp-checkbox"
+                           :checked="!!selected[exp.id]"
+                           @change="toggleSelect(exp.id)">
+                </label>
+            </div>
+        </template>
+
+        <p x-show="!fetching && expenses.length === 0" class="empty exp-empty-search">No expenses yet. <a href="{% url 'budget:expense_create' %}">Add one.</a></p>
     </div>
-    {% endfor %}
+
+    <a :href="exportHref" class="expenses-export-link">&#8595; Export CSV</a>
 </div>
-
-{% if nav_mode == 'year' %}
-<a href="{% url 'budget:expenses_export' %}?view=year&year={{ nav_year }}" class="expenses-export-link">↓ Export CSV</a>
-{% else %}
-<a href="{% url 'budget:expenses_export' %}?year={{ nav_year }}&month={{ nav_month }}" class="expenses-export-link">↓ Export CSV</a>
-{% endif %}
-
-{% else %}
-<p class="empty">No expenses yet. <a href="{% url 'budget:expense_create' %}">Add one.</a></p>
-{% endif %}
-{% endblock %}
-
-
-{% block extra_scripts %}
-{% if expenses %}
-<script>
-(function () {
-    var searchInput  = document.getElementById('exp-search');
-    var selectAllBtn = document.getElementById('exp-select-all');
-    var sumEl        = document.getElementById('exp-sum-value');
-    var bulkForm     = document.getElementById('exp-bulk-form');
-    var bulkUids     = document.getElementById('exp-bulk-uids');
-    var bulkAction   = document.getElementById('exp-bulk-action');
-    var cards        = Array.from(document.querySelectorAll('#exp-list .exp-card'));
-
-    // ── Predicate primitives ──────────────────────────────────────────────
-    // makeSubstringPred / makeExactPred return *factories*: val → (card → bool).
-    // Use them to populate the registries below; no parser changes needed.
-    function makeSubstringPred(field) {
-        return function(val) { return function(c) { return (c.dataset[field]||'').indexOf(val) !== -1; }; };
-    }
-    function makeExactPred(field) {
-        return function(val) { return function(c) { return c.dataset[field] === val; }; };
-    }
-    // Returns a predicate directly (tags are pipe-separated, need special split).
-    function makeTagFilter(val) {
-        return function(c) { return (c.dataset.tags||'').split('|').some(function(t){ return t.indexOf(val) !== -1; }); };
-    }
-    // Returns a predicate directly (normalises true/yes/1 vs false/no/0).
-    function makeSettledFilter(val) {
-        var want = (val === 'true' || val === 'yes' || val === '1') ? 'true' : 'false';
-        return function(c) { return c.dataset.settled === want; };
-    }
-    // Returns a predicate for a numeric comparison on any dataset field.
-    function makeNumericFilter(field, op, num) {
-        return function(c) {
-            var v = parseFloat(c.dataset[field]) || 0;
-            if (op === '<')  return v < num;   if (op === '<=') return v <= num;
-            if (op === '>')  return v > num;   if (op === '>=') return v >= num;
-            return Math.abs(v - num) < 0.001;
-        };
-    }
-    function makeTermFilter(val) {
-        return function(c) { return (c.dataset.search||'').indexOf(val) !== -1; };
-    }
-
-    // ── Filter registries ─────────────────────────────────────────────────
-    // To add a new filter, add one entry here. No parser changes needed.
-    // Both key=val and key:val syntax resolve through EQUALS_FILTERS —
-    // the operator is just stylistic preference for the user.
-    //   EQUALS_FILTERS — key=val / key:val   entry: val → predicate
-    //   CMP_FILTERS    — key</>= num         entry: (op, num) → predicate
-    var EQUALS_FILTERS = {
-        type:    makeExactPred('type'),
-        settled: makeSettledFilter,
-        value:   function(val) { return makeNumericFilter('value', '=', parseFloat(val) || 0); },
-        tag:     makeTagFilter,
-        cat:     makeSubstringPred('cat'),
-        payee:   makeSubstringPred('payee'),
-    };
-    var CMP_FILTERS = {
-        value: function(op, num) { return makeNumericFilter('value', op, num); },
-    };
-
-    // ── Query compiler ────────────────────────────────────────────────────
-    // Tokenises the raw (lowercased) search string into a flat token list.
-    // Token shapes:
-    //   {t:'or'}                              — ||
-    //   {t:'lp'} / {t:'rp'}                  — ( / )
-    //   {t:'cmp', key, op, num}              — key < / <= / > / >= num
-    //   {t:'kv',  key, val}                  — key=val
-    //   {t:'str', val}                        — "phrase" or bare word
-    function tokenize(raw) {
-        var re = /\|\||\(|\)|(\w+)\s*([<>]=?)\s*(\d+(?:\.\d+)?)|(\w+)=(?:"([^"]*)"|([^\s()|"]+))|"([^"]*)"|([^\s()|"]+)/g;
-        var out = [], m;
-        while ((m = re.exec(raw)) !== null) {
-            if      (m[0] === '||')        out.push({t: 'or'});
-            else if (m[0] === '(')         out.push({t: 'lp'});
-            else if (m[0] === ')')         out.push({t: 'rp'});
-            else if (m[1])                 out.push({t: 'cmp', key: m[1], op: m[2], num: parseFloat(m[3])});
-            else if (m[4])                 out.push({t: 'kv',  key: m[4], val: m[5] !== undefined ? m[5] : m[6]});
-            else if (m[7] !== undefined)   out.push({t: 'str', val: m[7]});
-            else                           out.push({t: 'str', val: m[8]});
-        }
-        return out;
-    }
-
-    // Compiles a token list into a card predicate (card → bool).
-    // Grammar: expr = group ('||' group)* ; group = atom* ; atom = '(' expr ')' | filter
-    function compile(tokens) {
-        var i = 0;
-        function peek() { return i < tokens.length ? tokens[i] : null; }
-        function next() { return tokens[i++]; }
-
-        function parseExpr() {
-            var groups = [parseGroup()];
-            while (peek() && peek().t === 'or') { next(); groups.push(parseGroup()); }
-            if (groups.length === 1) return groups[0];
-            return function(c) { for (var g = 0; g < groups.length; g++) if (groups[g](c)) return true; return false; };
-        }
-        function parseGroup() {
-            var ps = [];
-            while (peek() && peek().t !== 'or' && peek().t !== 'rp') ps.push(parseAtom());
-            if (!ps.length) return function() { return true; };
-            if (ps.length === 1) return ps[0];
-            return function(c) { for (var p = 0; p < ps.length; p++) if (!ps[p](c)) return false; return true; };
-        }
-        function parseAtom() {
-            if (peek() && peek().t === 'lp') {
-                next();
-                var inner = parseExpr();
-                if (peek() && peek().t === 'rp') next();
-                return inner;
-            }
-            return makeFilter(next());
-        }
-        function makeFilter(tok) {
-            if (!tok) return function() { return true; };
-            if (tok.t === 'cmp') {
-                var cmpH = CMP_FILTERS[tok.key];
-                if (cmpH) return cmpH(tok.op, tok.num);
-            }
-            if (tok.t === 'kv') {
-                var kvH = EQUALS_FILTERS[tok.key];
-                if (kvH) return kvH(tok.val);
-            }
-            // Unrecognised token → fold back into free-text search.
-            var term = tok.t === 'str' ? tok.val
-                     : tok.t === 'cmp' ? tok.key + tok.op + tok.num
-                     :                   tok.key + '=' + tok.val;
-            return makeTermFilter(term);
-        }
-        return parseExpr();
-    }
-
-    function compileQuery(raw) {
-        var s = raw ? raw.trim() : '';
-        return s ? compile(tokenize(s)) : null;
-    }
-
-    // ── Card helpers ──────────────────────────────────────────────────────
-    function visibleCards() {
-        return cards.filter(function(c) { return c.style.display !== 'none'; });
-    }
-    function checkedCards() {
-        return visibleCards().filter(function(c) { return c.querySelector('.exp-checkbox').checked; });
-    }
-    function signedValue(card) {
-        var v = parseFloat(card.dataset.value) || 0;
-        var t = card.dataset.type;
-        return (t === 'expense' || t === 'savings deposit') ? -v : v;
-    }
-    function updateSum() {
-        var vis = visibleCards();
-        if (!vis.length) { sumEl.textContent = '–'; return; }
-        sumEl.textContent = vis.reduce(function(a, c) { return a + signedValue(c); }, 0).toFixed(2);
-    }
-    function updateSelectAllBtn() {
-        var vis = visibleCards();
-        if (!vis.length) { selectAllBtn.textContent = 'Select all'; return; }
-        selectAllBtn.textContent = vis.every(function(c) {
-            return c.querySelector('.exp-checkbox').checked;
-        }) ? 'Deselect all' : 'Select all';
-    }
-    function filterCards() {
-        var pred = compileQuery(searchInput.value.toLowerCase());
-        cards.forEach(function(card) {
-            var vis = !pred || pred(card);
-            card.style.display = vis ? '' : 'none';
-            if (!vis) card.querySelector('.exp-checkbox').checked = false;
-        });
-        updateSum();
-        updateSelectAllBtn();
-    }
-
-    var urlSearch = new URLSearchParams(window.location.search).get('search');
-    if (urlSearch !== null) {
-        sessionStorage.setItem('expSearch', urlSearch);
-        searchInput.value = urlSearch;
-        filterCards();
-    } else {
-        var ref = '';
-        try { ref = document.referrer ? new URL(document.referrer).pathname : ''; } catch (e) {}
-        var expBase = "{% url 'budget:expenses_list' %}".replace(/\/$/, '');
-        var fromExpensesArea = ref === expBase + '/' || ref.startsWith(expBase + '/');
-
-        if (fromExpensesArea) {
-            var savedQuery = sessionStorage.getItem('expSearch');
-            if (savedQuery) { searchInput.value = savedQuery; filterCards(); }
-        } else {
-            sessionStorage.removeItem('expSearch');
-        }
-    }
-
-    searchInput.addEventListener('input', function () {
-        sessionStorage.setItem('expSearch', searchInput.value);
-        filterCards();
-    });
-
-    selectAllBtn.addEventListener('click', function () {
-        var visible = visibleCards();
-        var allChecked = visible.every(function (c) {
-            return c.querySelector('.exp-checkbox').checked;
-        });
-        visible.forEach(function (c) {
-            c.querySelector('.exp-checkbox').checked = !allChecked;
-        });
-        updateSelectAllBtn();
-    });
-
-    cards.forEach(function (card) {
-        card.querySelector('.exp-checkbox').addEventListener('change', updateSelectAllBtn);
-    });
-
-    bulkForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var action = bulkAction.value;
-        if (!action) { alert('Bitte eine Aktion auswählen.'); return; }
-        var selected = checkedCards();
-        if (!selected.length) { alert('Keine Einträge ausgewählt.'); return; }
-
-        var labels = { settle: 'Settle', unsettle: 'Unsettle', 'delete': 'Delete' };
-        var label  = labels[action] || action;
-        var count  = selected.length;
-        var msg    = label + ' ' + count + ' expense' + (count !== 1 ? 's' : '') + '?';
-
-        confirmDialog(msg, label).then(function () {
-            bulkUids.innerHTML = '';
-            selected.forEach(function (c) {
-                var inp = document.createElement('input');
-                inp.type  = 'hidden';
-                inp.name  = 'uid';
-                inp.value = c.dataset.uid;
-                bulkUids.appendChild(inp);
-            });
-            bulkForm.submit();
-        }).catch(function () {});
-    });
-
-    updateSum();
-})();
-</script>
-{% endif %}
 {% endblock %}

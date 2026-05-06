@@ -3,9 +3,15 @@
   "private": true,
   "scripts": {
     "build:css": "sass build/scss/main.scss static/dist/main.css --style=compressed --no-source-map",
+    "build:js": "esbuild build/js/expenses.js --bundle --minify --target=es2020 --outfile=static/dist/expenses.js",
+    "build": "npm run build:css && npm run build:js",
     "watch:css": "sass --watch build/scss/main.scss:static/dist/main.css"
   },
+  "dependencies": {
+    "alpinejs": "^3.14.9"
+  },
   "devDependencies": {
+    "esbuild": "^0.25.4",
     "sass": "^1.77.6"
   }
 }

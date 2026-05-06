@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from budget.date_utils import financial_month_range, financial_year_range
 from budget.expense_factory import create_expense
 from budget.models import Category, Expense, ScheduledExpense, Tag, TransactionType
+from budget.query_parser import apply_query
 from budget.notifications import send_settled_notification, set_initial_notification_class
 from .serializers import (
     _expense_json, _scheduled_json,
@@ -37,6 +38,7 @@ def expenses(request, feuser):
             .prefetch_related("tags")
             .order_by("date_due", "date_created")
         )
+        qs = apply_query(qs, request.GET.get("q", ""))
         return _ok({"year": year, "month": month, "expenses": [_expense_json(e) for e in qs]})
 
     if request.method == "POST":

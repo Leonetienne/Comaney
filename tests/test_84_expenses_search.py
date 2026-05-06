@@ -11,6 +11,7 @@ from datetime import date
 import time
 import pytest
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
 
 from conftest import _url, click, wait_text, server_today, api_post, api_get, api_delete, CLICK_PACE
 
@@ -28,15 +29,25 @@ CAT_TITLE   = "SearchTest Haushalt"
 TAG_TITLE   = "SearchTest Kreditkarte"
 
 
+def _wait_search_settled(driver, timeout=3.0):
+    """Wait until no search request (pending debounce or in-flight XHR) is active."""
+    WebDriverWait(driver, timeout).until(
+        lambda d: (
+            not d.find_element(By.ID, 'exp-list').get_attribute('data-search-pending') and
+            not d.find_element(By.ID, 'exp-list').get_attribute('data-search-loading')
+        )
+    )
+
+
 def search_type(driver, value):
     el = driver.find_element(By.ID, "exp-search")
-    el.clear()
-    if value:
-        el.send_keys(value)
     driver.execute_script(
-        "arguments[0].dispatchEvent(new Event('input', {bubbles:true}))", el
+        "arguments[0].value = arguments[1];"
+        "arguments[0].dispatchEvent(new Event('input', {bubbles:true}));",
+        el, value,
     )
-    time.sleep(CLICK_PACE)
+    _wait_search_settled(driver)
+    time.sleep(1)
 
 
 def visible_titles(driver):
@@ -166,7 +177,8 @@ class TestExpensesSearch:
         # Click Cancel – should go back via history.back()
         driver.find_element(By.CSS_SELECTOR, ".form-actions .btn-secondary").click()
         wait_text(driver, w, TITLE_ALPHA)
-        time.sleep(CLICK_PACE)
+        # Wait for the session-restored search API call to complete
+        _wait_search_settled(driver)
 
         # Search input must still contain the term
         val = driver.find_element(By.ID, "exp-search").get_attribute("value")
@@ -206,7 +218,7 @@ class TestExpensesSearch:
         url = _url("/budget/expenses/") + "?" + urlencode({"search": f'tag="{TAG_TITLE}"'})
         driver.get(url)
         wait_text(driver, w, TITLE_ALPHA)
-        time.sleep(CLICK_PACE)
+        _wait_search_settled(driver)
 
         val = driver.find_element(By.ID, "exp-search").get_attribute("value")
         assert "tag=" in val.lower() and "kreditkarte" in val.lower(), (
@@ -224,7 +236,7 @@ class TestExpensesSearch:
         url = _url("/budget/expenses/") + "?" + urlencode({"search": f'cat="{CAT_TITLE}"'})
         driver.get(url)
         wait_text(driver, w, TITLE_ALPHA)
-        time.sleep(CLICK_PACE)
+        _wait_search_settled(driver)
 
         val = driver.find_element(By.ID, "exp-search").get_attribute("value")
         assert "cat=" in val.lower() and "haushalt" in val.lower(), (
@@ -246,7 +258,7 @@ class TestExpensesSearch:
         url = _url("/budget/expenses/") + "?" + urlencode({"search": f'tag="{TAG_TITLE}"'})
         driver.get(url)
         wait_text(driver, w, TITLE_ALPHA)
-        time.sleep(CLICK_PACE)
+        _wait_search_settled(driver)
 
         # URL param must win — Alpha visible, Beta hidden
         titles = visible_titles(driver)

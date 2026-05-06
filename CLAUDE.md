@@ -1,7 +1,7 @@
 # Comaney — Claude Code Guide
 
 ## What this is
-Django budgeting app. Session-based auth (no Django auth backend). MariaDB. SCSS compiled via Node. Deployed as Docker container.
+Django budgeting app. Session-based auth (no Django auth backend). MariaDB. SCSS + Alpine.js compiled via Node. Deployed as Docker container.
 
 ## Rules
 - You never commit
@@ -13,9 +13,11 @@ Django budgeting app. Session-based auth (no Django auth backend). MariaDB. SCSS
 
 ## Stack
 - **Python 3.12**, Django, Gunicorn, WhiteNoise, mysqlclient
-- **Node** (SCSS → CSS build only, stripped from final image)
+- **Node** (SCSS + JS build only, stripped from final image)
 - **Templates**: Django templates in `templates/`
 - **SCSS**: source in `build/scss/`, compiled to `static/dist/main.css`. Run `npm run build:css` after SCSS changes (or `npm run watch:css` during dev). Use `nvm install` first to get the right Node version.
+- **JS**: source in `build/js/`, bundled via esbuild to `static/dist/`. Run `npm run build:js` after JS changes. `npm run build` compiles both CSS and JS.
+  - `build/js/expenses.js` — Alpine.js v3 component for the expense list (live search, bulk actions, sum). Bundled with `--target=es2020` (required; lower targets break Alpine's async evaluator).
 - **CSS theming**: light/dark mode via CSS custom properties (`--var`). Never replace them with SCSS `$vars` — those are compile-time only. Required for dynamic dark/light mode in-browser.
 - **Tests**: Every functional feature requires selenium end-to-end tests, which are in `tests/`. Don't run them yourself!
 

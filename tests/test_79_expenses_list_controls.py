@@ -7,6 +7,7 @@ from datetime import date
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select as SeleniumSelect
+from selenium.webdriver.support.ui import WebDriverWait
 
 from conftest import _url, click, wait_text, server_today, api_post, api_get, api_delete, CLICK_PACE
 import time
@@ -19,16 +20,25 @@ TITLE_B = "BulkCtrl Beta"
 TITLE_C = "BulkCtrl Gamma Income"
 
 
+def _wait_search_settled(driver, timeout=3.0):
+    WebDriverWait(driver, timeout).until(
+        lambda d: (
+            not d.find_element(By.ID, 'exp-list').get_attribute('data-search-pending') and
+            not d.find_element(By.ID, 'exp-list').get_attribute('data-search-loading')
+        )
+    )
+
+
 def search_type(driver, value):
     """Set the search field value and dispatch the input event."""
     el = driver.find_element(By.ID, "exp-search")
-    el.clear()
-    if value:
-        el.send_keys(value)
     driver.execute_script(
-        "arguments[0].dispatchEvent(new Event('input', {bubbles:true}))", el
+        "arguments[0].value = arguments[1];"
+        "arguments[0].dispatchEvent(new Event('input', {bubbles:true}));",
+        el, value,
     )
-    time.sleep(CLICK_PACE)
+    _wait_search_settled(driver)
+    time.sleep(1)
 
 
 def search_clear(driver):
@@ -158,7 +168,7 @@ class TestExpensesListControls:
         """Select action, click Go, confirm dialog, wait for page reload."""
         anchor = driver.find_element(By.ID, "exp-list")
         SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value(action_value)
-        driver.find_element(By.CSS_SELECTOR, "#exp-bulk-form button[type=submit]").click()
+        driver.find_element(By.ID, "exp-bulk-go").click()
         time.sleep(CLICK_PACE)
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
         # Wait for the page to actually navigate (form POST + redirect)
@@ -193,7 +203,7 @@ class TestExpensesListControls:
 
         anchor = driver.find_element(By.ID, "exp-list")
         SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value("delete")
-        driver.find_element(By.CSS_SELECTOR, "#exp-bulk-form button[type=submit]").click()
+        driver.find_element(By.ID, "exp-bulk-go").click()
         time.sleep(CLICK_PACE)
 
         ok = w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok")))
@@ -258,7 +268,7 @@ class TestExpensesListControls:
         click(w, By.ID, "exp-select-all")
 
         SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value("delete")
-        driver.find_element(By.CSS_SELECTOR, "#exp-bulk-form button[type=submit]").click()
+        driver.find_element(By.ID, "exp-bulk-go").click()
         time.sleep(CLICK_PACE)
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-cancel"))).click()
         time.sleep(CLICK_PACE)

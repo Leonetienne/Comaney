@@ -246,17 +246,27 @@ docker buildx build \
   .
 ```
 
-### Building SCSS
+### Building front-end assets
 ```
-# If node version is not already 25, install NVM and do
+# If node version is not already set, install NVM and do
 nvm install
 
-# Building
+# Install dependencies
 npm install
-npm run build:css      # one-off compile → static/dist/main.css
-npm run watch:css      # recompile on every save
+
+# Build everything (CSS + JS) in one shot
+npm run build
+
+# Or build individually
+npm run build:css      # SCSS → static/dist/main.css
+npm run build:js       # Alpine bundle → static/dist/expenses.js
+
+# Watch CSS during development
+npm run watch:css
 ```
-Source files live in `build/scss/`. The compiled output at `static/dist/main.css` is what Django serves.
+Source files:
+- SCSS: `build/scss/` → compiled to `static/dist/main.css`
+- JS: `build/js/expenses.js` (Alpine.js component, bundled via esbuild) → `static/dist/expenses.js`
 
 ### Running tests
 

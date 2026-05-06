@@ -33,24 +33,12 @@ def expenses_list(request):
 
     if mode == "year":
         year = _get_year(request, feuser.month_start_day, feuser.month_start_prev)
-        start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
         nav_ctx = _year_nav_context(year, feuser.month_start_day, feuser.month_start_prev)
     else:
         year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
-        start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
         nav_ctx = _month_nav_context(year, month, feuser.month_start_day, feuser.month_start_prev)
 
-    expenses = (
-        Expense.objects.filter(
-            owning_feuser=feuser,
-            date_due__gte=start,
-            date_due__lte=end,
-        )
-        .select_related("category")
-        .prefetch_related("tags")
-        .order_by("-date_due", "-date_created")
-    )
-    ctx = {"active_nav": "expenses", "expenses": expenses}
+    ctx = {"active_nav": "expenses"}
     ctx.update(nav_ctx)
     return render(request, "budget/expenses_list.html", ctx)
 

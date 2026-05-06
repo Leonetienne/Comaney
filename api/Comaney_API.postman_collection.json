@@ -285,7 +285,9 @@
               "path": ["api", "v1", "expenses", ""],
               "query": [
                 { "key": "year",  "value": "2025", "disabled": true, "description": "Defaults to current financial year" },
-                { "key": "month", "value": "4",    "disabled": true, "description": "1–12. Defaults to current financial month" }
+                { "key": "year",  "value": "2025", "disabled": true, "description": "Defaults to current financial year" },
+                { "key": "month", "value": "4",    "disabled": true, "description": "1–12. Defaults to current financial month" },
+                { "key": "q", "value": "",    "disabled": true, "description": "Search query" }
               ]
             },
             "description": "Returns expenses whose `date_due` falls within the given financial month. `year` and `month` are independent."
