@@ -374,6 +374,75 @@ class TestExpensesSearch:
                 api_delete(f"/api/v1/expenses/{ctx.pop(key)}/", ctx)
         driver.execute_script("sessionStorage.removeItem('expSearch')")
 
+    # ── cat=none / tag=none filters ──────────────────────────────────────────
+
+    def test_84_80_setup_none_filters(self, driver, w, ctx):
+        """Create one expense with no category and no tag for none-filter tests."""
+        nc = api_post("/api/v1/expenses/", ctx, json={
+            "title": "SearchTest NoCat", "type": "expense", "value": "33.00",
+            "date_due": TODAY, "settled": False,
+        })
+        assert nc.status_code == 201
+        nc = api_post("/api/v1/expenses/", ctx, json={
+            "title": "SearchTest NoTag", "type": "expense", "value": "34.00",
+            "date_due": TODAY, "settled": False,
+        })
+        assert nc.status_code == 201
+        ctx["s84_uid_nc"] = nc.json()["id"]
+
+    def test_84_81_cat_none_shows_uncategorised(self, driver, w, ctx):
+        """cat=none shows only expenses with no category."""
+        driver.get(_url("/budget/expenses/"))
+        wait_text(driver, w, "SearchTest NoCat")
+        search_type(driver, "cat=none")
+        titles = visible_titles(driver)
+        assert any("SearchTest NoCat" in t for t in titles), "uncategorised expense should be visible"
+        assert not any(TITLE_ALPHA in t for t in titles), "categorised expense should be hidden"
+
+    def test_84_82_tag_none_shows_untagged(self, driver, w, ctx):
+        """tag=none shows only expenses with no tags."""
+        search_type(driver, "tag=none")
+        titles = visible_titles(driver)
+        assert any("SearchTest NoTag" in t for t in titles), "untagged expense should be visible"
+        assert not any(TITLE_ALPHA in t for t in titles), "tagged expense should be hidden"
+
+    def test_84_83_cat_none_url_param(self, driver, w, ctx):
+        """?search=cat=none pre-fills the input and filters to uncategorised expenses."""
+        from urllib.parse import urlencode
+        driver.execute_script("sessionStorage.removeItem('expSearch')")
+        url = _url("/budget/expenses/") + "?" + urlencode({"search": "cat=none"})
+        driver.get(url)
+        wait_text(driver, w, "SearchTest NoCat")
+        _wait_search_settled(driver)
+
+        val = driver.find_element(By.ID, "exp-search").get_attribute("value")
+        assert "cat=none" in val.lower(), f"Expected cat=none in search input, got: {val!r}"
+
+        titles = visible_titles(driver)
+        assert any("SearchTest NoCat" in t for t in titles)
+        assert not any(TITLE_ALPHA in t for t in titles)
+
+    def test_84_84_tag_none_url_param(self, driver, w, ctx):
+        """?search=tag=none pre-fills the input and filters to untagged expenses."""
+        from urllib.parse import urlencode
+        driver.execute_script("sessionStorage.removeItem('expSearch')")
+        url = _url("/budget/expenses/") + "?" + urlencode({"search": "tag=none"})
+        driver.get(url)
+        wait_text(driver, w, "SearchTest NoTag")
+        _wait_search_settled(driver)
+
+        val = driver.find_element(By.ID, "exp-search").get_attribute("value")
+        assert "tag=none" in val.lower(), f"Expected tag=none in search input, got: {val!r}"
+
+        titles = visible_titles(driver)
+        assert any("SearchTest NoTag" in t for t in titles)
+        assert not any(TITLE_ALPHA in t for t in titles)
+
+    def test_84_85_cleanup_none_filters(self, driver, w, ctx):
+        if "s84_uid_nc" in ctx:
+            api_delete(f"/api/v1/expenses/{ctx.pop('s84_uid_nc')}/", ctx)
+        driver.execute_script("sessionStorage.removeItem('expSearch')")
+
     # ── Cleanup ──────────────────────────────────────────────────────────────
 
     def test_84_99_cleanup(self, driver, w, ctx):

@@ -14,8 +14,8 @@ Filters:
     type=income / type=expense / type="savings deposit" / …
     settled=yes|no|true|false|1|0
     value<N, value<=N, value>N, value>=N, value=N
-    cat=<substring>
-    tag=<substring>
+    cat=<substring>   cat=none  (expenses with no category)
+    tag=<substring>   tag=none  (expenses with no tag)
     payee=<substring>
     <bare word or "quoted phrase">  →  free-text (title / payee / note)
 """
@@ -91,8 +91,8 @@ _EQUALS: dict = {
     'type':    lambda v: _type_q(v),
     'settled': lambda v: _settled_q(v),
     'value':   lambda v: _value_q('=', float(v)),
-    'tag':     lambda v: Q(tags__title__icontains=v),
-    'cat':     lambda v: Q(category__title__icontains=v),
+    'tag':     lambda v: Q(tags__isnull=True) if v == 'none' else Q(tags__title__icontains=v),
+    'cat':     lambda v: Q(category__isnull=True) if v == 'none' else Q(category__title__icontains=v),
     'payee':   lambda v: Q(payee__icontains=v),
 }
 

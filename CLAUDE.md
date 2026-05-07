@@ -18,6 +18,7 @@ Django budgeting app. Session-based auth (no Django auth backend). MariaDB. SCSS
 - **SCSS**: source in `build/scss/`, compiled to `static/dist/main.css`. Run `npm run build:css` after SCSS changes (or `npm run watch:css` during dev). Use `nvm install` first to get the right Node version.
 - **JS**: source in `build/js/`, bundled via esbuild to `static/dist/`. Run `npm run build:js` after JS changes. `npm run build` compiles both CSS and JS.
   - `build/js/expenses.js` — Alpine.js v3 component for the expense list (live search, bulk actions, sum). Bundled with `--target=es2020` (required; lower targets break Alpine's async evaluator).
+  - **Docker does NOT rebuild JS** — esbuild's native binary breaks cross-platform builds (Mac arm64 → linux/amd64). `static/dist/expenses.js` is committed and copied into the image as-is. Always run `npm run build:js` locally and commit the result before building a Docker image.
 - **CSS theming**: light/dark mode via CSS custom properties (`--var`). Never replace them with SCSS `$vars` — those are compile-time only. Required for dynamic dark/light mode in-browser.
 - **Tests**: Every functional feature requires selenium end-to-end tests, which are in `tests/`. Don't run them yourself!
 

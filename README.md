@@ -54,7 +54,9 @@ grocery run
 | `type=expense` | Expenses (also: `income`, `savings deposit`, `savings withdrawal`, `carry-over`) |
 | `settled=yes` | Settled expenses (`yes` / `true` / `1` → settled; `no` / `false` / `0` → unsettled) |
 | `cat=Haushalt` | Category contains "Haushalt" (substring, case-insensitive) |
+| `cat=none` | Expenses with **no category** assigned |
 | `tag=Kreditkarte` | Any tag contains "Kreditkarte" (substring, case-insensitive) |
+| `tag=none` | Expenses with **no tag** assigned |
 | `payee=Amazon` | Payee contains "Amazon" (substring, case-insensitive) |
 
 Use double quotes for values that contain spaces:
@@ -89,6 +91,7 @@ Use `()` to group before combining:
 |---|---|
 | `settled=no value>500` | Unsettled expenses over 500 |
 | `cat=Food payee=Rewe` | Categorised as Food **and** payee contains Rewe |
+| `cat=none tag=none` | Expenses with neither a category nor any tag |
 | `type=income \|\| settled=yes` | All income **or** any settled expense |
 | `tag="credit card" settled=no` | Unmatured credit-card expenses |
 

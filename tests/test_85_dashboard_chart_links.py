@@ -118,6 +118,30 @@ class TestDashboardChartLinks:
         assert any(TITLE_A in t for t in titles), "Alpha (categorised) should be visible"
         assert not any(TITLE_B in t for t in titles), "Beta (uncategorised) should be hidden"
 
+    def test_85_11_uncategorized_slice_uses_cat_none(self, driver, w, ctx):
+        """Clicking the Uncategorized slice navigates with cat=none filter."""
+        driver.execute_script("sessionStorage.removeItem('expSearch')")
+        driver.get(_url("/budget/"))
+        w.until(EC.url_contains("/budget/"))
+        _wait_for_chart(w, "cat-chart")
+
+        idx = _chart_label_index(driver, "cat-chart", "Uncategorized")
+        assert idx >= 0, "Uncategorized slice should exist (Beta has no category)"
+
+        _trigger_chart_click(driver, "cat-chart", idx)
+        w.until(EC.url_contains("/budget/expenses/"))
+        wait_text(driver, w, TITLE_B)
+        time.sleep(CLICK_PACE)
+
+        val = driver.find_element(By.ID, "exp-search").get_attribute("value")
+        assert val.strip().lower() == "cat=none", (
+            f"Expected cat=none in search input, got: {val!r}"
+        )
+
+        titles = visible_titles(driver)
+        assert any(TITLE_B in t for t in titles), "Beta (uncategorised) should be visible"
+        assert not any(TITLE_A in t for t in titles), "Alpha (categorised) should be hidden"
+
     # ── Tag bar chart ────────────────────────────────────────────────────────
 
     def test_85_20_tag_chart_click_navigates(self, driver, w, ctx):

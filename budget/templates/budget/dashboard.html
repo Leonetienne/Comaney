@@ -79,7 +79,8 @@ new Chart(document.getElementById('cat-chart'), {
         onClick: (evt, elements) => {
             if (!elements.length) return;
             const label = {{ cat_labels|safe }}[elements[0].index];
-            window.location.href = expensesUrl + '?search=' + encodeURIComponent('cat="' + label + '"') + periodParams;
+            const catQuery = label === 'Uncategorized' ? 'cat=none' : 'cat="' + label + '"';
+            window.location.href = expensesUrl + '?search=' + encodeURIComponent(catQuery) + periodParams;
         },
         onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
         plugins: {
