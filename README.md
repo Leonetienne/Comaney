@@ -252,6 +252,8 @@ type: bar-chart
 title: Spendings on amazon
 group: tags
 query: tag=amazon
+# 'total' handles product returns correctly
+method: total
 hide_groups:
  - amazon
 positioning:
