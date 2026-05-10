@@ -197,20 +197,40 @@ positioning:
 ```
 
 ```yaml
-# Custom Python cell: disposable budget
+# Disposable budget
+type: cell
+title: Left to spend
+color: '#1a3326'
+color_lightmode: '#a7f3d0'
+# Sum up all expenses, but treat income as negative
+method: total
+# Flip sign to get a positive number
+flip_signs: true
+positioning:
+  height: 1
+  position: 5
+  width: 2
+```
+
+```yaml
+# Custom python function (implements disposable budget too)
 type: cell
 title: Left to spend
 method: custom
+color: '#1a3326'
+color_lightmode: '#a7f3d0'
 python: |
   return (
-    query_sum('type="income"')
-    - query_sum('type="expense"')
-    - (query_sum('type="savings deposit"') + query_sum('type="savings withdrawal"'))
+    query_sum('type="income"') -
+    query_sum('type="expense"') -
+    query_sum('type="savings deposit"') +
+    query_sum('type="savings withdrawal"')
   )
 positioning:
-  position: 2
+  position: 5
   width: 4
   height: 1
+
 ```
 
 ```yaml
