@@ -32,10 +32,8 @@ import time
 
 import requests
 
-import pytest
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 
 from conftest import BASE_URL, _url, session_cookies, wait_text
