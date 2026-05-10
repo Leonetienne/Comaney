@@ -153,6 +153,17 @@ function dashboardBoard() {
             const colors = Array.from({ length: n }, (_, i) => PALETTE[i % PALETTE.length]);
             const cur    = this.currency;
 
+            const linkTpl  = card.config.link_template || '';
+            const onClickFn = linkTpl ? (_evt, elements) => {
+                if (!elements.length) return;
+                const label = this.charts[card.id].data.labels[elements[0].index];
+                const slug = label === 'Uncategorized' ? 'none' : encodeURIComponent(label);
+                window.location.href = linkTpl.replace('$GROUP_NAME', slug);
+            } : undefined;
+            const onHoverFn = linkTpl ? (_evt, elements) => {
+                canvas.style.cursor = elements.length ? 'pointer' : 'default';
+            } : undefined;
+
             if (type === 'pie-chart') {
                 // Size canvas to fill the card body so Chart.js doesn't over-expand it
                 const body = canvas.closest('.dash-card-body');
@@ -174,6 +185,8 @@ function dashboardBoard() {
                         animation: false,
                         responsive: true,
                         maintainAspectRatio: false,
+                        onClick: onClickFn,
+                        onHover: onHoverFn,
                         plugins: {
                             legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
                             tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed.toFixed(2)} ${cur}` } },
@@ -199,6 +212,8 @@ function dashboardBoard() {
                     options: {
                         animation: false,
                         indexAxis: 'y',
+                        onClick: onClickFn,
+                        onHover: onHoverFn,
                         plugins: {
                             legend: { display: false },
                             tooltip: { callbacks: { label: c => ` ${c.parsed.x.toFixed(2)} ${cur}` } },

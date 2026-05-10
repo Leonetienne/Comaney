@@ -94,6 +94,11 @@
     padding: 14px 16px;
   }
 
+  &--linked {
+    cursor: pointer;
+    &:hover { background: rgba(128,128,128,.07); }
+  }
+
   // For chart cards — allow scroll only when canvas exceeds card height
   &--chart {
     overflow-y: auto;

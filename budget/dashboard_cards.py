@@ -12,6 +12,8 @@ Card YAML schema:
     color: "#hex"               # optional; cell background color (both modes)
     color_lightmode: "#hex"    # optional; overrides color in light mode
     color_darkmode: "#hex"     # optional; overrides color in dark mode
+    link: "/path?search=..."    # optional; clicking a cell navigates here
+    link_template: "/path?search=tag%3D$GROUP_NAME"  # optional; $GROUP_NAME replaced per segment
     python: |                   # required when method=custom; function body
         return query_sum('...')
     positioning:
@@ -92,6 +94,8 @@ def parse_card_config(yaml_str: str) -> dict:
         'color':            str(cfg.get('color', '')),
         'color_lightmode':  str(cfg.get('color_lightmode', '')),
         'color_darkmode':   str(cfg.get('color_darkmode', '')),
+        'link':             str(cfg.get('link', '')),
+        'link_template':    str(cfg.get('link_template', '')),
         'python':      str(cfg.get('python', '')),
         'positioning': positioning,
     }

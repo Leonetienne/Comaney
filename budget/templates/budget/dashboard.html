@@ -62,7 +62,10 @@ window.DASHBOARD_CONFIG = {
 
                 {# ── Cell card ─────────────────────────────────────────── #}
                 <template x-if="card.config && card.config.type === 'cell'">
-                    <div class="dash-card-body dash-card-body--cell">
+                    <div class="dash-card-body dash-card-body--cell"
+                         :class="{'dash-card-body--linked': card.config.link}"
+                         @click="card.config.link && (window.location.href = card.config.link)"
+                         draggable="false">
                         <template x-if="card.error">
                             <p class="dash-card-error" x-text="card.error"></p>
                         </template>
