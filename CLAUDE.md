@@ -10,6 +10,7 @@ Django budgeting app. Session-based auth (no Django auth backend). MariaDB. SCSS
 - If you change any feature covered by readme.md or claude.md, you must correct these .md files
 - If you add an important feature, you must also brief it in claude.md
 - If you add functional features or fixes, you must cover them with tests.
+- End-2-end tests should test the UI. Tests that don't test the API directly are allowed to use the API ONLY for setup and cleanup but NOT for verification. For example: "test if tags can be created" MUST use the UI to create the tag and MUST use the UI to see if the tag exists! "Test if tag can be deleted" may use the API to create a tag since it would be setup.
 
 ## Stack
 - **Python 3.12**, Django, Gunicorn, WhiteNoise, mysqlclient
@@ -60,13 +61,14 @@ comaney/        Settings, root urls, middleware, public_pages context processor
 - **AI express creation**: system prompt in `budget/views/express.py`; expects `{"result":"good","items":[]}` or `{"result":"fail","msg":""}` — never prose
 - **Modular dashboard** (`budget/dashboard_cards.py`, `budget/views/dashboard_cards_api.py`):
   - Cards stored as `DashboardCard` model (per user) with only `yaml_config` + `created_at` DB fields. All layout info (`position`, `width`, `height`) lives inside the YAML `positioning:` block.
-  - YAML fields: `type` (`cell` | `bar-chart` | `pie-chart`), `title`, `query`, `group`, `method`, `color`, `color_lightmode`, `color_darkmode`, `link`, `link_template`, `python`, `positioning`.
+  - YAML fields: `type` (`cell` | `bar-chart` | `pie-chart`), `title`, `query`, `group`, `method`, `color`, `color_lightmode`, `color_darkmode`, `link`, `link_template`, `template`, `python`, `positioning`.
   - `parse_card_config(yaml_str)` validates and normalises YAML. `compute_card_data(config, qs, feuser)` returns data for the current period.
   - `method: custom` cells execute user Python in a sandboxed `exec()`: no imports, no dunder attrs, builtins restricted to safe math + `Decimal`. Runs in a daemon thread with 2 s timeout. Provides `query_sum`, `query_sum_abs`, `query_sum_gt0`, `query_sum_lt0` helpers.
   - `color_lightmode` / `color_darkmode` override `color` per scheme, resolved at page-load via `matchMedia`.
   - `link` (cell): clicking the cell body navigates to the URL. `link_template` (charts): clicking a segment navigates, replacing `$GROUP_NAME` with `encodeURIComponent(label)`; `Uncategorized` → `none`.
+  - `template` (cell): display string with `$VALUE` and `$CURRENCY_SYMBOL` placeholders. Defaults to `$VALUE $CURRENCY_SYMBOL`. When set, the entire cell content is the rendered string (no separate currency span).
   - API (session auth, not Bearer): `GET/POST /budget/dashboard/cards/`, `PATCH/DELETE /budget/dashboard/cards/<id>/`, `PATCH /budget/dashboard/cards/<id>/resize/`, `POST /budget/dashboard/cards/reorder/`, `GET /budget/dashboard/cards/presets/`.
-  - Frontend: Alpine.js `dashboardBoard` component in `build/js/dashboard.js`. CSS Grid (12 cols desktop / 6 cols mobile, fixed `ROW_H = 90 px`). HTML5 drag-drop for reorder; pointer-event resize handle (updates YAML `positioning` block). Chart.js for bar/pie cards. CodeMirror 6 YAML editor in both modals. In-DOM `window.confirmDialog()` for delete and preset-overwrite confirmations.
+  - Frontend: Alpine.js `dashboardBoard` component in `build/js/dashboard.js`. CSS Grid (12 cols desktop / 6 cols mobile, fixed `ROW_H = 90 px`). HTML5 drag-drop for reorder; pointer-event resize handle (updates YAML `positioning` block). Chart.js for bar/pie cards. CodeMirror 6 YAML editor in both modals. In-DOM `window.confirmDialog()` for delete and preset-overwrite confirmations. Modals do not close on outside click.
 - **Expense search query parser** (`budget/query_parser.py`): translates the search bar's mini-language into Django Q objects via `apply_query(qs, query_str)`. Called by the API expense list view. Supported filters: `type=`, `settled=`, `deactivated=`, `value` (with `< <= > >= = ==`), `date` (date comparisons, formats `dd.mm.yyyy` / `mm/dd/yyyy` / `yyyy-mm-dd`, special value `today`), `cat=` / `tag=` (substring or `none` for null), `payee=`, free-text, `||` OR, `()` grouping, `!` NOT prefix. The full query string is lowercased before parsing.
 
 ## Running tests

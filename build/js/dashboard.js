@@ -504,6 +504,13 @@ function dashboardBoard() {
             return Math.round(n).toString();
         },
 
+        // Render cell text, substituting $VALUE and $CURRENCY_SYMBOL in template
+        cellText(card) {
+            const val = this.formatValue(card.data && card.data.value);
+            const tpl = (card.config && card.config.template) || '$VALUE $CURRENCY_SYMBOL';
+            return tpl.replace('$VALUE', val).replace('$CURRENCY_SYMBOL', this.currency);
+        },
+
         // Hex → [h°, s%, l%]
         _hexToHsl(hex) {
             const n = parseInt(hex.replace('#', ''), 16);

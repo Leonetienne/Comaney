@@ -69,11 +69,14 @@ window.DASHBOARD_CONFIG = {
                         <template x-if="card.error">
                             <p class="dash-card-error" x-text="card.error"></p>
                         </template>
-                        <template x-if="!card.error">
+                        <template x-if="!card.error && !card.config.template">
                             <div class="dash-cell-value">
                                 <span x-text="formatValue(card.data && card.data.value)"></span>
                                 <span class="dash-cell-currency" x-text="currency"></span>
                             </div>
+                        </template>
+                        <template x-if="!card.error && card.config.template">
+                            <div class="dash-cell-value" x-text="cellText(card)"></div>
                         </template>
                     </div>
                 </template>
@@ -129,7 +132,6 @@ window.DASHBOARD_CONFIG = {
     <div id="dash-edit-backdrop"
          x-show="editCard !== null"
          class="dash-modal-backdrop"
-         @click.self="closeEdit()"
          style="display:none">
         <div class="dash-modal">
             <h3>Edit card</h3>
@@ -153,10 +155,14 @@ window.DASHBOARD_CONFIG = {
     <div id="dash-add-backdrop"
          x-show="addOpen"
          class="dash-modal-backdrop"
-         @click.self="closeAdd()"
          style="display:none">
         <div class="dash-modal">
             <h3>New dashboard card</h3>
+
+            <p class="dash-new-card-hint">
+                Cards are configured in YAML. Load a preset below to get started, or write your own.
+                See the <a href="https://github.com/Leonetienne/Comaney#modular-dashboard" target="_blank" rel="noopener noreferrer">documentation</a> for all available fields.
+            </p>
 
             {# Preset buttons #}
             <div x-show="presets.length > 0" class="dash-presets">

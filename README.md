@@ -164,10 +164,11 @@ The dashboard is fully customizable. Each card is defined in YAML and can be cre
 |---|---|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `method` | ✓ | `sum` · `count` · `custom`                                                                                                                                                                  |
 | `python` | when `method: custom` | Python function body. `return` a number. Helpers available: `query_sum(q)`, `query_sum_abs(q)`, `query_sum_gt0(q)`, `query_sum_lt0(q)`, each accept the same query syntax as the search bar |
-| `color` | | Css background colour applied in both light and dark mode                                                                                                                                   |
+| `color` | | CSS background colour applied in both light and dark mode                                                                                                                                   |
 | `color_lightmode` | | Overrides `color` in light mode                                                                                                                                                             |
 | `color_darkmode` | | Overrides `color` in dark mode                                                                                                                                                              |
 | `link` | | URL to navigate to when the cell is clicked (e.g. a pre-filtered expense list)                                                                                                              |
+| `template` | | Display template string. Defaults to `$VALUE $CURRENCY_SYMBOL`. Placeholders: `$VALUE` (formatted number), `$CURRENCY_SYMBOL` (user currency)                                              |
 
 ### Chart-specific fields
 | Field | Required | Description                                                                                                                                                                               |

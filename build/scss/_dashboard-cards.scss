@@ -280,6 +280,17 @@
   color: var(--error);
 }
 
+// ── New card hint ──────────────────────────────────────────────────────────
+
+.dash-new-card-hint {
+  margin: 0 0 12px;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+
+  a { color: var(--link); }
+}
+
 // ── Preset buttons ─────────────────────────────────────────────────────────
 
 .dash-presets {
