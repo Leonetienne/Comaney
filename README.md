@@ -72,10 +72,10 @@ value<100       value>=500      value=77.00     value==77.00
 Operators: `<` `<=` `>` `>=` `=` `==`
 
 ### Date comparisons
-Filter by due date using `due_date` with any comparison operator:
+Filter by due date using `date` with any comparison operator:
 ```
-due_date>31.12.2024        due_date<=12/31/2024
-due_date>=01.01.2025       due_date==15.03.2025
+date>31.12.2024        date<=12/31/2024
+date>=01.01.2025       date==15.03.2025
 ```
 Three date formats are supported — the delimiter identifies which:
 * **`dd.mm.yyyy`** (dot) — day first, e.g. `31.01.2025`
@@ -84,7 +84,7 @@ Three date formats are supported — the delimiter identifies which:
 
 The special value **`today`** resolves to the current date at query time:
 ```
-due_date=today      due_date<today      due_date>=today
+date=today      date<today      date>=today
 ```
 
 ### NOT operator
@@ -127,8 +127,8 @@ type=expense !fence !oven !food
 | Query | Meaning |
 |---|---|
 | `settled=no value>500` | Unsettled expenses over 500 |
-| `due_date>=01.01.2025` | Expenses due on or after 1 Jan 2025 |
-| `due_date>01/01/2025 due_date<04/01/2025` | Expenses due in Q1 2025 |
+| `date>=01.01.2025` | Expenses due on or after 1 Jan 2025 |
+| `date>01/01/2025 date<04/01/2025` | Expenses due in Q1 2025 |
 | `cat=Food payee=Rewe` | Categorised as Food **and** payee contains Rewe |
 | `cat=none tag=none` | Expenses with neither a category nor any tag |
 | `type=income \|\| settled=yes` | All income **or** any settled expense |

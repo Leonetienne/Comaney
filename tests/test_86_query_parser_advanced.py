@@ -1,8 +1,8 @@
 """
-Advanced query-parser features: due_date comparisons, deactivated= filter, NOT operator.
+Advanced query-parser features: date comparisons, deactivated= filter, NOT operator.
 
 Tests:
-  - due_date= / due_date> / due_date>= / due_date< / due_date<= / due_date==
+  - date= / date> / date>= / date< / date<= / date==
     with all three formats: dd.mm.yyyy, mm/dd/yyyy, yyyy-mm-dd
   - deactivated=yes / deactivated=no
   - !term   (NOT negates a single atom)
@@ -158,151 +158,151 @@ class TestQueryParserAdvanced:
                       json={"deactivated": True})
         assert r.status_code == 200
 
-    # ── due_date comparisons — dd.mm.yyyy format ─────────────────────────────
+    # ── date comparisons — dd.mm.yyyy format ─────────────────────────────
 
-    def test_86_10_due_date_gt_past_dmy(self, driver, w, ctx):
-        """due_date>past shows today and future, not past."""
-        url_search(driver, w, f"due_date>{_dmy(_PAST_D)}")
+    def test_86_10_date_gt_past_dmy(self, driver, w, ctx):
+        """date>past shows today and future, not past."""
+        url_search(driver, w, f"date>{_dmy(_PAST_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert any(TITLE_FUTURE in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
 
-    def test_86_11_due_date_gte_today_dmy(self, driver, w, ctx):
-        """due_date>=today shows today and future, not past."""
-        url_search(driver, w, f"due_date>={_dmy(_MID_D)}")
+    def test_86_11_date_gte_today_dmy(self, driver, w, ctx):
+        """date>=today shows today and future, not past."""
+        url_search(driver, w, f"date>={_dmy(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert any(TITLE_FUTURE in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
 
-    def test_86_12_due_date_lt_future_dmy(self, driver, w, ctx):
-        """due_date<future shows past and today."""
-        url_search(driver, w, f"due_date<{_dmy(_FUTURE_D)}")
+    def test_86_12_date_lt_future_dmy(self, driver, w, ctx):
+        """date<future shows past and today."""
+        url_search(driver, w, f"date<{_dmy(_FUTURE_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_PAST in t for t in titles)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    def test_86_13_due_date_lte_today_dmy(self, driver, w, ctx):
-        """due_date<=today shows past and today, not future."""
-        url_search(driver, w, f"due_date<={_dmy(_MID_D)}")
+    def test_86_13_date_lte_today_dmy(self, driver, w, ctx):
+        """date<=today shows past and today, not future."""
+        url_search(driver, w, f"date<={_dmy(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_PAST in t for t in titles)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    def test_86_14_due_date_eq_today_dmy(self, driver, w, ctx):
-        """due_date=today (single equals) shows only today."""
-        url_search(driver, w, f"due_date={_dmy(_MID_D)}")
+    def test_86_14_date_eq_today_dmy(self, driver, w, ctx):
+        """date=today (single equals) shows only today."""
+        url_search(driver, w, f"date={_dmy(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    def test_86_15_due_date_eqeq_today_dmy(self, driver, w, ctx):
-        """due_date==today (double equals) shows only today."""
-        url_search(driver, w, f"due_date=={_dmy(_MID_D)}")
+    def test_86_15_date_eqeq_today_dmy(self, driver, w, ctx):
+        """date==today (double equals) shows only today."""
+        url_search(driver, w, f"date=={_dmy(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    # ── due_date comparisons — mm/dd/yyyy format ─────────────────────────────
+    # ── date comparisons — mm/dd/yyyy format ─────────────────────────────
 
-    def test_86_20_due_date_gt_past_mdy(self, driver, w, ctx):
-        """due_date>past (slash format) shows today and future."""
-        url_search(driver, w, f"due_date>{_mdy(_PAST_D)}")
+    def test_86_20_date_gt_past_mdy(self, driver, w, ctx):
+        """date>past (slash format) shows today and future."""
+        url_search(driver, w, f"date>{_mdy(_PAST_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert any(TITLE_FUTURE in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
 
-    def test_86_21_due_date_gte_today_mdy(self, driver, w, ctx):
-        """due_date>=today (slash format) shows today and future, not past."""
-        url_search(driver, w, f"due_date>={_mdy(_MID_D)}")
+    def test_86_21_date_gte_today_mdy(self, driver, w, ctx):
+        """date>=today (slash format) shows today and future, not past."""
+        url_search(driver, w, f"date>={_mdy(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert any(TITLE_FUTURE in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
 
-    def test_86_22_due_date_lt_future_mdy(self, driver, w, ctx):
-        """due_date<future (slash format) shows past and today."""
-        url_search(driver, w, f"due_date<{_mdy(_FUTURE_D)}")
+    def test_86_22_date_lt_future_mdy(self, driver, w, ctx):
+        """date<future (slash format) shows past and today."""
+        url_search(driver, w, f"date<{_mdy(_FUTURE_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_PAST in t for t in titles)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    def test_86_23_due_date_lte_today_mdy(self, driver, w, ctx):
-        """due_date<=today (slash format) shows past and today."""
-        url_search(driver, w, f"due_date<={_mdy(_MID_D)}")
+    def test_86_23_date_lte_today_mdy(self, driver, w, ctx):
+        """date<=today (slash format) shows past and today."""
+        url_search(driver, w, f"date<={_mdy(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_PAST in t for t in titles)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    def test_86_24_due_date_eq_today_mdy(self, driver, w, ctx):
-        """due_date=today (slash format, single equals) shows only today."""
-        url_search(driver, w, f"due_date={_mdy(_MID_D)}")
+    def test_86_24_date_eq_today_mdy(self, driver, w, ctx):
+        """date=today (slash format, single equals) shows only today."""
+        url_search(driver, w, f"date={_mdy(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    def test_86_25_due_date_eqeq_today_mdy(self, driver, w, ctx):
-        """due_date==today (slash format, double equals) shows only today."""
-        url_search(driver, w, f"due_date=={_mdy(_MID_D)}")
+    def test_86_25_date_eqeq_today_mdy(self, driver, w, ctx):
+        """date==today (slash format, double equals) shows only today."""
+        url_search(driver, w, f"date=={_mdy(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    # ── due_date comparisons — yyyy-mm-dd format ─────────────────────────────
+    # ── date comparisons — yyyy-mm-dd format ─────────────────────────────
 
-    def test_86_26_due_date_gt_past_iso(self, driver, w, ctx):
-        """due_date>past (ISO format) shows today and future."""
-        url_search(driver, w, f"due_date>{_iso(_PAST_D)}")
+    def test_86_26_date_gt_past_iso(self, driver, w, ctx):
+        """date>past (ISO format) shows today and future."""
+        url_search(driver, w, f"date>{_iso(_PAST_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert any(TITLE_FUTURE in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
 
-    def test_86_27_due_date_gte_today_iso(self, driver, w, ctx):
-        """due_date>=today (ISO format) shows today and future, not past."""
-        url_search(driver, w, f"due_date>={_iso(_MID_D)}")
+    def test_86_27_date_gte_today_iso(self, driver, w, ctx):
+        """date>=today (ISO format) shows today and future, not past."""
+        url_search(driver, w, f"date>={_iso(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert any(TITLE_FUTURE in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
 
-    def test_86_28_due_date_lt_future_iso(self, driver, w, ctx):
-        """due_date<future (ISO format) shows past and today."""
-        url_search(driver, w, f"due_date<{_iso(_FUTURE_D)}")
+    def test_86_28_date_lt_future_iso(self, driver, w, ctx):
+        """date<future (ISO format) shows past and today."""
+        url_search(driver, w, f"date<{_iso(_FUTURE_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_PAST in t for t in titles)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    def test_86_29_due_date_lte_today_iso(self, driver, w, ctx):
-        """due_date<=today (ISO format) shows past and today, not future."""
-        url_search(driver, w, f"due_date<={_iso(_MID_D)}")
+    def test_86_29_date_lte_today_iso(self, driver, w, ctx):
+        """date<=today (ISO format) shows past and today, not future."""
+        url_search(driver, w, f"date<={_iso(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_PAST in t for t in titles)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    def test_86_2a_due_date_eq_today_iso(self, driver, w, ctx):
-        """due_date=today (ISO format, single equals via kv path) shows only today."""
-        url_search(driver, w, f"due_date={_iso(_MID_D)}")
+    def test_86_2a_date_eq_today_iso(self, driver, w, ctx):
+        """date=today (ISO format, single equals via kv path) shows only today."""
+        url_search(driver, w, f"date={_iso(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    def test_86_2b_due_date_eqeq_today_iso(self, driver, w, ctx):
-        """due_date==today (ISO format, double equals) shows only today."""
-        url_search(driver, w, f"due_date=={_iso(_MID_D)}")
+    def test_86_2b_date_eqeq_today_iso(self, driver, w, ctx):
+        """date==today (ISO format, double equals) shows only today."""
+        url_search(driver, w, f"date=={_iso(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
@@ -380,11 +380,11 @@ class TestQueryParserAdvanced:
         assert not any(TITLE_FUTURE in t for t in titles)
         assert not any(TITLE_INCOME in t for t in titles)
 
-    # ── Combined: due_date + NOT ─────────────────────────────────────────────
+    # ── Combined: date + NOT ─────────────────────────────────────────────
 
-    def test_86_60_due_date_and_not(self, driver, w, ctx):
-        """due_date>=today !future shows only today."""
-        url_search(driver, w, f"due_date>={_dmy(_MID_D)} !future")
+    def test_86_60_date_and_not(self, driver, w, ctx):
+        """date>=today !future shows only today."""
+        url_search(driver, w, f"date>={_dmy(_MID_D)} !future")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
@@ -418,39 +418,39 @@ class TestQueryParserAdvanced:
         _wait_settled(driver)
         import time; time.sleep(1)
 
-    def test_86_71_due_date_eq_today(self, driver, w, ctx):
-        """due_date=today (kv path) shows the today expense."""
-        self._url_today(driver, w, "due_date=today")
+    def test_86_71_date_eq_today(self, driver, w, ctx):
+        """date=today (kv path) shows the today expense."""
+        self._url_today(driver, w, "date=today")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY_DYN in t for t in titles)
 
-    def test_86_72_due_date_eqeq_today(self, driver, w, ctx):
-        """due_date==today (cmp path) shows the today expense."""
-        self._url_today(driver, w, "due_date==today")
+    def test_86_72_date_eqeq_today(self, driver, w, ctx):
+        """date==today (cmp path) shows the today expense."""
+        self._url_today(driver, w, "date==today")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY_DYN in t for t in titles)
 
-    def test_86_73_due_date_gt_today(self, driver, w, ctx):
-        """due_date>today does NOT show the today expense."""
-        self._url_today(driver, w, "due_date>today")
+    def test_86_73_date_gt_today(self, driver, w, ctx):
+        """date>today does NOT show the today expense."""
+        self._url_today(driver, w, "date>today")
         titles = visible_titles(driver)
         assert not any(TITLE_TODAY_DYN in t for t in titles)
 
-    def test_86_74_due_date_lt_today(self, driver, w, ctx):
-        """due_date<today does NOT show the today expense."""
-        self._url_today(driver, w, "due_date<today")
+    def test_86_74_date_lt_today(self, driver, w, ctx):
+        """date<today does NOT show the today expense."""
+        self._url_today(driver, w, "date<today")
         titles = visible_titles(driver)
         assert not any(TITLE_TODAY_DYN in t for t in titles)
 
-    def test_86_75_due_date_gte_today(self, driver, w, ctx):
-        """due_date>=today shows the today expense."""
-        self._url_today(driver, w, "due_date>=today")
+    def test_86_75_date_gte_today(self, driver, w, ctx):
+        """date>=today shows the today expense."""
+        self._url_today(driver, w, "date>=today")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY_DYN in t for t in titles)
 
-    def test_86_76_due_date_lte_today(self, driver, w, ctx):
-        """due_date<=today shows the today expense."""
-        self._url_today(driver, w, "due_date<=today")
+    def test_86_76_date_lte_today(self, driver, w, ctx):
+        """date<=today shows the today expense."""
+        self._url_today(driver, w, "date<=today")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY_DYN in t for t in titles)
 
@@ -527,27 +527,27 @@ class TestQueryParserAdvanced:
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
-    # due_date — two comparisons (date range)
+    # date — two comparisons (date range)
 
     def test_86_84_date_range_exclusive(self, driver, w, ctx):
-        """due_date>PAST due_date<FUTURE: exclusive range matches only mid."""
-        url_search(driver, w, f"due_date>{_iso(_PAST_D)} due_date<{_iso(_FUTURE_D)}")
+        """date>PAST date<FUTURE: exclusive range matches only mid."""
+        url_search(driver, w, f"date>{_iso(_PAST_D)} date<{_iso(_FUTURE_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_PAST in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
     def test_86_85_date_range_inclusive(self, driver, w, ctx):
-        """due_date>=PAST due_date<=MID: inclusive range matches past and mid."""
-        url_search(driver, w, f"due_date>={_iso(_PAST_D)} due_date<={_iso(_MID_D)}")
+        """date>=PAST date<=MID: inclusive range matches past and mid."""
+        url_search(driver, w, f"date>={_iso(_PAST_D)} date<={_iso(_MID_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_PAST in t for t in titles)
         assert any(TITLE_TODAY in t for t in titles)
         assert not any(TITLE_FUTURE in t for t in titles)
 
     def test_86_86_date_not_range(self, driver, w, ctx):
-        """due_date>=PAST !due_date>=FUTURE: open-ended lower bound excluding future."""
-        url_search(driver, w, f"due_date>={_iso(_PAST_D)} !due_date>={_iso(_FUTURE_D)}")
+        """date>=PAST !date>=FUTURE: open-ended lower bound excluding future."""
+        url_search(driver, w, f"date>={_iso(_PAST_D)} !date>={_iso(_FUTURE_D)}")
         titles = visible_titles(driver)
         assert any(TITLE_PAST in t for t in titles)
         assert any(TITLE_TODAY in t for t in titles)

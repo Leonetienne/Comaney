@@ -15,7 +15,7 @@ Filters:
     settled=yes|no|true|false|1|0
     deactivated=yes|no|true|false|1|0
     value<N, value<=N, value>N, value>=N, value=N, value==N
-    due_date<dd.mm.yyyy   due_date>=mm/dd/yyyy  due_date==yyyy-mm-dd  due_date>today
+    date<dd.mm.yyyy   date>=mm/dd/yyyy  date==yyyy-mm-dd  date>today
         dot delimiter → dd.mm.yyyy  |  slash delimiter → mm/dd/yyyy  |  hyphen → yyyy-mm-dd
         'today' resolves to the current date at query time
     cat=<substring>   cat=none  (expenses with no category)
@@ -141,7 +141,7 @@ _EQUALS: dict = {
     'settled':     lambda v: _bool_q('settled', v),
     'deactivated': lambda v: _bool_q('deactivated', v),
     'value':       lambda v: _value_q('=', float(v)),
-    'due_date':    lambda v: _date_q('=', v),
+    'date':        lambda v: _date_q('=', v),
     'tag':         lambda v: Q(tags__isnull=True) if v == 'none' else Q(tags__title__icontains=v),
     'cat':         lambda v: Q(category__isnull=True) if v == 'none' else Q(category__title__icontains=v),
     'payee':       lambda v: Q(payee__icontains=v),
@@ -152,7 +152,7 @@ _CMP: dict = {
 }
 
 _DATE_CMP: dict = {
-    'due_date': lambda op, raw: _date_q(op, raw),
+    'date':     lambda op, raw: _date_q(op, raw),
 }
 
 

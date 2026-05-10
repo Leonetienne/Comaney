@@ -56,7 +56,7 @@ comaney/        Settings, root urls, middleware, public_pages context processor
 - **Notification classes**: `"" < soon < tomorrow < today < late < settled` — each sent at most once per expense
 - **CSV export** (feusers/views/account.py): dynamic via `_meta.concrete_fields`; skip `owning_feuser`; mask `anthropic_api_key`; resolve `category` FK and `tags` M2M via `extra=`
 - **AI express creation**: system prompt in `budget/views/express.py`; expects `{"result":"good","items":[]}` or `{"result":"fail","msg":""}` — never prose
-- **Expense search query parser** (`budget/query_parser.py`): translates the search bar's mini-language into Django Q objects via `apply_query(qs, query_str)`. Called by the API expense list view. Supported filters: `type=`, `settled=`, `deactivated=`, `value` (with `< <= > >= = ==`), `due_date` (date comparisons, formats `dd.mm.yyyy` / `mm/dd/yyyy` / `yyyy-mm-dd`, special value `today`), `cat=` / `tag=` (substring or `none` for null), `payee=`, free-text, `||` OR, `()` grouping, `!` NOT prefix. The full query string is lowercased before parsing.
+- **Expense search query parser** (`budget/query_parser.py`): translates the search bar's mini-language into Django Q objects via `apply_query(qs, query_str)`. Called by the API expense list view. Supported filters: `type=`, `settled=`, `deactivated=`, `value` (with `< <= > >= = ==`), `date` (date comparisons, formats `dd.mm.yyyy` / `mm/dd/yyyy` / `yyyy-mm-dd`, special value `today`), `cat=` / `tag=` (substring or `none` for null), `payee=`, free-text, `||` OR, `()` grouping, `!` NOT prefix. The full query string is lowercased before parsing.
 
 ## Running tests
 Tests are end-to-end Selenium + requests against a live Docker stack.
