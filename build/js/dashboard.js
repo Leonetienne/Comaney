@@ -36,11 +36,12 @@ function dashboardBoard() {
         editSaving: false,
 
         // New card dialog
-        addOpen:   false,
-        addYaml:   '',
-        addError:  '',
-        addSaving: false,
-        presets:   [],
+        addOpen:      false,
+        addYaml:      '',
+        addYamlDirty: false,
+        addError:     '',
+        addSaving:    false,
+        presets:      [],
 
         // Drag-drop
         dragId:        null,
@@ -353,9 +354,10 @@ function dashboardBoard() {
 
         // ── New card dialog ───────────────────────────────────────────────────
         async openAdd() {
-            this.addOpen  = true;
-            this.addYaml  = '';
-            this.addError = '';
+            this.addOpen      = true;
+            this.addYaml      = '';
+            this.addYamlDirty = false;
+            this.addError     = '';
             if (!this.presets.length) {
                 try {
                     const resp = await fetch(this.urlPresets);
@@ -370,8 +372,9 @@ function dashboardBoard() {
         },
 
         loadPreset(yaml) {
-            if (this.addYaml.trim() && !confirm('Overwrite current content?')) return;
-            this.addYaml = yaml;
+            if (this.addYamlDirty && !confirm('Overwrite current content?')) return;
+            this.addYaml      = yaml;
+            this.addYamlDirty = false;
         },
 
         async saveAdd() {

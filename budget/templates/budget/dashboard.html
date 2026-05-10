@@ -169,6 +169,7 @@ window.DASHBOARD_CONFIG = {
 
             <textarea class="dash-yaml-editor"
                       x-model="addYaml"
+                      @input="addYamlDirty = addYaml.trim() !== ''"
                       rows="20"
                       spellcheck="false"
                       autocomplete="off"
