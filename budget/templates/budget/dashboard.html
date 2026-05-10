@@ -41,9 +41,9 @@ window.DASHBOARD_CONFIG = {
                  :class="{
                      'dash-card--drag-over': dragOverId === card.id,
                      'dash-card--dragging':  dragId     === card.id,
-                     'dash-card--colored':   card.config && card.config.color,
+                     'dash-card--colored':   card.config && (card.config.color || card.config.color_lightmode || card.config.color_darkmode),
                  }"
-                 :style="cardStyle(card) + (card.config && card.config.color ? ';' + cardColorStyle(card.config.color) : '')"
+                 :style="cardStyle(card) + (card.config && (card.config.color || card.config.color_lightmode || card.config.color_darkmode) ? ';' + cardColorStyle(card.config) : '')"
                  draggable="true"
                  @dragstart="onDragStart(card.id, $event)"
                  @dragover="onDragOver(card.id, $event)"

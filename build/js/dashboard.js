@@ -514,11 +514,14 @@ function dashboardBoard() {
         // Text is the same hue/saturation as the background but shifted:
         //   dark mode  → much lighter  (+55 L, clamped to 95)
         //   light mode → much darker   (−40 L, clamped to  5)
-        cardColorStyle(color) {
+        cardColorStyle(cfg) {
+            const dark  = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const color = dark
+                ? (cfg.color_darkmode  || cfg.color)
+                : (cfg.color_lightmode || cfg.color);
             if (!color) return '';
             try {
                 const [h, s, l] = this._hexToHsl(color);
-                const dark  = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 const textL = dark
                     ? Math.min(95, l + 55)
                     : Math.max( 5, l - 40);

@@ -9,7 +9,9 @@ Card YAML schema:
     max_groups: N               # optional; top-N groups (bar-chart only)
     hide_groups: "a,b"          # optional; comma-sep group names to exclude
     method: sum | count | custom   # required for cell
-    color: "#hex"               # optional; cell background color
+    color: "#hex"               # optional; cell background color (both modes)
+    color_lightmode: "#hex"    # optional; overrides color in light mode
+    color_darkmode: "#hex"     # optional; overrides color in dark mode
     python: |                   # required when method=custom; function body
         return query_sum('...')
     positioning:
@@ -87,7 +89,9 @@ def parse_card_config(yaml_str: str) -> dict:
             else []
         ),
         'method':      str(cfg.get('method', 'sum')),
-        'color':       str(cfg.get('color', '')),
+        'color':            str(cfg.get('color', '')),
+        'color_lightmode':  str(cfg.get('color_lightmode', '')),
+        'color_darkmode':   str(cfg.get('color_darkmode', '')),
         'python':      str(cfg.get('python', '')),
         'positioning': positioning,
     }
