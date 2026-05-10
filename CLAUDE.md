@@ -59,12 +59,14 @@ comaney/        Settings, root urls, middleware, public_pages context processor
 - **CSV export** (feusers/views/account.py): dynamic via `_meta.concrete_fields`; skip `owning_feuser`; mask `anthropic_api_key`; resolve `category` FK and `tags` M2M via `extra=`
 - **AI express creation**: system prompt in `budget/views/express.py`; expects `{"result":"good","items":[]}` or `{"result":"fail","msg":""}` — never prose
 - **Modular dashboard** (`budget/dashboard_cards.py`, `budget/views/dashboard_cards_api.py`):
-  - Cards stored as `DashboardCard` model (per user) with `yaml_config`, `position`, `width`, `height` DB fields.
-  - YAML defines card `type` (`cell` | `bar-chart` | `pie-chart`), `title`, `query`, `group`, `method`, `color`, `python`, and `positioning`.
+  - Cards stored as `DashboardCard` model (per user) with only `yaml_config` + `created_at` DB fields. All layout info (`position`, `width`, `height`) lives inside the YAML `positioning:` block.
+  - YAML fields: `type` (`cell` | `bar-chart` | `pie-chart`), `title`, `query`, `group`, `method`, `color`, `color_lightmode`, `color_darkmode`, `link`, `link_template`, `python`, `positioning`.
   - `parse_card_config(yaml_str)` validates and normalises YAML. `compute_card_data(config, qs, feuser)` returns data for the current period.
   - `method: custom` cells execute user Python in a sandboxed `exec()`: no imports, no dunder attrs, builtins restricted to safe math + `Decimal`. Runs in a daemon thread with 2 s timeout. Provides `query_sum`, `query_sum_abs`, `query_sum_gt0`, `query_sum_lt0` helpers.
+  - `color_lightmode` / `color_darkmode` override `color` per scheme, resolved at page-load via `matchMedia`.
+  - `link` (cell): clicking the cell body navigates to the URL. `link_template` (charts): clicking a segment navigates, replacing `$GROUP_NAME` with `encodeURIComponent(label)`; `Uncategorized` → `none`.
   - API (session auth, not Bearer): `GET/POST /budget/dashboard/cards/`, `PATCH/DELETE /budget/dashboard/cards/<id>/`, `PATCH /budget/dashboard/cards/<id>/resize/`, `POST /budget/dashboard/cards/reorder/`, `GET /budget/dashboard/cards/presets/`.
-  - Frontend: Alpine.js `dashboardBoard` component in `build/js/dashboard.js`. CSS Grid (6 cols, row height = col_width × 4/3, via ResizeObserver). HTML5 drag-drop for reorder; pointer-event resize handle. Chart.js for bar/pie cards.
+  - Frontend: Alpine.js `dashboardBoard` component in `build/js/dashboard.js`. CSS Grid (12 cols desktop / 6 cols mobile, fixed `ROW_H = 90 px`). HTML5 drag-drop for reorder; pointer-event resize handle (updates YAML `positioning` block). Chart.js for bar/pie cards. CodeMirror 6 YAML editor in both modals. In-DOM `window.confirmDialog()` for delete and preset-overwrite confirmations.
 - **Expense search query parser** (`budget/query_parser.py`): translates the search bar's mini-language into Django Q objects via `apply_query(qs, query_str)`. Called by the API expense list view. Supported filters: `type=`, `settled=`, `deactivated=`, `value` (with `< <= > >= = ==`), `date` (date comparisons, formats `dd.mm.yyyy` / `mm/dd/yyyy` / `yyyy-mm-dd`, special value `today`), `cat=` / `tag=` (substring or `none` for null), `payee=`, free-text, `||` OR, `()` grouping, `!` NOT prefix. The full query string is lowercased before parsing.
 
 ## Running tests

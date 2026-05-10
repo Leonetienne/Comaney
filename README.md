@@ -79,10 +79,10 @@ Filter by due date using `date` with any comparison operator:
 date>31.12.2024        date<=12/31/2024
 date>=01.01.2025       date==15.03.2025
 ```
-Three date formats are supported — the delimiter identifies which:
-* **`dd.mm.yyyy`** (dot) — day first, e.g. `31.01.2025`
-* **`mm/dd/yyyy`** (slash) — month first, e.g. `01/31/2025`
-* **`yyyy-mm-dd`** (hyphen) — ISO 8601, e.g. `2025-01-31`
+Three date formats are supported, the delimiter identifies which:
+* **`dd.mm.yyyy`** (dot), day first, e.g. `31.01.2025`
+* **`mm/dd/yyyy`** (slash), month first, e.g. `01/31/2025`
+* **`yyyy-mm-dd`** (hyphen), ISO 8601, e.g. `2025-01-31`
 
 The special value **`today`** resolves to the current date at query time:
 ```
@@ -138,6 +138,104 @@ type=expense !fence !oven !food
 | `type=expense !(rent \|\| payee=landlord)` | Expenses unrelated to rent |
 | `tag="credit card" settled=no` | Unmatured credit-card expenses |
 
+
+## Modular Dashboard
+The dashboard is fully customizable. Each card is defined in YAML and can be created, edited, resized, and reordered directly in the UI.
+
+### Card types
+| `type` | Description |
+|---|---|
+| `cell` | Single numeric value (sum, count, or custom Python) |
+| `bar-chart` | Horizontal bar chart grouped by tag or category |
+| `pie-chart` | Pie chart grouped by tag or category |
+
+### Common fields
+| Field | Required | Description |
+|---|---|---|
+| `type` | ✓ | Card type: `cell`, `bar-chart`, or `pie-chart` |
+| `title` | ✓ | Label shown in the card header |
+| `query` | | Search-filter string (same syntax as the expense search bar) to restrict which expenses are included |
+| `positioning.position` | | Display order (1-based integer) |
+| `positioning.width` | | Grid columns to span (1–12; default 2) |
+| `positioning.height` | | Grid rows to span (default 1) |
+
+### Cell-specific fields
+| Field | Required | Description                                                                                                                                                                                 |
+|---|---|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `method` | ✓ | `sum` · `count` · `custom`                                                                                                                                                                  |
+| `python` | when `method: custom` | Python function body. `return` a number. Helpers available: `query_sum(q)`, `query_sum_abs(q)`, `query_sum_gt0(q)`, `query_sum_lt0(q)`, each accept the same query syntax as the search bar |
+| `color` | | Css background colour applied in both light and dark mode                                                                                                                                   |
+| `color_lightmode` | | Overrides `color` in light mode                                                                                                                                                             |
+| `color_darkmode` | | Overrides `color` in dark mode                                                                                                                                                              |
+| `link` | | URL to navigate to when the cell is clicked (e.g. a pre-filtered expense list)                                                                                                              |
+
+### Chart-specific fields
+| Field | Required | Description                                                                                                                                                                               |
+|---|---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `group` | ✓ | `categories` or `tags`                                                                                                                                                                    |
+| `max_groups` | | Limit to top-N groups (bar-chart only)                                                                                                                                                    |
+| `hide_groups` | | YAML list of group names to exclude (case-insensitive)                                                                                                                                    |
+| `link_template` | | URL template navigated to when a segment is clicked. `$GROUP_NAME` is replaced with the URL-encoded group label; `Uncategorized` segments substitute `none` instead to help with searches |
+
+### Example cards
+```yaml
+# Monthly income total, click to see all income entries
+type: cell
+title: Income
+query: type=income
+method: sum
+color: '#1a3326'
+color_lightmode: '#bbf7d0'
+link: /budget/expenses/?search=type%3Dincome
+positioning:
+  position: 1
+  width: 2
+  height: 1
+```
+
+```yaml
+# Custom Python cell: disposable budget
+type: cell
+title: Left to spend
+method: custom
+python: |
+  return (
+    query_sum('type="income"')
+    - query_sum('type="expense"')
+    - (query_sum('type="savings deposit"') + query_sum('type="savings withdrawal"'))
+  )
+positioning:
+  position: 2
+  width: 4
+  height: 1
+```
+
+```yaml
+# Pie chart, click a slice to filter expenses by that category
+type: pie-chart
+title: Expenses by category
+group: categories
+link_template: /budget/expenses/?search=cat%3D$GROUP_NAME
+positioning:
+  position: 3
+  width: 6
+  height: 4
+```
+
+```yaml
+# Horizontal bar chart showing the tag distribution of shared expenses that also have the tag amazon
+# E.g. "Tags for spendings on amazon"
+type: bar-chart
+title: Spendings on amazon
+group: tags
+query: tag=amazon
+hide_groups:
+ - amazon
+positioning:
+  position: 7
+  width: 6
+  height: 4
+```
 
 ## What Comaney doesn't do 🚫
 A few intentional omissions. These aren't oversights, they add significant complexity without enough payoff, or have design issues that would compromise the simplicity Comaney is built around:
@@ -257,7 +355,7 @@ This system is trivially expandable should more such legal pages be required.
 #### Environment variables
 | Variable | Default | Description                                                                                                                                       |
 |---|---|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| `DJANGO_SECRET_KEY` | — | Django secret key. Generate one with `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` |
+| `DJANGO_SECRET_KEY` |, | Django secret key. Generate one with `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` |
 | `DB_HOST` | `db` | MySQL host                                                                                                                                        |
 | `DB_PORT` | `3306` | MySQL port                                                                                                                                        |
 | `DB_NAME` | `comaney` | MySQL database name                                                                                                                               |
