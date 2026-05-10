@@ -188,7 +188,8 @@ def cards_reorder_api(request):
         except Exception:
             pass
 
-    return _ok({'ok': True})
+    updated = [{'id': pk, 'yaml_config': c.yaml_config} for pk, c in cards.items()]
+    return _ok({'ok': True, 'cards': updated})
 
 
 # ---------------------------------------------------------------------------

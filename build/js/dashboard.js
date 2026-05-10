@@ -273,7 +273,12 @@ function dashboardBoard() {
             const positions = this.cards.map((c, i) => ({ id: c.id, position: i + 1 }));
             this.cards.forEach((c, i) => { c.position = i + 1; });
 
-            await this._postJson(this.urlReorder, { positions });
+            const resp = await this._postJson(this.urlReorder, { positions });
+            const data = await resp.json();
+            if (data.cards) {
+                const yamlMap = Object.fromEntries(data.cards.map(c => [c.id, c.yaml_config]));
+                this.cards.forEach(c => { if (yamlMap[c.id]) c.yaml_config = yamlMap[c.id]; });
+            }
         },
 
         // ── Resize (pointer events on the handle) ─────────────────────────────

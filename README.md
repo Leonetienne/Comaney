@@ -150,30 +150,32 @@ The dashboard is fully customizable. Each card is defined in YAML and can be cre
 | `pie-chart` | Pie chart grouped by tag or category |
 
 ### Common fields
-| Field | Required | Description |
-|---|---|---|
-| `type` | ✓ | Card type: `cell`, `bar-chart`, or `pie-chart` |
-| `title` | ✓ | Label shown in the card header |
-| `query` | | Search-filter string (same syntax as the expense search bar) to restrict which expenses are included |
-| `positioning.position` | | Display order (1-based integer) |
-| `positioning.width` | | Grid columns to span (1–12; default 2) |
-| `positioning.height` | | Grid rows to span (default 1) |
+| Field                  | Required       | Description                                                                                                                                                                            |
+|------------------------|----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `type`                 | ✓              | Card type: `cell`, `bar-chart`, or `pie-chart`                                                                                                                                         |
+| `method`               | Only for cells | `sum` -> sums up expense values · `total` -> sums up expense values but treats income-like types as negatives · `count` -> counts expenses · `custom` -> compute it yourself in python |
+| `flip_signs`           |                | Multiply results by -1                                                                                                                                                                 |
+| `title`                | ✓              | Label shown in the card header                                                                                                                                                         |
+| `query`                |                | Search-filter string (same syntax as the expense search bar) to restrict which expenses are included                                                                                   |
+| `positioning.position` |                | Display order (1-based integer)                                                                                                                                                        |
+| `positioning.width`    |                | Grid columns to span (1–12; default 2)                                                                                                                                                 |
+| `positioning.height`   |                | Grid rows to span (default 1)                                                                                                                                                          |
 
 ### Cell-specific fields
 | Field | Required | Description                                                                                                                                                                                 |
 |---|---|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `method` | ✓ | `sum` · `count` · `custom`                                                                                                                                                                  |
 | `python` | when `method: custom` | Python function body. `return` a number. Helpers available: `query_sum(q)`, `query_sum_abs(q)`, `query_sum_gt0(q)`, `query_sum_lt0(q)`, each accept the same query syntax as the search bar |
 | `color` | | CSS background colour applied in both light and dark mode                                                                                                                                   |
 | `color_lightmode` | | Overrides `color` in light mode                                                                                                                                                             |
 | `color_darkmode` | | Overrides `color` in dark mode                                                                                                                                                              |
 | `link` | | URL to navigate to when the cell is clicked (e.g. a pre-filtered expense list)                                                                                                              |
-| `template` | | Display template string. Defaults to `$VALUE $CURRENCY_SYMBOL`. Placeholders: `$VALUE` (formatted number), `$CURRENCY_SYMBOL` (user currency)                                              |
+| `template` | | Display template string. Defaults to `$VALUE $CURRENCY_SYMBOL`. Placeholders: `$VALUE` (formatted number), `$CURRENCY_SYMBOL` (user currency)                                               |
 
 ### Chart-specific fields
 | Field | Required | Description                                                                                                                                                                               |
-|---|---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|---|-|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `group` | ✓ | `categories` or `tags`                                                                                                                                                                    |
+| `method` | | `custom` not supported |                                                                                                                                                                   |
 | `max_groups` | | Limit to top-N groups (bar-chart only)                                                                                                                                                    |
 | `hide_groups` | | YAML list of group names to exclude (case-insensitive)                                                                                                                                    |
 | `link_template` | | URL template navigated to when a segment is clicked. `$GROUP_NAME` is replaced with the URL-encoded group label; `Uncategorized` segments substitute `none` instead to help with searches |

@@ -27,6 +27,10 @@ Tests:
   - Sandbox security: __builtins__ is empty dict, not real builtins (sb_13)
   - Sandbox security: type coercion and error handling (sb_14–sb_17)
   - Sandbox security: data isolation and SQL injection in query helpers (sb_18–sb_19)
+  - method=total cell: income/savings_wit count as negative (test_13)
+  - flip_signs: true inverts computed cell value (test_14)
+  - bar-chart with method=total (test_15)
+  - chart rejects method=count/custom with 400 (test_16)
 """
 import time
 
@@ -325,6 +329,105 @@ class TestDashboardCardsAPI:
         url = CARDS_URL.rstrip("/") + "/9999999/"
         r = sess.delete(url, headers={"X-CSRFToken": csrf})
         assert r.status_code == 404
+
+    def test_13_method_total_cell(self, driver, w, ctx):
+        """method=total negates income and savings_wit types."""
+        from conftest import api_delete, api_post, server_today
+
+        today = server_today()
+        # Create a regular expense (value=50) and an income expense (value=100)
+        exp = api_post("/api/v1/expenses/", ctx, json={
+            "title": "TotalTest expense", "type": "expense",
+            "value": "50.00", "date_due": today, "settled": False,
+        })
+        assert exp.status_code == 201
+        inc = api_post("/api/v1/expenses/", ctx, json={
+            "title": "TotalTest income", "type": "income",
+            "value": "100.00", "date_due": today, "settled": False,
+        })
+        assert inc.status_code == 201
+        ctx["_total_exp_ids"] = [exp.json()["id"], inc.json()["id"]]
+
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        # method=sum should give 50 + 100 = 150
+        r_sum = _post_card(sess, csrf, (
+            "type: cell\ntitle: TotalTestSum\nmethod: sum\n"
+            "positioning:\n  position: 90\n  width: 1\n  height: 1\n"
+        ))
+        assert r_sum.status_code == 201, r_sum.text
+        # method=total should give 50 - 100 = -50
+        r_tot = _post_card(sess, csrf, (
+            "type: cell\ntitle: TotalTestTotal\nmethod: total\n"
+            "positioning:\n  position: 91\n  width: 1\n  height: 1\n"
+        ))
+        assert r_tot.status_code == 201, r_tot.text
+        ctx["_total_card_ids"] = [r_sum.json()["card"]["id"], r_tot.json()["card"]["id"]]
+
+        cards = sess.get(CARDS_URL).json()["cards"]
+        by_title = {c["config"]["title"]: c for c in cards}
+        sum_val = by_title["TotalTestSum"]["data"]["value"]
+        tot_val = by_title["TotalTestTotal"]["data"]["value"]
+        assert sum_val >= 150.0, f"sum card expected ≥150, got {sum_val}"
+        assert tot_val <= -50.0, f"total card expected ≤-50, got {tot_val}"
+
+    def test_14_flip_signs(self, driver, w, ctx):
+        """flip_signs: true multiplies computed value by -1."""
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, (
+            "type: cell\ntitle: InvertTest\nmethod: total\nflip_signs: true\n"
+            "positioning:\n  position: 92\n  width: 1\n  height: 1\n"
+        ))
+        assert r.status_code == 201, r.text
+        val = r.json()["card"]["data"]["value"]
+        # method=total with expenses from test_13 gives -50 minimum; inverted → +50
+        assert val >= 50.0, f"inverted total card expected ≥50, got {val}"
+        ctx["_invert_card_id"] = r.json()["card"]["id"]
+
+    def test_15_chart_method_total(self, driver, w, ctx):
+        """bar-chart with method=total returns negated values for income/savings_wit."""
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, (
+            "type: bar-chart\ngroup: categories\ntitle: TotalChartTest\nmethod: total\n"
+            "positioning:\n  position: 93\n  width: 3\n  height: 2\n"
+        ))
+        assert r.status_code == 201, r.text
+        ctx["_total_chart_id"] = r.json()["card"]["id"]
+        # Sum of all chart values must equal the method=total cell value (no query filter)
+        cards = sess.get(CARDS_URL).json()["cards"]
+        chart = next(c for c in cards if c["id"] == ctx["_total_chart_id"])
+        chart_sum = sum(chart["data"]["values"])
+        cell = next(c for c in cards if c["config"]["title"] == "TotalTestTotal")
+        assert abs(chart_sum - cell["data"]["value"]) < 0.01, (
+            f"chart total {chart_sum} should equal cell total {cell['data']['value']}"
+        )
+
+    def test_16_chart_invalid_method_returns_400(self, driver, w, ctx):
+        """Charts only accept method=sum or method=total; count/custom return 400."""
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, (
+            "type: bar-chart\ngroup: tags\ntitle: BadMethod\nmethod: count\n"
+            "positioning:\n  position: 99\n  width: 2\n  height: 2\n"
+        ))
+        assert r.status_code == 400
+        assert "error" in r.json()
+
+    def test_17_cleanup_total_method_cards_and_expenses(self, driver, w, ctx):
+        """Clean up expenses and cards created by tests 13–15."""
+        from conftest import api_delete
+
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        for card_id in ctx.get("_total_card_ids", []):
+            sess.delete(CARDS_URL.rstrip("/") + f"/{card_id}/", headers={"X-CSRFToken": csrf})
+        for cid in ["_invert_card_id", "_total_chart_id"]:
+            if cid in ctx:
+                sess.delete(CARDS_URL.rstrip("/") + f"/{ctx[cid]}/", headers={"X-CSRFToken": csrf})
+        for exp_id in ctx.get("_total_exp_ids", []):
+            api_delete(f"/api/v1/expenses/{exp_id}/", ctx)
 
 
 

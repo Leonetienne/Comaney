@@ -61,8 +61,10 @@ comaney/        Settings, root urls, middleware, public_pages context processor
 - **AI express creation**: system prompt in `budget/views/express.py`; expects `{"result":"good","items":[]}` or `{"result":"fail","msg":""}` — never prose
 - **Modular dashboard** (`budget/dashboard_cards.py`, `budget/views/dashboard_cards_api.py`):
   - Cards stored as `DashboardCard` model (per user) with only `yaml_config` + `created_at` DB fields. All layout info (`position`, `width`, `height`) lives inside the YAML `positioning:` block.
-  - YAML fields: `type` (`cell` | `bar-chart` | `pie-chart`), `title`, `query`, `group`, `method`, `color`, `color_lightmode`, `color_darkmode`, `link`, `link_template`, `template`, `python`, `positioning`.
+  - YAML fields: `type` (`cell` | `bar-chart` | `pie-chart`), `title`, `query`, `group`, `method`, `flip_signs`, `color`, `color_lightmode`, `color_darkmode`, `link`, `link_template`, `template`, `python`, `positioning`.
   - `parse_card_config(yaml_str)` validates and normalises YAML. `compute_card_data(config, qs, feuser)` returns data for the current period.
+  - `method` for cells: `sum` (plain sum), `total` (sum where income/savings-withdrawal count as negative), `count`, `custom`. Charts accept `sum` and `total` only.
+  - `flip_signs: true` multiplies all computed values by -1 (works for cells and charts).
   - `method: custom` cells execute user Python in a sandboxed `exec()`: no imports, no dunder attrs, builtins restricted to safe math + `Decimal`. Runs in a daemon thread with 2 s timeout. Provides `query_sum`, `query_sum_abs`, `query_sum_gt0`, `query_sum_lt0` helpers.
   - `color_lightmode` / `color_darkmode` override `color` per scheme, resolved at page-load via `matchMedia`.
   - `link` (cell): clicking the cell body navigates to the URL. `link_template` (charts): clicking a segment navigates, replacing `$GROUP_NAME` with `encodeURIComponent(label)`; `Uncategorized` → `none`.

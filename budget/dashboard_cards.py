@@ -8,7 +8,8 @@ Card YAML schema:
     group: tags | categories    # required for bar-chart / pie-chart
     max_groups: N               # optional; top-N groups (bar-chart only)
     hide_groups: "a,b"          # optional; comma-sep group names to exclude
-    method: sum | count | custom   # required for cell
+    method: sum | total | count | custom   # required for cell; sum/total also apply to charts
+    flip_signs: true/false      # optional; multiply all computed values by -1
     color: "#hex"               # optional; cell background color (both modes)
     color_lightmode: "#hex"    # optional; overrides color in light mode
     color_darkmode: "#hex"     # optional; overrides color in dark mode
@@ -28,13 +29,16 @@ import threading
 from decimal import Decimal, InvalidOperation
 
 import yaml
-from django.db.models import Sum
+from django.db.models import Case, DecimalField, F, Sum, When
 
 from .query_parser import apply_query
 
 VALID_TYPES = {'cell', 'bar-chart', 'pie-chart'}
 VALID_GROUPS = {'tags', 'categories'}
-VALID_METHODS = {'sum', 'count', 'custom'}
+VALID_METHODS = {'sum', 'total', 'count', 'custom'}
+
+# Expense types that count as negative income under method=total
+_TOTAL_NEGATIVE_TYPES = {'income', 'savings_wit', 'carry_over'}
 
 DEFAULT_POSITIONING = {'position': 0, 'width': 2, 'height': 2}
 
@@ -73,6 +77,11 @@ def parse_card_config(yaml_str: str) -> dict:
         if method == 'custom' and not cfg.get('python', '').strip():
             raise CardConfigError("method=custom requires a 'python' code block")
 
+    if card_type in ('bar-chart', 'pie-chart'):
+        method = cfg.get('method', 'sum')
+        if method not in ('sum', 'total'):
+            raise CardConfigError("method for charts must be sum or total")
+
     pos = cfg.get('positioning') or {}
     positioning = {
         'position': int(pos.get('position', DEFAULT_POSITIONING['position'])),
@@ -81,25 +90,26 @@ def parse_card_config(yaml_str: str) -> dict:
     }
 
     return {
-        'type':        card_type,
-        'title':       str(cfg.get('title', '')),
-        'query':       str(cfg.get('query', '')),
-        'group':       str(cfg.get('group', '')),
-        'max_groups':  int(cfg['max_groups']) if cfg.get('max_groups') is not None else None,
-        'hide_groups': (
+        'type':          card_type,
+        'title':         str(cfg.get('title', '')),
+        'query':         str(cfg.get('query', '')),
+        'group':         str(cfg.get('group', '')),
+        'max_groups':    int(cfg['max_groups']) if cfg.get('max_groups') is not None else None,
+        'hide_groups':   (
             [str(g).strip().lower() for g in cfg['hide_groups'] if str(g).strip()]
             if isinstance(cfg.get('hide_groups'), list)
             else []
         ),
-        'method':      str(cfg.get('method', 'sum')),
+        'method':        str(cfg.get('method', 'sum')),
+        'flip_signs': bool(cfg.get('flip_signs', False)),
         'color':            str(cfg.get('color', '')),
         'color_lightmode':  str(cfg.get('color_lightmode', '')),
         'color_darkmode':   str(cfg.get('color_darkmode', '')),
         'link':             str(cfg.get('link', '')),
         'link_template':    str(cfg.get('link_template', '')),
         'template':         str(cfg.get('template', '')),
-        'python':      str(cfg.get('python', '')),
-        'positioning': positioning,
+        'python':        str(cfg.get('python', '')),
+        'positioning':   positioning,
     }
 
 
@@ -129,34 +139,64 @@ def _filtered_qs(config: dict, base_qs):
     return base_qs
 
 
+def _signed_sum(qs):
+    """Sum values, negating income and savings-withdrawal types (method=total)."""
+    return (
+        qs.annotate(
+            _signed=Case(
+                When(type__in=_TOTAL_NEGATIVE_TYPES, then=-F('value')),
+                default=F('value'),
+                output_field=DecimalField(),
+            )
+        ).aggregate(t=Sum('_signed'))['t'] or Decimal('0')
+    )
+
+
 def _compute_cell(config: dict, period_qs) -> dict:
     method = config['method']
+    invert = config.get('flip_signs', False)
     qs = _filtered_qs(config, period_qs)
 
     if method == 'sum':
         value = qs.aggregate(t=Sum('value'))['t'] or Decimal('0')
-        return {'value': float(value)}
-
-    if method == 'count':
+    elif method == 'total':
+        value = _signed_sum(qs)
+    elif method == 'count':
         return {'value': qs.count()}
-
-    if method == 'custom':
+    elif method == 'custom':
         fns = _make_query_fns(period_qs)
         value = _run_sandboxed(config['python'], fns)
-        return {'value': float(value)}
+    else:
+        value = Decimal('0')
 
-    return {'value': 0}
+    if invert:
+        value = -value
+    return {'value': float(value)}
 
 
 def _compute_chart(config: dict, period_qs) -> dict:
     qs = _filtered_qs(config, period_qs)
     group = config['group']
+    method = config.get('method', 'sum')
+    invert = config.get('flip_signs', False)
+
+    if method == 'total':
+        qs = qs.annotate(
+            _signed=Case(
+                When(type__in=_TOTAL_NEGATIVE_TYPES, then=-F('value')),
+                default=F('value'),
+                output_field=DecimalField(),
+            )
+        )
+        agg_field = '_signed'
+    else:
+        agg_field = 'value'
 
     if group == 'tags':
         rows = (
             qs.filter(tags__isnull=False)
             .values('tags__title')
-            .annotate(total=Sum('value'))
+            .annotate(total=Sum(agg_field))
             .order_by('-total')
         )
         labels = [r['tags__title'] or '' for r in rows]
@@ -165,7 +205,7 @@ def _compute_chart(config: dict, period_qs) -> dict:
     elif group == 'categories':
         rows = (
             qs.values('category__title')
-            .annotate(total=Sum('value'))
+            .annotate(total=Sum(agg_field))
             .order_by('-total')
         )
         labels = [r['category__title'] if r['category__title'] else 'Uncategorized' for r in rows]
@@ -185,6 +225,9 @@ def _compute_chart(config: dict, period_qs) -> dict:
     if max_g and config['type'] == 'bar-chart':
         labels = labels[:max_g]
         values = values[:max_g]
+
+    if invert:
+        values = [-v for v in values]
 
     return {'labels': labels, 'values': values}
 
