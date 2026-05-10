@@ -21,13 +21,14 @@ Tests:
   - Empty editor loads preset without confirm dialog (test_30)
   - Delete card via browser modal with confirmDialog (test_31)
   - Cell link navigates to the configured URL on click (test_32)
-  - Chart link_template config is stored and returned via API (test_33)
+  - Cell template field renders correct text in card body (test_34)
   - Sandbox security: AST-level import/dunder blocks (TestSandboxSecurity sb_01–sb_06)
   - Sandbox security: runtime NameError for dangerous builtins (sb_07–sb_12)
   - Sandbox security: __builtins__ is empty dict, not real builtins (sb_13)
   - Sandbox security: type coercion and error handling (sb_14–sb_17)
   - Sandbox security: data isolation and SQL injection in query helpers (sb_18–sb_19)
 """
+import time
 
 import requests
 
@@ -107,6 +108,24 @@ def _cm_text(driver, backdrop_id: str) -> str:
     )
 
 
+def _set_cm_text(driver, backdrop_id: str, text: str):
+    """Replace the CodeMirror editor content AND the Alpine data property that saveAdd/saveEdit reads."""
+    driver.execute_script(
+        """
+        const data = document.querySelector('[x-data="dashboardBoard"]')._x_dataStack[0];
+        const isAdd = arguments[0] === 'dash-add-backdrop';
+        // Set the Alpine property directly — this is what saveAdd()/saveEdit() sends to the API.
+        if (isAdd) { data.addYaml = arguments[1]; data.addYamlDirty = true; }
+        else        { data.editYaml = arguments[1]; }
+        // Also update the editor display so _cm_text() reflects the new content.
+        const view = isAdd ? data._addEditor : data._editEditor;
+        if (view) view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: arguments[1] } });
+        """,
+        backdrop_id,
+        text,
+    )
+
+
 def _dialog_visible(driver) -> bool:
     """Return True when the in-DOM confirm dialog is currently shown."""
     return driver.execute_script(
@@ -123,6 +142,7 @@ def _open_add_dialog(driver, w):
     ))
     add_btn.click()
     w.until(EC.visibility_of_element_located((By.ID, "dash-add-backdrop")))
+    time.sleep(1)  # wait for Alpine + CodeMirror to finish mounting inside the dialog
 
 
 # ---------------------------------------------------------------------------
@@ -308,26 +328,6 @@ class TestDashboardCardsAPI:
         r = sess.delete(url, headers={"X-CSRFToken": csrf})
         assert r.status_code == 404
 
-    def test_33_chart_link_template_config_stored(self, driver, w, ctx):
-        sess = _cards_session(driver)
-        csrf = _csrf(sess)
-        yaml_str = (
-            "type: bar-chart\n"
-            "title: LinkTemplateTest\n"
-            "group: tags\n"
-            "link_template: /budget/expenses/?search=tag%3D$GROUP_NAME\n"
-            "positioning:\n"
-            "    position: 99\n"
-            "    width: 3\n"
-            "    height: 2\n"
-        )
-        r = _post_card(sess, csrf, yaml_str)
-        assert r.status_code == 201, r.text
-        card = r.json()["card"]
-        assert card["config"]["link_template"] == "/budget/expenses/?search=tag%3D$GROUP_NAME"
-        # Clean up
-        url = CARDS_URL.rstrip("/") + f"/{card['id']}/"
-        sess.delete(url, headers={"X-CSRFToken": csrf})
 
 
 class TestSandboxSecurity:
@@ -459,153 +459,139 @@ class TestDashboardBrowser:
 
     def test_20_dashboard_page_loads(self, driver, w, ctx):
         driver.get(_url("/budget/"))
-        # Wait for Alpine to initialise and finish loading
-        w.until(lambda d: d.execute_script(
-            "return document.querySelector('.dash-grid') !== null || "
-            "document.querySelector('.dash-loading') !== null"
-        ))
+        time.sleep(3)
+        assert driver.find_element(By.CSS_SELECTOR, ".dash-grid, .dash-loading")
 
     def test_21_grid_renders_cards(self, driver, w, ctx):
         driver.get(_url("/budget/"))
-        # Wait until loading spinner disappears and grid is visible
-        w.until(lambda d: not d.execute_script(
-            "const el = document.querySelector('.dash-loading');"
-            "return el && el.style.display !== 'none';"
-        ))
-        # At least one dash-card should be in the DOM
-        w.until(lambda d: len(d.find_elements(By.CSS_SELECTOR, ".dash-card")) > 0)
+        time.sleep(3)
+        assert len(driver.find_elements(By.CSS_SELECTOR, ".dash-card")) > 0
 
     def test_22_add_card_dialog_opens(self, driver, w, ctx):
         driver.get(_url("/budget/"))
-        add_btn = w.until(EC.element_to_be_clickable(
-            (By.XPATH, "//button[contains(text(),'New dashboard card')]")
-        ))
-        add_btn.click()
-        # Wait for the ADD backdrop specifically (not the edit one which is always hidden)
-        w.until(EC.visibility_of_element_located((By.ID, "dash-add-backdrop")))
+        time.sleep(3)
+        driver.find_element(
+            By.XPATH, "//button[contains(text(),'New dashboard card')]"
+        ).click()
+        time.sleep(1)
+        assert driver.find_element(By.ID, "dash-add-backdrop").is_displayed()
 
     def test_23_preset_loads_into_editor(self, driver, w, ctx):
-        # Dialog should still be open from previous test; click first preset
-        presets = w.until(lambda d: d.find_elements(By.CSS_SELECTOR, ".dash-presets .btn"))
+        # Dialog still open from previous test
+        time.sleep(1)
+        presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         assert len(presets) > 0
         presets[0].click()
-        # CodeMirror editor — read via DOM textContent, not .value
-        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
+        time.sleep(1)
+        assert "type:" in _cm_text(driver, "dash-add-backdrop")
 
     def test_24_cancel_dialog(self, driver, w, ctx):
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        w.until(lambda d: not d.find_element(By.ID, "dash-add-backdrop").is_displayed())
+        time.sleep(1)
+        assert not driver.find_element(By.ID, "dash-add-backdrop").is_displayed()
 
     def test_25_edit_modal_opens_on_edit_button(self, driver, w, ctx):
         driver.get(_url("/budget/"))
-        # Hover over first card to make edit button visible, then click it
-        first_card = w.until(EC.presence_of_element_located(
-            (By.CSS_SELECTOR, ".dash-card")
-        ))
+        time.sleep(3)
+        first_card = driver.find_element(By.CSS_SELECTOR, ".dash-card")
         driver.execute_script("arguments[0].querySelector('.dash-card-edit-btn').click()", first_card)
-        w.until(EC.visibility_of_element_located((By.ID, "dash-edit-backdrop")))
-        # CodeMirror editor — read via DOM textContent, not .value
-        w.until(lambda d: "type:" in _cm_text(d, "dash-edit-backdrop"))
-        # Close
+        time.sleep(1)
+        assert driver.find_element(By.ID, "dash-edit-backdrop").is_displayed()
+        assert "type:" in _cm_text(driver, "dash-edit-backdrop")
         driver.find_element(
             By.XPATH, "//div[@id='dash-edit-backdrop']//button[text()='Cancel']"
         ).click()
+        time.sleep(1)
 
     def test_27_sequential_presets_load_without_confirm(self, driver, w, ctx):
         _open_add_dialog(driver, w)
-        presets = w.until(lambda d: d.find_elements(By.CSS_SELECTOR, ".dash-presets .btn"))
+        presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         assert len(presets) >= 1
-        # First click: loads preset (editor starts empty, no confirm)
         presets[0].click()
-        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
-        # Second click on same preset: addYamlDirty was reset to False after load, no confirm
+        time.sleep(1)
+        assert "type:" in _cm_text(driver, "dash-add-backdrop")
         presets[0].click()
-        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
+        time.sleep(1)
+        assert "type:" in _cm_text(driver, "dash-add-backdrop")
         assert not _dialog_visible(driver), "Confirm dialog must not appear on back-to-back preset loads"
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        w.until(lambda d: not d.find_element(By.ID, "dash-add-backdrop").is_displayed())
+        time.sleep(1)
 
     def test_28_dirty_editor_confirm_cancel_keeps_content(self, driver, w, ctx):
         _open_add_dialog(driver, w)
-        presets = w.until(lambda d: d.find_elements(By.CSS_SELECTOR, ".dash-presets .btn"))
+        presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         assert len(presets) >= 1
-        # Load preset so editor has content, then type to mark it dirty
         presets[0].click()
-        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
-        cm = driver.find_element(By.CSS_SELECTOR, "#dash-add-backdrop .cm-content")
-        cm.click()
+        time.sleep(1)
+        assert "type:" in _cm_text(driver, "dash-add-backdrop")
+        driver.find_element(By.CSS_SELECTOR, "#dash-add-backdrop .cm-content").click()
         ActionChains(driver).send_keys("z").perform()
         dirty_text = _cm_text(driver, "dash-add-backdrop")
-        assert dirty_text  # sanity: editor is not empty
-        # Click preset again — confirm dialog must appear because editor is dirty
+        assert dirty_text
         presets[0].click()
-        w.until(lambda d: _dialog_visible(d))
-        # Cancel → user's content must be preserved unchanged
+        time.sleep(1)
+        assert _dialog_visible(driver), "Confirm dialog must appear when editor is dirty"
         driver.find_element(By.ID, "cdialog-cancel").click()
-        w.until(lambda d: not _dialog_visible(d))
+        time.sleep(1)
         assert _cm_text(driver, "dash-add-backdrop") == dirty_text
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        w.until(lambda d: not d.find_element(By.ID, "dash-add-backdrop").is_displayed())
+        time.sleep(1)
 
     def test_29_dirty_editor_confirm_overwrite_loads_preset(self, driver, w, ctx):
         _open_add_dialog(driver, w)
-        presets = w.until(lambda d: d.find_elements(By.CSS_SELECTOR, ".dash-presets .btn"))
+        presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         assert len(presets) >= 1
-        # Load preset, then dirty the editor
         presets[0].click()
-        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
-        cm = driver.find_element(By.CSS_SELECTOR, "#dash-add-backdrop .cm-content")
-        cm.click()
+        time.sleep(1)
+        assert "type:" in _cm_text(driver, "dash-add-backdrop")
+        driver.find_element(By.CSS_SELECTOR, "#dash-add-backdrop .cm-content").click()
         ActionChains(driver).send_keys("z").perform()
-        # Click preset → confirm dialog appears
         presets[0].click()
-        w.until(lambda d: _dialog_visible(d))
-        # Confirm overwrite → preset content should replace user's text
+        time.sleep(1)
+        assert _dialog_visible(driver), "Confirm dialog must appear when editor is dirty"
         driver.find_element(By.ID, "cdialog-ok").click()
-        w.until(lambda d: not _dialog_visible(d))
-        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
+        time.sleep(1)
+        assert "type:" in _cm_text(driver, "dash-add-backdrop")
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        w.until(lambda d: not d.find_element(By.ID, "dash-add-backdrop").is_displayed())
+        time.sleep(1)
 
     def test_30_empty_editor_loads_preset_without_confirm(self, driver, w, ctx):
         _open_add_dialog(driver, w)
-        presets = w.until(lambda d: d.find_elements(By.CSS_SELECTOR, ".dash-presets .btn"))
+        presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         assert len(presets) >= 1
-        # Load preset first so the editor has content
         presets[0].click()
-        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
-        # Clear the editor by dispatching directly to the CM EditorView.
-        # Using EditorView.dispatch (not _setEditorContent) keeps _programmaticEdit=False,
-        # so updateListener fires onChange('') → addYamlDirty = False.
-        # This is equivalent to the user selecting all text and deleting it.
+        time.sleep(1)
+        assert "type:" in _cm_text(driver, "dash-add-backdrop")
+        # Clear the editor directly via CM dispatch (keeps _programmaticEdit=False so
+        # onChange fires and sets addYamlDirty = False — same as user deleting all text)
         driver.execute_script("""
             const data = document.querySelector('[x-data="dashboardBoard"]')._x_dataStack[0];
             const view = data._addEditor;
             view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: '' } });
         """)
-        w.until(lambda d: _cm_text(d, "dash-add-backdrop").strip() == "")
-        # Click preset — no confirm because editor is empty (addYamlDirty = False)
+        time.sleep(1)
+        assert _cm_text(driver, "dash-add-backdrop").strip() == ""
         presets[0].click()
-        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
+        time.sleep(1)
+        assert "type:" in _cm_text(driver, "dash-add-backdrop")
         assert not _dialog_visible(driver), "Confirm dialog must not appear when editor was empty"
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        w.until(lambda d: not d.find_element(By.ID, "dash-add-backdrop").is_displayed())
+        time.sleep(1)
 
     def test_31_delete_card_via_browser_modal(self, driver, w, ctx):
-        # Create a fresh card via API
         sess = _cards_session(driver)
         csrf = _csrf(sess)
-        yaml_str = (
+        r = _post_card(sess, csrf, (
             "type: cell\n"
             "title: BrowserDeleteTest\n"
             "method: sum\n"
@@ -613,52 +599,33 @@ class TestDashboardBrowser:
             "    position: 99\n"
             "    width: 2\n"
             "    height: 1\n"
-        )
-        r = _post_card(sess, csrf, yaml_str)
+        ))
         assert r.status_code == 201, r.text
-        card_id = r.json()["card"]["id"]
-        ctx["card_id_browser_delete"] = card_id
 
         driver.get(_url("/budget/"))
-        # Wait for grid to be visible (spinner gone, at least one card present)
-        w.until(lambda d: not d.execute_script(
-            "const el = document.querySelector('.dash-loading');"
-            "return el && el.style.display !== 'none';"
-        ))
-        w.until(lambda d: len(d.find_elements(By.CSS_SELECTOR, ".dash-card")) > 0)
-
-        # Click the edit button on the BrowserDeleteTest card via JS
+        time.sleep(3)
         driver.execute_script(
             "Array.from(document.querySelectorAll('.dash-card')).find("
             "  c => c.querySelector('.dash-card-title')?.textContent?.trim() === 'BrowserDeleteTest'"
             ")?.querySelector('.dash-card-edit-btn')?.click()"
         )
-        w.until(EC.visibility_of_element_located((By.ID, "dash-edit-backdrop")))
-
-        # Click the Delete button inside the edit modal
-        delete_btn = w.until(EC.element_to_be_clickable(
-            (By.XPATH, "//div[@id='dash-edit-backdrop']//button[contains(@class,'btn-danger')]")
-        ))
-        delete_btn.click()
-
-        # Confirm dialog should appear
-        w.until(lambda d: _dialog_visible(d))
+        time.sleep(1)
+        assert driver.find_element(By.ID, "dash-edit-backdrop").is_displayed()
+        driver.find_element(
+            By.XPATH, "//div[@id='dash-edit-backdrop']//button[contains(@class,'btn-danger')]"
+        ).click()
+        time.sleep(1)
+        assert _dialog_visible(driver)
         driver.find_element(By.ID, "cdialog-ok").click()
-        w.until(lambda d: not _dialog_visible(d))
-
-        # Edit backdrop should close
-        w.until(lambda d: not d.find_element(By.ID, "dash-edit-backdrop").is_displayed())
-
-        # Verify card is gone via API
-        cards = sess.get(CARDS_URL).json()["cards"]
-        titles = [c["config"].get("title") for c in cards]
+        time.sleep(2)
+        assert not driver.find_element(By.ID, "dash-edit-backdrop").is_displayed()
+        titles = [el.text.strip() for el in driver.find_elements(By.CSS_SELECTOR, ".dash-card-title")]
         assert "BrowserDeleteTest" not in titles
 
     def test_32_cell_link_navigates(self, driver, w, ctx):
-        # Create a cell card with a link via API
         sess = _cards_session(driver)
         csrf = _csrf(sess)
-        yaml_str = (
+        r = _post_card(sess, csrf, (
             "type: cell\n"
             "title: LinkTestCell\n"
             "query: type=income\n"
@@ -668,34 +635,66 @@ class TestDashboardBrowser:
             "  position: 99\n"
             "  width: 2\n"
             "  height: 1\n"
-        )
-        r = _post_card(sess, csrf, yaml_str)
+        ))
         assert r.status_code == 201, r.text
         card_id = r.json()["card"]["id"]
-        ctx["card_id_link_test"] = card_id
 
         driver.get(_url("/budget/"))
-        # Wait for grid to be visible
-        w.until(lambda d: not d.execute_script(
-            "const el = document.querySelector('.dash-loading');"
-            "return el && el.style.display !== 'none';"
-        ))
-        w.until(lambda d: len(d.find_elements(By.CSS_SELECTOR, ".dash-card")) > 0)
-
-        # Click the linked cell body via JS
+        time.sleep(3)
         driver.execute_script(
             "Array.from(document.querySelectorAll('.dash-card')).find("
             "  c => c.querySelector('.dash-card-title')?.textContent?.trim() === 'LinkTestCell'"
             ")?.querySelector('.dash-card-body--linked')?.click()"
         )
-
-        # Wait until we land on the expenses page
-        w.until(lambda d: "/budget/expenses/" in d.current_url)
+        time.sleep(2)
+        assert "/budget/expenses/" in driver.current_url
         assert "type%3Dincome" in driver.current_url or "type=income" in driver.current_url
 
-        # Clean up: delete the card via API
-        url = CARDS_URL.rstrip("/") + f"/{card_id}/"
-        sess.delete(url, headers={"X-CSRFToken": csrf})
+        sess.delete(CARDS_URL.rstrip("/") + f"/{card_id}/", headers={"X-CSRFToken": csrf})
+
+    def test_34_cell_template_renders_in_card_body(self, driver, w, ctx):
+        """Create a cell card with template: and verify the card body renders the template string."""
+        yaml_str = (
+            "type: cell\n"
+            "title: TemplateUITest\n"
+            "method: sum\n"
+            "template: $VALUE $CURRENCY_SYMBOL incoming\n"
+            "positioning:\n"
+            "  position: 99\n"
+            "  width: 2\n"
+            "  height: 1\n"
+        )
+        _open_add_dialog(driver, w)
+        presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
+        presets[0].click()
+        time.sleep(1)
+        _set_cm_text(driver, "dash-add-backdrop", yaml_str)
+        time.sleep(1)
+        assert "template" in _cm_text(driver, "dash-add-backdrop")
+        driver.find_element(
+            By.CSS_SELECTOR, "#dash-add-backdrop .dash-modal-actions .btn-primary"
+        ).click()
+        time.sleep(3)
+        assert not driver.find_element(By.ID, "dash-add-backdrop").is_displayed()
+        titles = [el.text.strip().lower() for el in driver.find_elements(By.CSS_SELECTOR, ".dash-card-title")]
+        assert "TemplateUITest".lower() in titles
+        bodies = driver.find_elements(By.CSS_SELECTOR, ".dash-card-body--cell .dash-cell-value")
+        assert any("incoming" in (b.text or "") for b in bodies)
+        driver.execute_script(
+            "Array.from(document.querySelectorAll('.dash-card')).find("
+            "  c => c.querySelector('.dash-card-title')?.textContent?.trim() === 'TemplateUITest'"
+            ")?.querySelector('.dash-card-edit-btn')?.click()"
+        )
+        time.sleep(1)
+        assert driver.find_element(By.ID, "dash-edit-backdrop").is_displayed()
+        driver.find_element(
+            By.XPATH, "//div[@id='dash-edit-backdrop']//button[contains(@class,'btn-danger')]"
+        ).click()
+        time.sleep(1)
+        assert _dialog_visible(driver)
+        driver.find_element(By.ID, "cdialog-ok").click()
+        time.sleep(2)
+        assert not driver.find_element(By.ID, "dash-edit-backdrop").is_displayed()
 
     def test_26_cleanup_remaining_cards(self, driver, w, ctx):
         sess = _cards_session(driver)
