@@ -29,7 +29,18 @@ DOCKER_WEB  = "comaney-web-1"
 
 
 def pytest_configure(config):
-    """Abort immediately if the server isn't wired up to Mailpit."""
+    """Abort immediately if the app or Mailpit aren't reachable."""
+    # ── App reachability check ────────────────────────────────────────────────
+    try:
+        requests.get(BASE_URL, timeout=5)
+    except Exception:
+        pytest.exit(
+            f"\nABORT: Can't reach Comaney endpoint. "
+            f"Is the container up and running at {BASE_URL}?\n",
+            returncode=1,
+        )
+
+    # ── Mailpit / email config check ─────────────────────────────────────────
     try:
         result = subprocess.run(
             ["docker", "exec", DOCKER_WEB, "python", "-c",
