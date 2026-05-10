@@ -166,13 +166,13 @@ class TestExpensesListControls:
 
     def _bulk_action_and_wait(self, driver, w, action_value):
         """Select action, click Go, confirm dialog, wait for page reload."""
-        anchor = driver.find_element(By.ID, "exp-list")
         SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value(action_value)
         driver.find_element(By.ID, "exp-bulk-go").click()
         time.sleep(CLICK_PACE)
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-        # Wait for the page to actually navigate (form POST + redirect)
-        w.until(EC.staleness_of(anchor))
+        # Wait for the POST + redirect to complete without holding a stale node ref
+        time.sleep(CLICK_PACE)
+        w.until(lambda d: d.execute_script("return document.readyState") == "complete")
         wait_text(driver, w, "Expenses")
 
     def test_79_40_bulk_settle(self, driver, w, ctx):

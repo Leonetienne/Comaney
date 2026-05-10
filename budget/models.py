@@ -114,14 +114,10 @@ class ScheduledExpense(OwnedModel):
 
 class DashboardCard(OwnedModel):
     yaml_config = models.TextField()
-    # layout fields — parsed from yaml on create/update, updated directly on drag-drop/resize
-    position = models.PositiveIntegerField(default=0)
-    width = models.PositiveIntegerField(default=2)
-    height = models.PositiveIntegerField(default=2)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['position', 'created_at']
+        ordering = ['created_at']
 
     def __str__(self) -> str:
         return f"DashboardCard #{self.pk}"

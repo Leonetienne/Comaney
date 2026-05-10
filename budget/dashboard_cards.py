@@ -273,7 +273,14 @@ def _run_sandboxed(code: str, fns: dict, timeout: float = 2.0) -> Decimal:
 
 def _build_presets():
     from .fixtures import DEFAULT_DASHBOARD_CARDS
-    return [{'name': entry['title'], 'yaml': entry['yaml']} for entry in DEFAULT_DASHBOARD_CARDS]
+    result = []
+    for entry in DEFAULT_DASHBOARD_CARDS:
+        try:
+            name = (yaml.safe_load(entry['yaml']) or {}).get('title', 'Card')
+        except Exception:
+            name = 'Card'
+        result.append({'name': name, 'yaml': entry['yaml']})
+    return result
 
 
 PRESETS = _build_presets()

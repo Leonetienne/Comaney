@@ -71,24 +71,17 @@ def _card_to_json(card: DashboardCard, period_qs, feuser) -> dict:
         data = {}
         error = str(exc)
 
+    pos = config.get('positioning', {}) if config else {}
     return {
         'id':          card.pk,
         'yaml_config': card.yaml_config,
-        'position':    card.position,
-        'width':       card.width,
-        'height':      card.height,
+        'position':    pos.get('position', 0),
+        'width':       pos.get('width', 2),
+        'height':      pos.get('height', 2),
         'config':      config,
         'data':        data,
         'error':       error,
     }
-
-
-def _sync_positioning(card: DashboardCard, config: dict) -> None:
-    """Copy positioning parsed from YAML into the card's DB fields."""
-    pos = config.get('positioning', {})
-    card.position = pos.get('position', card.position)
-    card.width    = max(1, min(12, pos.get('width',  card.width)))
-    card.height   = max(1, pos.get('height', card.height))
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +96,11 @@ def cards_api(request):
     if request.method == 'GET':
         period_qs = _period_qs(request, feuser)
         cards = DashboardCard.objects.filter(owning_feuser=feuser)
-        return _ok({'cards': [_card_to_json(c, period_qs, feuser) for c in cards]})
+        card_list = sorted(
+            [_card_to_json(c, period_qs, feuser) for c in cards],
+            key=lambda c: (c['position'], c['id']),
+        )
+        return _ok({'cards': card_list})
 
     # POST — create new card
     body = _parse_body(request)
@@ -116,18 +113,7 @@ def cards_api(request):
     except CardConfigError as exc:
         return _err(str(exc))
 
-    # Position new card at the end by default
-    max_pos = (
-        DashboardCard.objects.filter(owning_feuser=feuser)
-        .order_by('-position')
-        .values_list('position', flat=True)
-        .first()
-    ) or 0
-
     card = DashboardCard(owning_feuser=feuser, yaml_config=yaml_str)
-    _sync_positioning(card, config)
-    if card.position == 0:
-        card.position = max_pos + 1
     card.save()
 
     period_qs = _period_qs(request, feuser)
@@ -163,7 +149,6 @@ def card_detail_api(request, uid: int):
         return _err(str(exc))
 
     card.yaml_config = yaml_str
-    _sync_positioning(card, config)
     card.save()
 
     period_qs = _period_qs(request, feuser)
@@ -188,9 +173,20 @@ def cards_reorder_api(request):
     for entry in positions:
         card_id = entry.get('id')
         new_pos = entry.get('position')
-        if card_id in cards and isinstance(new_pos, int):
-            cards[card_id].position = new_pos
-            cards[card_id].save(update_fields=['position'])
+        if card_id not in cards or not isinstance(new_pos, int):
+            continue
+        card = cards[card_id]
+        try:
+            cfg = yaml.safe_load(card.yaml_config) or {}
+            if not isinstance(cfg, dict):
+                cfg = {}
+            pos = cfg.get('positioning') or {}
+            pos['position'] = new_pos
+            cfg['positioning'] = pos
+            card.yaml_config = yaml.dump(cfg, default_flow_style=False, allow_unicode=True)
+            card.save(update_fields=['yaml_config'])
+        except Exception:
+            pass
 
     return _ok({'ok': True})
 
@@ -211,26 +207,25 @@ def card_resize_api(request, uid: int):
     body = _parse_body(request)
     w = body.get('width')
     h = body.get('height')
-    if w is not None:
-        card.width  = max(1, min(12, int(w)))
-    if h is not None:
-        card.height = max(1, int(h))
 
-    # Keep yaml_config positioning in sync
     try:
         cfg = yaml.safe_load(card.yaml_config) or {}
         if not isinstance(cfg, dict):
             cfg = {}
         pos = cfg.get('positioning') or {}
-        pos['width']  = card.width
-        pos['height'] = card.height
+        if w is not None:
+            pos['width']  = max(1, min(12, int(w)))
+        if h is not None:
+            pos['height'] = max(1, int(h))
         cfg['positioning'] = pos
         card.yaml_config = yaml.dump(cfg, default_flow_style=False, allow_unicode=True)
+        card.save(update_fields=['yaml_config'])
     except Exception:
-        pass  # leave yaml_config unchanged if it can't be round-tripped
+        return _err('Failed to update card')
 
-    card.save(update_fields=['width', 'height', 'yaml_config'])
-    return _ok({'width': card.width, 'height': card.height, 'yaml_config': card.yaml_config})
+    new_w = cfg['positioning'].get('width', 2)
+    new_h = cfg['positioning'].get('height', 2)
+    return _ok({'width': new_w, 'height': new_h, 'yaml_config': card.yaml_config})
 
 
 # ---------------------------------------------------------------------------

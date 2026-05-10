@@ -42,13 +42,7 @@ def _cards_session(driver) -> requests.Session:
 
 
 def _csrf(sess: requests.Session) -> str:
-    """Fetch a CSRF token from the session cookies (set during GET)."""
-    return sess.cookies.get("csrftoken", "")
-
-
-def _get_csrf(sess: requests.Session) -> str:
-    sess.get(BASE_URL + "/budget/")  # ensures csrftoken cookie is set
-    return sess.cookies.get("csrftoken", "")
+    return next((c.value for c in sess.cookies if c.name == "csrftoken"), "")
 
 
 def _post_card(sess, csrf, yaml_str) -> requests.Response:
@@ -77,7 +71,7 @@ class TestDashboardCardsAPI:
 
     def test_02_create_cell_card(self, driver, w, ctx):
         sess = _cards_session(driver)
-        csrf = _get_csrf(sess)
+        csrf = _csrf(sess)
         yaml_str = (
             "type: cell\n"
             "title: Test Income\n"
@@ -102,7 +96,7 @@ class TestDashboardCardsAPI:
 
     def test_03_create_bar_chart_card(self, driver, w, ctx):
         sess = _cards_session(driver)
-        csrf = _get_csrf(sess)
+        csrf = _csrf(sess)
         yaml_str = (
             "type: bar-chart\n"
             "group: tags\n"
@@ -135,20 +129,20 @@ class TestDashboardCardsAPI:
 
     def test_05_invalid_yaml_returns_400(self, driver, w, ctx):
         sess = _cards_session(driver)
-        csrf = _get_csrf(sess)
+        csrf = _csrf(sess)
         r = _post_card(sess, csrf, "type: not-a-real-type\n")
         assert r.status_code == 400
         assert "error" in r.json()
 
     def test_06_missing_group_returns_400(self, driver, w, ctx):
         sess = _cards_session(driver)
-        csrf = _get_csrf(sess)
+        csrf = _csrf(sess)
         r = _post_card(sess, csrf, "type: bar-chart\ntitle: No group\n")
         assert r.status_code == 400
 
     def test_07_custom_python_cell(self, driver, w, ctx):
         sess = _cards_session(driver)
-        csrf = _get_csrf(sess)
+        csrf = _csrf(sess)
         yaml_str = (
             "type: cell\n"
             "title: Custom Python\n"
@@ -168,7 +162,7 @@ class TestDashboardCardsAPI:
 
     def test_08_patch_card_yaml(self, driver, w, ctx):
         sess = _cards_session(driver)
-        csrf = _get_csrf(sess)
+        csrf = _csrf(sess)
         new_yaml = (
             "type: cell\n"
             "title: Renamed Cell\n"
@@ -192,7 +186,7 @@ class TestDashboardCardsAPI:
 
     def test_09_resize_card(self, driver, w, ctx):
         sess = _cards_session(driver)
-        csrf = _get_csrf(sess)
+        csrf = _csrf(sess)
         url = CARDS_URL.rstrip("/") + f"/{ctx['card_id_bar']}/resize/"
         r = sess.patch(
             url,
@@ -206,7 +200,7 @@ class TestDashboardCardsAPI:
 
     def test_10_reorder_cards(self, driver, w, ctx):
         sess = _cards_session(driver)
-        csrf = _get_csrf(sess)
+        csrf = _csrf(sess)
         positions = [
             {"id": ctx["card_id_bar"],  "position": 1},
             {"id": ctx["card_id_cell"], "position": 2},
@@ -226,7 +220,7 @@ class TestDashboardCardsAPI:
 
     def test_11_delete_custom_card(self, driver, w, ctx):
         sess = _cards_session(driver)
-        csrf = _get_csrf(sess)
+        csrf = _csrf(sess)
         url = CARDS_URL.rstrip("/") + f"/{ctx['card_id_custom']}/"
         r = sess.delete(url, headers={"X-CSRFToken": csrf})
         assert r.status_code == 200
@@ -237,7 +231,7 @@ class TestDashboardCardsAPI:
     def test_12_delete_404_for_wrong_user(self, driver, w, ctx):
         # Use a non-existent uid — should 404
         sess = _cards_session(driver)
-        csrf = _get_csrf(sess)
+        csrf = _csrf(sess)
         url = CARDS_URL.rstrip("/") + "/9999999/"
         r = sess.delete(url, headers={"X-CSRFToken": csrf})
         assert r.status_code == 404
@@ -269,27 +263,23 @@ class TestDashboardBrowser:
             (By.XPATH, "//button[contains(text(),'New dashboard card')]")
         ))
         add_btn.click()
-        # Dialog should appear
-        w.until(EC.visibility_of_element_located(
-            (By.CSS_SELECTOR, ".dash-modal-backdrop")
-        ))
+        # Wait for the ADD backdrop specifically (not the edit one which is always hidden)
+        w.until(EC.visibility_of_element_located((By.ID, "dash-add-backdrop")))
 
     def test_23_preset_loads_into_textarea(self, driver, w, ctx):
         # Dialog should still be open from previous test; click first preset
         presets = w.until(lambda d: d.find_elements(By.CSS_SELECTOR, ".dash-presets .btn"))
         assert len(presets) > 0
         presets[0].click()
-        textarea = driver.find_element(By.CSS_SELECTOR, ".dash-yaml-editor")
+        # Use the textarea inside the add backdrop specifically
+        textarea = driver.find_element(By.CSS_SELECTOR, "#dash-add-backdrop .dash-yaml-editor")
         assert "type:" in textarea.get_attribute("value")
 
     def test_24_cancel_dialog(self, driver, w, ctx):
-        cancel_btn = driver.find_element(
-            By.XPATH, "//div[contains(@class,'dash-modal')]//button[text()='Cancel']"
-        )
-        cancel_btn.click()
-        w.until(lambda d: len(d.find_elements(
-            By.CSS_SELECTOR, ".dash-modal-backdrop[style*='display: none']"
-        )) > 0 or len(d.find_elements(By.CSS_SELECTOR, ".dash-modal-backdrop")) == 0)
+        driver.find_element(
+            By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
+        ).click()
+        w.until(lambda d: not d.find_element(By.ID, "dash-add-backdrop").is_displayed())
 
     def test_25_edit_modal_opens_on_edit_button(self, driver, w, ctx):
         driver.get(_url("/budget/"))
@@ -298,20 +288,18 @@ class TestDashboardBrowser:
             (By.CSS_SELECTOR, ".dash-card")
         ))
         driver.execute_script("arguments[0].querySelector('.dash-card-edit-btn').click()", first_card)
-        w.until(EC.visibility_of_element_located(
-            (By.CSS_SELECTOR, ".dash-modal-backdrop")
-        ))
+        w.until(EC.visibility_of_element_located((By.ID, "dash-edit-backdrop")))
         # Textarea should contain YAML
-        textarea = driver.find_element(By.CSS_SELECTOR, ".dash-yaml-editor")
+        textarea = driver.find_element(By.CSS_SELECTOR, "#dash-edit-backdrop .dash-yaml-editor")
         assert "type:" in textarea.get_attribute("value")
         # Close
         driver.find_element(
-            By.XPATH, "//div[contains(@class,'dash-modal')]//button[text()='Cancel']"
+            By.XPATH, "//div[@id='dash-edit-backdrop']//button[text()='Cancel']"
         ).click()
 
     def test_26_cleanup_remaining_cards(self, driver, w, ctx):
         sess = _cards_session(driver)
-        csrf = _get_csrf(sess)
+        csrf = _csrf(sess)
         cards = sess.get(CARDS_URL).json()["cards"]
         for card in cards:
             url = CARDS_URL.rstrip("/") + f"/{card['id']}/"

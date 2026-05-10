@@ -37,7 +37,6 @@ DEFAULT_TAGS = [
 
 DEFAULT_DASHBOARD_CARDS = [
     {
-        "title": "Income",
         "yaml": (
             "# Shows the sum of all income entries in the selected period.\n"
             "type: cell\n"
@@ -52,7 +51,6 @@ DEFAULT_DASHBOARD_CARDS = [
         ),
     },
     {
-        "title": "Paid expenses",
         "yaml": (
             "# Shows the sum of all settled (paid) expenses in the selected period.\n"
             "type: cell\n"
@@ -67,7 +65,6 @@ DEFAULT_DASHBOARD_CARDS = [
         ),
     },
     {
-        "title": "Outstanding",
         "yaml": (
             "# Shows the sum of all unsettled (unpaid) expenses in the selected period.\n"
             "type: cell\n"
@@ -82,7 +79,6 @@ DEFAULT_DASHBOARD_CARDS = [
         ),
     },
     {
-        "title": "Savings",
         "yaml": (
             "# Shows net savings: deposits minus withdrawals in the selected period.\n"
             "type: cell\n"
@@ -98,7 +94,6 @@ DEFAULT_DASHBOARD_CARDS = [
         ),
     },
     {
-        "title": "Left to spend",
         "yaml": (
             "# Shows disposable budget: income minus expenses and net savings.\n"
             "type: cell\n"
@@ -118,7 +113,6 @@ DEFAULT_DASHBOARD_CARDS = [
         ),
     },
     {
-        "title": "Expenses by category",
         "yaml": (
             "# Pie chart breaking down expenses by category in the selected period.\n"
             "type: pie-chart\n"
@@ -131,7 +125,6 @@ DEFAULT_DASHBOARD_CARDS = [
         ),
     },
     {
-        "title": "Expenses by tag",
         "yaml": (
             "# Horizontal bar chart showing the top 10 tags by total expense amount.\n"
             "type: bar-chart\n"
@@ -149,7 +142,6 @@ DEFAULT_DASHBOARD_CARDS = [
 
 def create_defaults(feuser) -> None:
     from .models import Category, DashboardCard, Tag
-    from .dashboard_cards import parse_card_config
 
     existing_cats = set(Category.objects.filter(owning_feuser=feuser).values_list("title", flat=True))
     Category.objects.bulk_create([
@@ -166,13 +158,7 @@ def create_defaults(feuser) -> None:
     ])
 
     if not DashboardCard.objects.filter(owning_feuser=feuser).exists():
-        for entry in DEFAULT_DASHBOARD_CARDS:
-            cfg = parse_card_config(entry["yaml"])
-            pos = cfg["positioning"]
-            DashboardCard.objects.create(
-                owning_feuser=feuser,
-                yaml_config=entry["yaml"],
-                position=pos["position"],
-                width=pos["width"],
-                height=pos["height"],
-            )
+        DashboardCard.objects.bulk_create([
+            DashboardCard(owning_feuser=feuser, yaml_config=entry["yaml"])
+            for entry in DEFAULT_DASHBOARD_CARDS
+        ])

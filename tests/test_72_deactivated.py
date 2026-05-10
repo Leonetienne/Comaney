@@ -15,24 +15,51 @@ Cleanup is done via the API.
 import time
 import re
 
+import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 
-from conftest import _url, fill, server_today, submit, wait_url, wait_text, api_delete, api_patch, run_cmd
+from conftest import _url, BASE_URL, fill, server_today, submit, wait_url, wait_text, \
+    api_delete, api_patch, run_cmd, session_cookies
 
 
-def _read_panel_amount(driver, panel_class):
-    """Read the numeric text from a dashboard panel, stripping the currency span."""
-    panel = driver.find_element(By.CSS_SELECTOR, f".{panel_class} .amount")
-    # The currency is in a child <span>; get only the direct text node
-    return driver.execute_script(
-        "return Array.from(arguments[0].childNodes)"
-        ".filter(n => n.nodeType === 3)"
-        ".map(n => n.textContent.trim())"
-        ".join('');",
-        panel
+CARDS_URL = BASE_URL + "/budget/dashboard/cards/"
+
+
+def _cards_session(driver):
+    s = requests.Session()
+    s.cookies.update(session_cookies(driver))
+    return s
+
+
+def _card_paid_value(sess, today):
+    """Return the 'paid expenses' sum from a temporary dashboard card."""
+    year, month = today[:4], today[5:7]
+    csrf = next((c.value for c in sess.cookies if c.name == "csrftoken"), "")
+    yaml_str = (
+        "type: cell\n"
+        "title: _test_paid\n"
+        "query: \"type=expense settled=yes\"\n"
+        "method: sum\n"
+        "positioning:\n"
+        "    position: 99\n"
+        "    width: 1\n"
+        "    height: 1\n"
     )
+    r = sess.post(CARDS_URL, json={"yaml_config": yaml_str},
+                  headers={"X-CSRFToken": csrf, "Content-Type": "application/json"})
+    assert r.status_code == 201, f"Card create failed: {r.text}"
+    card_id = r.json()["card"]["id"]
+
+    r = sess.get(CARDS_URL, params={"year": year, "month": month})
+    cards = r.json()["cards"]
+    value = next(c["data"].get("value", 0) for c in cards if c["id"] == card_id)
+
+    # Cleanup the temporary card
+    sess.delete(CARDS_URL.rstrip("/") + f"/{card_id}/",
+                headers={"X-CSRFToken": csrf})
+    return float(value)
 
 
 def _reset_month_settings(ctx):
@@ -190,22 +217,16 @@ class TestDeactivated:
 
     def test_77_deactivated_expense_not_in_dashboard(self, driver, w, ctx):
         """
-        The deactivated expense created via the browser in test_76 should not
-        affect the dashboard 'Paid expenses' panel.  We verify this by reading
-        the baseline paid amount, then creating a second, identical but ACTIVE
-        settled expense worth 99 999 — if the deactivated one were counted the
-        baseline itself would already be unexpectedly large.  The real check is
-        that paid does not include the 99 999 deactivated expense: after adding
-        an active settled expense of the same huge value we confirm the panel
-        jumps by exactly that amount (not double).
+        The deactivated expense created in test_76 must not appear in the
+        dashboard 'Paid expenses' cell value.  We read the baseline via a
+        temporary card, create a large deactivated settled expense, re-read,
+        and assert the value is unchanged.
         """
-        today = server_today()
         from conftest import api_post, api_get
+        today = server_today()
+        sess = _cards_session(driver)
 
-        # Read the current dashboard paid baseline (whatever prior tests left).
-        driver.get(_url("/budget/"))
-        time.sleep(1)
-        baseline_paid = float(_read_panel_amount(driver, "panel-paid"))
+        baseline_paid = _card_paid_value(sess, today)
 
         # Create a large DEACTIVATED settled expense via the browser form.
         driver.get(_url("/budget/expenses/new/"))
@@ -227,12 +248,9 @@ class TestDeactivated:
             if e["title"] == "Deact Big Expense"
         )
 
-        driver.get(_url("/budget/"))
-        time.sleep(1)
-
-        paid_after = float(_read_panel_amount(driver, "panel-paid"))
+        paid_after = _card_paid_value(sess, today)
         assert paid_after == baseline_paid, (
-            f"Deactivated expense must not affect 'Paid' panel: "
+            f"Deactivated expense must not affect 'Paid' cell: "
             f"before={baseline_paid}, after={paid_after}"
         )
 

@@ -123,7 +123,8 @@ window.DASHBOARD_CONFIG = {
     </div>
 
     {# ── Edit modal ───────────────────────────────────────────────────────── #}
-    <div x-show="editCard !== null"
+    <div id="dash-edit-backdrop"
+         x-show="editCard !== null"
          class="dash-modal-backdrop"
          @click.self="closeEdit()"
          style="display:none">
@@ -150,7 +151,8 @@ window.DASHBOARD_CONFIG = {
     </div>
 
     {# ── New card dialog ───────────────────────────────────────────────────── #}
-    <div x-show="addOpen"
+    <div id="dash-add-backdrop"
+         x-show="addOpen"
          class="dash-modal-backdrop"
          @click.self="closeAdd()"
          style="display:none">

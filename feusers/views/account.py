@@ -172,7 +172,7 @@ def account_export(request):
         p = io.StringIO()
         _write_model_csv(
             p,
-            DashboardCard.objects.filter(owning_feuser=feuser).order_by("position"),
+            DashboardCard.objects.filter(owning_feuser=feuser),
             skip={"owning_feuser"},
         )
         zf.writestr("dashboard_cards.csv", p.getvalue())
