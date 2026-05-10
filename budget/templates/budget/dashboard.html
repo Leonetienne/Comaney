@@ -1,146 +1,193 @@
 {% extends "budget_base.html" %}
+{% load static %}
 
 {% block title %}Comaney – Dashboard{% endblock %}
 
+{% block extra_head %}
+<style>
+  main.app-main { max-width: 1200px; }
+</style>
+{% endblock %}
 
 {% block content %}
 <h1 style="margin-bottom:16px;">Dashboard</h1>
 {% include "partials/_month_nav.html" %}
 
-<div class="panels">
-    <div class="panel panel-income" id="panel-income">
-        <div class="label">Income</div>
-        <div class="amount">{{ income }}<span class="currency">{{ current_feuser.currency }}</span></div>
-    </div>
-
-    <div class="panel panel-paid" id="panel-paid">
-        <div class="label">Paid expenses</div>
-        <div class="amount">{{ paid }}<span class="currency">{{ current_feuser.currency }}</span></div>
-    </div>
-
-    <div class="panel panel-outstanding" id="panel-outstanding">
-        <div class="label">Outstanding</div>
-        <div class="amount">{{ outstanding }}<span class="currency">{{ current_feuser.currency }}</span></div>
-    </div>
-
-    <div class="panel {% if savings < 0 %}panel-savings-neg{% else %}panel-savings{% endif %}" id="panel-savings">
-        <div class="label">Savings</div>
-        <div class="amount">{{ savings }}<span class="currency">{{ current_feuser.currency }}</span></div>
-    </div>
-
-    <div class="panel {% if left < 0 %}panel-left-danger{% elif left < 100 %}panel-left-warn{% else %}panel-left{% endif %}">
-        <div class="label">Left to spend</div>
-        <div class="amount">{{ left }}<span class="currency">{{ current_feuser.currency }}</span></div>
-    </div>
-</div>
-
-<div class="charts">
-    <div class="chart-card">
-        <h2>Expenses by category</h2>
-        {% if cat_labels != "[]" %}
-        <canvas id="cat-chart"></canvas>
-        {% else %}
-        <p class="chart-empty">No expense data this {% if nav_mode == 'year' %}year{% else %}month{% endif %}.</p>
-        {% endif %}
-    </div>
-    <div class="chart-card">
-        <h2>Expenses by tag</h2>
-        {% if tag_labels != "[]" %}
-        <canvas id="tag-chart"></canvas>
-        {% else %}
-        <p class="chart-empty">No tagged expenses this {% if nav_mode == 'year' %}year{% else %}month{% endif %}.</p>
-        {% endif %}
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
-const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-Chart.defaults.color      = dark ? '#888' : '#666';
-Chart.defaults.borderColor = dark ? '#333' : '#e8e8e8';
-
-const PALETTE = [
-    '#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f',
-    '#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac',
-];
-const pal = n => Array.from({length: n}, (_, i) => PALETTE[i % PALETTE.length]);
-
-const expensesUrl = "{% url 'budget:expenses_list' %}";
-const periodParams = {% if nav_mode == 'year' %}'&view=year&year={{ nav_year }}'{% else %}''{% endif %};
-
-{% if cat_labels != "[]" %}
-new Chart(document.getElementById('cat-chart'), {
-    type: 'pie',
-    data: {
-        labels: {{ cat_labels|safe }},
-        datasets: [{ data: {{ cat_values|safe }}, backgroundColor: pal({{ cat_labels|safe }}.length), borderWidth: 2, borderColor: dark ? '#1c1c1c' : '#fff' }]
-    },
-    options: {
-        onClick: (evt, elements) => {
-            if (!elements.length) return;
-            const label = {{ cat_labels|safe }}[elements[0].index];
-            const catQuery = label === 'Uncategorized' ? 'cat=none' : 'cat="' + label + '"';
-            window.location.href = expensesUrl + '?search=' + encodeURIComponent(catQuery) + periodParams;
-        },
-        onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
-        plugins: {
-            legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14, font: { size: 12 } } },
-            tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed.toFixed(2)} {{ current_feuser.currency }}` } }
-        }
-    }
-});
-{% endif %}
-
-{% if tag_labels != "[]" %}
-document.getElementById('tag-chart').height = {{ tag_labels|safe }}.length * 20;
-new Chart(document.getElementById('tag-chart'), {
-    type: 'bar',
-    data: {
-        labels: {{ tag_labels|safe }},
-        datasets: [{
-            data: {{ tag_values|safe }},
-            backgroundColor: pal({{ tag_labels|safe }}.length),
-            borderRadius: 4,
-            borderSkipped: false,
-            barThickness: 16
-        }]
-    },
-    options: {
-        indexAxis: 'y',
-        onClick: (evt, elements) => {
-            if (!elements.length) return;
-            const label = {{ tag_labels|safe }}[elements[0].index];
-            window.location.href = expensesUrl + '?search=' + encodeURIComponent('tag="' + label + '"') + periodParams;
-        },
-        onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
-        plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: c => ` ${c.parsed.x.toFixed(2)} {{ current_feuser.currency }}` } }
-        },
-        y: {
-            grid: { display: false },
-            ticks: { font: { size: 12 }, autoSkip: false }
-        }
-    }
-});
-{% endif %}
-
-// ── Panel links ───────────────────────────────────────────────────────────
-(function() {
-    function panelLink(search) {
-        return expensesUrl + '?search=' + encodeURIComponent(search) + periodParams;
-    }
-    [
-        ['panel-income',      'type=income'],
-        ['panel-paid',        'type=expense settled=yes'],
-        ['panel-outstanding', 'type=expense settled=no'],
-        ['panel-savings',     'type="savings withdrawal" || type="savings deposit"'],
-    ].forEach(function(p) {
-        var el = document.getElementById(p[0]);
-        if (!el) return;
-        el.style.cursor = 'pointer';
-        el.addEventListener('click', function() { window.location.href = panelLink(p[1]); });
-    });
-}());
+window.DASHBOARD_CONFIG = {
+    currency:   "{{ current_feuser.currency|escapejs }}",
+    year:       "{{ nav_year }}",
+    month:      "{{ nav_month|default:'' }}",
+    mode:       "{{ nav_mode }}",
+    urlCards:   "{% url 'budget:dashboard_cards' %}",
+    urlReorder: "{% url 'budget:dashboard_cards_reorder' %}",
+    urlPresets: "{% url 'budget:dashboard_card_presets' %}",
+};
 </script>
+
+{# ── Dashboard board (Alpine.js) ─────────────────────────────────────────── #}
+<div x-data="dashboardBoard" x-init="init()">
+
+    {# Loading state #}
+    <div x-show="loading" class="dash-loading">Loading…</div>
+
+    {# ── Grid ──────────────────────────────────────────────────────────────── #}
+    <div class="dash-grid"
+         x-show="!loading"
+         x-ref="grid">
+
+        <template x-for="card in cards" :key="card.id">
+            <div class="dash-card"
+                 :class="{
+                     'dash-card--drag-over': dragOverId === card.id,
+                     'dash-card--dragging':  dragId     === card.id,
+                     'dash-card--colored':   card.config && card.config.color,
+                 }"
+                 :style="cardStyle(card) + (card.config && card.config.color ? ';' + cardColorStyle(card.config.color) : '')"
+                 draggable="true"
+                 @dragstart="onDragStart(card.id, $event)"
+                 @dragover="onDragOver(card.id, $event)"
+                 @dragleave="onDragLeave()"
+                 @dragend="onDragEnd()"
+                 @drop="onDrop(card.id, $event)">
+
+                {# Card header #}
+                <div class="dash-card-header">
+                    <span class="dash-card-title" x-text="card.config && card.config.title || 'Card'"></span>
+                    <button class="dash-card-edit-btn"
+                            title="Edit card"
+                            @click.stop="openEdit(card)"
+                            draggable="false">✎</button>
+                </div>
+
+                {# ── Cell card ─────────────────────────────────────────── #}
+                <template x-if="card.config && card.config.type === 'cell'">
+                    <div class="dash-card-body dash-card-body--cell">
+                        <template x-if="card.error">
+                            <p class="dash-card-error" x-text="card.error"></p>
+                        </template>
+                        <template x-if="!card.error">
+                            <div class="dash-cell-value">
+                                <span x-text="formatValue(card.data && card.data.value)"></span>
+                                <span class="dash-cell-currency" x-text="currency"></span>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                {# ── Bar / pie chart card ──────────────────────────────── #}
+                <template x-if="card.config && (card.config.type === 'bar-chart' || card.config.type === 'pie-chart')">
+                    <div class="dash-card-body dash-card-body--chart">
+                        <template x-if="card.error">
+                            <p class="dash-card-error" x-text="card.error"></p>
+                        </template>
+                        <template x-if="!card.error && card.data && card.data.labels && card.data.labels.length > 0">
+                            <canvas :id="'chart-' + card.id"></canvas>
+                        </template>
+                        <template x-if="!card.error && (!card.data || !card.data.labels || !card.data.labels.length)">
+                            <p class="dash-chart-empty">No data for this period.</p>
+                        </template>
+                    </div>
+                </template>
+
+                {# ── Unknown type ──────────────────────────────────────── #}
+                <template x-if="card.error && !(card.config && card.config.type)">
+                    <div class="dash-card-body dash-card-body--cell">
+                        <p class="dash-card-error" x-text="card.error"></p>
+                    </div>
+                </template>
+
+                {# Resize handle #}
+                <div class="dash-card-resize"
+                     @pointerdown.stop="onResizeStart(card.id, $event)"
+                     @pointermove.stop="onResizeMove(card.id, $event)"
+                     @pointerup.stop="onResizeEnd(card.id, $event)"
+                     draggable="false"></div>
+            </div>
+        </template>
+
+        {# Empty state (no cards) #}
+        <template x-if="!loading && cards.length === 0">
+            <div class="dash-empty" style="grid-column: 1 / -1;">
+                <p>Your dashboard is empty.</p>
+                <p>Add a card to get started.</p>
+                <button class="btn btn-primary" @click="openAdd()">+ New dashboard card</button>
+            </div>
+        </template>
+
+    </div>{# end .dash-grid #}
+
+    {# ── Add card button (below grid) ────────────────────────────────────── #}
+    <div x-show="!loading && cards.length > 0" class="dash-add-btn">
+        <button class="btn btn-secondary" @click="openAdd()">+ New dashboard card</button>
+    </div>
+
+    {# ── Edit modal ───────────────────────────────────────────────────────── #}
+    <div x-show="editCard !== null"
+         class="dash-modal-backdrop"
+         @click.self="closeEdit()"
+         style="display:none">
+        <div class="dash-modal">
+            <h3>Edit card</h3>
+            <textarea class="dash-yaml-editor"
+                      x-model="editYaml"
+                      rows="20"
+                      spellcheck="false"
+                      autocomplete="off"></textarea>
+            <p class="dash-modal-error" x-show="editError" x-text="editError"></p>
+            <div class="dash-modal-actions">
+                <button class="btn btn-primary"
+                        :disabled="editSaving"
+                        @click="saveEdit()">
+                    <span x-text="editSaving ? 'Saving…' : 'Save'"></span>
+                </button>
+                <button class="btn btn-secondary" @click="closeEdit()">Cancel</button>
+                <button class="btn btn-danger"
+                        style="margin-left:auto"
+                        @click="deleteCard(editCard && editCard.id)">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    {# ── New card dialog ───────────────────────────────────────────────────── #}
+    <div x-show="addOpen"
+         class="dash-modal-backdrop"
+         @click.self="closeAdd()"
+         style="display:none">
+        <div class="dash-modal">
+            <h3>New dashboard card</h3>
+
+            {# Preset buttons #}
+            <div x-show="presets.length > 0" class="dash-presets">
+                <template x-for="p in presets" :key="p.name">
+                    <button class="btn btn-secondary"
+                            style="font-size:.78rem;padding:4px 10px"
+                            @click="loadPreset(p.yaml)"
+                            x-text="p.name"></button>
+                </template>
+            </div>
+
+            <textarea class="dash-yaml-editor"
+                      x-model="addYaml"
+                      rows="20"
+                      spellcheck="false"
+                      autocomplete="off"
+                      placeholder="Paste or type YAML config…"></textarea>
+            <p class="dash-modal-error" x-show="addError" x-text="addError"></p>
+            <div class="dash-modal-actions">
+                <button class="btn btn-primary"
+                        :disabled="addSaving"
+                        @click="saveAdd()">
+                    <span x-text="addSaving ? 'Creating…' : 'Create'"></span>
+                </button>
+                <button class="btn btn-secondary" @click="closeAdd()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+</div>{# end x-data="dashboardBoard" #}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'dist/dashboard.js' %}"></script>
 {% endblock %}

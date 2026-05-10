@@ -96,7 +96,7 @@ def account_export(request):
     if not feuser:
         return redirect("login")
 
-    from budget.models import Category, Expense, ScheduledExpense, Tag
+    from budget.models import Category, DashboardCard, Expense, ScheduledExpense, Tag
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -168,6 +168,14 @@ def account_export(request):
             extra=[_CATEGORY, _TAGS],
         )
         zf.writestr("scheduled_expenses.csv", p.getvalue())
+
+        p = io.StringIO()
+        _write_model_csv(
+            p,
+            DashboardCard.objects.filter(owning_feuser=feuser).order_by("position"),
+            skip={"owning_feuser"},
+        )
+        zf.writestr("dashboard_cards.csv", p.getvalue())
 
     filename = f"comaney_export_{timezone.localdate().isoformat()}.zip"
     response = HttpResponse(buf.getvalue(), content_type="application/zip")

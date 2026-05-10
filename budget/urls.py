@@ -6,6 +6,11 @@ app_name = "budget"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    path("dashboard/cards/", views.cards_api, name="dashboard_cards"),
+    path("dashboard/cards/reorder/", views.cards_reorder_api, name="dashboard_cards_reorder"),
+    path("dashboard/cards/presets/", views.card_presets_api, name="dashboard_card_presets"),
+    path("dashboard/cards/<int:uid>/", views.card_detail_api, name="dashboard_card_detail"),
+    path("dashboard/cards/<int:uid>/resize/", views.card_resize_api, name="dashboard_card_resize"),
     path("categories-tags/", views.categories_tags, name="categories_tags"),
     path("categories/create/", views.category_create, name="category_create"),
     path("categories/<int:uid>/delete/", views.category_delete, name="category_delete"),

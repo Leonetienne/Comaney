@@ -18,6 +18,7 @@ Django budgeting app. Session-based auth (no Django auth backend). MariaDB. SCSS
 - **SCSS**: source in `build/scss/`, compiled to `static/dist/main.css`.
 - **JS**: source in `build/js/`, bundled via esbuild to `static/dist/`.
   - `build/js/expenses.js` — Alpine.js v3 component for the expense list (live search, bulk actions, sum). Bundled with `--target=es2020` (required; lower targets break Alpine's async evaluator).
+  - `build/js/dashboard.js` — Alpine.js v3 + Chart.js component for the modular dashboard. Separate bundle (`npm run build:dashboard`) → `static/dist/dashboard.js`.
 - **Building assets**: always use `build/build-assets.sh` — runs `npm install && npm run build` inside a `node:25.9.0-slim` linux/amd64 container. Never run npm directly on the host; `package-lock.json` is gitignored to prevent arch-specific binaries (Mac arm64 vs. linux/amd64) from being committed. The Dockerfile also runs `npm install` fresh inside the linux/amd64 build container.
 - **CSS theming**: light/dark mode via CSS custom properties (`--var`). Never replace them with SCSS `$vars` — those are compile-time only. Required for dynamic dark/light mode in-browser.
 - **Tests**: Every functional feature requires selenium end-to-end tests, which are in `tests/`. Don't run them yourself!
@@ -29,8 +30,9 @@ feusers/        Auth, profiles, TOTP, API keys
   utils.py      _get_session_feuser, _record_login, PoW helpers
 budget/         Expenses, dashboard, scheduled, categories, AI
   views/        Package: dashboard.py · expenses.py · scheduled.py
-                         categories_tags.py · express.py
+                         categories_tags.py · express.py · dashboard_cards_api.py
   views/_period.py  Shared request-parsing nav helpers
+  dashboard_cards.py  YAML parsing, data computation, sandboxed Python for custom cells
   notifications.py  Notification class logic + cron helpers
   ai_trial.py   Trial key budget tracking + admin notifications
   expense_factory.py  create_expense() — always use this, not Expense() directly
@@ -56,6 +58,13 @@ comaney/        Settings, root urls, middleware, public_pages context processor
 - **Notification classes**: `"" < soon < tomorrow < today < late < settled` — each sent at most once per expense
 - **CSV export** (feusers/views/account.py): dynamic via `_meta.concrete_fields`; skip `owning_feuser`; mask `anthropic_api_key`; resolve `category` FK and `tags` M2M via `extra=`
 - **AI express creation**: system prompt in `budget/views/express.py`; expects `{"result":"good","items":[]}` or `{"result":"fail","msg":""}` — never prose
+- **Modular dashboard** (`budget/dashboard_cards.py`, `budget/views/dashboard_cards_api.py`):
+  - Cards stored as `DashboardCard` model (per user) with `yaml_config`, `position`, `width`, `height` DB fields.
+  - YAML defines card `type` (`cell` | `bar-chart` | `pie-chart`), `title`, `query`, `group`, `method`, `color`, `python`, and `positioning`.
+  - `parse_card_config(yaml_str)` validates and normalises YAML. `compute_card_data(config, qs, feuser)` returns data for the current period.
+  - `method: custom` cells execute user Python in a sandboxed `exec()`: no imports, no dunder attrs, builtins restricted to safe math + `Decimal`. Runs in a daemon thread with 2 s timeout. Provides `query_sum`, `query_sum_abs`, `query_sum_gt0`, `query_sum_lt0` helpers.
+  - API (session auth, not Bearer): `GET/POST /budget/dashboard/cards/`, `PATCH/DELETE /budget/dashboard/cards/<id>/`, `PATCH /budget/dashboard/cards/<id>/resize/`, `POST /budget/dashboard/cards/reorder/`, `GET /budget/dashboard/cards/presets/`.
+  - Frontend: Alpine.js `dashboardBoard` component in `build/js/dashboard.js`. CSS Grid (6 cols, row height = col_width × 4/3, via ResizeObserver). HTML5 drag-drop for reorder; pointer-event resize handle. Chart.js for bar/pie cards.
 - **Expense search query parser** (`budget/query_parser.py`): translates the search bar's mini-language into Django Q objects via `apply_query(qs, query_str)`. Called by the API expense list view. Supported filters: `type=`, `settled=`, `deactivated=`, `value` (with `< <= > >= = ==`), `date` (date comparisons, formats `dd.mm.yyyy` / `mm/dd/yyyy` / `yyyy-mm-dd`, special value `today`), `cat=` / `tag=` (substring or `none` for null), `payee=`, free-text, `||` OR, `()` grouping, `!` NOT prefix. The full query string is lowercased before parsing.
 
 ## Running tests

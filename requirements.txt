@@ -7,3 +7,4 @@ whitenoise==6.7.0
 Pillow>=10.0.0
 pyotp>=2.9.0
 qrcode[pil]>=7.4
+PyYAML>=6.0
