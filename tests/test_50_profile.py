@@ -10,12 +10,15 @@ from conftest import _url, fill, click, wait_url, wait_text, BASE_URL, PASSWORD
 class TestProfile:
 
     def test_17_update_profile(self, driver, w, ctx):
+        time.sleep(1)
         driver.get(_url("/profile/"))
+        time.sleep(1)
         wait_text(driver, w, "Personal info")
         fill(w, By.ID, "id_currency", "$")
         driver.execute_script(
             "document.querySelector(\"input[name='action'][value='profile']\").closest('form').submit()"
         )
+        time.sleep(1)
         wait_url(w, "/profile/")
         wait_text(driver, w, "Saved.")
 
