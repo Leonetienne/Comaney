@@ -19,6 +19,14 @@ Tests:
   - Dirty editor: confirm appears on preset load; cancel keeps content (test_28)
   - Dirty editor: confirm appears on preset load; overwrite loads preset (test_29)
   - Empty editor loads preset without confirm dialog (test_30)
+  - Delete card via browser modal with confirmDialog (test_31)
+  - Cell link navigates to the configured URL on click (test_32)
+  - Chart link_template config is stored and returned via API (test_33)
+  - Sandbox security: AST-level import/dunder blocks (TestSandboxSecurity sb_01–sb_06)
+  - Sandbox security: runtime NameError for dangerous builtins (sb_07–sb_12)
+  - Sandbox security: __builtins__ is empty dict, not real builtins (sb_13)
+  - Sandbox security: type coercion and error handling (sb_14–sb_17)
+  - Sandbox security: data isolation and SQL injection in query helpers (sb_18–sb_19)
 """
 
 import requests
@@ -57,6 +65,37 @@ def _post_card(sess, csrf, yaml_str) -> requests.Response:
         json={"yaml_config": yaml_str},
         headers={"X-CSRFToken": csrf, "Content-Type": "application/json"},
     )
+
+
+def _sandbox_yaml(code: str) -> str:
+    """Wrap a Python snippet in a valid method=custom cell card YAML."""
+    indented = "\n".join("  " + line for line in code.splitlines())
+    return (
+        "type: cell\n"
+        "title: SandboxTest\n"
+        "method: custom\n"
+        "python: |\n"
+        f"{indented}\n"
+        "positioning:\n"
+        "  position: 99\n"
+        "  width: 1\n"
+        "  height: 1\n"
+    )
+
+
+def _sandbox_post(driver, code: str) -> dict:
+    """POST a sandbox card, delete it immediately, return the card dict."""
+    sess = _cards_session(driver)
+    csrf = _csrf(sess)
+    r = _post_card(sess, csrf, _sandbox_yaml(code))
+    assert r.status_code == 201, r.text
+    card = r.json()["card"]
+    if card.get("id"):
+        sess.delete(
+            CARDS_URL.rstrip("/") + f"/{card['id']}/",
+            headers={"X-CSRFToken": csrf},
+        )
+    return card
 
 
 def _cm_text(driver, backdrop_id: str) -> str:
@@ -269,6 +308,152 @@ class TestDashboardCardsAPI:
         r = sess.delete(url, headers={"X-CSRFToken": csrf})
         assert r.status_code == 404
 
+    def test_33_chart_link_template_config_stored(self, driver, w, ctx):
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        yaml_str = (
+            "type: bar-chart\n"
+            "title: LinkTemplateTest\n"
+            "group: tags\n"
+            "link_template: /budget/expenses/?search=tag%3D$GROUP_NAME\n"
+            "positioning:\n"
+            "    position: 99\n"
+            "    width: 3\n"
+            "    height: 2\n"
+        )
+        r = _post_card(sess, csrf, yaml_str)
+        assert r.status_code == 201, r.text
+        card = r.json()["card"]
+        assert card["config"]["link_template"] == "/budget/expenses/?search=tag%3D$GROUP_NAME"
+        # Clean up
+        url = CARDS_URL.rstrip("/") + f"/{card['id']}/"
+        sess.delete(url, headers={"X-CSRFToken": csrf})
+
+
+class TestSandboxSecurity:
+    """
+    Pentest cases for the method=custom sandboxed Python execution.
+
+    All tests POST a card (always 201 — AST/runtime errors surface in card["error"],
+    not the HTTP status), delete it immediately, then assert on error/value.
+    """
+
+    # ── AST-level blocks ─────────────────────────────────────────────────────
+    # These are caught before exec() is called.
+
+    def test_sb_01_import_blocked(self, driver, w, ctx):
+        card = _sandbox_post(driver, "import os\nreturn 0")
+        assert card["error"] is not None
+        assert "import" in card["error"].lower() or "not allowed" in card["error"].lower()
+
+    def test_sb_02_from_import_blocked(self, driver, w, ctx):
+        card = _sandbox_post(driver, "from os import getcwd\nreturn 0")
+        assert card["error"] is not None
+        assert "import" in card["error"].lower() or "not allowed" in card["error"].lower()
+
+    def test_sb_03_dunder_attribute_blocked(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return (0).__class__")
+        assert card["error"] is not None
+        assert "dunder" in card["error"].lower() or "not allowed" in card["error"].lower()
+
+    def test_sb_04_dunder_on_mro_blocked(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return str.__mro__[-1].__subclasses__()")
+        assert card["error"] is not None
+        assert "dunder" in card["error"].lower() or "not allowed" in card["error"].lower()
+
+    def test_sb_05_dunder_globals_on_helper_blocked(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return query_sum.__globals__['os']")
+        assert card["error"] is not None
+        assert "dunder" in card["error"].lower() or "not allowed" in card["error"].lower()
+
+    def test_sb_06_dunder_closure_on_helper_blocked(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return query_sum.__closure__[0].cell_contents")
+        assert card["error"] is not None
+
+    # ── Runtime NameError ────────────────────────────────────────────────────
+    # AST passes (no Attribute dunder, no Import node), but the name is simply
+    # absent from the sandbox namespace — fails at exec() time.
+
+    def test_sb_07_dunder_import_name_unavailable(self, driver, w, ctx):
+        # __import__ is a Name node (not Attribute) so AST check misses it,
+        # but it is not in _SAFE_BUILTINS and __builtins__ is {}.
+        card = _sandbox_post(driver, "return __import__('os').getcwd()")
+        assert card["error"] is not None
+        assert "runtime error" in card["error"].lower()
+
+    def test_sb_08_getattr_unavailable(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return getattr(str, '__cl' + 'ass__')")
+        assert card["error"] is not None
+        assert "runtime error" in card["error"].lower()
+
+    def test_sb_09_eval_unavailable(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return eval('__import__(\"os\").getcwd()')")
+        assert card["error"] is not None
+        assert "runtime error" in card["error"].lower()
+
+    def test_sb_10_open_unavailable(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return len(open('/etc/passwd').read())")
+        assert card["error"] is not None
+        assert "runtime error" in card["error"].lower()
+
+    def test_sb_11_globals_unavailable(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return len(globals())")
+        assert card["error"] is not None
+        assert "runtime error" in card["error"].lower()
+
+    def test_sb_12_type_unavailable(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return type(query_sum)")
+        assert card["error"] is not None
+        assert "runtime error" in card["error"].lower()
+
+    # ── __builtins__ leak check ───────────────────────────────────────────────
+    # __builtins__ is accessible as a Name (not an Attribute, so AST passes),
+    # but it must be the empty dict {} — not the real builtins module.
+
+    def test_sb_13_builtins_is_empty_dict(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return len(__builtins__)")
+        assert card["error"] is None, f"unexpected error: {card['error']}"
+        assert card["data"]["value"] == 0.0
+
+    # ── Type-safety and error handling ────────────────────────────────────────
+
+    def test_sb_14_string_return_coerces_to_zero(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return 'not a number'")
+        assert card["error"] is None
+        assert card["data"]["value"] == 0.0
+
+    def test_sb_15_none_return_coerces_to_zero(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return None")
+        assert card["error"] is None
+        assert card["data"]["value"] == 0.0
+
+    def test_sb_16_runtime_exception_surfaces_as_error(self, driver, w, ctx):
+        card = _sandbox_post(driver, "return 1 / 0")
+        assert card["error"] is not None
+        assert "runtime error" in card["error"].lower()
+
+    def test_sb_17_swallowed_exception_returns_zero(self, driver, w, ctx):
+        code = "try:\n  return 1 / 0\nexcept:\n  pass"
+        card = _sandbox_post(driver, code)
+        assert card["error"] is None
+        assert card["data"]["value"] == 0.0
+
+    # ── Data isolation ────────────────────────────────────────────────────────
+
+    def test_sb_18_query_sum_empty_is_numeric(self, driver, w, ctx):
+        # period_qs is already scoped to owning_feuser; must return a number, not crash
+        card = _sandbox_post(driver, "return query_sum('')")
+        assert card["error"] is None
+        assert isinstance(card["data"]["value"], (int, float))
+
+    def test_sb_19_sql_injection_in_query_sum_does_not_crash(self, driver, w, ctx):
+        # Django ORM protects against raw SQL injection; the string is fed to the
+        # query parser which treats unrecognised syntax as free text.
+        card = _sandbox_post(driver, "return query_sum(\"' OR '1'='1\")")
+        # Must not 500 — card was already asserted 201 in _sandbox_post.
+        # Error in card["error"] is acceptable (parse error); a value is also fine.
+        assert card.get("data") is not None or card.get("error") is not None
+
 
 class TestDashboardBrowser:
 
@@ -415,6 +600,102 @@ class TestDashboardBrowser:
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
         w.until(lambda d: not d.find_element(By.ID, "dash-add-backdrop").is_displayed())
+
+    def test_31_delete_card_via_browser_modal(self, driver, w, ctx):
+        # Create a fresh card via API
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        yaml_str = (
+            "type: cell\n"
+            "title: BrowserDeleteTest\n"
+            "method: sum\n"
+            "positioning:\n"
+            "    position: 99\n"
+            "    width: 2\n"
+            "    height: 1\n"
+        )
+        r = _post_card(sess, csrf, yaml_str)
+        assert r.status_code == 201, r.text
+        card_id = r.json()["card"]["id"]
+        ctx["card_id_browser_delete"] = card_id
+
+        driver.get(_url("/budget/"))
+        # Wait for grid to be visible (spinner gone, at least one card present)
+        w.until(lambda d: not d.execute_script(
+            "const el = document.querySelector('.dash-loading');"
+            "return el && el.style.display !== 'none';"
+        ))
+        w.until(lambda d: len(d.find_elements(By.CSS_SELECTOR, ".dash-card")) > 0)
+
+        # Click the edit button on the BrowserDeleteTest card via JS
+        driver.execute_script(
+            "Array.from(document.querySelectorAll('.dash-card')).find("
+            "  c => c.querySelector('.dash-card-title')?.textContent?.trim() === 'BrowserDeleteTest'"
+            ")?.querySelector('.dash-card-edit-btn')?.click()"
+        )
+        w.until(EC.visibility_of_element_located((By.ID, "dash-edit-backdrop")))
+
+        # Click the Delete button inside the edit modal
+        delete_btn = w.until(EC.element_to_be_clickable(
+            (By.XPATH, "//div[@id='dash-edit-backdrop']//button[contains(@class,'btn-danger')]")
+        ))
+        delete_btn.click()
+
+        # Confirm dialog should appear
+        w.until(lambda d: _dialog_visible(d))
+        driver.find_element(By.ID, "cdialog-ok").click()
+        w.until(lambda d: not _dialog_visible(d))
+
+        # Edit backdrop should close
+        w.until(lambda d: not d.find_element(By.ID, "dash-edit-backdrop").is_displayed())
+
+        # Verify card is gone via API
+        cards = sess.get(CARDS_URL).json()["cards"]
+        titles = [c["config"].get("title") for c in cards]
+        assert "BrowserDeleteTest" not in titles
+
+    def test_32_cell_link_navigates(self, driver, w, ctx):
+        # Create a cell card with a link via API
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        yaml_str = (
+            "type: cell\n"
+            "title: LinkTestCell\n"
+            "query: type=income\n"
+            "method: sum\n"
+            "link: /budget/expenses/?search=type%3Dincome\n"
+            "positioning:\n"
+            "  position: 99\n"
+            "  width: 2\n"
+            "  height: 1\n"
+        )
+        r = _post_card(sess, csrf, yaml_str)
+        assert r.status_code == 201, r.text
+        card_id = r.json()["card"]["id"]
+        ctx["card_id_link_test"] = card_id
+
+        driver.get(_url("/budget/"))
+        # Wait for grid to be visible
+        w.until(lambda d: not d.execute_script(
+            "const el = document.querySelector('.dash-loading');"
+            "return el && el.style.display !== 'none';"
+        ))
+        w.until(lambda d: len(d.find_elements(By.CSS_SELECTOR, ".dash-card")) > 0)
+
+        # Click the linked cell body via JS
+        driver.execute_script(
+            "Array.from(document.querySelectorAll('.dash-card')).find("
+            "  c => c.querySelector('.dash-card-title')?.textContent?.trim() === 'LinkTestCell'"
+            ")?.querySelector('.dash-card-body--linked')?.click()"
+        )
+
+        # Wait until we land on the expenses page
+        w.until(lambda d: "/budget/expenses/" in d.current_url)
+        assert "type%3Dincome" in driver.current_url or "type=income" in driver.current_url
+
+        # Clean up: delete the card via API
+        url = CARDS_URL.rstrip("/") + f"/{card_id}/"
+        sess.delete(url, headers={"X-CSRFToken": csrf})
 
     def test_26_cleanup_remaining_cards(self, driver, w, ctx):
         sess = _cards_session(driver)
