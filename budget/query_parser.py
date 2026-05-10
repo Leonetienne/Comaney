@@ -8,45 +8,53 @@ Expense queryset.
 Grammar (mirrors JS):
     expr  = group ('||' group)*
     group = atom*
-    atom  = '(' expr ')' | filter
+    atom  = '!' atom | '(' expr ')' | filter
 
 Filters:
     type=income / type=expense / type="savings deposit" / …
     settled=yes|no|true|false|1|0
-    value<N, value<=N, value>N, value>=N, value=N
+    deactivated=yes|no|true|false|1|0
+    value<N, value<=N, value>N, value>=N, value=N, value==N
+    due_date<dd.mm.yyyy   due_date>=mm/dd/yyyy  due_date==yyyy-mm-dd  due_date>today
+        dot delimiter → dd.mm.yyyy  |  slash delimiter → mm/dd/yyyy  |  hyphen → yyyy-mm-dd
+        'today' resolves to the current date at query time
     cat=<substring>   cat=none  (expenses with no category)
     tag=<substring>   tag=none  (expenses with no tag)
     payee=<substring>
     <bare word or "quoted phrase">  →  free-text (title / payee / note)
+    !<atom>           →  NOT  (negates the next atom or parenthesised group)
 """
 
 import re
-from decimal import Decimal
+from datetime import date as _date
+from decimal import Decimal, InvalidOperation
 from django.db.models import Q
 
 
 # Map the lowercased display names (as used in the UI) to internal DB values.
 _TYPE_MAP: dict[str, str] = {
-    "income":            "income",
-    "expense":           "expense",
-    "savings deposit":   "savings_dep",
-    "savings withdrawal":"savings_wit",
-    "carry-over":        "carry_over",
-    "carry over":        "carry_over",
+    "income":             "income",
+    "expense":            "expense",
+    "savings deposit":    "savings_dep",
+    "savings withdrawal": "savings_wit",
+    "carry-over":         "carry_over",
+    "carry over":         "carry_over",
     # Also accept internal codes directly.
-    "savings_dep":       "savings_dep",
-    "savings_wit":       "savings_wit",
-    "carry_over":        "carry_over",
+    "savings_dep":        "savings_dep",
+    "savings_wit":        "savings_wit",
+    "carry_over":         "carry_over",
 }
 
 _TOKEN_RE = re.compile(
-    r'\|\|'                                        # ||
-    r'|\('                                          # (
-    r'|\)'                                          # )
-    r'|(\w+)\s*([<>]=?)\s*(\d+(?:\.\d+)?)'        # key op num  (cmp)
-    r'|(\w+)=(?:"([^"]*)"|([^\s()|"]+))'           # key="v" or key=v  (kv)
-    r'|"([^"]*)"'                                   # "quoted phrase"  (str)
-    r'|([^\s()|"]+)'                                # bare word  (str)
+    r'\|\|'                                                        # ||
+    r'|!'                                                          # ! (NOT)
+    r'|\('                                                         # (
+    r'|\)'                                                         # )
+    r'|(\w+)\s*(==|[<>]=?)\s*(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./]\d{1,2}[./]\d{4}|today)'  # g1-3: key op date
+    r'|(\w+)\s*(==|[<>]=?)\s*(\d+(?:\.\d+)?)'                    # g4-6: key op num
+    r'|(\w+)=(?:"([^"]*)"|([^\s()|"!]+))'                        # g7-9: key="v" or key=v
+    r'|"([^"]*)"'                                                  # g10:  "quoted phrase"
+    r'|([^\s()|"!]+)'                                             # g11:  bare word
 )
 
 
@@ -56,56 +64,103 @@ def _tokenize(raw: str) -> list[dict]:
         s = m.group(0)
         if s == '||':
             out.append({'t': 'or'})
+        elif s == '!':
+            out.append({'t': 'not'})
         elif s == '(':
             out.append({'t': 'lp'})
         elif s == ')':
             out.append({'t': 'rp'})
         elif m.group(1):
-            out.append({'t': 'cmp', 'key': m.group(1), 'op': m.group(2), 'num': float(m.group(3))})
+            out.append({'t': 'date_cmp', 'key': m.group(1), 'op': m.group(2), 'raw': m.group(3)})
         elif m.group(4):
-            val = m.group(5) if m.group(5) is not None else (m.group(6) or '')
-            out.append({'t': 'kv', 'key': m.group(4), 'val': val})
-        elif m.group(7) is not None:
-            out.append({'t': 'str', 'val': m.group(7)})
+            out.append({'t': 'cmp', 'key': m.group(4), 'op': m.group(5), 'num': float(m.group(6))})
+        elif m.group(7):
+            val = m.group(8) if m.group(8) is not None else (m.group(9) or '')
+            out.append({'t': 'kv', 'key': m.group(7), 'val': val})
+        elif m.group(10) is not None:
+            out.append({'t': 'str', 'val': m.group(10)})
         else:
-            out.append({'t': 'str', 'val': m.group(8) or ''})
+            out.append({'t': 'str', 'val': m.group(11) or ''})
     return out
 
+
+# ---------------------------------------------------------------------------
+# Q-object builders
+# ---------------------------------------------------------------------------
 
 def _type_q(val: str) -> Q:
     internal = _TYPE_MAP.get(val)
     return Q(type=internal) if internal else Q(type=val)
 
 
-def _settled_q(val: str) -> Q:
-    return Q(settled=val in ('true', 'yes', '1'))
+def _bool_q(field: str, val: str) -> Q:
+    return Q(**{field: val in ('true', 'yes', '1')})
 
 
 def _value_q(op: str, num: float) -> Q:
-    d = Decimal(str(num))
-    lookup = {'<': 'lt', '<=': 'lte', '>': 'gt', '>=': 'gte', '=': 'exact'}.get(op, 'exact')
+    try:
+        d = Decimal(str(num))
+    except InvalidOperation:
+        return Q(pk__in=[])
+    lookup = {'<': 'lt', '<=': 'lte', '>': 'gt', '>=': 'gte', '=': 'exact', '==': 'exact'}.get(op, 'exact')
     return Q(**{f'value__{lookup}': d})
 
 
-_EQUALS: dict = {
-    'type':    lambda v: _type_q(v),
-    'settled': lambda v: _settled_q(v),
-    'value':   lambda v: _value_q('=', float(v)),
-    'tag':     lambda v: Q(tags__isnull=True) if v == 'none' else Q(tags__title__icontains=v),
-    'cat':     lambda v: Q(category__isnull=True) if v == 'none' else Q(category__title__icontains=v),
-    'payee':   lambda v: Q(payee__icontains=v),
-}
+def _parse_date(raw: str) -> _date:
+    """Parse 'today', yyyy-mm-dd (hyphen), dd.mm.yyyy (dot), or mm/dd/yyyy (slash)."""
+    if raw == 'today':
+        return _date.today()
+    if raw[4:5] == '-':             # yyyy-mm-dd
+        year, month, day = raw.split('-')
+    elif '.' in raw:                # dd.mm.yyyy
+        day, month, year = raw.split('.')
+    else:                           # mm/dd/yyyy
+        month, day, year = raw.split('/')
+    return _date(int(year), int(month), int(day))
 
-_CMP: dict = {
-    'value': lambda op, num: _value_q(op, num),
-}
+
+def _date_q(op: str, raw: str) -> Q:
+    try:
+        d = _parse_date(raw)
+    except (ValueError, TypeError):
+        return Q(pk__in=[])   # invalid date → match nothing
+    lookup = {'<': 'lt', '<=': 'lte', '>': 'gt', '>=': 'gte', '=': 'exact', '==': 'exact'}.get(op, 'exact')
+    return Q(**{f'date_due__{lookup}': d})
 
 
 def _term_q(val: str) -> Q:
     return Q(title__icontains=val) | Q(payee__icontains=val) | Q(note__icontains=val)
 
 
-def _compile(tokens: list[dict]) -> Q:
+# ---------------------------------------------------------------------------
+# Filter dispatch tables
+# ---------------------------------------------------------------------------
+
+_EQUALS: dict = {
+    'type':        lambda v: _type_q(v),
+    'settled':     lambda v: _bool_q('settled', v),
+    'deactivated': lambda v: _bool_q('deactivated', v),
+    'value':       lambda v: _value_q('=', float(v)),
+    'due_date':    lambda v: _date_q('=', v),
+    'tag':         lambda v: Q(tags__isnull=True) if v == 'none' else Q(tags__title__icontains=v),
+    'cat':         lambda v: Q(category__isnull=True) if v == 'none' else Q(category__title__icontains=v),
+    'payee':       lambda v: Q(payee__icontains=v),
+}
+
+_CMP: dict = {
+    'value': lambda op, num: _value_q(op, num),
+}
+
+_DATE_CMP: dict = {
+    'due_date': lambda op, raw: _date_q(op, raw),
+}
+
+
+# ---------------------------------------------------------------------------
+# Recursive-descent compiler
+# ---------------------------------------------------------------------------
+
+def _compile(tokens: list[dict], model=None) -> Q:
     pos = [0]
 
     def peek():
@@ -138,6 +193,11 @@ def _compile(tokens: list[dict]) -> Q:
         return q
 
     def parse_atom() -> Q:
+        if peek() and peek()['t'] == 'not':
+            nxt()                   # consume !
+            if not peek():
+                return Q()          # bare ! at end of input → ignore
+            return ~parse_atom()
         if peek() and peek()['t'] == 'lp':
             nxt()
             inner = parse_expr()
@@ -149,22 +209,32 @@ def _compile(tokens: list[dict]) -> Q:
     def make_filter(tok) -> Q:
         if tok is None:
             return Q()
+        if tok['t'] == 'date_cmp':
+            h = _DATE_CMP.get(tok['key'])
+            if h:
+                return h(tok['op'], tok['raw'])
+            # Unrecognised key → free-text
+            return _term_q(tok['key'] + tok['op'] + tok['raw'])
         if tok['t'] == 'cmp':
             h = _CMP.get(tok['key'])
             if h:
                 return h(tok['op'], tok['num'])
+            # Unrecognised key → free-text
+            return _term_q(tok['key'] + tok['op'] + str(tok['num']))
         if tok['t'] == 'kv':
+            # tag=<value> (not 'none') must use a pk-in subquery so that
+            # multiple tag conditions don't collapse onto the same JOIN row.
+            if tok['key'] == 'tag' and tok['val'] != 'none' and model is not None:
+                return Q(pk__in=model.objects.filter(
+                    tags__title__icontains=tok['val']
+                ).values('pk'))
             h = _EQUALS.get(tok['key'])
             if h:
                 return h(tok['val'])
-        # Unrecognised token → fold into free-text search.
-        if tok['t'] == 'str':
-            term = tok['val']
-        elif tok['t'] == 'cmp':
-            term = tok['key'] + tok['op'] + str(tok['num'])
-        else:
-            term = tok['key'] + '=' + tok['val']
-        return _term_q(term)
+            # Unrecognised key → free-text
+            return _term_q(tok['key'] + '=' + tok['val'])
+        # str token → free-text search
+        return _term_q(tok.get('val', ''))
 
     return parse_expr()
 
@@ -174,4 +244,4 @@ def apply_query(qs, query_str: str):
     s = (query_str or '').strip()
     if not s:
         return qs
-    return qs.filter(_compile(_tokenize(s.lower()))).distinct()
+    return qs.filter(_compile(_tokenize(s.lower()), qs.model)).distinct()

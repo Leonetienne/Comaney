@@ -25,8 +25,9 @@ TITLE_SETTLED = "SearchTest Settled"
 TITLE_BIG     = "SearchTest Big"
 PAYEE_ALPHA = "Rainer Winkler"
 PAYEE_BETA  = "Hans Dampf"
-CAT_TITLE   = "SearchTest Haushalt"
-TAG_TITLE   = "SearchTest Kreditkarte"
+CAT_TITLE    = "SearchTest Haushalt"
+TAG_TITLE    = "SearchTest Kreditkarte"
+TAG_TITLE_2  = "SearchTest Motorroller"   # second tag for multi-tag M2M tests
 
 
 def _wait_search_settled(driver, timeout=3.0):
@@ -90,6 +91,19 @@ class TestExpensesSearch:
         assert b.status_code == 201
         ctx["s84_uid_b"] = b.json()["id"]
 
+        tag2 = api_post("/api/v1/tags/", ctx, json={"title": TAG_TITLE_2})
+        assert tag2.status_code == 201
+        ctx["s84_tag2_id"] = tag2.json()["id"]
+
+        # Gamma has BOTH tags — used for multi-tag AND / NOT regression tests
+        g = api_post("/api/v1/expenses/", ctx, json={
+            "title": "SearchTest Gamma", "type": "expense", "value": "333.00",
+            "date_due": TODAY, "settled": False,
+            "tag_ids": [ctx["s84_tag_id"], ctx["s84_tag2_id"]],
+        })
+        assert g.status_code == 201
+        ctx["s84_uid_g"] = g.json()["id"]
+
     # ── tag= filter ──────────────────────────────────────────────────────────
 
     def test_84_10_tag_filter_shows_only_tagged(self, driver, w, ctx):
@@ -107,6 +121,30 @@ class TestExpensesSearch:
 
         titles = visible_titles(driver)
         assert any(TITLE_ALPHA in t for t in titles)
+        assert not any(TITLE_BETA in t for t in titles)
+
+    def test_84_12_tag_and_two_tags(self, driver, w, ctx):
+        """tag=A tag=B shows only expenses that carry BOTH tags (M2M AND regression)."""
+        search_type(driver, f'tag="{TAG_TITLE.lower()}" tag="{TAG_TITLE_2.lower()}"')
+
+        titles = visible_titles(driver)
+        # Gamma has both tags → visible
+        assert any("SearchTest Gamma" in t for t in titles)
+        # Alpha has only Kreditkarte → hidden
+        assert not any(TITLE_ALPHA in t for t in titles)
+        # Beta has no tags → hidden
+        assert not any(TITLE_BETA in t for t in titles)
+
+    def test_84_13_tag_not_excludes_correctly(self, driver, w, ctx):
+        """tag=A !tag=B shows A-tagged expenses that do NOT also carry B (M2M NOT regression)."""
+        search_type(driver, f'tag="{TAG_TITLE.lower()}" !tag="{TAG_TITLE_2.lower()}"')
+
+        titles = visible_titles(driver)
+        # Alpha has Kreditkarte but NOT Motorroller → visible
+        assert any(TITLE_ALPHA in t for t in titles)
+        # Gamma has BOTH → must be hidden
+        assert not any("SearchTest Gamma" in t for t in titles)
+        # Beta has no tags → hidden
         assert not any(TITLE_BETA in t for t in titles)
 
     # ── cat= filter ──────────────────────────────────────────────────────────
@@ -446,13 +484,13 @@ class TestExpensesSearch:
     # ── Cleanup ──────────────────────────────────────────────────────────────
 
     def test_84_99_cleanup(self, driver, w, ctx):
-        for key in ("s84_uid_a", "s84_uid_b"):
+        for key in ("s84_uid_a", "s84_uid_b", "s84_uid_g"):
             if key in ctx:
                 api_delete(f"/api/v1/expenses/{ctx.pop(key)}/", ctx)
         for key in ("s84_cat_id",):
             if key in ctx:
                 api_delete(f"/api/v1/categories/{ctx.pop(key)}/", ctx)
-        for key in ("s84_tag_id",):
+        for key in ("s84_tag_id", "s84_tag2_id"):
             if key in ctx:
                 api_delete(f"/api/v1/tags/{ctx.pop(key)}/", ctx)
 

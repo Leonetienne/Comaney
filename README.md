@@ -53,6 +53,7 @@ grocery run
 |---|---|
 | `type=expense` | Expenses (also: `income`, `savings deposit`, `savings withdrawal`, `carry-over`) |
 | `settled=yes` | Settled expenses (`yes` / `true` / `1` → settled; `no` / `false` / `0` → unsettled) |
+| `deactivated=yes` | Deactivated expenses (same truthy/falsy values as `settled`) |
 | `cat=Haushalt` | Category contains "Haushalt" (substring, case-insensitive) |
 | `cat=none` | Expenses with **no category** assigned |
 | `tag=Kreditkarte` | Any tag contains "Kreditkarte" (substring, case-insensitive) |
@@ -66,33 +67,73 @@ cat="Fixed costs"   tag="credit card"   type="savings deposit"
 
 ### Numeric comparisons
 ```
-value<100       value>=500      value=77.00
+value<100       value>=500      value=77.00     value==77.00
 ```
-Operators: `<` `<=` `>` `>=` `=`
+Operators: `<` `<=` `>` `>=` `=` `==`
+
+### Date comparisons
+Filter by due date using `due_date` with any comparison operator:
+```
+due_date>31.12.2024        due_date<=12/31/2024
+due_date>=01.01.2025       due_date==15.03.2025
+```
+Three date formats are supported — the delimiter identifies which:
+* **`dd.mm.yyyy`** (dot) — day first, e.g. `31.01.2025`
+* **`mm/dd/yyyy`** (slash) — month first, e.g. `01/31/2025`
+* **`yyyy-mm-dd`** (hyphen) — ISO 8601, e.g. `2025-01-31`
+
+The special value **`today`** resolves to the current date at query time:
+```
+due_date=today      due_date<today      due_date>=today
+```
+
+### NOT operator
+Prefix any term, filter, or group with `!` to negate it:
+```
+type=expense !rent # All expenses that are not rent
+!tag=amazon all records that are not tagged "amazon"
+```
 
 ### Combining filters
 Terms separated by a space are **AND**-ed (all must match):
 ```
+# All unsettled expenses that are less than 200
 type=expense settled=no value<200
+# All amazon-tagged expenses that are not tagged "gardening"
+tag=amazon !tag=gardening
 ```
 
 Use `||` for **OR** (either side may match):
 ```
+All income or savings withdrawals
 type=income || type="savings withdrawal"
 ```
 
 Use `()` to group before combining:
 ```
+Either all expenses that are settled, or income 
 (type=expense settled=yes) || type=income
+```
+
+You can negate groups too
+```
+# All expenses that dont fuzzy-match "fence", "oven" or "food".
+type=expense !(fence || oven || food)
+# This is identical to
+type=expense !fence !oven !food
 ```
 
 ### Examples
 | Query | Meaning |
 |---|---|
 | `settled=no value>500` | Unsettled expenses over 500 |
+| `due_date>=01.01.2025` | Expenses due on or after 1 Jan 2025 |
+| `due_date>01/01/2025 due_date<04/01/2025` | Expenses due in Q1 2025 |
 | `cat=Food payee=Rewe` | Categorised as Food **and** payee contains Rewe |
 | `cat=none tag=none` | Expenses with neither a category nor any tag |
 | `type=income \|\| settled=yes` | All income **or** any settled expense |
+| `type=expense !rent` | Expenses whose title/payee/note doesn't contain "rent" |
+| `type=expense !(rent \|\| payee=landlord)` | Expenses unrelated to rent |
 | `tag="credit card" settled=no` | Unmatured credit-card expenses |
 
 
@@ -251,21 +292,8 @@ docker buildx build \
 
 ### Building front-end assets
 ```
-# If node version is not already set, install NVM and do
-nvm install
-
-# Install dependencies
-npm install
-
-# Build everything (CSS + JS) in one shot
-npm run build
-
-# Or build individually
-npm run build:css      # SCSS → static/dist/main.css
-npm run build:js       # Alpine bundle → static/dist/expenses.js
-
-# Watch CSS during development
-npm run watch:css
+# Build frontend assets inside the container
+./build/build-assets.sh
 ```
 Source files:
 - SCSS: `build/scss/` → compiled to `static/dist/main.css`
