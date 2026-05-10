@@ -15,11 +15,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY requirements.txt package*.json ./
-RUN pip install --no-cache-dir -r requirements.txt && npm ci
+COPY requirements.txt package.json ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN npm install
 RUN npm run build && chmod +x entrypoint.sh && rm -rf build/ node_modules/
 
 EXPOSE 8000

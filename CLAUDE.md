@@ -15,10 +15,10 @@ Django budgeting app. Session-based auth (no Django auth backend). MariaDB. SCSS
 - **Python 3.12**, Django, Gunicorn, WhiteNoise, mysqlclient
 - **Node** (SCSS + JS build only, stripped from final image)
 - **Templates**: Django templates in `templates/`
-- **SCSS**: source in `build/scss/`, compiled to `static/dist/main.css`. Run `npm run build:css` after SCSS changes (or `npm run watch:css` during dev). Use `nvm install` first to get the right Node version.
-- **JS**: source in `build/js/`, bundled via esbuild to `static/dist/`. Run `npm run build:js` after JS changes. `npm run build` compiles both CSS and JS.
+- **SCSS**: source in `build/scss/`, compiled to `static/dist/main.css`.
+- **JS**: source in `build/js/`, bundled via esbuild to `static/dist/`.
   - `build/js/expenses.js` — Alpine.js v3 component for the expense list (live search, bulk actions, sum). Bundled with `--target=es2020` (required; lower targets break Alpine's async evaluator).
-  - **Docker does NOT rebuild JS** — esbuild's native binary breaks cross-platform builds (Mac arm64 → linux/amd64). `static/dist/expenses.js` is committed and copied into the image as-is. Always run `npm run build:js` locally and commit the result before building a Docker image.
+- **Building assets**: always use `build/build-assets.sh` — runs `npm install && npm run build` inside a `node:25.9.0-slim` linux/amd64 container. Never run npm directly on the host; `package-lock.json` is gitignored to prevent arch-specific binaries (Mac arm64 vs. linux/amd64) from being committed. The Dockerfile also runs `npm install` fresh inside the linux/amd64 build container.
 - **CSS theming**: light/dark mode via CSS custom properties (`--var`). Never replace them with SCSS `$vars` — those are compile-time only. Required for dynamic dark/light mode in-browser.
 - **Tests**: Every functional feature requires selenium end-to-end tests, which are in `tests/`. Don't run them yourself!
 
@@ -56,6 +56,7 @@ comaney/        Settings, root urls, middleware, public_pages context processor
 - **Notification classes**: `"" < soon < tomorrow < today < late < settled` — each sent at most once per expense
 - **CSV export** (feusers/views/account.py): dynamic via `_meta.concrete_fields`; skip `owning_feuser`; mask `anthropic_api_key`; resolve `category` FK and `tags` M2M via `extra=`
 - **AI express creation**: system prompt in `budget/views/express.py`; expects `{"result":"good","items":[]}` or `{"result":"fail","msg":""}` — never prose
+- **Expense search query parser** (`budget/query_parser.py`): translates the search bar's mini-language into Django Q objects via `apply_query(qs, query_str)`. Called by the API expense list view. Supported filters: `type=`, `settled=`, `deactivated=`, `value` (with `< <= > >= = ==`), `due_date` (date comparisons, formats `dd.mm.yyyy` / `mm/dd/yyyy` / `yyyy-mm-dd`, special value `today`), `cat=` / `tag=` (substring or `none` for null), `payee=`, free-text, `||` OR, `()` grouping, `!` NOT prefix. The full query string is lowercased before parsing.
 
 ## Running tests
 Tests are end-to-end Selenium + requests against a live Docker stack.
