@@ -128,8 +128,11 @@
   .dash-card-header {
     border-bottom-color: rgba(128,128,128,.2);
     .dash-card-title { color: inherit; opacity: .85; }
-    .dash-card-edit-btn { color: inherit; opacity: .6; }
+    .dash-card-edit-btn { color: inherit; opacity: 0; }
   }
+
+  // Show on hover — more specific than the rule above so it wins
+  &:hover .dash-card-header .dash-card-edit-btn { opacity: .85; }
 }
 
 // ── Resize handle ──────────────────────────────────────────────────────────
