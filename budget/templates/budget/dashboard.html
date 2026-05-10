@@ -130,11 +130,7 @@ window.DASHBOARD_CONFIG = {
          style="display:none">
         <div class="dash-modal">
             <h3>Edit card</h3>
-            <textarea class="dash-yaml-editor"
-                      x-model="editYaml"
-                      rows="20"
-                      spellcheck="false"
-                      autocomplete="off"></textarea>
+            <div class="dash-yaml-editor" x-ref="editEditorEl"></div>
             <p class="dash-modal-error" x-show="editError" x-text="editError"></p>
             <div class="dash-modal-actions">
                 <button class="btn btn-primary"
@@ -169,13 +165,7 @@ window.DASHBOARD_CONFIG = {
                 </template>
             </div>
 
-            <textarea class="dash-yaml-editor"
-                      x-model="addYaml"
-                      @input="addYamlDirty = addYaml.trim() !== ''"
-                      rows="20"
-                      spellcheck="false"
-                      autocomplete="off"
-                      placeholder="Paste or type YAML config…"></textarea>
+            <div class="dash-yaml-editor" x-ref="addEditorEl"></div>
             <p class="dash-modal-error" x-show="addError" x-text="addError"></p>
             <div class="dash-modal-actions">
                 <button class="btn btn-primary"

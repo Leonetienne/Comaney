@@ -15,12 +15,18 @@ Tests:
   - Dashboard page renders (browser smoke test)
   - Dashboard add-card dialog opens and creates a card (browser)
   - Edit and delete via browser modal
+  - Sequential preset clicks load without confirm dialog (test_27)
+  - Dirty editor: confirm appears on preset load; cancel keeps content (test_28)
+  - Dirty editor: confirm appears on preset load; overwrite loads preset (test_29)
+  - Empty editor loads preset without confirm dialog (test_30)
 """
 
 import requests
 
 import pytest
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 
 from conftest import BASE_URL, _url, session_cookies, wait_text
@@ -51,6 +57,33 @@ def _post_card(sess, csrf, yaml_str) -> requests.Response:
         json={"yaml_config": yaml_str},
         headers={"X-CSRFToken": csrf, "Content-Type": "application/json"},
     )
+
+
+def _cm_text(driver, backdrop_id: str) -> str:
+    """Return the text content of the CodeMirror 6 editor inside the given backdrop element."""
+    return driver.execute_script(
+        "const el = document.querySelector('#' + arguments[0] + ' .cm-content');"
+        "return el ? el.textContent : '';",
+        backdrop_id,
+    )
+
+
+def _dialog_visible(driver) -> bool:
+    """Return True when the in-DOM confirm dialog is currently shown."""
+    return driver.execute_script(
+        "const el = document.getElementById('cdialog-backdrop');"
+        "return el ? el.classList.contains('cdialog-visible') : false;"
+    )
+
+
+def _open_add_dialog(driver, w):
+    """Navigate to the dashboard and open the 'New card' dialog."""
+    driver.get(_url("/budget/"))
+    add_btn = w.until(EC.element_to_be_clickable(
+        (By.XPATH, "//button[contains(text(),'New dashboard card')]")
+    ))
+    add_btn.click()
+    w.until(EC.visibility_of_element_located((By.ID, "dash-add-backdrop")))
 
 
 # ---------------------------------------------------------------------------
@@ -266,14 +299,13 @@ class TestDashboardBrowser:
         # Wait for the ADD backdrop specifically (not the edit one which is always hidden)
         w.until(EC.visibility_of_element_located((By.ID, "dash-add-backdrop")))
 
-    def test_23_preset_loads_into_textarea(self, driver, w, ctx):
+    def test_23_preset_loads_into_editor(self, driver, w, ctx):
         # Dialog should still be open from previous test; click first preset
         presets = w.until(lambda d: d.find_elements(By.CSS_SELECTOR, ".dash-presets .btn"))
         assert len(presets) > 0
         presets[0].click()
-        # Use the textarea inside the add backdrop specifically
-        textarea = driver.find_element(By.CSS_SELECTOR, "#dash-add-backdrop .dash-yaml-editor")
-        assert "type:" in textarea.get_attribute("value")
+        # CodeMirror editor — read via DOM textContent, not .value
+        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
 
     def test_24_cancel_dialog(self, driver, w, ctx):
         driver.find_element(
@@ -289,13 +321,100 @@ class TestDashboardBrowser:
         ))
         driver.execute_script("arguments[0].querySelector('.dash-card-edit-btn').click()", first_card)
         w.until(EC.visibility_of_element_located((By.ID, "dash-edit-backdrop")))
-        # Textarea should contain YAML
-        textarea = driver.find_element(By.CSS_SELECTOR, "#dash-edit-backdrop .dash-yaml-editor")
-        assert "type:" in textarea.get_attribute("value")
+        # CodeMirror editor — read via DOM textContent, not .value
+        w.until(lambda d: "type:" in _cm_text(d, "dash-edit-backdrop"))
         # Close
         driver.find_element(
             By.XPATH, "//div[@id='dash-edit-backdrop']//button[text()='Cancel']"
         ).click()
+
+    def test_27_sequential_presets_load_without_confirm(self, driver, w, ctx):
+        _open_add_dialog(driver, w)
+        presets = w.until(lambda d: d.find_elements(By.CSS_SELECTOR, ".dash-presets .btn"))
+        assert len(presets) >= 1
+        # First click: loads preset (editor starts empty, no confirm)
+        presets[0].click()
+        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
+        # Second click on same preset: addYamlDirty was reset to False after load, no confirm
+        presets[0].click()
+        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
+        assert not _dialog_visible(driver), "Confirm dialog must not appear on back-to-back preset loads"
+        driver.find_element(
+            By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
+        ).click()
+        w.until(lambda d: not d.find_element(By.ID, "dash-add-backdrop").is_displayed())
+
+    def test_28_dirty_editor_confirm_cancel_keeps_content(self, driver, w, ctx):
+        _open_add_dialog(driver, w)
+        presets = w.until(lambda d: d.find_elements(By.CSS_SELECTOR, ".dash-presets .btn"))
+        assert len(presets) >= 1
+        # Load preset so editor has content, then type to mark it dirty
+        presets[0].click()
+        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
+        cm = driver.find_element(By.CSS_SELECTOR, "#dash-add-backdrop .cm-content")
+        cm.click()
+        ActionChains(driver).send_keys("z").perform()
+        dirty_text = _cm_text(driver, "dash-add-backdrop")
+        assert dirty_text  # sanity: editor is not empty
+        # Click preset again — confirm dialog must appear because editor is dirty
+        presets[0].click()
+        w.until(lambda d: _dialog_visible(d))
+        # Cancel → user's content must be preserved unchanged
+        driver.find_element(By.ID, "cdialog-cancel").click()
+        w.until(lambda d: not _dialog_visible(d))
+        assert _cm_text(driver, "dash-add-backdrop") == dirty_text
+        driver.find_element(
+            By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
+        ).click()
+        w.until(lambda d: not d.find_element(By.ID, "dash-add-backdrop").is_displayed())
+
+    def test_29_dirty_editor_confirm_overwrite_loads_preset(self, driver, w, ctx):
+        _open_add_dialog(driver, w)
+        presets = w.until(lambda d: d.find_elements(By.CSS_SELECTOR, ".dash-presets .btn"))
+        assert len(presets) >= 1
+        # Load preset, then dirty the editor
+        presets[0].click()
+        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
+        cm = driver.find_element(By.CSS_SELECTOR, "#dash-add-backdrop .cm-content")
+        cm.click()
+        ActionChains(driver).send_keys("z").perform()
+        # Click preset → confirm dialog appears
+        presets[0].click()
+        w.until(lambda d: _dialog_visible(d))
+        # Confirm overwrite → preset content should replace user's text
+        driver.find_element(By.ID, "cdialog-ok").click()
+        w.until(lambda d: not _dialog_visible(d))
+        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
+        driver.find_element(
+            By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
+        ).click()
+        w.until(lambda d: not d.find_element(By.ID, "dash-add-backdrop").is_displayed())
+
+    def test_30_empty_editor_loads_preset_without_confirm(self, driver, w, ctx):
+        _open_add_dialog(driver, w)
+        presets = w.until(lambda d: d.find_elements(By.CSS_SELECTOR, ".dash-presets .btn"))
+        assert len(presets) >= 1
+        # Load preset first so the editor has content
+        presets[0].click()
+        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
+        # Clear the editor by dispatching directly to the CM EditorView.
+        # Using EditorView.dispatch (not _setEditorContent) keeps _programmaticEdit=False,
+        # so updateListener fires onChange('') → addYamlDirty = False.
+        # This is equivalent to the user selecting all text and deleting it.
+        driver.execute_script("""
+            const data = document.querySelector('[x-data="dashboardBoard"]')._x_dataStack[0];
+            const view = data._addEditor;
+            view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: '' } });
+        """)
+        w.until(lambda d: _cm_text(d, "dash-add-backdrop").strip() == "")
+        # Click preset — no confirm because editor is empty (addYamlDirty = False)
+        presets[0].click()
+        w.until(lambda d: "type:" in _cm_text(d, "dash-add-backdrop"))
+        assert not _dialog_visible(driver), "Confirm dialog must not appear when editor was empty"
+        driver.find_element(
+            By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
+        ).click()
+        w.until(lambda d: not d.find_element(By.ID, "dash-add-backdrop").is_displayed())
 
     def test_26_cleanup_remaining_cards(self, driver, w, ctx):
         sess = _cards_session(driver)

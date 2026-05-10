@@ -1,5 +1,9 @@
 import Alpine from 'alpinejs';
 import Chart from 'chart.js/auto';
+import { EditorView, basicSetup } from 'codemirror';
+import { Compartment, EditorState } from '@codemirror/state';
+import { yaml } from '@codemirror/lang-yaml';
+import { oneDark } from '@codemirror/theme-one-dark';
 
 const PALETTE = [
     '#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f',
@@ -42,6 +46,11 @@ function dashboardBoard() {
         addError:     '',
         addSaving:    false,
         presets:      [],
+
+        // CodeMirror editor instances
+        _addEditor:         null,
+        _editEditor:        null,
+        _programmaticEdit:  false,
 
         // Drag-drop
         dragId:        null,
@@ -314,10 +323,18 @@ function dashboardBoard() {
         },
 
         // ── Edit modal ────────────────────────────────────────────────────────
-        openEdit(card) {
+        async openEdit(card) {
             this.editCard  = card;
             this.editYaml  = card.yaml_config;
             this.editError = '';
+            await Alpine.nextTick();
+            const el = this.$refs.editEditorEl;
+            if (!this._editEditor) {
+                this._editEditor = this._makeEditor(el, card.yaml_config, v => { this.editYaml = v; });
+            } else {
+                this._setEditorContent(this._editEditor, card.yaml_config);
+                this._editEditor.focus();
+            }
         },
 
         closeEdit() {
@@ -346,7 +363,7 @@ function dashboardBoard() {
         },
 
         async deleteCard(cardId) {
-            if (!confirm('Delete this card?')) return;
+            try { await window.confirmDialog('Delete this card?', 'Delete'); } catch (_) { return; }
             await this._deleteReq(this.urlCards.replace(/\/$/, '') + '/' + cardId + '/');
             this.editCard = null;
             await this.fetchCards();
@@ -358,6 +375,17 @@ function dashboardBoard() {
             this.addYaml      = '';
             this.addYamlDirty = false;
             this.addError     = '';
+            await Alpine.nextTick();
+            const el = this.$refs.addEditorEl;
+            if (!this._addEditor) {
+                this._addEditor = this._makeEditor(el, '', v => {
+                    this.addYaml      = v;
+                    this.addYamlDirty = v.trim() !== '';
+                });
+            } else {
+                this._setEditorContent(this._addEditor, '');
+                this._addEditor.focus();
+            }
             if (!this.presets.length) {
                 try {
                     const resp = await fetch(this.urlPresets);
@@ -371,10 +399,14 @@ function dashboardBoard() {
             this.addOpen = false;
         },
 
-        loadPreset(yaml) {
-            if (this.addYamlDirty && !confirm('Overwrite current content?')) return;
+        async loadPreset(yaml) {
+            if (this.addYamlDirty) {
+                try { await window.confirmDialog('Overwrite your changes with this preset?', 'Overwrite'); }
+                catch (_) { return; }
+            }
             this.addYaml      = yaml;
             this.addYamlDirty = false;
+            if (this._addEditor) this._setEditorContent(this._addEditor, yaml);
         },
 
         async saveAdd() {
@@ -393,6 +425,36 @@ function dashboardBoard() {
             } finally {
                 this.addSaving = false;
             }
+        },
+
+        // ── CodeMirror helpers ────────────────────────────────────────────────
+        _makeEditor(el, initialDoc, onChange) {
+            const darkMQ   = window.matchMedia('(prefers-color-scheme: dark)');
+            const themeC   = new Compartment();
+            const view = new EditorView({
+                state: EditorState.create({
+                    doc: initialDoc,
+                    extensions: [
+                        basicSetup,
+                        yaml(),
+                        themeC.of(darkMQ.matches ? oneDark : []),
+                        EditorView.updateListener.of(u => {
+                            if (u.docChanged && !this._programmaticEdit) onChange(u.state.doc.toString());
+                        }),
+                    ],
+                }),
+                parent: el,
+            });
+            darkMQ.addEventListener('change', e => {
+                view.dispatch({ effects: themeC.reconfigure(e.matches ? oneDark : []) });
+            });
+            return view;
+        },
+
+        _setEditorContent(editor, content) {
+            this._programmaticEdit = true;
+            editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: content } });
+            this._programmaticEdit = false;
         },
 
         // ── Helpers ───────────────────────────────────────────────────────────

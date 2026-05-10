@@ -241,18 +241,22 @@
 .dash-yaml-editor {
   width: 100%;
   min-height: 260px;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 0.82rem;
-  line-height: 1.55;
-  resize: vertical;
   box-sizing: border-box;
-  background: var(--bg-input);
   border: 1px solid var(--input-border);
   border-radius: 8px;
-  padding: 12px;
-  color: var(--text);
+  overflow: hidden;
 
-  &:focus { outline: 2px solid var(--link); outline-offset: -1px; }
+  // CodeMirror 6 shell
+  .cm-editor {
+    min-height: 260px;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 0.82rem;
+    border-radius: 8px;
+
+    &.cm-focused { outline: 2px solid var(--link); outline-offset: -1px; }
+  }
+
+  .cm-scroller { min-height: 260px; }
 }
 
 .dash-modal-actions {
