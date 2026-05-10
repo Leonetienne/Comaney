@@ -49,16 +49,18 @@ grocery run
 ```
 
 ### Key filters (`key=value`)
-| Filter | Matches |
-|---|---|
-| `type=expense` | Expenses (also: `income`, `savings deposit`, `savings withdrawal`, `carry-over`) |
-| `settled=yes` | Settled expenses (`yes` / `true` / `1` → settled; `no` / `false` / `0` → unsettled) |
-| `deactivated=yes` | Deactivated expenses (same truthy/falsy values as `settled`) |
-| `cat=Haushalt` | Category contains "Haushalt" (substring, case-insensitive) |
-| `cat=none` | Expenses with **no category** assigned |
-| `tag=Kreditkarte` | Any tag contains "Kreditkarte" (substring, case-insensitive) |
-| `tag=none` | Expenses with **no tag** assigned |
-| `payee=Amazon` | Payee contains "Amazon" (substring, case-insensitive) |
+| Filter            | Matches                                                                             |
+|-------------------|-------------------------------------------------------------------------------------|
+| `type=expense`    | Expenses (also: `income`, `savings deposit`, `savings withdrawal`, `carry-over`)    |
+| `settled=yes`     | Settled expenses (`yes` / `true` / `1` → settled; `no` / `false` / `0` → unsettled) |
+| `deactivated=yes` | Deactivated expenses (same truthy/falsy values as `settled`)                        |
+| `cat=Haushalt`    | Category contains "Haushalt" (substring, case-insensitive)                          |
+| `cat=none`        | Expenses with **no category** assigned                                              |
+| `tag=Kreditkarte` | Any tag contains "Kreditkarte" (substring, case-insensitive)                        |
+| `tag=none`        | Expenses with **no tag** assigned                                                   |
+| `date>24/12/2025` | Expenses after christmas 2025                                                       |
+| `value>100`       | Expenses over 100 (currency units)                                                  |
+| `payee=Amazon`    | Payee contains "Amazon" (substring, case-insensitive)                               |
 
 Use double quotes for values that contain spaces:
 ```
