@@ -226,9 +226,18 @@ function dashboardBoard() {
             }
         },
 
+        // ── Mobile detection ──────────────────────────────────────────────────
+        _isMobile() {
+            return (this._currentCols || 12) <= 6;
+        },
+
         // ── Card style (grid placement) ────────────────────────────────────────
         cardStyle(card) {
-            return `grid-column: span ${card.width}; grid-row: span ${card.height};`;
+            const mob = this._isMobile();
+            const w   = (mob && card.mobile_width    != null) ? card.mobile_width    : card.width;
+            const h   = (mob && card.mobile_height   != null) ? card.mobile_height   : card.height;
+            const ord = (mob && card.mobile_position != null) ? card.mobile_position : card.position;
+            return `grid-column: span ${w}; grid-row: span ${h}; order: ${ord};`;
         },
 
         // ── Drag-drop ─────────────────────────────────────────────────────────
@@ -261,23 +270,45 @@ function dashboardBoard() {
 
             if (fromId == null || fromId === targetId) return;
 
-            const fromIdx = this.cards.findIndex(c => c.id === fromId);
-            const toIdx   = this.cards.findIndex(c => c.id === targetId);
-            if (fromIdx < 0 || toIdx < 0) return;
+            const mob = this._isMobile();
 
-            // Reorder local state
-            const moved = this.cards.splice(fromIdx, 1)[0];
-            this.cards.splice(toIdx, 0, moved);
+            if (mob) {
+                // On mobile: reorder by mobile_position (CSS order), keep DOM order intact.
+                const getMob = c => c.mobile_position ?? c.position;
+                const mobileOrder = [...this.cards].sort((a, b) => getMob(a) - getMob(b));
+                const fromIdx = mobileOrder.findIndex(c => c.id === fromId);
+                const toIdx   = mobileOrder.findIndex(c => c.id === targetId);
+                if (fromIdx < 0 || toIdx < 0) return;
 
-            // Assign new 1-based positions
-            const positions = this.cards.map((c, i) => ({ id: c.id, position: i + 1 }));
-            this.cards.forEach((c, i) => { c.position = i + 1; });
+                const moved = mobileOrder.splice(fromIdx, 1)[0];
+                mobileOrder.splice(toIdx, 0, moved);
+                mobileOrder.forEach((c, i) => { c.mobile_position = i + 1; });
 
-            const resp = await this._postJson(this.urlReorder, { positions });
-            const data = await resp.json();
-            if (data.cards) {
-                const yamlMap = Object.fromEntries(data.cards.map(c => [c.id, c.yaml_config]));
-                this.cards.forEach(c => { if (yamlMap[c.id]) c.yaml_config = yamlMap[c.id]; });
+                const positions = this.cards.map(c => ({ id: c.id, position: c.mobile_position }));
+                const resp = await this._postJson(this.urlReorder, { positions, mobile: true });
+                const data = await resp.json();
+                if (data.cards) {
+                    const yamlMap = Object.fromEntries(data.cards.map(c => [c.id, c.yaml_config]));
+                    this.cards.forEach(c => { if (yamlMap[c.id]) c.yaml_config = yamlMap[c.id]; });
+                }
+            } else {
+                // On desktop: reorder DOM array, update position.
+                const fromIdx = this.cards.findIndex(c => c.id === fromId);
+                const toIdx   = this.cards.findIndex(c => c.id === targetId);
+                if (fromIdx < 0 || toIdx < 0) return;
+
+                const moved = this.cards.splice(fromIdx, 1)[0];
+                this.cards.splice(toIdx, 0, moved);
+
+                const positions = this.cards.map((c, i) => ({ id: c.id, position: i + 1 }));
+                this.cards.forEach((c, i) => { c.position = i + 1; });
+
+                const resp = await this._postJson(this.urlReorder, { positions, mobile: false });
+                const data = await resp.json();
+                if (data.cards) {
+                    const yamlMap = Object.fromEntries(data.cards.map(c => [c.id, c.yaml_config]));
+                    this.cards.forEach(c => { if (yamlMap[c.id]) c.yaml_config = yamlMap[c.id]; });
+                }
             }
         },
 
@@ -290,14 +321,16 @@ function dashboardBoard() {
             const card = this.cards.find(c => c.id === cardId);
             if (!card) return;
 
+            const mob = this._isMobile();
             this._resizeState = {
                 cardId,
                 startX: e.clientX,
                 startY: e.clientY,
-                startW: card.width,
-                startH: card.height,
+                startW: mob ? (card.mobile_width  ?? card.width)  : card.width,
+                startH: mob ? (card.mobile_height ?? card.height) : card.height,
                 colW,
                 rowH,
+                mobile: mob,
             };
             e.target.setPointerCapture(e.pointerId);
         },
@@ -306,15 +339,21 @@ function dashboardBoard() {
             const s = this._resizeState;
             if (!s || s.cardId !== cardId) return;
 
-            const dx   = e.clientX - s.startX;
-            const dy   = e.clientY - s.startY;
-            const newW = Math.max(1, Math.min(this._currentCols || MAX_COLS, s.startW + Math.round(dx / s.colW)));
-            const newH = Math.max(1, s.startH + Math.round(dy / s.rowH));
+            const dx      = e.clientX - s.startX;
+            const dy      = e.clientY - s.startY;
+            const maxCols = this._currentCols || 12;
+            const newW    = Math.max(1, Math.min(maxCols, s.startW + Math.round(dx / s.colW)));
+            const newH    = Math.max(1, s.startH + Math.round(dy / s.rowH));
 
             const card = this.cards.find(c => c.id === cardId);
             if (card) {
-                card.width  = newW;
-                card.height = newH;
+                if (s.mobile) {
+                    card.mobile_width  = newW;
+                    card.mobile_height = newH;
+                } else {
+                    card.width  = newW;
+                    card.height = newH;
+                }
             }
         },
 
@@ -326,12 +365,22 @@ function dashboardBoard() {
             const card = this.cards.find(c => c.id === cardId);
             if (!card) return;
 
+            const w = s.mobile ? card.mobile_width  : card.width;
+            const h = s.mobile ? card.mobile_height : card.height;
+
             const resp = await this._patchJson(
                 this.urlCards.replace(/\/$/, '') + '/' + cardId + '/resize/',
-                { width: card.width, height: card.height },
+                { width: w, height: h, mobile: s.mobile },
             );
             const data = await resp.json();
             if (data.yaml_config) card.yaml_config = data.yaml_config;
+            if (s.mobile) {
+                if (data.mobile_width  != null) card.mobile_width  = data.mobile_width;
+                if (data.mobile_height != null) card.mobile_height = data.mobile_height;
+            } else {
+                if (data.width  != null) card.width  = data.width;
+                if (data.height != null) card.height = data.height;
+            }
 
             // Re-render chart for this card after size change
             await Alpine.nextTick();

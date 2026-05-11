@@ -29,6 +29,10 @@ Card YAML schema:
         position: N             # display order (1-based)
         width: N                # grid columns to span
         height: N               # grid rows to span
+        mobile:                 # optional; overrides above on mobile (≤ 6-col grid)
+            position: N
+            width: N            # clamped to 1–6
+            height: N
 """
 
 import ast
@@ -111,10 +115,20 @@ def parse_card_config(yaml_str: str) -> dict:
             raise CardConfigError("method for charts must be sum or total")
 
     pos = cfg.get('positioning') or {}
+    mobile_pos = pos.get('mobile') if isinstance(pos, dict) else None
+    mobile_positioning = {}
+    if isinstance(mobile_pos, dict):
+        if 'position' in mobile_pos:
+            mobile_positioning['position'] = int(mobile_pos['position'])
+        if 'width' in mobile_pos:
+            mobile_positioning['width'] = max(1, min(6, int(mobile_pos['width'])))
+        if 'height' in mobile_pos:
+            mobile_positioning['height'] = max(1, int(mobile_pos['height']))
     positioning = {
         'position': int(pos.get('position', DEFAULT_POSITIONING['position'])),
         'width':    max(1, min(12, int(pos.get('width',    DEFAULT_POSITIONING['width'])))),
         'height':   max(1, int(pos.get('height',   DEFAULT_POSITIONING['height']))),
+        'mobile':   mobile_positioning,
     }
 
     return {

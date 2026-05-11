@@ -6,8 +6,9 @@ Tests:
   - Creating a bar-chart card via the API
   - Data endpoint returns card with computed value
   - Updating a card's YAML via PATCH
-  - Reordering cards via POST /reorder/
-  - Resizing a card via PATCH /resize/
+  - Reordering cards via POST /reorder/ (desktop + mobile=True, test_10b)
+  - Resizing a card via PATCH /resize/ (desktop + mobile=True, test_09b/09c)
+  - Mobile positioning YAML roundtrip (test_10c)
   - Deleting a card via DELETE
   - YAML validation errors return 400
   - Sandboxed Python cell (method=custom)
@@ -316,6 +317,90 @@ class TestDashboardCardsAPI:
         by_id = {c["id"]: c for c in cards}
         assert by_id[ctx["card_id_bar"]]["position"]  == 1
         assert by_id[ctx["card_id_cell"]]["position"] == 2
+
+    def test_09b_mobile_resize_card(self, driver, w, ctx):
+        """Resizing with mobile=True updates positioning.mobile.width/height."""
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        url = CARDS_URL.rstrip("/") + f"/{ctx['card_id_cell']}/resize/"
+        r = sess.patch(
+            url,
+            json={"width": 3, "height": 2, "mobile": True},
+            headers={"X-CSRFToken": csrf, "Content-Type": "application/json"},
+        )
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["mobile_width"] == 3
+        assert data["mobile_height"] == 2
+        # Desktop dimensions unchanged
+        cards = sess.get(CARDS_URL).json()["cards"]
+        cell = next(c for c in cards if c["id"] == ctx["card_id_cell"])
+        assert cell["mobile_width"] == 3
+        assert cell["mobile_height"] == 2
+
+    def test_09c_mobile_resize_clamps_to_6_cols(self, driver, w, ctx):
+        """Mobile width is clamped to 6 (max mobile grid columns)."""
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        url = CARDS_URL.rstrip("/") + f"/{ctx['card_id_cell']}/resize/"
+        r = sess.patch(
+            url,
+            json={"width": 12, "height": 1, "mobile": True},
+            headers={"X-CSRFToken": csrf, "Content-Type": "application/json"},
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["mobile_width"] == 6
+
+    def test_10b_mobile_reorder_cards(self, driver, w, ctx):
+        """Reordering with mobile=True updates positioning.mobile.position."""
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        positions = [
+            {"id": ctx["card_id_cell"], "position": 1},
+            {"id": ctx["card_id_bar"],  "position": 2},
+        ]
+        r = sess.post(
+            REORDER_URL,
+            json={"positions": positions, "mobile": True},
+            headers={"X-CSRFToken": csrf, "Content-Type": "application/json"},
+        )
+        assert r.status_code == 200, r.text
+
+        # mobile_position updated; desktop position unchanged from test_10
+        cards = sess.get(CARDS_URL).json()["cards"]
+        by_id = {c["id"]: c for c in cards}
+        assert by_id[ctx["card_id_cell"]]["mobile_position"] == 1
+        assert by_id[ctx["card_id_bar"]]["mobile_position"]  == 2
+        # Desktop positions set by test_10 must not have changed
+        assert by_id[ctx["card_id_bar"]]["position"]  == 1
+        assert by_id[ctx["card_id_cell"]]["position"] == 2
+
+    def test_10c_mobile_positioning_yaml_roundtrip(self, driver, w, ctx):
+        """A card created with positioning.mobile block is parsed and returned correctly."""
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        yaml_str = (
+            "type: cell\n"
+            "title: MobilePositionTest\n"
+            "method: sum\n"
+            "positioning:\n"
+            "    position: 1\n"
+            "    width: 4\n"
+            "    height: 2\n"
+            "    mobile:\n"
+            "        position: 3\n"
+            "        width: 6\n"
+            "        height: 1\n"
+        )
+        r = _post_card(sess, csrf, yaml_str)
+        assert r.status_code == 201, r.text
+        card = r.json()["card"]
+        assert card["width"] == 4
+        assert card["height"] == 2
+        assert card["mobile_position"] == 3
+        assert card["mobile_width"] == 6
+        assert card["mobile_height"] == 1
+        sess.delete(CARDS_URL.rstrip("/") + f"/{card['id']}/", headers={"X-CSRFToken": csrf})
 
     def test_11_delete_custom_card(self, driver, w, ctx):
         sess = _cards_session(driver)

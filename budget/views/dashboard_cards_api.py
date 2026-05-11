@@ -72,15 +72,19 @@ def _card_to_json(card: DashboardCard, period_qs, feuser) -> dict:
         error = str(exc)
 
     pos = config.get('positioning', {}) if config else {}
+    mobile = (pos.get('mobile') or {}) if pos else {}
     return {
-        'id':          card.pk,
-        'yaml_config': card.yaml_config,
-        'position':    pos.get('position', 0),
-        'width':       pos.get('width', 2),
-        'height':      pos.get('height', 2),
-        'config':      config,
-        'data':        data,
-        'error':       error,
+        'id':             card.pk,
+        'yaml_config':    card.yaml_config,
+        'position':       pos.get('position', 0),
+        'width':          pos.get('width', 2),
+        'height':         pos.get('height', 2),
+        'mobile_position': mobile.get('position'),
+        'mobile_width':   mobile.get('width'),
+        'mobile_height':  mobile.get('height'),
+        'config':         config,
+        'data':           data,
+        'error':          error,
     }
 
 
@@ -169,6 +173,7 @@ def cards_reorder_api(request):
     if not isinstance(positions, list):
         return _err('positions must be a list')
 
+    is_mobile = bool(body.get('mobile', False))
     cards = {c.pk: c for c in DashboardCard.objects.filter(owning_feuser=feuser)}
     for entry in positions:
         card_id = entry.get('id')
@@ -181,7 +186,12 @@ def cards_reorder_api(request):
             if not isinstance(cfg, dict):
                 cfg = {}
             pos = cfg.get('positioning') or {}
-            pos['position'] = new_pos
+            if is_mobile:
+                mob = pos.get('mobile') or {}
+                mob['position'] = new_pos
+                pos['mobile'] = mob
+            else:
+                pos['position'] = new_pos
             cfg['positioning'] = pos
             card.yaml_config = yaml.dump(cfg, default_flow_style=False, allow_unicode=True)
             card.save(update_fields=['yaml_config'])
@@ -208,25 +218,40 @@ def card_resize_api(request, uid: int):
     body = _parse_body(request)
     w = body.get('width')
     h = body.get('height')
+    is_mobile = bool(body.get('mobile', False))
 
     try:
         cfg = yaml.safe_load(card.yaml_config) or {}
         if not isinstance(cfg, dict):
             cfg = {}
         pos = cfg.get('positioning') or {}
-        if w is not None:
-            pos['width']  = max(1, min(12, int(w)))
-        if h is not None:
-            pos['height'] = max(1, int(h))
+        if is_mobile:
+            mob = pos.get('mobile') or {}
+            if w is not None:
+                mob['width']  = max(1, min(6, int(w)))
+            if h is not None:
+                mob['height'] = max(1, int(h))
+            pos['mobile'] = mob
+        else:
+            if w is not None:
+                pos['width']  = max(1, min(12, int(w)))
+            if h is not None:
+                pos['height'] = max(1, int(h))
         cfg['positioning'] = pos
         card.yaml_config = yaml.dump(cfg, default_flow_style=False, allow_unicode=True)
         card.save(update_fields=['yaml_config'])
     except Exception:
         return _err('Failed to update card')
 
-    new_w = cfg['positioning'].get('width', 2)
-    new_h = cfg['positioning'].get('height', 2)
-    return _ok({'width': new_w, 'height': new_h, 'yaml_config': card.yaml_config})
+    final_pos = cfg['positioning']
+    mob = final_pos.get('mobile') or {}
+    return _ok({
+        'width':         final_pos.get('width', 2),
+        'height':        final_pos.get('height', 2),
+        'mobile_width':  mob.get('width'),
+        'mobile_height': mob.get('height'),
+        'yaml_config':   card.yaml_config,
+    })
 
 
 # ---------------------------------------------------------------------------
