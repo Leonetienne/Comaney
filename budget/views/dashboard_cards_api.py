@@ -262,3 +262,26 @@ def card_resize_api(request, uid: int):
 @require_http_methods(['GET'])
 def card_presets_api(request):
     return _ok({'presets': [{'name': p['name'], 'yaml': p['yaml']} for p in PRESETS]})
+
+
+# ---------------------------------------------------------------------------
+# Reset dashboard to defaults
+# ---------------------------------------------------------------------------
+
+@feuser_required
+@require_http_methods(['POST'])
+def cards_reset_api(request):
+    from ..fixtures import DEFAULT_DASHBOARD_CARDS
+    feuser = request.feuser
+    DashboardCard.objects.filter(owning_feuser=feuser).delete()
+    DashboardCard.objects.bulk_create([
+        DashboardCard(owning_feuser=feuser, yaml_config=entry['yaml'])
+        for entry in DEFAULT_DASHBOARD_CARDS
+    ])
+    period_qs = _period_qs(request, feuser)
+    cards = DashboardCard.objects.filter(owning_feuser=feuser)
+    card_list = sorted(
+        [_card_to_json(c, period_qs, feuser) for c in cards],
+        key=lambda c: (c['position'], c['id']),
+    )
+    return _ok({'cards': card_list})

@@ -27,6 +27,7 @@ function dashboardBoard() {
         urlCards:    '',
         urlReorder:  '',
         urlPresets:  '',
+        urlReset:    '',
 
         // Period
         periodYear:  '',
@@ -67,6 +68,7 @@ function dashboardBoard() {
             this.urlCards  = cfg.urlCards;
             this.urlReorder = cfg.urlReorder;
             this.urlPresets = cfg.urlPresets;
+            this.urlReset  = cfg.urlReset;
             this.periodYear  = cfg.year;
             this.periodMonth = cfg.month;
             this.periodMode  = cfg.mode;
@@ -434,6 +436,14 @@ function dashboardBoard() {
         async deleteCard(cardId) {
             try { await window.confirmDialog('Delete this card?', 'Delete'); } catch (_) { return; }
             await this._deleteReq(this.urlCards.replace(/\/$/, '') + '/' + cardId + '/');
+            this.editCard = null;
+            await this.fetchCards();
+        },
+
+        async resetDashboard() {
+            try { await window.confirmDialog('Reset dashboard to defaults? All cards will be replaced.', 'Reset'); } catch (_) { return; }
+            const resp = await this._postJson(this.urlReset, {});
+            if (!resp.ok) return;
             this.editCard = null;
             await this.fetchCards();
         },

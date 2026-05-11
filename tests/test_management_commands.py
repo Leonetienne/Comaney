@@ -66,6 +66,7 @@ class TestCreateUser:
         _run(["create_user", email, "-p", PASSWORD])
 
     def test_created_user_can_log_in(self, driver, w, ctx):
+        driver.delete_all_cookies()
         browser_login(driver, w, ctx["email"], PASSWORD)
         assert "/budget/" in driver.current_url
 

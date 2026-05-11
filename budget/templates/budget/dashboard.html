@@ -22,6 +22,7 @@ window.DASHBOARD_CONFIG = {
     urlCards:   "{% url 'budget:dashboard_cards' %}",
     urlReorder: "{% url 'budget:dashboard_cards_reorder' %}",
     urlPresets: "{% url 'budget:dashboard_card_presets' %}",
+    urlReset:   "{% url 'budget:dashboard_cards_reset' %}",
 };
 </script>
 
@@ -123,9 +124,10 @@ window.DASHBOARD_CONFIG = {
 
     </div>{# end .dash-grid #}
 
-    {# ── Add card button (below grid) ────────────────────────────────────── #}
+    {# ── Add card / reset buttons (below grid) ──────────────────────────── #}
     <div x-show="!loading && cards.length > 0" class="dash-add-btn">
         <button class="btn btn-secondary" @click="openAdd()">+ New dashboard card</button>
+        <button class="btn btn-danger" @click="resetDashboard()">Reset dashboard</button>
     </div>
 
     {# ── Edit modal ───────────────────────────────────────────────────────── #}

@@ -18,6 +18,7 @@ from helpers import (
 CARDS_URL   = BASE_URL + "/budget/dashboard/cards/"
 REORDER_URL = BASE_URL + "/budget/dashboard/cards/reorder/"
 PRESETS_URL = BASE_URL + "/budget/dashboard/cards/presets/"
+RESET_URL   = BASE_URL + "/budget/dashboard/cards/reset/"
 
 
 def _cards_session(driver) -> requests.Session:
@@ -827,6 +828,66 @@ class TestBrowserSmoke:
             assert expected in style, f"Expected red ({expected}) in style: {style}"
         finally:
             self._bp_teardown(driver, ctx, sess, exp_id, card_id)
+
+    def test_reset_dashboard_api(self, driver, w, ctx, sess):
+        """Reset API replaces all cards with the 7 default cards."""
+        csrf = _csrf(sess)
+        # Delete all existing cards first
+        for card in sess.get(CARDS_URL).json()["cards"]:
+            _delete_card(sess, csrf, card["id"])
+        assert sess.get(CARDS_URL).json()["cards"] == []
+        # Hit the reset endpoint
+        r = sess.post(RESET_URL, json={}, headers={"X-CSRFToken": csrf, "Content-Type": "application/json"})
+        assert r.status_code == 200
+        cards = r.json()["cards"]
+        assert len(cards) == 7
+        titles = [c["config"]["title"] for c in cards]
+        assert "Income" in titles
+        assert "Left to spend" in titles
+
+    def test_reset_dashboard_browser(self, driver, w, ctx, sess):
+        """Reset button in browser shows confirmation dialog and reloads default cards."""
+        csrf = _csrf(sess)
+        # Add a marker card so we can verify it disappears
+        r = _post_card(sess, csrf, (
+            "type: cell\ntitle: ResetMarker\nmethod: sum\n"
+            "positioning:\n  position: 99\n  width: 2\n  height: 1\n"
+        ))
+        assert r.status_code == 201
+        driver.get(_url("/budget/"))
+        time.sleep(3)
+
+        def _titles():
+            return driver.execute_script(
+                "return Array.from(document.querySelectorAll('.dash-card-title'))"
+                ".map(el => el.textContent.trim().toLowerCase())"
+                ".filter(t => t !== '');"
+            )
+
+        # Marker card should be visible
+        assert "resetmarker" in _titles()
+        # Click "Reset dashboard"
+        driver.find_element(
+            By.XPATH, "//div[contains(@class,'dash-add-btn')]//button[contains(@class,'btn-danger')]"
+        ).click()
+        time.sleep(1)
+        assert _dialog_visible(driver)
+        # Cancel: marker should still be there
+        driver.find_element(By.ID, "cdialog-cancel").click()
+        time.sleep(1)
+        assert not _dialog_visible(driver)
+        assert "resetmarker" in _titles()
+        # Confirm reset
+        driver.find_element(
+            By.XPATH, "//div[contains(@class,'dash-add-btn')]//button[contains(@class,'btn-danger')]"
+        ).click()
+        time.sleep(1)
+        assert _dialog_visible(driver)
+        driver.find_element(By.ID, "cdialog-ok").click()
+        time.sleep(3)
+        titles = _titles()
+        assert "resetmarker" not in titles
+        assert "income" in titles
 
     def test_cleanup_all_cards(self, driver, w, ctx, sess):
         csrf = _csrf(sess)

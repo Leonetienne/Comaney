@@ -37,6 +37,10 @@ Desktop and mobile sizes are independent.
 
 Click the trash icon on any card. A confirmation dialog appears before deletion.
 
+### Resetting to defaults
+
+Click **Reset dashboard** (below the card grid) to delete all your cards and restore the original set of default cards. A confirmation dialog appears before the reset is applied.
+
 ## Types of cards
 
 ### Cells
