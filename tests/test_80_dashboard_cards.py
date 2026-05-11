@@ -31,6 +31,11 @@ Tests:
   - flip_signs: true inverts computed cell value (test_14)
   - bar-chart with method=total (test_15)
   - chart rejects method=count/custom with 400 (test_16)
+  - color_breakpoints parsed and returned in config (test_18)
+  - color_breakpoints with non-numeric less_than returns 400 (test_19)
+  - color_breakpoints: value ≥100 shows base color (test_35a)
+  - color_breakpoints: value <100 shows yellow breakpoint color (test_35b)
+  - color_breakpoints: value <10 shows red breakpoint color (test_35c)
 """
 import time
 
@@ -435,6 +440,67 @@ class TestDashboardCardsAPI:
         for exp_id in ctx.get("_total_exp_ids", []):
             api_delete(f"/api/v1/expenses/{exp_id}/", ctx)
 
+    def test_18_color_breakpoints_parsed_and_returned(self, driver, w, ctx):
+        """color_breakpoints are stored and returned in config."""
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        yaml_str = (
+            "type: cell\n"
+            "title: Budget Left\n"
+            "method: sum\n"
+            "color: \"#00ff00\"\n"
+            "color_breakpoints:\n"
+            "  - less_than: 100\n"
+            "    color: \"#ffff00\"\n"
+            "  - less_than: 0\n"
+            "    color: \"#ff0000\"\n"
+            "    color_darkmode: \"#ff4444\"\n"
+            "positioning:\n"
+            "  position: 99\n"
+            "  width: 2\n"
+            "  height: 1\n"
+        )
+        r = _post_card(sess, csrf, yaml_str)
+        assert r.status_code == 201, r.text
+        card = r.json()["card"]
+        bps = card["config"]["color_breakpoints"]
+        assert len(bps) == 2
+        assert bps[0]["less_than"] == 100.0
+        assert bps[0]["color"] == "#ffff00"
+        assert bps[1]["less_than"] == 0.0
+        assert bps[1]["color"] == "#ff0000"
+        assert bps[1]["color_darkmode"] == "#ff4444"
+        ctx["_bp_card_id"] = card["id"]
+
+    def test_19_color_breakpoints_invalid_returns_400(self, driver, w, ctx):
+        """color_breakpoints with a non-numeric less_than returns 400."""
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, (
+            "type: cell\n"
+            "title: Bad BP\n"
+            "method: sum\n"
+            "color_breakpoints:\n"
+            "  - less_than: not-a-number\n"
+            "    color: \"#ff0000\"\n"
+            "positioning:\n"
+            "  position: 99\n"
+            "  width: 1\n"
+            "  height: 1\n"
+        ))
+        assert r.status_code == 400
+        assert "error" in r.json()
+
+    def test_19b_color_breakpoints_cleanup(self, driver, w, ctx):
+        """Clean up card created by test_18."""
+        if "_bp_card_id" not in ctx:
+            return
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        sess.delete(
+            CARDS_URL.rstrip("/") + f"/{ctx['_bp_card_id']}/",
+            headers={"X-CSRFToken": csrf},
+        )
 
 
 class TestSandboxSecurity:
@@ -802,6 +868,118 @@ class TestDashboardBrowser:
         driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(2)
         assert not driver.find_element(By.ID, "dash-edit-backdrop").is_displayed()
+
+    # ── Color breakpoints browser tests ───────────────────────────────────────
+    # Uses income expenses whose title contains a unique tag so query: <tag>
+    # isolates each card's value, then verifies the rendered background color.
+    #
+    # Headless Chrome defaults to light mode, so we assert lightmode hex values.
+    # Green  ≥ 100 → #a7f3d0   yellow < 100 → #fef08a   red < 10 → #fecaca
+
+    _BP_YAML = (
+        "type: cell\n"
+        "title: '{title}'\n"
+        "method: sum\n"
+        "query: '{tag}'\n"
+        "color: '#1a3326'\n"
+        "color_lightmode: '#a7f3d0'\n"
+        "color_breakpoints:\n"
+        "  - less_than: 100\n"
+        "    color: '#3b2e00'\n"
+        "    color_lightmode: '#fef08a'\n"
+        "  - less_than: 10\n"
+        "    color: '#3b0a0a'\n"
+        "    color_lightmode: '#fecaca'\n"
+        "positioning:\n"
+        "  position: 99\n"
+        "  width: 2\n"
+        "  height: 1\n"
+    )
+
+    # Expected colors per breakpoint tier, keyed by color scheme.
+    # dark=True uses the `color` fields; dark=False uses `color_lightmode` fields.
+    _BP_COLORS = {
+        True:  {"green": "#1a3326", "yellow": "#3b2e00", "red": "#3b0a0a"},
+        False: {"green": "#a7f3d0", "yellow": "#fef08a", "red": "#fecaca"},
+    }
+
+    def _bp_is_dark(self, driver):
+        return driver.execute_script(
+            "return window.matchMedia('(prefers-color-scheme: dark)').matches;"
+        )
+
+    def _bp_card_style(self, driver, title):
+        """Return the inline style attribute of the dash-card with the given title."""
+        return driver.execute_script(
+            "const card = Array.from(document.querySelectorAll('.dash-card')).find("
+            "  c => c.querySelector('.dash-card-title')?.textContent?.trim() === arguments[0]"
+            ");"
+            "return card ? (card.getAttribute('style') || '') : '';",
+            title,
+        )
+
+    def _bp_setup(self, driver, ctx, tag, value, title):
+        """Create one income expense + one color-breakpoint card; return (exp_id, card_id)."""
+        from conftest import api_post, server_today
+        exp = api_post("/api/v1/expenses/", ctx, json={
+            "title": f"BPBrowserTest {tag}", "type": "income",
+            "value": str(value), "date_due": server_today(), "settled": False,
+        })
+        assert exp.status_code == 201, exp.text
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, self._BP_YAML.format(title=title, tag=tag))
+        assert r.status_code == 201, r.text
+        return exp.json()["id"], r.json()["card"]["id"]
+
+    def _bp_teardown(self, driver, ctx, exp_id, card_id):
+        from conftest import api_delete
+        sess = _cards_session(driver)
+        csrf = _csrf(sess)
+        sess.delete(CARDS_URL.rstrip("/") + f"/{card_id}/", headers={"X-CSRFToken": csrf})
+        api_delete(f"/api/v1/expenses/{exp_id}/", ctx)
+
+    def test_35a_color_breakpoint_green(self, driver, w, ctx):
+        """Value ≥ 100: card renders with the base (green) color."""
+        exp_id, card_id = self._bp_setup(driver, ctx, "bptest_35a", 200, "BPGreenCard")
+        try:
+            driver.get(_url("/budget/"))
+            time.sleep(3)
+            dark = self._bp_is_dark(driver)
+            expected = self._BP_COLORS[dark]["green"]
+            style = self._bp_card_style(driver, "BPGreenCard")
+            assert style, "Card element not found or has no style"
+            assert expected in style, f"Expected green ({expected}) in style, got: {style}"
+        finally:
+            self._bp_teardown(driver, ctx, exp_id, card_id)
+
+    def test_35b_color_breakpoint_yellow(self, driver, w, ctx):
+        """Value < 100 and ≥ 10: card renders with the yellow breakpoint color."""
+        exp_id, card_id = self._bp_setup(driver, ctx, "bptest_35b", 50, "BPYellowCard")
+        try:
+            driver.get(_url("/budget/"))
+            time.sleep(3)
+            dark = self._bp_is_dark(driver)
+            expected = self._BP_COLORS[dark]["yellow"]
+            style = self._bp_card_style(driver, "BPYellowCard")
+            assert style, "Card element not found or has no style"
+            assert expected in style, f"Expected yellow ({expected}) in style, got: {style}"
+        finally:
+            self._bp_teardown(driver, ctx, exp_id, card_id)
+
+    def test_35c_color_breakpoint_red(self, driver, w, ctx):
+        """Value < 10: card renders with the red breakpoint color."""
+        exp_id, card_id = self._bp_setup(driver, ctx, "bptest_35c", 5, "BPRedCard")
+        try:
+            driver.get(_url("/budget/"))
+            time.sleep(3)
+            dark = self._bp_is_dark(driver)
+            expected = self._BP_COLORS[dark]["red"]
+            style = self._bp_card_style(driver, "BPRedCard")
+            assert style, "Card element not found or has no style"
+            assert expected in style, f"Expected red ({expected}) in style, got: {style}"
+        finally:
+            self._bp_teardown(driver, ctx, exp_id, card_id)
 
     def test_26_cleanup_remaining_cards(self, driver, w, ctx):
         sess = _cards_session(driver)
