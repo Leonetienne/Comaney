@@ -541,11 +541,28 @@ function dashboardBoard() {
         // Text is the same hue/saturation as the background but shifted:
         //   dark mode  → much lighter  (+55 L, clamped to 95)
         //   light mode → much darker   (−40 L, clamped to  5)
-        cardColorStyle(cfg) {
+        // color_breakpoints: evaluated in order; last matching (value < less_than) wins.
+        cardColorStyle(cfg, value) {
             const dark  = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const color = dark
+            let color = dark
                 ? (cfg.color_darkmode  || cfg.color)
                 : (cfg.color_lightmode || cfg.color);
+
+            const bps = cfg && cfg.color_breakpoints;
+            if (bps && bps.length && value !== null && value !== undefined) {
+                const num = parseFloat(value);
+                if (!isNaN(num)) {
+                    for (const bp of bps) {
+                        if (num < bp.less_than) {
+                            const bpColor = dark
+                                ? (bp.color_darkmode  || bp.color)
+                                : (bp.color_lightmode || bp.color);
+                            if (bpColor) color = bpColor;
+                        }
+                    }
+                }
+            }
+
             if (!color) return '';
             try {
                 const [h, s, l] = this._hexToHsl(color);

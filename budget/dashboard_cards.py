@@ -13,6 +13,13 @@ Card YAML schema:
     color: "#hex"               # optional; cell background color (both modes)
     color_lightmode: "#hex"    # optional; overrides color in light mode
     color_darkmode: "#hex"     # optional; overrides color in dark mode
+    color_breakpoints:          # optional (cell only); override color by computed value
+      - less_than: 100          # applies when value < 100
+        color: "#ffff00"
+        color_lightmode: "#hex" # optional per-breakpoint mode overrides
+        color_darkmode: "#hex"
+      - less_than: 0
+        color: "#ff0000"        # last matching breakpoint wins
     link: "/path?search=..."    # optional; clicking a cell navigates here
     link_template: "/path?search=tag%3D$GROUP_NAME"  # optional; $GROUP_NAME replaced per segment
     template: "$VALUE $CURRENCY_SYMBOL"  # optional; cell display template ($VALUE / $CURRENCY_SYMBOL)
@@ -77,6 +84,27 @@ def parse_card_config(yaml_str: str) -> dict:
         if method == 'custom' and not cfg.get('python', '').strip():
             raise CardConfigError("method=custom requires a 'python' code block")
 
+    color_breakpoints = []
+    if card_type == 'cell':
+        raw_bp = cfg.get('color_breakpoints') or cfg.get('color-breakpoints') or []
+        if not isinstance(raw_bp, list):
+            raise CardConfigError("color_breakpoints must be a list")
+        for i, bp in enumerate(raw_bp):
+            if not isinstance(bp, dict):
+                raise CardConfigError(f"color_breakpoints[{i}] must be a mapping")
+            if 'less_than' not in bp:
+                raise CardConfigError(f"color_breakpoints[{i}] must have a 'less_than' key")
+            try:
+                less_than = float(bp['less_than'])
+            except (TypeError, ValueError):
+                raise CardConfigError(f"color_breakpoints[{i}].less_than must be a number")
+            color_breakpoints.append({
+                'less_than':       less_than,
+                'color':           str(bp.get('color', '')),
+                'color_lightmode': str(bp.get('color_lightmode', '')),
+                'color_darkmode':  str(bp.get('color_darkmode', '')),
+            })
+
     if card_type in ('bar-chart', 'pie-chart'):
         method = cfg.get('method', 'sum')
         if method not in ('sum', 'total'):
@@ -102,9 +130,10 @@ def parse_card_config(yaml_str: str) -> dict:
         ),
         'method':        str(cfg.get('method', 'sum')),
         'flip_signs': bool(cfg.get('flip_signs', False)),
-        'color':            str(cfg.get('color', '')),
-        'color_lightmode':  str(cfg.get('color_lightmode', '')),
-        'color_darkmode':   str(cfg.get('color_darkmode', '')),
+        'color':             str(cfg.get('color', '')),
+        'color_lightmode':   str(cfg.get('color_lightmode', '')),
+        'color_darkmode':    str(cfg.get('color_darkmode', '')),
+        'color_breakpoints': color_breakpoints,
         'link':             str(cfg.get('link', '')),
         'link_template':    str(cfg.get('link_template', '')),
         'template':         str(cfg.get('template', '')),
