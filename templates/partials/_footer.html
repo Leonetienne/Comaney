@@ -7,8 +7,8 @@
         <span class="footer-copy">&copy; {% now "Y" %} Leon Etienne</span>
         <span class="footer-version">v{{ APP_VERSION }}</span>
     </div>
-    {% if PUBLIC_PAGES or contact_available %}
     <div class="footer-right">
+        <a href="/docs/">Docs</a>
         {% if contact_available %}
         <a href="{% url 'contact' %}">Contact</a>
         {% endif %}
@@ -16,5 +16,4 @@
         <a href="/{{ slug }}/">{{ page.1 }}</a>
         {% endfor %}
     </div>
-    {% endif %}
 </footer>
