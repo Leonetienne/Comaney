@@ -11,7 +11,7 @@ Django budgeting app. Session-based auth (no Django auth backend). MariaDB. SCSS
 - If you change any feature covered by readme.md, claude.md, or the docs (docs/src/), you must correct those files
 - If you add an important feature, you must also brief it in claude.md and update the relevant docs page(s)
 - If you add functional features or fixes, you must cover them with tests.
-- End-2-end tests should test the UI. Tests that don't test the API directly are allowed to use the API ONLY for setup and cleanup but NOT for verification. For example: "test if tags can be created" MUST use the UI to create the tag and MUST use the UI to see if the tag exists! "Test if tag can be deleted" may use the API to create a tag since it would be setup.
+- End-2-end tests should test the UI. The API may be used for setup and teardown. Whether API verification is acceptable depends on what the test is asserting: if the test is about "does the result appear correctly in the UI", it must verify via the UI. If the test is about "can the UI perform action X" and the API is independently tested elsewhere, API verification is acceptable. For example: "test if the tag list shows the tag" MUST verify via the UI. "Test if the UI can create a tag" may verify via the API if the API is already covered by its own tests. "Test if tag can be deleted" may use the API to create the tag (setup), delete via the UI, then verify via the UI.
 
 ## Stack
 - **Python 3.12**, Django, Gunicorn, WhiteNoise, mysqlclient

@@ -34,9 +34,9 @@ All runtime dependencies are in `requirements.txt`:
 
 ## Dev setup
 
-The development stack runs entirely in Docker. You do not need Python or MariaDB installed locally.
+The development stack runs MariaDB and the web app in Docker. You need Python locally only to run the test suite.
 
-**Prerequisites:** Docker with Compose.
+**Prerequisites:** Docker with Compose, Python 3.12 (for tests).
 
 ```bash
 # Clone the repo
