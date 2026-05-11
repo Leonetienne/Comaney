@@ -92,7 +92,10 @@
     <div class="preview-section">
         <div class="preview-header">
             <h2>Preview — <span id="selected-count">{{ preview_items|length }}</span> of {{ preview_items|length }} selected</h2>
-            <span class="select-toggle" id="toggle-all">Deselect all</span>
+            <div class="preview-header-right">
+                <span class="preview-sum" id="selected-sum"></span>
+                <span class="select-toggle" id="toggle-all">Deselect all</span>
+            </div>
         </div>
         <p class="preview-hint">All fields are editable — click any field to adjust.</p>
 
@@ -290,6 +293,9 @@ try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
     const confirmBtn = document.getElementById('confirm-btn');
     const total      = checkboxes.length;
 
+    const sumEl       = document.getElementById('selected-sum');
+    const currency    = '{{ current_feuser.currency|escapejs }}';
+
     function updateUI() {
         const checked = document.querySelectorAll('#confirm-form input[name=selected]:checked').length;
         countEl.textContent   = checked;
@@ -298,9 +304,15 @@ try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
         confirmBtn.textContent = checked === 0
             ? '✓ Save selected'
             : `✓ Save ${checked} expense${checked !== 1 ? 's' : ''}`;
+
+        let sum = 0;
         checkboxes.forEach(cb => {
             cb.closest('.preview-card').classList.toggle('deselected', !cb.checked);
+            if (cb.checked) {
+                sum += parseFloat(cb.closest('.preview-card').querySelector('.edit-value').value) || 0;
+            }
         });
+        sumEl.textContent = sum.toFixed(2) + ' ' + currency;
     }
 
     checkboxes.forEach(cb => cb.addEventListener('change', updateUI));
@@ -309,6 +321,7 @@ try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
         checkboxes.forEach(cb => { cb.checked = !anyChecked; });
         updateUI();
     });
+    document.querySelectorAll('.edit-value').forEach(inp => inp.addEventListener('input', updateUI));
     updateUI();
 })();
 

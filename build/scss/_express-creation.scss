@@ -208,6 +208,19 @@
   }
 }
 
+.preview-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.preview-sum {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: .01em;
+}
+
 .select-toggle {
   font-size: 0.82rem;
   color: var(--text-muted);
