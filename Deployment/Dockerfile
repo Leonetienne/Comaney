@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     curl \
     && curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz \
-       | tar -xz -C /usr/local --strip-components=1 --no-same-ow  ner \
+       | tar -xz -C /usr/local --strip-components=1 --no-same-owner \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
