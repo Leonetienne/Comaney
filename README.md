@@ -173,6 +173,7 @@ The dashboard is fully customizable. Each card is defined in YAML and can be cre
 | `color` | | CSS background colour applied in both light and dark mode                                                                                                                                   |
 | `color_lightmode` | | Overrides `color` in light mode                                                                                                                                                             |
 | `color_darkmode` | | Overrides `color` in dark mode                                                                                                                                                              |
+| `color_breakpoints` | | Arry of objects like  `{color: '#3b0a0a', color_lightmode: '#fecaca', less_than: 10}` that overrides the cell color if its value is below a set threshold.                                  |
 | `link` | | URL to navigate to when the cell is clicked (e.g. a pre-filtered expense list)                                                                                                              |
 | `template` | | Display template string. Defaults to `$VALUE $CURRENCY_SYMBOL`. Placeholders: `$VALUE` (formatted number), `$CURRENCY_SYMBOL` (user currency)                                               |
 
