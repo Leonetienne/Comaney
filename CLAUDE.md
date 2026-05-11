@@ -91,6 +91,7 @@ cd tests && pytest -x
 - Tests numbered by prefix; run in order
 - `run_cmd("management_command")` via docker exec
 - `ctx` dict is session-scoped state shared across tests in a file
+- **NEVER use `wait_url`, `wait_text`, or any `w.until(...)` / `WebDriverWait` condition after a browser action.** Always use `time.sleep()` and then assert on `driver.page_source` or `driver.current_url`. Conditional waits cause race conditions.
 
 ## Docker / build
 ```bash

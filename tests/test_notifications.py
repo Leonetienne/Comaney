@@ -15,9 +15,11 @@ from datetime import date, timedelta
 
 import requests
 import pytest
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select as SeleniumSelect
 
 from helpers import (
-    BASE_URL, _url, api_get, api_post, api_patch, api_delete,
+    BASE_URL, _url, fill, submit, api_get, api_post, api_patch, api_delete,
     extract_link, fetch_email, mailpit_seen_ids, run_cmd, server_today,
     setup_user, cleanup_user, session_cookies,
 )
@@ -52,14 +54,6 @@ def _auth_session(driver) -> requests.Session:
     s.cookies.update(session_cookies(driver))
     return s
 
-
-def _post_form(driver, url, data):
-    s = _auth_session(driver)
-    page = s.get(f"{BASE_URL}/budget/expenses/new/")
-    m = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', page.text)
-    csrf = m.group(1) if m else ""
-    return s.post(url, data=dict(data, csrfmiddlewaretoken=csrf),
-                  headers={"Referer": BASE_URL + "/"}, allow_redirects=False)
 
 
 @pytest.fixture(scope="module")
@@ -106,11 +100,11 @@ class TestInitialClass:
         e = _mk(ctx, "NC Edit", IN_10_DAYS)
         eid = e["id"]
         assert e["last_notification_class_sent"] == ""
-        resp = _post_form(driver, f"{BASE_URL}/budget/expenses/{eid}/edit/", {
-            "title": "NC Edit", "type": "expense", "value": "42.00",
-            "date_due": TOMORROW, "notify": "on",
-        })
-        assert resp.status_code in (302, 200)
+        driver.get(_url(f"/budget/expenses/{eid}/edit/"))
+        time.sleep(1)
+        driver.execute_script(f"document.getElementById('id_date_due').value = '{TOMORROW}';")
+        submit(w)
+        time.sleep(2)
         assert _get(ctx, eid)["last_notification_class_sent"] == "tomorrow"
         api_delete(f"/api/v1/expenses/{eid}/", ctx)
 
@@ -152,11 +146,14 @@ class TestSettledNotification:
         e = _mk(ctx, "Settled Edit", IN_3_DAYS)
         eid = e["id"]
         seen = mailpit_seen_ids()
-        resp = _post_form(driver, f"{BASE_URL}/budget/expenses/{eid}/edit/", {
-            "title": "Settled Edit", "type": "expense", "value": "42.00",
-            "date_due": IN_3_DAYS, "settled": "on", "notify": "on",
-        })
-        assert resp.status_code in (302, 200)
+        driver.get(_url(f"/budget/expenses/{eid}/edit/"))
+        time.sleep(1)
+        cb = driver.find_element(By.ID, "id_settled")
+        if not cb.is_selected():
+            cb.click()
+            time.sleep(0.1)
+        submit(w)
+        time.sleep(2)
         fetch_email(ctx["email"], "settled", timeout=30, ignore_ids=seen)
         api_delete(f"/api/v1/expenses/{eid}/", ctx)
 
@@ -231,11 +228,11 @@ class TestEditClassBack:
         e = _mk(ctx, "NC EditBack", TOMORROW)
         eid = e["id"]
         assert e["last_notification_class_sent"] == "tomorrow"
-        resp = _post_form(driver, f"{BASE_URL}/budget/expenses/{eid}/edit/", {
-            "title": "NC EditBack", "type": "expense", "value": "42.00",
-            "date_due": IN_10_DAYS, "notify": "on",
-        })
-        assert resp.status_code in (302, 200)
+        driver.get(_url(f"/budget/expenses/{eid}/edit/"))
+        time.sleep(1)
+        driver.execute_script(f"document.getElementById('id_date_due').value = '{IN_10_DAYS}';")
+        submit(w)
+        time.sleep(2)
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
         api_delete(f"/api/v1/expenses/{eid}/", ctx)
 
@@ -345,14 +342,22 @@ class TestSettledNotifications:
         assert a.status_code == 201 and b.status_code == 201
         eid_a, eid_b = a.json()["id"], b.json()["id"]
         msgs_before = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
-        s = _auth_session(driver)
-        page = s.get(f"{BASE_URL}/budget/expenses/new/")
-        m = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', page.text)
-        csrf = m.group(1) if m else ""
-        s.post(f"{BASE_URL}/budget/expenses/bulk-action/",
-               data={"csrfmiddlewaretoken": csrf, "action": "settle",
-                     "uid": [str(eid_a), str(eid_b)]},
-               headers={"Referer": BASE_URL + "/"}, allow_redirects=False)
+        # Bulk settle via browser
+        driver.get(_url("/budget/expenses/"))
+        time.sleep(2)
+        search_el = driver.find_element(By.ID, "exp-search")
+        driver.execute_script(
+            "arguments[0].value=arguments[1];"
+            "arguments[0].dispatchEvent(new Event('input',{bubbles:true}));",
+            search_el, "BulkNoNotify",
+        )
+        time.sleep(2)
+        driver.find_element(By.ID, "exp-select-all").click()
+        time.sleep(0.3)
+        SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value("settle")
+        driver.find_element(By.ID, "exp-bulk-go").click()
+        time.sleep(0.5)
+        driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(2)
         msgs_after = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         new_settled = [m for m in msgs_after
@@ -367,14 +372,23 @@ class TestSettledNotifications:
         e = _mk(ctx, "BulkNotify Single", IN_3_DAYS)
         eid = e["id"]
         seen = mailpit_seen_ids()
-        s = _auth_session(driver)
-        page = s.get(f"{BASE_URL}/budget/expenses/new/")
-        m = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', page.text)
-        csrf = m.group(1) if m else ""
-        s.post(f"{BASE_URL}/budget/expenses/bulk-action/",
-               data={"csrfmiddlewaretoken": csrf, "action": "settle", "uid": [str(eid)]},
-               headers={"Referer": BASE_URL + "/"}, allow_redirects=False)
-        time.sleep(1)
+        # Bulk settle via browser
+        driver.get(_url("/budget/expenses/"))
+        time.sleep(2)
+        search_el = driver.find_element(By.ID, "exp-search")
+        driver.execute_script(
+            "arguments[0].value=arguments[1];"
+            "arguments[0].dispatchEvent(new Event('input',{bubbles:true}));",
+            search_el, "BulkNotify Single",
+        )
+        time.sleep(2)
+        driver.find_element(By.ID, "exp-select-all").click()
+        time.sleep(0.3)
+        SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value("settle")
+        driver.find_element(By.ID, "exp-bulk-go").click()
+        time.sleep(0.5)
+        driver.find_element(By.ID, "cdialog-ok").click()
+        time.sleep(2)
         exp = _get(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
