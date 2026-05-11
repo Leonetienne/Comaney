@@ -49,9 +49,22 @@
 }
 
 .exp-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.exp-sort-label {
   font-size: 0.88rem;
   color: var(--text-muted);
-  white-space: nowrap;
+}
+
+.exp-toolbar-meta {
+  margin-top: 4px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  text-align: right;
 
   span {
     font-weight: 600;
@@ -59,7 +72,7 @@
   }
 }
 
-.exp-bulk-select {
+.expense-toolbar-dropdown {
   margin-top: 0;
   padding: 6px 10px;
   border: 1px solid var(--input-border);

@@ -31,12 +31,23 @@ def expenses(request, feuser):
             start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
         else:
             start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+        _sort_field_map = {
+            "title": "title",
+            "payee": "payee",
+            "value": "value",
+            "date": "date_due",
+        }
+        sort_by = request.GET.get("sort_by", "date")
+        sort_dir = request.GET.get("sort_dir", "desc")
+        sort_field = _sort_field_map.get(sort_by, "date_due")
+        if sort_dir == "desc":
+            sort_field = "-" + sort_field
         qs = (
             Expense.objects
             .filter(owning_feuser=feuser, date_due__gte=start, date_due__lte=end)
             .select_related("category")
             .prefetch_related("tags")
-            .order_by("date_due", "date_created")
+            .order_by(sort_field, "date_created")
         )
         qs = apply_query(qs, request.GET.get("q", ""))
         return _ok({"year": year, "month": month, "expenses": [_expense_json(e) for e in qs]})

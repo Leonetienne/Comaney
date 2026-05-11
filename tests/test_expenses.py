@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import (
     _url, fill, submit, server_today,
-    session_cookies, api_get, api_delete,
+    session_cookies, api_get, api_post, api_delete,
     setup_user, cleanup_user,
 )
 
@@ -167,3 +167,74 @@ class TestExpenses:
         for key in ("income_id", "dep_id", "wit_id"):
             if key in ctx:
                 api_delete(f"/api/v1/expenses/{ctx.pop(key)}/", ctx)
+
+
+class TestExpenseSorting:
+
+    @pytest.fixture(scope="class")
+    def sctx(self, driver, w):
+        c = setup_user(driver, w)
+        today = server_today()
+        year, month = today[:4], str(int(today[5:7]))
+        ids = []
+        for title, value in [("ZZZ Sort", "10.00"), ("AAA Sort", "50.00"), ("MMM Sort", "30.00")]:
+            r = api_post("/api/v1/expenses/", c, json={
+                "title": title, "value": value, "type": "expense",
+                "date_due": today, "settled": True,
+            })
+            assert r.status_code == 201
+            ids.append(r.json()["id"])
+        c["sort_ids"] = ids
+        c["sort_year"] = year
+        c["sort_month"] = month
+        yield c
+        for uid in ids:
+            api_delete(f"/api/v1/expenses/{uid}/", c)
+        cleanup_user(c["email"])
+
+    def _card_titles(self, driver):
+        return driver.execute_script(
+            "return Array.from(document.querySelectorAll('.exp-title'))"
+            ".map(e => e.textContent.trim());"
+        )
+
+    def test_sort_title_asc(self, driver, w, sctx):
+        driver.get(_url(
+            f"/budget/expenses/?year={sctx['sort_year']}&month={sctx['sort_month']}"
+        ))
+        time.sleep(2)
+        # Change to title asc via the sort dropdowns
+        sort_by_sel = Select(driver.find_element(By.ID, "exp-sort-by"))
+        sort_dir_sel = Select(driver.find_element(By.ID, "exp-sort-dir"))
+        sort_by_sel.select_by_value("title")
+        time.sleep(0.1)
+        sort_dir_sel.select_by_value("asc")
+        time.sleep(2)
+        titles = self._card_titles(driver)
+        sort_titles = [t for t in titles if t.endswith(" Sort")]
+        assert sort_titles == ["AAA Sort", "MMM Sort", "ZZZ Sort"], sort_titles
+
+    def test_sort_value_desc(self, driver, w, sctx):
+        sort_by_sel = Select(driver.find_element(By.ID, "exp-sort-by"))
+        sort_dir_sel = Select(driver.find_element(By.ID, "exp-sort-dir"))
+        sort_by_sel.select_by_value("value")
+        time.sleep(0.1)
+        sort_dir_sel.select_by_value("desc")
+        time.sleep(2)
+        values = driver.execute_script(
+            "return Array.from(document.querySelectorAll('.exp-amount'))"
+            ".map(e => parseFloat(e.textContent.trim()));"
+        )
+        sort_values = [v for v in values if v in (10.0, 30.0, 50.0)]
+        assert sort_values == [50.0, 30.0, 10.0], sort_values
+
+    def test_sort_date_desc_default(self, driver, w, sctx):
+        # Reload the page to confirm default is date desc (no explicit change needed)
+        driver.get(_url(
+            f"/budget/expenses/?year={sctx['sort_year']}&month={sctx['sort_month']}"
+        ))
+        time.sleep(2)
+        sort_by_sel = Select(driver.find_element(By.ID, "exp-sort-by"))
+        sort_dir_sel = Select(driver.find_element(By.ID, "exp-sort-dir"))
+        assert sort_by_sel.first_selected_option.get_attribute("value") == "date"
+        assert sort_dir_sel.first_selected_option.get_attribute("value") == "desc"

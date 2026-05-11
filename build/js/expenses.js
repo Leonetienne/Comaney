@@ -4,6 +4,8 @@ function expenseList() {
     return {
         expenses: [],
         query: '',
+        sortBy: 'date',
+        sortDir: 'desc',
         pending: false,
         fetching: false,
         selected: {},
@@ -82,6 +84,8 @@ function expenseList() {
                 p.set('month', this.periodMonth);
             }
             if (this.query) p.set('q', this.query);
+            p.set('sort_by', this.sortBy);
+            p.set('sort_dir', this.sortDir);
 
             const xhr = new XMLHttpRequest();
             this._xhr = xhr;

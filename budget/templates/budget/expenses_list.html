@@ -45,7 +45,7 @@ window.EXPENSE_CONFIG = {
                     @click="toggleSelectAll()"
                     x-text="allSelected ? 'Deselect all' : 'Select all'"></button>
             <div style="display:contents">
-                <select id="exp-bulk-action" x-model="bulkAction" class="exp-bulk-select">
+                <select id="exp-bulk-action" x-model="bulkAction" class="expense-toolbar-dropdown">
                     <option value="">— Bulk action —</option>
                     <option value="settle">Settle</option>
                     <option value="unsettle">Unsettle</option>
@@ -55,8 +55,21 @@ window.EXPENSE_CONFIG = {
             </div>
         </div>
         <div class="exp-toolbar-right">
-            Visible total: <span id="exp-sum-value" x-text="visibleSum"></span> {{ current_feuser.currency }}
+            <label class="exp-sort-label">Sort by</label>
+            <select id="exp-sort-by" class="expense-toolbar-dropdown" x-model="sortBy" @change="fetchExpenses()">
+                <option value="date">Date</option>
+                <option value="title">Title</option>
+                <option value="payee">Payee</option>
+                <option value="value">Value</option>
+            </select>
+            <select id="exp-sort-dir" class="expense-toolbar-dropdown" x-model="sortDir" @change="fetchExpenses()">
+                <option value="desc">Desc</option>
+                <option value="asc">Asc</option>
+            </select>
         </div>
+    </div>
+    <div class="exp-toolbar-meta">
+        Visible total: <span id="exp-sum-value" x-text="visibleSum"></span> {{ current_feuser.currency }}
     </div>
     <a href="https://github.com/Leonetienne/Comaney#advanced-search-filters" target="_blank" rel="noopener" style="display:block;margin-top:6px;font-size:0.75rem;font-style:italic;text-decoration:underline;color:var(--text-muted);">Advanced search filters</a>
 
