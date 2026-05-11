@@ -1,5 +1,8 @@
 site_name: Comaney Documentation
 site_description: Budgeting that actually fits into your life.
+copyright: >
+  <a href="/impressum/">Impressum</a> &nbsp;&middot;&nbsp;
+  <a href="/datenschutzerklaerung/">Datenschutzerklärung</a>
 
 theme:
   name: material
