@@ -2,14 +2,15 @@
 Dashboard card YAML parsing, data computation, and sandboxed Python execution.
 
 Card YAML schema:
-    type: cell | bar-chart | pie-chart
+    type: cell | bar-chart | pie-chart | list
     title: "string"
     query: "query string"       # optional; filters the period queryset
     group: tags | categories    # required for bar-chart / pie-chart
     max_groups: N               # optional; top-N groups (bar-chart only)
     hide_groups: "a,b"          # optional; comma-sep group names to exclude
-    method: sum | total | count | custom   # required for cell; sum/total also apply to charts
-    flip_signs: true/false      # optional; multiply all computed values by -1
+    method: sum | total | count | custom   # required for cell; sum/total for charts;
+                                           # sum/total/count for list (controls sum row)
+    flip_signs: true/false      # optional; multiply computed value/sum by -1
     color: "#hex"               # optional; cell background color (both modes)
     color_lightmode: "#hex"    # optional; overrides color in light mode
     color_darkmode: "#hex"     # optional; overrides color in dark mode
@@ -25,6 +26,12 @@ Card YAML schema:
     template: "$VALUE $CURRENCY_SYMBOL"  # optional; cell display template ($VALUE / $CURRENCY_SYMBOL)
     python: |                   # required when method=custom; function body
         return query_sum('...')
+    # list-only fields:
+    order_by: value | date | title   # sort field; default date
+    order_dir: asc | desc            # sort direction; default desc
+    type_colors: true/false          # colour rows by expense type; default true
+    show_sum: true/false             # show computed sum row at top; default false
+    sum_template: "$VALUE $CURRENCY_SYMBOL"  # template for the sum row
     positioning:
         position: N             # display order (1-based)
         width: N                # grid columns to span
@@ -44,9 +51,12 @@ from django.db.models import Case, DecimalField, F, Sum, When
 
 from .query_parser import apply_query
 
-VALID_TYPES = {'cell', 'bar-chart', 'pie-chart'}
+VALID_TYPES = {'cell', 'bar-chart', 'pie-chart', 'list'}
 VALID_GROUPS = {'tags', 'categories'}
 VALID_METHODS = {'sum', 'total', 'count', 'custom'}
+VALID_LIST_METHODS = {'sum', 'total', 'count'}
+VALID_ORDER_BY = {'value', 'date', 'title'}
+VALID_ORDER_DIR = {'asc', 'desc'}
 
 # Expense types that count as negative income under method=total
 _TOTAL_NEGATIVE_TYPES = {'income', 'savings_wit', 'carry_over'}
@@ -87,6 +97,17 @@ def parse_card_config(yaml_str: str) -> dict:
             raise CardConfigError(f"method must be one of: {', '.join(sorted(VALID_METHODS))}")
         if method == 'custom' and not cfg.get('python', '').strip():
             raise CardConfigError("method=custom requires a 'python' code block")
+
+    if card_type == 'list':
+        order_by = cfg.get('order_by', 'date')
+        if str(order_by) not in VALID_ORDER_BY:
+            raise CardConfigError(f"order_by must be one of: {', '.join(sorted(VALID_ORDER_BY))}")
+        order_dir = cfg.get('order_dir', 'desc')
+        if str(order_dir) not in VALID_ORDER_DIR:
+            raise CardConfigError("order_dir must be asc or desc")
+        method = cfg.get('method', 'sum')
+        if str(method) not in VALID_LIST_METHODS:
+            raise CardConfigError(f"method for list must be one of: {', '.join(sorted(VALID_LIST_METHODS))}")
 
     color_breakpoints = []
     if card_type == 'cell':
@@ -143,7 +164,7 @@ def parse_card_config(yaml_str: str) -> dict:
             else []
         ),
         'method':        str(cfg.get('method', 'sum')),
-        'flip_signs': bool(cfg.get('flip_signs', False)),
+        'flip_signs':    bool(cfg.get('flip_signs', False)),
         'color':             str(cfg.get('color', '')),
         'color_lightmode':   str(cfg.get('color_lightmode', '')),
         'color_darkmode':    str(cfg.get('color_darkmode', '')),
@@ -152,6 +173,12 @@ def parse_card_config(yaml_str: str) -> dict:
         'link_template':    str(cfg.get('link_template', '')),
         'template':         str(cfg.get('template', '')),
         'python':        str(cfg.get('python', '')),
+        # list-only fields
+        'order_by':      str(cfg.get('order_by', 'date')),
+        'order_dir':     str(cfg.get('order_dir', 'desc')),
+        'type_colors':   cfg.get('type_colors', True) is not False,
+        'show_sum':      bool(cfg.get('show_sum', False)),
+        'sum_template':  str(cfg.get('sum_template', '')),
         'positioning':   positioning,
     }
 
@@ -172,6 +199,8 @@ def compute_card_data(config: dict, period_qs, feuser) -> dict:
         return _compute_cell(config, period_qs)
     if card_type in ('bar-chart', 'pie-chart'):
         return _compute_chart(config, period_qs)
+    if card_type == 'list':
+        return _compute_list(config, period_qs)
     return {}
 
 
@@ -273,6 +302,50 @@ def _compute_chart(config: dict, period_qs) -> dict:
         values = [-v for v in values]
 
     return {'labels': labels, 'values': values}
+
+
+_ORDER_BY_FIELD = {'value': 'value', 'date': 'date_due', 'title': 'title'}
+
+
+def _compute_list(config: dict, period_qs) -> dict:
+    qs = _filtered_qs(config, period_qs)
+
+    order_by  = config.get('order_by', 'date')
+    order_dir = config.get('order_dir', 'desc')
+    db_field  = _ORDER_BY_FIELD.get(order_by, 'date_due')
+    order_field = db_field if order_dir == 'asc' else f'-{db_field}'
+    ordered_qs = qs.order_by(order_field)
+
+    items = [
+        {
+            'type':  row['type'],
+            'title': row['title'],
+            'value': float(row['value']),
+        }
+        for row in ordered_qs.values('type', 'title', 'value')
+    ]
+
+    result: dict = {'items': items}
+
+    if config.get('show_sum'):
+        method = config.get('method', 'sum')
+        invert = config.get('flip_signs', False)
+
+        if method == 'sum':
+            sum_val = qs.aggregate(t=Sum('value'))['t'] or Decimal('0')
+        elif method == 'total':
+            sum_val = _signed_sum(qs)
+        elif method == 'count':
+            sum_val = Decimal(str(qs.count()))
+        else:
+            sum_val = Decimal('0')
+
+        if invert:
+            sum_val = -sum_val
+
+        result['sum_value'] = float(sum_val)
+
+    return result
 
 
 # ---------------------------------------------------------------------------

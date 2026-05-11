@@ -40,71 +40,87 @@ DEFAULT_DASHBOARD_CARDS = [
         "yaml": (
             "# Shows the sum of all income entries in the selected period.\n"
             "type: cell\n"
-            "title: 'Income'\n"
+            "title: Income\n"
             "query: type=income\n"
             "method: sum\n"
             "color: '#1a3326'\n"
             "color_lightmode: '#bbf7d0'\n"
-            "link: '/budget/expenses/?search=type%3Dincome'\n"
+            "link: /budget/expenses/?search=type%3Dincome\n"
             "positioning:\n"
             "  position: 1\n"
             "  width: 2\n"
             "  height: 1\n"
-        ),
-    },
-    {
-        "yaml": (
-            "# Shows the sum of all settled (paid) expenses in the selected period.\n"
-            "type: cell\n"
-            "title: 'Paid expenses'\n"
-            "query: 'type=expense settled=yes'\n"
-            "method: sum\n"
-            "color: '#331a1d'\n"
-            "color_lightmode: '#fecaca'\n"
-            "link: '/budget/expenses/?search=type%3Dexpense+settled%3Dyes\"'\n"
-            "positioning:\n"
-            "  position: 2\n"
-            "  width: 2\n"
-            "  height: 1\n"
-        ),
-    },
-    {
-        "yaml": (
-            "# Shows the sum of all unsettled (unpaid) expenses in the selected period.\n"
-            "type: cell\n"
-            "title: 'Outstanding'\n"
-            "query: 'type=expense settled=no'\n"
-            "method: sum\n"
-            "color: '#2b1a1c'\n"
-            "color_lightmode: '#fed7aa'\n"
-            "link: '/budget/expenses/?search=type%3Dexpense+settled%3Dno'\n"
-            "positioning:\n"
-            "  position: 3\n"
-            "  width: 2\n"
-            "  height: 1\n"
+            "  mobile:\n"
+            "    position: 1\n"
+            "    width: 3\n"
+            "    height: 1\n"
         ),
     },
     {
         "yaml": (
             "# Shows net savings: deposits minus withdrawals in the selected period.\n"
             "type: cell\n"
-            "title: 'Savings'\n"
+            "title: Savings\n"
             "method: total\n"
             "query: 'query: type=\"Savings deposit\" || type=\"Savings withdrawal\"'\n"
             "color: '#0d2a4a'\n"
             "color_lightmode: '#bfdbfe'\n"
-            "link: '/budget/expenses/?search=type%3D%22savings+deposit%22+%7C%7C+type%3D%22savings+withdrawal%22'\n"
+            "link: /budget/expenses/?search=type%3D%22savings+deposit%22+%7C%7C+type%3D%22savings+withdrawal%22\n"
+            "positioning:\n"
+            "  position: 2\n"
+            "  width: 2\n"
+            "  height: 1\n"
+            "  mobile:\n"
+            "    position: 3\n"
+            "    width: 3\n"
+            "    height: 1\n"
+        ),
+    },
+    {
+        "yaml": (
+            "# Shows the sum of all settled (paid) expenses in the selected period.\n"
+            "type: cell\n"
+            "title: Paid expenses\n"
+            "query: type=expense settled=yes\n"
+            "method: sum\n"
+            "color: '#331a1d'\n"
+            "color_lightmode: '#fecaca'\n"
+            "link: /budget/expenses/?search=type%3Dexpense+settled%3Dyes\n"
+            "positioning:\n"
+            "  position: 3\n"
+            "  width: 2\n"
+            "  height: 1\n"
+            "  mobile:\n"
+            "    position: 2\n"
+            "    width: 3\n"
+            "    height: 1\n"
+        ),
+    },
+    {
+        "yaml": (
+            "# Shows the sum of all unsettled (unpaid) expenses in the selected period.\n"
+            "type: cell\n"
+            "title: Outstanding\n"
+            "query: type=expense settled=no\n"
+            "method: sum\n"
+            "color: '#2b1a1c'\n"
+            "color_lightmode: '#fed7aa'\n"
+            "link: /budget/expenses/?search=type%3Dexpense+settled%3Dno\n"
             "positioning:\n"
             "  position: 4\n"
             "  width: 2\n"
             "  height: 1\n"
+            "  mobile:\n"
+            "    position: 4\n"
+            "    width: 3\n"
+            "    height: 1\n"
         ),
     },
     {
         "yaml": (
             "# Shows disposable budget: income minus expenses and net savings.\n"
             "type: cell\n"
-            "title: 'Left to spend'\n"
+            "title: Left to spend\n"
             "method: total\n"
             "flip_signs: true\n"
             "color: '#1a3326'\n"
@@ -120,38 +136,64 @@ DEFAULT_DASHBOARD_CARDS = [
             "  position: 5\n"
             "  width: 4\n"
             "  height: 1\n"
+            "  mobile:\n"
+            "    position: 5\n"
+            "    width: 6\n"
+            "    height: 1\n"
         ),
     },
     {
         "yaml": (
             "# Pie chart breaking down expenses by category in the selected period.\n"
             "type: pie-chart\n"
-            "title: 'Expenses by category'\n"
+            "title: Expenses by category\n"
             "group: categories\n"
             "method: total\n"
-            "query: 'type=expense'\n"
-            "link_template: '/budget/expenses/?search=cat%3D\"$GROUP_NAME\"'\n"
+            "query: type=expense\n"
+            "link_template: /budget/expenses/?search=cat%3D\"$GROUP_NAME\"\n"
             "positioning:\n"
             "  position: 6\n"
             "  width: 6\n"
             "  height: 4\n"
+            "  mobile:\n"
+            "    position: 6\n"
         ),
     },
     {
         "yaml": (
             "# Horizontal bar chart showing the top 10 tags by total expense amount.\n"
             "type: bar-chart\n"
-            "title: 'Expenses by tag'\n"
-            "query: 'type=expense !tag=none'\n"
+            "title: Expenses by tag\n"
+            "query: type=expense\n"
             "method: total\n"
-            "query: 'type=expense'\n"
             "group: tags\n"
             "max_groups: 10\n"
-            "link_template: '/budget/expenses/?search=tag%3D\"$GROUP_NAME\"'\n"
+            "link_template: /budget/expenses/?search=tag%3D\"$GROUP_NAME\"\n"
             "positioning:\n"
             "  position: 7\n"
             "  width: 6\n"
             "  height: 4\n"
+            "  mobile:\n"
+            "    position: 7\n"
+        ),
+    },
+    {
+        "yaml": (
+            "# Lists all unsettled expenses in the period, largest first.\n"
+            "# The sum row shows the total outstanding amount.\n"
+            "type: list\n"
+            "title: Outstanding bills\n"
+            "query: type=expense settled=no\n"
+            "order_by: value\n"
+            "order_dir: desc\n"
+            "show_sum: true\n"
+            "method: sum\n"
+            "positioning:\n"
+            "  position: 8\n"
+            "  width: 6\n"
+            "  height: 4\n"
+            "  mobile:\n"
+            "    position: 8\n"
         ),
     },
 ]

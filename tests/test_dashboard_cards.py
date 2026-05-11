@@ -840,7 +840,7 @@ class TestBrowserSmoke:
         r = sess.post(RESET_URL, json={}, headers={"X-CSRFToken": csrf, "Content-Type": "application/json"})
         assert r.status_code == 200
         cards = r.json()["cards"]
-        assert len(cards) == 7
+        assert len(cards) == 8
         titles = [c["config"]["title"] for c in cards]
         assert "Income" in titles
         assert "Left to spend" in titles

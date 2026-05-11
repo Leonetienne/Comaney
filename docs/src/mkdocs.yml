@@ -58,6 +58,7 @@ nav:
         - Cell Cards: user-manual/dashboard/cards/cell.md
         - Bar Chart Cards: user-manual/dashboard/cards/bar-chart.md
         - Pie Chart Cards: user-manual/dashboard/cards/pie-chart.md
+        - List Cards: user-manual/dashboard/cards/list.md
     - AI Express Creation: user-manual/ai-express-creation.md
     - Notifications: user-manual/notifications.md
     - Account & Settings: user-manual/account-settings.md

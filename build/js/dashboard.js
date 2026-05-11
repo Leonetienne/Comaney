@@ -11,6 +11,14 @@ const PALETTE = [
     '#86bcb6','#f1ce63','#d4a6c8','#a0cbe8','#ffbe7d',
 ];
 
+const TYPE_ABBR = {
+    expense:     'EX',
+    income:      'IN',
+    savings_dep: 'SD',
+    savings_wit: 'SW',
+    carry_over:  'CO',
+};
+
 const GRID_GAP = 12;
 const ROW_H    = 90; // px — fixed row height, independent of viewport width
 
@@ -573,6 +581,33 @@ function dashboardBoard() {
             const val = this.formatValue(card.data && card.data.value);
             const tpl = (card.config && card.config.template) || '$VALUE $CURRENCY_SYMBOL';
             return tpl.replace('$VALUE', val).replace('$CURRENCY_SYMBOL', this.currency);
+        },
+
+        // Return two-letter abbreviation for an expense type
+        listTypeAbbr(type) {
+            return TYPE_ABBR[type] || (type || '').substring(0, 2).toUpperCase();
+        },
+
+        // Render the sum row text for a list card using sum_template
+        listSumText(card) {
+            const val = card.data && card.data.sum_value;
+            if (val === null || val === undefined) return '';
+            const rounded = Math.round(parseFloat(val));
+            const tpl = (card.config && card.config.sum_template) || '$VALUE $CURRENCY_SYMBOL';
+            return tpl.replace('$VALUE', rounded.toString()).replace('$CURRENCY_SYMBOL', this.currency);
+        },
+
+        // CSS class for sum row coloring (green/red by sign)
+        listSumColorClass(card) {
+            if (!card.config || card.config.type_colors === false) return '';
+            if (card.config.method === 'count') return '';
+            const val = card.data && card.data.sum_value;
+            if (val === null || val === undefined) return '';
+            const n = parseFloat(val);
+            if (isNaN(n)) return '';
+            if (n > 0) return 'dash-list-sum--positive';
+            if (n < 0) return 'dash-list-sum--negative';
+            return '';
         },
 
         // Hex → [h°, s%, l%]

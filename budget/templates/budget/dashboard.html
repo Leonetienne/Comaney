@@ -82,6 +82,47 @@ window.DASHBOARD_CONFIG = {
                     </div>
                 </template>
 
+                {# ── List card ─────────────────────────────────────────── #}
+                <template x-if="card.config && card.config.type === 'list'">
+                    <div class="dash-card-body dash-card-body--list" draggable="false">
+                        <template x-if="card.error">
+                            <p class="dash-card-error" x-text="card.error"></p>
+                        </template>
+                        <template x-if="!card.error && card.config.show_sum && card.data && card.data.sum_value !== undefined">
+                            <div class="dash-list-sum"
+                                 :class="listSumColorClass(card)"
+                                 x-text="listSumText(card)">
+                            </div>
+                        </template>
+                        <template x-if="!card.error && card.data && card.data.items && card.data.items.length > 0">
+                            <div class="dash-list-scroll">
+                                <table class="dash-list-table">
+                                    <colgroup>
+                                        <col class="dash-list-col-type">
+                                        <col class="dash-list-col-title">
+                                        <col class="dash-list-col-value">
+                                    </colgroup>
+                                    <tbody>
+                                        <template x-for="(item, idx) in card.data.items" :key="idx">
+                                            <tr :class="card.config.type_colors !== false
+                                                    ? 'dash-list-item dash-list-item--' + item.type
+                                                    : 'dash-list-item'">
+                                                <td class="dash-list-type" x-text="listTypeAbbr(item.type)"></td>
+                                                <td class="dash-list-title" x-text="item.title"></td>
+                                                <td class="dash-list-value"
+                                                    x-text="Math.round(item.value) + ' ' + currency"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                        <template x-if="!card.error && (!card.data || !card.data.items || !card.data.items.length)">
+                            <p class="dash-chart-empty">No data for this period.</p>
+                        </template>
+                    </div>
+                </template>
+
                 {# ── Bar / pie chart card ──────────────────────────────── #}
                 <template x-if="card.config && (card.config.type === 'bar-chart' || card.config.type === 'pie-chart')">
                     <div class="dash-card-body dash-card-body--chart">
@@ -127,7 +168,7 @@ window.DASHBOARD_CONFIG = {
     {# ── Add card / reset buttons (below grid) ──────────────────────────── #}
     <div x-show="!loading && cards.length > 0" class="dash-add-btn">
         <button class="btn btn-secondary" @click="openAdd()">+ New dashboard card</button>
-        <button class="btn btn-danger" @click="resetDashboard()">Reset dashboard</button>
+        <button class="btn btn-secondary" @click="resetDashboard()">Reset dashboard</button>
     </div>
 
     {# ── Edit modal ───────────────────────────────────────────────────────── #}
@@ -163,7 +204,7 @@ window.DASHBOARD_CONFIG = {
 
             <p class="dash-new-card-hint">
                 Cards are configured in YAML. Load a preset below to get started, or write your own.
-                See the <a href="https://github.com/Leonetienne/Comaney#modular-dashboard" target="_blank" rel="noopener noreferrer">documentation</a> for all available fields.
+                See the <a href="/docs/user-manual/dashboard/cards/" target="_blank" rel="noopener noreferrer">documentation</a> for all available fields.
             </p>
 
             {# Preset buttons #}

@@ -4,13 +4,14 @@ Each card on your dashboard is configured using a small text recipe called YAML.
 
 When you click **+ Add card** or the pencil icon on an existing card, an editor opens where you type (or paste) the configuration. Click **Save** and the card updates immediately.
 
-## The three card types
+## Card types
 
 | `type` value | What it shows |
 |---|---|
 | `cell` | A single number: a total, a count, or a custom calculation. |
 | `bar-chart` | Horizontal bars showing how spending is split across categories or tags. |
 | `pie-chart` | A pie showing spending proportions across categories or tags. |
+| `list` | A scrollable table listing individual expenses that match a query. |
 
 ## Fields that every card has
 
@@ -20,7 +21,7 @@ When you click **+ Add card** or the pencil icon on an existing card, an editor 
 type: cell
 ```
 
-Sets the card style. Must be one of `cell`, `bar-chart`, or `pie-chart`.
+Sets the card style. Must be one of `cell`, `bar-chart`, `pie-chart`, or `list`.
 
 ---
 
@@ -165,8 +166,21 @@ positioning:
   height: 4
 ```
 
+The simplest list card:
+
+```yaml
+type: list
+title: Today's expenses
+query: type=expense date=today
+positioning:
+  position: 10
+  width: 4
+  height: 3
+```
+
 For all the extra options available to each type, see:
 
 - [Cell Cards](cell.md)
 - [Bar Chart Cards](bar-chart.md)
 - [Pie Chart Cards](pie-chart.md)
+- [List Cards](list.md)
