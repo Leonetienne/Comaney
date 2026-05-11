@@ -34,7 +34,7 @@
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
             </form>
-            <form method="post" action="{% url 'budget:scheduled_delete' s.uid %}" class="delete-form" data-title="{{ s.title|escapejs }}">
+            <form method="post" action="{% url 'budget:scheduled_delete' s.uid %}" class="delete-form" data-title="{{ s.title }}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>
             </form>

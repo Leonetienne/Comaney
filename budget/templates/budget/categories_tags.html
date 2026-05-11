@@ -14,7 +14,7 @@
             {% for cat in categories %}
             <li class="ct-item" id="category-{{ cat.uid }}">
                 <span class="ct-name" data-type="category" data-uid="{{ cat.uid }}" title="Click to rename">{{ cat.title }}</span>
-                <button class="ct-delete" title="Delete" data-type="category" data-uid="{{ cat.uid }}" data-title="{{ cat.title|escapejs }}">×</button>
+                <button class="ct-delete" title="Delete" data-type="category" data-uid="{{ cat.uid }}" data-title="{{ cat.title }}">×</button>
             </li>
             {% empty %}
             <li class="ct-empty" id="category-empty">No categories yet.</li>
@@ -31,7 +31,7 @@
             {% for tag in tags %}
             <li class="ct-item" id="tag-{{ tag.uid }}">
                 <span class="ct-name" data-type="tag" data-uid="{{ tag.uid }}" title="Click to rename">{{ tag.title }}</span>
-                <button class="ct-delete" title="Delete" data-type="tag" data-uid="{{ tag.uid }}" data-title="{{ tag.title|escapejs }}">×</button>
+                <button class="ct-delete" title="Delete" data-type="tag" data-uid="{{ tag.uid }}" data-title="{{ tag.title }}">×</button>
             </li>
             {% empty %}
             <li class="ct-empty" id="tag-empty">No tags yet.</li>
