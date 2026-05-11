@@ -6,12 +6,13 @@ This manual covers everything needed to deploy and operate a Comaney instance. I
 
 | Section | What it covers |
 |---|---|
-| [Deployment](deployment.md) | Docker Compose setup, first-run, superuser creation |
+| [Deployment](deployment.md) | Docker Compose setup, first-run, user and superuser creation |
 | [Environment Variables](environment-variables.md) | Complete reference for all configuration variables |
 | [Email Configuration](email.md) | SMTP setup, Mailpit for development |
 | [Cron Jobs](cron-jobs.md) | Required scheduled tasks and what they do |
 | [AI Trial Key](ai-trial-key.md) | Shared Anthropic key management |
 | [Registration & Users](registration.md) | Open vs. closed instances, user management |
+| [Console Commands](console-commands.md) | All management commands with usage reference |
 
 ## Quick-start checklist
 

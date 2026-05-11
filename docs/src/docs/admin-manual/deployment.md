@@ -102,9 +102,45 @@ When the container starts for the first time, the entrypoint runs Django migrati
 
 The web service is available on port 8000 inside the container (mapped to 80 or wherever you choose on the host).
 
+## Creating user accounts
+
+With registration enabled (`ENABLE_REGISTRATION=TRUE`) users can sign up through the web UI. You can also create accounts directly from the command line, bypassing the registration flow. Accounts created this way are immediately active and confirmed.
+
+```bash
+# Prompted interactively (recommended):
+docker exec -it comaney-web-1 python manage.py create_user user@example.com
+
+# Or with password provided directly:
+docker exec -it comaney-web-1 python manage.py create_user user@example.com -p "SecurePassword123"
+```
+
+To change a user's password later:
+
+```bash
+docker exec -it comaney-web-1 python manage.py set_user_password user@example.com
+```
+
+## Account recovery
+
+If a user forgets their password or loses access to their TOTP device, you can recover their account from the command line without any downtime.
+
+Reset a forgotten password:
+
+```bash
+docker exec -it comaney-web-1 python manage.py set_user_password user@example.com
+```
+
+Remove a lost TOTP device so the user can log in with their password again:
+
+```bash
+docker exec -it comaney-web-1 python manage.py remove_user_2fa user@example.com
+```
+
+See [Console Commands](console-commands.md) for the full reference.
+
 ## Creating a superuser
 
-A superuser account is purely optional but required to access the Django admin at `/admin/` and to re-enable the the AI trial at `/admin/ai-trial/`. The AI trial deactivates itself if your trial API key runs out of funds.
+A superuser account is purely optional but required to access the Django admin at `/admin/` and to re-enable the AI trial at `/admin/ai-trial/`. The AI trial deactivates itself if your trial API key runs out of funds.
 
 ```bash
 docker exec -it <container_name> python manage.py createsuperuser

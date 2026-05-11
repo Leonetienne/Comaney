@@ -110,6 +110,12 @@ Create superuser: `docker exec -it <container> python manage.py createsuperuser`
 
 Re-enable AI trial key after limit hit: `/admin/ai-trial/` in the admin.
 
+## Management commands
+- `create_user <email> [-p <password>]`: creates a confirmed, active user account; prompts for password if `-p` is omitted (feusers/management/commands/create_user.py)
+- `set_user_password <email> [-p <password>]`: updates the password for an existing user; prompts if `-p` is omitted (feusers/management/commands/set_user_password.py)
+- `remove_user_2fa <email>`: clears TOTP fields so the user can log in with password only; idempotent (feusers/management/commands/remove_user_2fa.py)
+- `delete_user <email> [--yes]`: permanently deletes a user and all associated data; prompts for confirmation unless `--yes` is given (feusers/management/commands/delete_user.py)
+
 ## Cron jobs
 Two management commands must run on a schedule inside the container:
 - `run_cron`: every 5 minutes (fires notifications, auto-settles, carry-overs)

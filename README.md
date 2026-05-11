@@ -56,8 +56,16 @@ volumes:
 ### First-run steps
 
 1. `docker compose up -d`
-2Register your account at `http://localhost/register/`.
-3Set `ENABLE_REGISTRATION: "FALSE"` and restart.
+2. Register your account via the web UI at `http://localhost/register/`, or create one from the command line:
+   ```bash
+   docker exec -it comaney-web-1 python manage.py create_user you@example.com
+   ```
+3. Set `ENABLE_REGISTRATION: "FALSE"` and restart.
+
+To change a user's password at any time:
+```bash
+docker exec -it comaney-web-1 python manage.py set_user_password you@example.com
+```
 
 ### Required cron jobs
 

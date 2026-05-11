@@ -69,6 +69,7 @@ nav:
     - Cron Jobs: admin-manual/cron-jobs.md
     - AI Trial Key: admin-manual/ai-trial-key.md
     - Registration & Users: admin-manual/registration.md
+    - Console Commands: admin-manual/console-commands.md
   - Developer Manual:
     - Overview: dev-manual/index.md
     - Architecture: dev-manual/architecture.md
