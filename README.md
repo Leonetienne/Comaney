@@ -91,36 +91,41 @@ date=today      date<today      date>=today
 
 ### NOT operator
 Prefix any term, filter, or group with `!` to negate it:
-```
-type=expense !rent # All expenses that are not rent
-!tag=amazon all records that are not tagged "amazon"
+```sh
+# All expenses that are not rent
+type=expense !rent
+
+# All records that are not tagged "amazon"
+!tag=amazon
 ```
 
 ### Combining filters
 Terms separated by a space are **AND**-ed (all must match):
-```
+```sh
 # All unsettled expenses that are less than 200
 type=expense settled=no value<200
+
 # All amazon-tagged expenses that are not tagged "gardening"
 tag=amazon !tag=gardening
 ```
 
 Use `||` for **OR** (either side may match):
-```
-All income or savings withdrawals
+```sh
+# All income or savings withdrawals
 type=income || type="savings withdrawal"
 ```
 
 Use `()` to group before combining:
-```
-Either all expenses that are settled, or income 
+```sh
+# Either all expenses that are settled, or income 
 (type=expense settled=yes) || type=income
 ```
 
 You can negate groups too
-```
+```sh
 # All expenses that dont fuzzy-match "fence", "oven" or "food".
 type=expense !(fence || oven || food)
+
 # This is identical to
 type=expense !fence !oven !food
 ```
