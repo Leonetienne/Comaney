@@ -1,0 +1,77 @@
+site_name: Comaney Documentation
+site_description: Budgeting that actually fits into your life.
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - def_list
+  - toc:
+      permalink: true
+
+nav:
+  - Introduction:
+    - introduction/index.md
+    - Features: introduction/features.md
+  - User Manual:
+    - user-manual/index.md
+    - Expenses: user-manual/expenses.md
+    - Scheduled Expenses: user-manual/scheduled-expenses.md
+    - Categories & Tags: user-manual/categories-tags.md
+    - Dashboard:
+      - Overview: user-manual/dashboard/index.md
+      - Query Language: user-manual/dashboard/query-language.md
+      - Cards:
+        - YAML Structure: user-manual/dashboard/cards/index.md
+        - Cell Cards: user-manual/dashboard/cards/cell.md
+        - Bar Chart Cards: user-manual/dashboard/cards/bar-chart.md
+        - Pie Chart Cards: user-manual/dashboard/cards/pie-chart.md
+    - AI Express Creation: user-manual/ai-express-creation.md
+    - Notifications: user-manual/notifications.md
+    - Account & Settings: user-manual/account-settings.md
+    - Two-Factor Authentication: user-manual/two-factor-auth.md
+    - REST API Access: user-manual/api-access.md
+    - Data Export: user-manual/data-export.md
+  - Admin Manual:
+    - Overview: admin-manual/index.md
+    - Deployment: admin-manual/deployment.md
+    - Environment Variables: admin-manual/environment-variables.md
+    - Email Configuration: admin-manual/email.md
+    - Cron Jobs: admin-manual/cron-jobs.md
+    - AI Trial Key: admin-manual/ai-trial-key.md
+    - Registration & Users: admin-manual/registration.md
+  - Developer Manual:
+    - Overview: dev-manual/index.md
+    - Architecture: dev-manual/architecture.md
+    - Building Assets: dev-manual/building-assets.md
+    - Testing: dev-manual/testing.md
+    - User Defaults: dev-manual/user-defaults.md

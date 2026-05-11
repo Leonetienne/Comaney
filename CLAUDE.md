@@ -1,14 +1,15 @@
-# Comaney — Claude Code Guide
+# Comaney: Claude Code Guide
 
 ## What this is
 Django budgeting app. Session-based auth (no Django auth backend). MariaDB. SCSS + Alpine.js compiled via Node. Deployed as Docker container.
 
 ## Rules
+- Never use the em-dash character '—' anywhere. Use ':', ';', ',', or rewrite the sentence instead.
 - You never commit
 - You never publish or push
 - All you do is analyze and modify, delete or create files and/or run/read commands, resp. their output.
-- If you change any feature covered by readme.md or claude.md, you must correct these .md files
-- If you add an important feature, you must also brief it in claude.md
+- If you change any feature covered by readme.md, claude.md, or the docs (docs/src/), you must correct those files
+- If you add an important feature, you must also brief it in claude.md and update the relevant docs page(s)
 - If you add functional features or fixes, you must cover them with tests.
 - End-2-end tests should test the UI. Tests that don't test the API directly are allowed to use the API ONLY for setup and cleanup but NOT for verification. For example: "test if tags can be created" MUST use the UI to create the tag and MUST use the UI to see if the tag exists! "Test if tag can be deleted" may use the API to create a tag since it would be setup.
 
@@ -18,10 +19,10 @@ Django budgeting app. Session-based auth (no Django auth backend). MariaDB. SCSS
 - **Templates**: Django templates in `templates/`
 - **SCSS**: source in `build/scss/`, compiled to `static/dist/main.css`.
 - **JS**: source in `build/js/`, bundled via esbuild to `static/dist/`.
-  - `build/js/expenses.js` — Alpine.js v3 component for the expense list (live search, bulk actions, sum). Bundled with `--target=es2020` (required; lower targets break Alpine's async evaluator).
-  - `build/js/dashboard.js` — Alpine.js v3 + Chart.js component for the modular dashboard. Separate bundle (`npm run build:dashboard`) → `static/dist/dashboard.js`.
-- **Building assets**: always use `build/build-assets.sh` — runs `npm install && npm run build` inside a `node:25.9.0-slim` linux/amd64 container. Never run npm directly on the host; `package-lock.json` is gitignored to prevent arch-specific binaries (Mac arm64 vs. linux/amd64) from being committed. The Dockerfile also runs `npm install` fresh inside the linux/amd64 build container.
-- **CSS theming**: light/dark mode via CSS custom properties (`--var`). Never replace them with SCSS `$vars` — those are compile-time only. Required for dynamic dark/light mode in-browser.
+  - `build/js/expenses.js`: Alpine.js v3 component for the expense list (live search, bulk actions, sum). Bundled with `--target=es2020` (required; lower targets break Alpine's async evaluator).
+  - `build/js/dashboard.js`: Alpine.js v3 + Chart.js component for the modular dashboard. Separate bundle (`npm run build:dashboard`) -> `static/dist/dashboard.js`.
+- **Building assets**: always use `build/build-assets.sh`; runs `npm install && npm run build` inside a `node:25.9.0-slim` linux/amd64 container. Never run npm directly on the host; `package-lock.json` is gitignored to prevent arch-specific binaries (Mac arm64 vs. linux/amd64) from being committed. The Dockerfile also runs `npm install` fresh inside the linux/amd64 build container.
+- **CSS theming**: light/dark mode via CSS custom properties (`--var`). Never replace them with SCSS `$vars`; those are compile-time only. Required for dynamic dark/light mode in-browser.
 - **Tests**: Every functional feature requires selenium end-to-end tests, which are in `tests/`. Don't run them yourself!
 
 ## App layout
@@ -36,9 +37,9 @@ budget/         Expenses, dashboard, scheduled, categories, AI
   dashboard_cards.py  YAML parsing, data computation, sandboxed Python for custom cells
   notifications.py  Notification class logic + cron helpers
   ai_trial.py   Trial key budget tracking + admin notifications
-  expense_factory.py  create_expense() — always use this, not Expense() directly
+  expense_factory.py  create_expense() - always use this, not Expense() directly
   date_utils.py  financial_month_range / financial_year_range
-  decorators.py  @feuser_required — sets request.feuser
+  decorators.py  @feuser_required - sets request.feuser
 api/            REST API (Bearer token auth)
   views.py      View functions only
   serializers.py  _expense_json, _scheduled_json, _apply_*_fields, _set_tags
@@ -48,19 +49,19 @@ comaney/        Settings, root urls, middleware, public_pages context processor
 ```
 
 ## Auth model
-- `FeUser` (feusers/models.py) — custom user, not `django.contrib.auth.User`
+- `FeUser` (feusers/models.py): custom user, not `django.contrib.auth.User`
 - Login sets `request.session["feuser_id"]`; `_get_session_feuser(request)` loads it
 - TOTP: `totp_pending_id` session key during 2FA step
 - REST API: Bearer token → `FeUser.api_key`
 
 ## Key conventions
-- **No Django auth backend** — never use `request.user`, `login()`, `@login_required`
-- **Migrations**: `./venv/bin/python3 manage.py makemigrations` locally to generate the file, then `docker compose restart web` — the entrypoint runs `migrate` automatically on start
-- **Notification classes**: `"" < soon < tomorrow < today < late < settled` — each sent at most once per expense
+- **No Django auth backend**: never use `request.user`, `login()`, `@login_required`
+- **Migrations**: `./venv/bin/python3 manage.py makemigrations` locally to generate the file, then `docker compose restart web`; the entrypoint runs `migrate` automatically on start
+- **Notification classes**: `"" < soon < tomorrow < today < late < settled`; each sent at most once per expense
 - **CSV export** (feusers/views/account.py): dynamic via `_meta.concrete_fields`; skip `owning_feuser`; mask `anthropic_api_key`; resolve `category` FK and `tags` M2M via `extra=`
-- **AI express creation**: system prompt in `budget/views/express.py`; expects `{"result":"good","items":[]}` or `{"result":"fail","msg":""}` — never prose
+- **AI express creation**: system prompt in `budget/views/express.py`; expects `{"result":"good","items":[]}` or `{"result":"fail","msg":""}`; never prose
 - **Modular dashboard** (`budget/dashboard_cards.py`, `budget/views/dashboard_cards_api.py`):
-  - Cards stored as `DashboardCard` model (per user) with only `yaml_config` + `created_at` DB fields. All layout info (`position`, `width`, `height`) lives inside the YAML `positioning:` block.
+  - Cards stored as `DashboardCard` model (per user) with only `yaml_config` + `created_at` DB fields. All layout info (`position`, `width`, `height`) lives inside the YAML `positioning:` block. An optional `positioning.mobile:` sub-block (`position`, `width`, `height`) overrides the desktop values on the 6-column mobile grid.
   - YAML fields: `type` (`cell` | `bar-chart` | `pie-chart`), `title`, `query`, `group`, `method`, `flip_signs`, `color`, `color_lightmode`, `color_darkmode`, `color_breakpoints`, `link`, `link_template`, `template`, `python`, `positioning`.
   - `parse_card_config(yaml_str)` validates and normalises YAML. `compute_card_data(config, qs, feuser)` returns data for the current period.
   - `method` for cells: `sum` (plain sum), `total` (sum where income/savings-withdrawal count as negative), `count`, `custom`. Charts accept `sum` and `total` only.
@@ -71,8 +72,13 @@ comaney/        Settings, root urls, middleware, public_pages context processor
   - `link` (cell): clicking the cell body navigates to the URL. `link_template` (charts): clicking a segment navigates, replacing `$GROUP_NAME` with `encodeURIComponent(label)`; `Uncategorized` → `none`.
   - `template` (cell): display string with `$VALUE` and `$CURRENCY_SYMBOL` placeholders. Defaults to `$VALUE $CURRENCY_SYMBOL`. When set, the entire cell content is the rendered string (no separate currency span).
   - API (session auth, not Bearer): `GET/POST /budget/dashboard/cards/`, `PATCH/DELETE /budget/dashboard/cards/<id>/`, `PATCH /budget/dashboard/cards/<id>/resize/`, `POST /budget/dashboard/cards/reorder/`, `GET /budget/dashboard/cards/presets/`.
-  - Frontend: Alpine.js `dashboardBoard` component in `build/js/dashboard.js`. CSS Grid (12 cols desktop / 6 cols mobile, fixed `ROW_H = 90 px`). HTML5 drag-drop for reorder; pointer-event resize handle (updates YAML `positioning` block). Chart.js for bar/pie cards. CodeMirror 6 YAML editor in both modals. In-DOM `window.confirmDialog()` for delete and preset-overwrite confirmations. Modals do not close on outside click.
+  - Frontend: Alpine.js `dashboardBoard` component in `build/js/dashboard.js`. CSS Grid (12 cols desktop / 6 cols mobile, fixed `ROW_H = 90 px`). HTML5 drag-drop for reorder; pointer-event resize handle; both update `positioning.mobile.*` when on mobile (≤ 6-col grid), `positioning.*` on desktop. Card visual order on mobile is applied via CSS `order` (DOM order always reflects desktop `position`). Chart.js for bar/pie cards. CodeMirror 6 YAML editor in both modals. In-DOM `window.confirmDialog()` for delete and preset-overwrite confirmations. Modals do not close on outside click.
 - **Expense search query parser** (`budget/query_parser.py`): translates the search bar's mini-language into Django Q objects via `apply_query(qs, query_str)`. Called by the API expense list view. Supported filters: `type=`, `settled=`, `deactivated=`, `value` (with `< <= > >= = ==`), `date` (date comparisons, formats `dd.mm.yyyy` / `mm/dd/yyyy` / `yyyy-mm-dd`, special value `today`), `cat=` / `tag=` (substring or `none` for null), `payee=`, free-text, `||` OR, `()` grouping, `!` NOT prefix. The full query string is lowercased before parsing.
+
+## Documentation
+mkdocs/Material sources live in `docs/src/`. Built site goes to `docs/build/site/` and is served by Django at `/docs/` (via `django.views.static.serve` in `comaney/urls.py`).
+Build: `./docs/build/build-docs.sh` (uses Docker; requires Docker daemon).
+Chapters: Introduction · User Manual · Admin Manual · Developer Manual.
 
 ## Running tests
 Tests are end-to-end Selenium + requests against a live Docker stack.
@@ -82,7 +88,7 @@ Tests are end-to-end Selenium + requests against a live Docker stack.
 cd tests && pytest -x
 ```
 - `DOCKER_WEB = "comaney-web-1"` (conftest.py)
-- Tests numbered by prefix — run in order
+- Tests numbered by prefix; run in order
 - `run_cmd("management_command")` via docker exec
 - `ctx` dict is session-scoped state shared across tests in a file
 
@@ -105,8 +111,8 @@ Re-enable AI trial key after limit hit: `/admin/ai-trial/` in the admin.
 
 ## Cron jobs
 Two management commands must run on a schedule inside the container:
-- `run_cron` — every 5 minutes (fires notifications, auto-settles, carry-overs)
-- `reset_trial_budgets` — monthly (resets AI trial usage per user)
+- `run_cron`: every 5 minutes (fires notifications, auto-settles, carry-overs)
+- `reset_trial_budgets`: monthly (resets AI trial usage per user)
 
 ## Settings env vars (key ones)
 | Var | Purpose |

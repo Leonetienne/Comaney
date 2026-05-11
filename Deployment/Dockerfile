@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     curl \
     && curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz \
-       | tar -xz -C /usr/local --strip-components=1 --no-same-owner \
+       | tar -xz -C /usr/local --strip-components=1 --no-same-ow  ner \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -21,7 +21,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 RUN npm install
-RUN npm run build && chmod +x entrypoint.sh && rm -rf build/ node_modules/
+RUN npm run build && rm -rf node_modules/ build/
+
+# Build MkDocs documentation; source is removed afterwards, site stays at docs/build/site/
+RUN pip install --no-cache-dir mkdocs-material \
+    && cd docs/src && mkdocs build --site-dir /app/docs/build/site \
+    && rm -rf docs/src
+
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8000
 
