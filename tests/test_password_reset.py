@@ -12,8 +12,8 @@ from selenium.webdriver.common.by import By
 
 from helpers import (
     _url, fill, click, mailpit_seen_ids,
-    fetch_email, extract_link, cleanup_user,
-    register_user, confirm_email, PASSWORD,
+    fetch_email, extract_link, setup_user, cleanup_user,
+    PASSWORD,
 )
 
 NEW_PASSWORD = "R41n3RWlnKl3R"
@@ -21,8 +21,10 @@ NEW_PASSWORD = "R41n3RWlnKl3R"
 
 @pytest.fixture(scope="module")
 def ctx(driver, w):
-    c = register_user(driver, w)
-    confirm_email(driver, w, c)
+    c = setup_user(driver, w)
+    # Password-reset tests start from an unauthenticated state.
+    driver.delete_all_cookies()
+    driver.execute_script("sessionStorage.clear(); localStorage.clear();")
     yield c
     cleanup_user(c["email"])
 

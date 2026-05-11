@@ -186,20 +186,40 @@ def get_api_key(driver, w) -> str:
 
 
 def setup_user(driver, w) -> dict:
-    """Full user setup: register, confirm email, log in, generate API key."""
-    ctx = register_user(driver, w)
-    confirm_email(driver, w, ctx)
-    browser_login(driver, w, ctx["email"], ctx["password"])
-    ctx["api_key"] = get_api_key(driver, w)
+    """Create a confirmed user via management commands and generate an API key via shell.
+
+    Bypasses the UI registration flow for speed. driver and w are accepted for
+    call-site compatibility but are not used. Use register_user() + confirm_email()
+    in tests that specifically exercise the registration UI.
+    """
+    email = f"sel.{uuid.uuid4().hex[:8]}@example.com"
+    result = subprocess.run(
+        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "create_user", email, "-p", PASSWORD],
+        capture_output=True, text=True, timeout=15,
+    )
+    assert result.returncode == 0, f"create_user failed:\n{result.stderr}"
+
+    key_result = subprocess.run(
+        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c",
+         f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}');"
+         f" u.generate_api_key(); u.save(); print(u.api_key)"],
+        capture_output=True, text=True, timeout=15,
+    )
+    assert key_result.returncode == 0, f"API key generation failed:\n{key_result.stderr}"
+
+    ctx = {"email": email, "password": PASSWORD, "api_key": key_result.stdout.strip()}
+    if driver is not None and w is not None:
+        driver.delete_all_cookies()
+        driver.execute_script("sessionStorage.clear(); localStorage.clear();")
+        browser_login(driver, w, email, PASSWORD)
     return ctx
 
 
 def cleanup_user(email: str):
-    """Delete a test user directly via docker exec (safe regardless of browser state)."""
+    """Delete a test user via the delete_user management command."""
     subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c",
-         f"from feusers.models import FeUser; FeUser.objects.filter(email='{email}').delete()"],
-        capture_output=True, text=True, timeout=10,
+        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "delete_user", email, "--yes"],
+        capture_output=True, text=True, timeout=15,
     )
 
 
