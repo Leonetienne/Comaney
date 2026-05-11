@@ -337,12 +337,12 @@ class TestDashboardCardsAPI:
         today = server_today()
         # Create a regular expense (value=50) and an income expense (value=100)
         exp = api_post("/api/v1/expenses/", ctx, json={
-            "title": "TotalTest expense", "type": "expense",
+            "title": "TotalTest expense test_80_13", "type": "expense",
             "value": "50.00", "date_due": today, "settled": False,
         })
         assert exp.status_code == 201
         inc = api_post("/api/v1/expenses/", ctx, json={
-            "title": "TotalTest income", "type": "income",
+            "title": "TotalTest income test_80_13", "type": "income",
             "value": "100.00", "date_due": today, "settled": False,
         })
         assert inc.status_code == 201
@@ -352,13 +352,13 @@ class TestDashboardCardsAPI:
         csrf = _csrf(sess)
         # method=sum should give 50 + 100 = 150
         r_sum = _post_card(sess, csrf, (
-            "type: cell\ntitle: TotalTestSum\nmethod: sum\n"
+            "type: cell\ntitle: TotalTestSum\nmethod: sum\nquery: test_80_13\n"
             "positioning:\n  position: 90\n  width: 1\n  height: 1\n"
         ))
         assert r_sum.status_code == 201, r_sum.text
         # method=total should give 50 - 100 = -50
         r_tot = _post_card(sess, csrf, (
-            "type: cell\ntitle: TotalTestTotal\nmethod: total\n"
+            "type: cell\ntitle: TotalTestTotal\nmethod: total\nquery: test_80_13\n"
             "positioning:\n  position: 91\n  width: 1\n  height: 1\n"
         ))
         assert r_tot.status_code == 201, r_tot.text
@@ -372,11 +372,14 @@ class TestDashboardCardsAPI:
         assert tot_val <= -50.0, f"total card expected ≤-50, got {tot_val}"
 
     def test_14_flip_signs(self, driver, w, ctx):
-        """flip_signs: true multiplies computed value by -1."""
+        """
+        flip_signs: true multiplies computed value by -1.
+        uses the expenses created in test 80_13
+        """
         sess = _cards_session(driver)
         csrf = _csrf(sess)
         r = _post_card(sess, csrf, (
-            "type: cell\ntitle: InvertTest\nmethod: total\nflip_signs: true\n"
+            "type: cell\ntitle: InvertTest\nmethod: total\nflip_signs: true\nquery: test_80_13\n"
             "positioning:\n  position: 92\n  width: 1\n  height: 1\n"
         ))
         assert r.status_code == 201, r.text
@@ -386,11 +389,14 @@ class TestDashboardCardsAPI:
         ctx["_invert_card_id"] = r.json()["card"]["id"]
 
     def test_15_chart_method_total(self, driver, w, ctx):
-        """bar-chart with method=total returns negated values for income/savings_wit."""
+        """
+        bar-chart with method=total returns negated values for income/savings_wit.
+        uses the expenses created in test 80_13
+        """
         sess = _cards_session(driver)
         csrf = _csrf(sess)
         r = _post_card(sess, csrf, (
-            "type: bar-chart\ngroup: categories\ntitle: TotalChartTest\nmethod: total\n"
+            "type: bar-chart\ngroup: categories\ntitle: TotalChartTest\nmethod: total\nquery: test_80_13\n"
             "positioning:\n  position: 93\n  width: 3\n  height: 2\n"
         ))
         assert r.status_code == 201, r.text
