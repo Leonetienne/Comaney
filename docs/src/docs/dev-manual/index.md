@@ -44,7 +44,7 @@ git clone ...
 cd Comaney
 
 # Create a .env file (see Admin Manual for env vars; for dev most defaults work)
-# The docker-compose.yml already sets sensible dev defaults.
+cp .env.example .env
 
 # Start the stack (database, mailpit, and the web app)
 docker compose up
