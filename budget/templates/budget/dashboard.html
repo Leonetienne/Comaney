@@ -84,7 +84,10 @@ window.DASHBOARD_CONFIG = {
 
                 {# ── List card ─────────────────────────────────────────── #}
                 <template x-if="card.config && card.config.type === 'list'">
-                    <div class="dash-card-body dash-card-body--list" draggable="false">
+                    <div class="dash-card-body dash-card-body--list"
+                         :class="{'dash-card-body--linked': card.config.query}"
+                         @click="card.config.query && _navTo('/budget/expenses/?search=' + encodeURIComponent(card.config.query))"
+                         draggable="false">
                         <template x-if="card.error">
                             <p class="dash-card-error" x-text="card.error"></p>
                         </template>
