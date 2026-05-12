@@ -181,8 +181,8 @@ window.DASHBOARD_CONFIG = {
     </div>{# end .dash-grid #}
 
     {# ── Add card / reset buttons (below grid) ──────────────────────────── #}
-    <div x-show="!loading && cards.length > 0" class="dash-add-btn">
-        <button id="dash-add-new-btn" class="btn btn-secondary" @click="openAdd()">+ New dashboard card</button>
+    <div x-show="!loading" class="dash-add-btn">
+        <button id="dash-add-new-btn" x-show="cards.length > 0" class="btn btn-secondary" @click="openAdd()">+ New dashboard card</button>
         <button id="dash-reset-btn" class="btn btn-secondary" @click="resetDashboard()">Reset dashboard</button>
     </div>
 

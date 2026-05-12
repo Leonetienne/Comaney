@@ -361,6 +361,9 @@
 
   &:last-child { border-bottom: none; }
 
+  // Prevent the global tr:hover td rule in _tables.scss from wiping type colors.
+  &:hover td { background: inherit; }
+
   td {
     padding: 3px 6px;
     white-space: nowrap;

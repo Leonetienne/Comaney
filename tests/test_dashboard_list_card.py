@@ -408,6 +408,37 @@ class TestListCardData:
         _delete_card(sess, csrf, card_id)
         api_delete(f"/api/v1/expenses/{e.json()['id']}/", ctx)
 
+    def test_duplicate_title_items_both_appear(self, driver, w, ctx, sess):
+        today = server_today()
+        year, month = today[:4], today[5:7]
+        e1 = api_post("/api/v1/expenses/", ctx, json={
+            "title": "DupTitle", "type": "expense", "value": "11.00",
+            "date_due": today, "settled": True,
+        })
+        e2 = api_post("/api/v1/expenses/", ctx, json={
+            "title": "DupTitle", "type": "expense", "value": "22.00",
+            "date_due": today, "settled": True,
+        })
+        assert e1.status_code == 201
+        assert e2.status_code == 201
+
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _list_yaml(query="DupTitle"))
+        assert r.status_code == 201
+        card_id = r.json()["card"]["id"]
+
+        cards = sess.get(CARDS_URL, params={"year": year, "month": month}).json()["cards"]
+        card = next((c for c in cards if c["id"] == card_id), None)
+        items = card["data"].get("items", [])
+        dup_items = [i for i in items if i["title"] == "DupTitle"]
+        assert len(dup_items) == 2, f"expected 2 rows for duplicate title, got {len(dup_items)}"
+        values = sorted(float(i["value"]) for i in dup_items)
+        assert values == pytest.approx([11.0, 22.0])
+
+        _delete_card(sess, csrf, card_id)
+        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+
     def test_empty_list_returns_empty_items(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]

@@ -89,13 +89,27 @@ You can filter by the due date using three different date formats:
 | Month/Day/Year | `date>=01/31/2025` |
 | Year-Month-Day | `date>=2025-01-31` |
 
-The special word `today` means today's date:
+Instead of a specific date, you can use one of these special words:
+
+| Word | Resolves to |
+|---|---|
+| `today` | Today's date |
+| `cur_week_start` | Monday of the current week |
+| `cur_week_end` | Sunday of the current week |
+
+Examples:
 
 ```
 date<=today
 ```
 
-Finds all expenses due on or before today.
+All expenses due on or before today.
+
+```
+date>=cur_week_start date<=cur_week_end
+```
+
+All expenses due somewhere within the current week.
 
 ## Combining filters
 

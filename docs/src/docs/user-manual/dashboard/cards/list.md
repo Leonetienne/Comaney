@@ -102,7 +102,25 @@ Controls how the summary row is displayed. Supports two placeholders:
 
 Default: `$VALUE $CURRENCY_SYMBOL`.
 
-## Full example
+## Full examples
+
+Bills due this week, largest first:
+
+```yaml
+type: list
+title: Bills due this week
+query: type=expense settled=no date>=cur_week_start date<=cur_week_end
+order_by: value
+order_dir: desc
+show_sum: true
+method: sum
+positioning:
+  position: 3
+  width: 4
+  height: 4
+```
+
+All outstanding bills with a custom total label:
 
 ```yaml
 type: list

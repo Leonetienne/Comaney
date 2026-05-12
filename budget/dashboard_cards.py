@@ -367,7 +367,7 @@ def _compute_list(config: dict, period_qs) -> dict:
             'title': row['title'],
             'value': float(row['value']),
         }
-        for row in ordered_qs.values('type', 'title', 'value')
+        for row in ordered_qs.values('uid', 'date_due', 'type', 'title', 'value')
     ]
 
     result: dict = {'items': items}

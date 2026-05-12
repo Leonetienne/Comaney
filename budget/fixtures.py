@@ -179,11 +179,10 @@ DEFAULT_DASHBOARD_CARDS = [
     },
     {
         "yaml": (
-            "# Lists all unsettled expenses in the period, largest first.\n"
-            "# The sum row shows the total outstanding amount.\n"
+            "# Lists unsettled expenses due this week, largest first.\n"
             "type: list\n"
-            "title: Outstanding bills\n"
-            "query: type=expense settled=no\n"
+            "title: Bills due this week\n"
+            "query: type=expense settled=no date>=cur_week_start date<=cur_week_end\n"
             "order_by: value\n"
             "order_dir: desc\n"
             "show_sum: true\n"

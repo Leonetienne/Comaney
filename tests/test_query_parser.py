@@ -300,3 +300,52 @@ class TestDeactivated:
         t = _api_titles(ctx, "deactivated=no")
         assert "QP Past" in t and "QP Mid" in t and "QP Future" in t
         assert "QP Deact" not in t
+
+
+class TestWeekKeywords:
+
+    def _titles(self, ctx, q):
+        resp = api_get("/api/v1/expenses/", ctx, params={"q": q, "view": "year"})
+        return [e["title"] for e in resp.json()["expenses"]]
+
+    def test_setup_week(self, driver, w, ctx):
+        today_iso = server_today()
+        exp = api_post("/api/v1/expenses/", ctx, json={
+            "title": "QP ThisWeek", "type": "expense", "value": "9.00",
+            "date_due": today_iso, "settled": False,
+        })
+        assert exp.status_code == 201
+        ctx["qp_this_week"] = exp.json()["id"]
+
+    def test_cur_week_start_lte_today(self, driver, w, ctx):
+        # cur_week_start is Monday; today >= Monday, so date>=cur_week_start must include today
+        t = self._titles(ctx, "date>=cur_week_start")
+        assert "QP ThisWeek" in t
+
+    def test_cur_week_end_gte_today(self, driver, w, ctx):
+        # cur_week_end is Sunday; today <= Sunday, so date<=cur_week_end must include today
+        t = self._titles(ctx, "date<=cur_week_end")
+        assert "QP ThisWeek" in t
+
+    def test_cur_week_range_includes_today(self, driver, w, ctx):
+        t = self._titles(ctx, "date>=cur_week_start date<=cur_week_end")
+        assert "QP ThisWeek" in t
+
+    def test_cur_week_range_excludes_past(self, driver, w, ctx):
+        # PAST_ISO = 2025-03-01 which is well outside any current week
+        t = self._titles(ctx, "date>=cur_week_start date<=cur_week_end")
+        assert "QP Past" not in t
+
+    def test_cur_week_start_excludes_before_week(self, driver, w, ctx):
+        # date<cur_week_start must NOT include today (today is within the week)
+        t = self._titles(ctx, "date<cur_week_start")
+        assert "QP ThisWeek" not in t
+
+    def test_cur_week_end_excludes_after_week(self, driver, w, ctx):
+        # date>cur_week_end must NOT include today
+        t = self._titles(ctx, "date>cur_week_end")
+        assert "QP ThisWeek" not in t
+
+    def test_cleanup_week(self, driver, w, ctx):
+        if "qp_this_week" in ctx:
+            api_delete(f"/api/v1/expenses/{ctx.pop('qp_this_week')}/", ctx)

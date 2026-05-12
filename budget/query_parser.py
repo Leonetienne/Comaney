@@ -17,7 +17,7 @@ Filters:
     value<N, value<=N, value>N, value>=N, value=N, value==N
     date<dd.mm.yyyy   date>=mm/dd/yyyy  date==yyyy-mm-dd  date>today
         dot delimiter → dd.mm.yyyy  |  slash delimiter → mm/dd/yyyy  |  hyphen → yyyy-mm-dd
-        'today' resolves to the current date at query time
+        magic words: 'today', 'cur_week_start' (Monday), 'cur_week_end' (Sunday)
     cat=<substring>   cat=none  (expenses with no category)
     tag=<substring>   tag=none  (expenses with no tag)
     payee=<substring>
@@ -26,7 +26,7 @@ Filters:
 """
 
 import re
-from datetime import date as _date
+from datetime import date as _date, timedelta as _timedelta
 from decimal import Decimal, InvalidOperation
 from django.db.models import Q
 
@@ -50,7 +50,7 @@ _TOKEN_RE = re.compile(
     r'|!'                                                          # ! (NOT)
     r'|\('                                                         # (
     r'|\)'                                                         # )
-    r'|(\w+)\s*(==|[<>]=?)\s*(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./]\d{1,2}[./]\d{4}|today)'  # g1-3: key op date
+    r'|(\w+)\s*(==|[<>]=?)\s*(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./]\d{1,2}[./]\d{4}|today|cur_week_start|cur_week_end)'  # g1-3: key op date
     r'|(\w+)\s*(==|[<>]=?)\s*(\d+(?:\.\d+)?)'                    # g4-6: key op num
     r'|(\w+)=(?:"([^"]*)"|([^\s()|"!]+))'                        # g7-9: key="v" or key=v
     r'|"([^"]*)"'                                                  # g10:  "quoted phrase"
@@ -107,9 +107,15 @@ def _value_q(op: str, num: float) -> Q:
 
 
 def _parse_date(raw: str) -> _date:
-    """Parse 'today', yyyy-mm-dd (hyphen), dd.mm.yyyy (dot), or mm/dd/yyyy (slash)."""
+    """Parse magic words or explicit date formats: yyyy-mm-dd, dd.mm.yyyy, mm/dd/yyyy."""
     if raw == 'today':
         return _date.today()
+    if raw == 'cur_week_start':
+        today = _date.today()
+        return today - _timedelta(days=today.weekday())   # Monday
+    if raw == 'cur_week_end':
+        today = _date.today()
+        return today - _timedelta(days=today.weekday()) + _timedelta(days=6)  # Sunday
     if raw[4:5] == '-':             # yyyy-mm-dd
         year, month, day = raw.split('-')
     elif '.' in raw:                # dd.mm.yyyy
