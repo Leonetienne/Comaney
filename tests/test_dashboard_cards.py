@@ -868,7 +868,7 @@ class TestBrowserSmoke:
         assert "resetmarker" in _titles()
         # Click "Reset dashboard"
         driver.find_element(
-            By.XPATH, "//div[contains(@class,'dash-add-btn')]//button[contains(@class,'btn-danger')]"
+            By.XPATH, "//*[@id='dash-reset-btn']"
         ).click()
         time.sleep(1)
         assert _dialog_visible(driver)
@@ -879,7 +879,7 @@ class TestBrowserSmoke:
         assert "resetmarker" in _titles()
         # Confirm reset
         driver.find_element(
-            By.XPATH, "//div[contains(@class,'dash-add-btn')]//button[contains(@class,'btn-danger')]"
+            By.XPATH, "//*[@id='dash-reset-btn']"
         ).click()
         time.sleep(1)
         assert _dialog_visible(driver)
