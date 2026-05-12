@@ -49,9 +49,15 @@ A cell shows a single number: your total spending, remaining budget, number of o
 
 See [Cell Cards](cards/cell.md) to learn how to configure one.
 
+### List cards
+
+A list card shows a scrollable table of individual expenses that match a query: one row per expense with a type abbreviation, title, and value. Optionally a summary row at the top shows the total.
+
+See [List Cards](cards/list.md) for configuration options.
+
 ### Charts
 
-Charts show how your money is distributed across your categories or tags, so you can see at a glance where it is all going.
+Charts show how your money moves over time or how it is distributed across your categories or tags.
 
 #### Bar chart
 
@@ -72,3 +78,13 @@ Pie charts are best for **categories**. Since every expense belongs to exactly o
 Clicking a slice takes you to the expense list filtered to that group (if the card is configured to do so).
 
 See [Pie Chart Cards](cards/pie-chart.md) for configuration options.
+
+#### Line chart
+
+A line chart plots one or more data series over time. In month view each data point is one day; in year view each data point is one week.
+
+Two modes are available: **cumulative** (`cum`) builds a running total up to each point, so the line never dips — useful for "total spent so far this month". **Base** (`base`) shows only the activity within each bucket, so you can see which days or weeks were most expensive.
+
+Each series has its own query and aggregation method, so you can overlay "money spent" and "net balance" on the same chart.
+
+See [Line Chart Cards](cards/line-chart.md) for configuration options.

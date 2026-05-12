@@ -151,6 +151,7 @@ function dashboardBoard() {
 
         _renderChart(card, dark) {
             const type = card.config && card.config.type;
+            if (type === 'line-chart') { this._renderLineChart(card, dark); return; }
             if (type !== 'bar-chart' && type !== 'pie-chart') return;
             if (!card.data || !card.data.labels || !card.data.labels.length) return;
 
@@ -234,6 +235,107 @@ function dashboardBoard() {
                     },
                 });
             }
+        },
+
+        _renderLineChart(card, dark) {
+            if (!card.data || !card.data.labels || !card.data.labels.length) return;
+            if (!card.data.series || !card.data.series.length) return;
+
+            const canvas = document.getElementById('chart-' + card.id);
+            if (!canvas) return;
+
+            if (this.charts[card.id]) this.charts[card.id].destroy();
+
+            const labels = card.data.labels;
+            const cur    = this.currency;
+
+            // Format an ISO date string as "02. Feb"
+            const fmtDate = iso => {
+                const d   = new Date(iso + 'T00:00:00');
+                const day = String(d.getDate()).padStart(2, '0');
+                const mon = d.toLocaleString('en', { month: 'short' });
+                return `${day}. ${mon}`;
+            };
+
+            // Derive a consistent colour from a label string when none is provided
+            const labelColor = label => {
+                let h = 0;
+                for (let i = 0; i < label.length; i++)
+                    h = (label.charCodeAt(i) + ((h << 5) - h)) | 0;
+                return `hsl(${Math.abs(h) % 360},60%,${dark ? 60 : 45}%)`;
+            };
+
+            const datasets = card.data.series.map((s, i) => {
+                const color = s.color || PALETTE[i % PALETTE.length];
+                return {
+                    label:           s.label,
+                    data:            s.values,
+                    borderColor:     color,
+                    backgroundColor: color + '28',
+                    borderWidth:     2,
+                    pointRadius:     labels.length > 60 ? 0 : 2,
+                    pointHoverRadius: 4,
+                    tension:         0.35,
+                    fill:            false,
+                };
+            });
+
+            const body  = canvas.closest('.dash-card-body');
+            const avail = body ? Math.max(80, body.offsetHeight - 8) : 180;
+            canvas.style.width  = '100%';
+            canvas.style.height = avail + 'px';
+
+            const bucketStarts = card.data.bucket_starts || labels;
+            const seriesCfg    = (card.config && card.config.series) || [];
+
+            const hasAnyLink = seriesCfg.some(s => s.link_template);
+
+            this.charts[card.id] = new Chart(canvas, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    animation: false,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: hasAnyLink ? (event, elements) => {
+                        if (!elements.length) return;
+                        const si  = elements[0].datasetIndex;
+                        const idx = elements[0].index;
+                        const lt  = seriesCfg[si] && seriesCfg[si].link_template;
+                        if (!lt) return;
+                        window.location.href = lt
+                            .replace(/\$START_DATE/g, bucketStarts[idx])
+                            .replace(/\$END_DATE/g,   labels[idx]);
+                    } : undefined,
+                    onHover: hasAnyLink ? (event, elements) => {
+                        if (!event.native) return;
+                        const si = elements.length ? elements[0].datasetIndex : -1;
+                        const lt = si >= 0 && seriesCfg[si] && seriesCfg[si].link_template;
+                        event.native.target.style.cursor = lt ? 'pointer' : 'default';
+                    } : undefined,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
+                        tooltip: { callbacks: {
+                            title: items => fmtDate(labels[items[0].dataIndex]),
+                            label: c => ` ${c.dataset.label}: ${c.parsed.y.toFixed(2)} ${cur}`,
+                        }},
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxTicksLimit: 8,
+                                maxRotation: 45,
+                                minRotation: 20,
+                                callback: (_val, idx) => fmtDate(labels[idx]),
+                            },
+                            grid: { display: false },
+                        },
+                        y: {
+                            ticks: { font: { size: 11 } },
+                        },
+                    },
+                },
+            });
         },
 
         // ── Mobile detection ──────────────────────────────────────────────────

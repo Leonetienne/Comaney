@@ -43,7 +43,11 @@ def _parse_body(request) -> dict:
 
 
 def _period_qs(request, feuser):
-    """Build the period-scoped base queryset from request params."""
+    """Build the period-scoped base queryset from request params.
+
+    Returns (queryset, period_info) where period_info is
+    {'start': date, 'end': date, 'mode': 'month'|'year'}.
+    """
     mode = _get_period_mode(request)
     if mode == 'year':
         year = _get_year(request, feuser.month_start_day, feuser.month_start_prev)
@@ -52,19 +56,20 @@ def _period_qs(request, feuser):
         year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
         start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
 
-    return Expense.objects.filter(
+    qs = Expense.objects.filter(
         owning_feuser=feuser,
         date_due__gte=start,
         date_due__lte=end,
         deactivated=False,
     )
+    return qs, {'start': start, 'end': end, 'mode': mode}
 
 
-def _card_to_json(card: DashboardCard, period_qs, feuser) -> dict:
+def _card_to_json(card: DashboardCard, period_qs, feuser, period_info: dict = None) -> dict:
     """Serialise a card including its computed data for the current period."""
     try:
         config = parse_card_config(card.yaml_config)
-        data = compute_card_data(config, period_qs, feuser)
+        data = compute_card_data(config, period_qs, feuser, period_info=period_info)
         error = None
     except CardConfigError as exc:
         config = {}
@@ -98,10 +103,10 @@ def cards_api(request):
     feuser = request.feuser
 
     if request.method == 'GET':
-        period_qs = _period_qs(request, feuser)
+        period_qs, period_info = _period_qs(request, feuser)
         cards = DashboardCard.objects.filter(owning_feuser=feuser)
         card_list = sorted(
-            [_card_to_json(c, period_qs, feuser) for c in cards],
+            [_card_to_json(c, period_qs, feuser, period_info) for c in cards],
             key=lambda c: (c['position'], c['id']),
         )
         return _ok({'cards': card_list})
@@ -120,8 +125,8 @@ def cards_api(request):
     card = DashboardCard(owning_feuser=feuser, yaml_config=yaml_str)
     card.save()
 
-    period_qs = _period_qs(request, feuser)
-    return _ok({'card': _card_to_json(card, period_qs, feuser)}, status=201)
+    period_qs, period_info = _period_qs(request, feuser)
+    return _ok({'card': _card_to_json(card, period_qs, feuser, period_info)}, status=201)
 
 
 # ---------------------------------------------------------------------------
@@ -155,8 +160,8 @@ def card_detail_api(request, uid: int):
     card.yaml_config = yaml_str
     card.save()
 
-    period_qs = _period_qs(request, feuser)
-    return _ok({'card': _card_to_json(card, period_qs, feuser)})
+    period_qs, period_info = _period_qs(request, feuser)
+    return _ok({'card': _card_to_json(card, period_qs, feuser, period_info)})
 
 
 # ---------------------------------------------------------------------------
@@ -278,10 +283,10 @@ def cards_reset_api(request):
         DashboardCard(owning_feuser=feuser, yaml_config=entry['yaml'])
         for entry in DEFAULT_DASHBOARD_CARDS
     ])
-    period_qs = _period_qs(request, feuser)
+    period_qs, period_info = _period_qs(request, feuser)
     cards = DashboardCard.objects.filter(owning_feuser=feuser)
     card_list = sorted(
-        [_card_to_json(c, period_qs, feuser) for c in cards],
+        [_card_to_json(c, period_qs, feuser, period_info) for c in cards],
         key=lambda c: (c['position'], c['id']),
     )
     return _ok({'cards': card_list})

@@ -196,6 +196,48 @@ DEFAULT_DASHBOARD_CARDS = [
             "    position: 8\n"
         ),
     },
+    {
+        "yaml": (
+            "type: line-chart\n"
+            "title: Left to spend\n"
+            "method: cum\n"
+            "series:\n"
+            "- color: '#2887f3'\n"
+            "  flip_signs: true\n"
+            "  label: Left to spend\n"
+            "  link_template: /budget/expenses/?search=date>=$START_DATE+date<=$END_DATE\n"
+            "  method: total\n"
+            "positioning:\n"
+            "  height: 3\n"
+            "  mobile:\n"
+            "    height: 3\n"
+            "    position: 9\n"
+            "    width: 6\n"
+            "  position: 9\n"
+            "  width: 4\n"
+        ),
+    },
+    {
+        "yaml": (
+            "type: line-chart\n"
+            "title: Expenses per day\n"
+            "method: base\n"
+            "series:\n"
+            "- color: '#c45'\n"
+            "  label: Money spent\n"
+            "  link_template: /budget/expenses/?search=type%3Dexpense+date>=$START_DATE+date<=$END_DATE\n"
+            "  method: total\n"
+            "  query: type=expense\n"
+            "positioning:\n"
+            "  height: 3\n"
+            "  mobile:\n"
+            "    height: 3\n"
+            "    position: 9\n"
+            "    width: 6\n"
+            "  position: 9\n"
+            "  width: 4\n"
+        ),
+    },
 ]
 
 

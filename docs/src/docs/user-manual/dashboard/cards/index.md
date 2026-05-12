@@ -11,6 +11,7 @@ When you click **+ Add card** or the pencil icon on an existing card, an editor 
 | `cell` | A single number: a total, a count, or a custom calculation. |
 | `bar-chart` | Horizontal bars showing how spending is split across categories or tags. |
 | `pie-chart` | A pie showing spending proportions across categories or tags. |
+| `line-chart` | One or more lines plotted over time, showing how money moves day by day or week by week. |
 | `list` | A scrollable table listing individual expenses that match a query. |
 
 ## Fields that every card has
@@ -21,7 +22,7 @@ When you click **+ Add card** or the pencil icon on an existing card, an editor 
 type: cell
 ```
 
-Sets the card style. Must be one of `cell`, `bar-chart`, `pie-chart`, or `list`.
+Sets the card style. Must be one of `cell`, `bar-chart`, `pie-chart`, `list`, or `line-chart`.
 
 ---
 
@@ -98,44 +99,70 @@ If you do not add a `mobile` block, the card uses the desktop values on both scr
 
 ## Computation methods
 
-The `method` field tells the card how to calculate its number. Different card types support different methods.
+The `method` field controls how a card calculates its value. Its meaning depends on the card type, because different types need different kinds of computation.
 
-### `sum`
+### Cell and list cards
 
-Adds up the value of all matching expenses. Every transaction counts as a positive number regardless of type.
+Cell cards compute a single number. List cards use `method` only to calculate the optional summary row.
+
+| `method` | What it calculates |
+|---|---|
+| `sum` | Adds up all matching values. Every transaction type counts as positive. |
+| `total` | Adds up values but treats income and savings withdrawals as negative. Good for a net-balance figure. |
+| `count` | Counts how many matching expenses there are instead of summing values. |
+| `custom` | Lets you write a small Python calculation. Cell cards only. See [Cell Cards](cell.md). |
+
+Default for cell and list cards: `sum`.
+
+#### Example: total spent on groceries
 
 ```yaml
 method: sum
 query: type=expense
 ```
 
-Good for: "How much did I spend on groceries?"
-
-### `total`
-
-Adds up values but treats income and savings withdrawals as negative contributors. This gives you a net balance.
+#### Example: money left to spend
 
 ```yaml
 method: total
 flip_signs: true
 ```
 
-With `flip_signs: true`, this gives "money left to spend": income minus expenses. Good for the "left to spend" card.
+Income minus expenses, displayed as a positive number.
 
-### `count`
-
-Counts how many matching expenses there are, rather than summing their values.
+#### Example: outstanding bill count
 
 ```yaml
 method: count
 query: settled=no
 ```
 
-Good for: "How many bills am I still waiting to pay?"
+---
 
-### `custom`
+### Bar chart and pie chart cards
 
-Lets you write a small calculation yourself, using Python. Only available for cell cards. See [Cell Cards](cell.md) for details.
+Bar and pie charts support the same two `method` values as the numeric methods above, applied per group:
+
+| `method` | What it calculates |
+|---|---|
+| `sum` | Total value of expenses in that group. Every type is positive. Default. |
+| `total` | Net value: income and savings withdrawals count negative. |
+
+---
+
+### Line chart cards
+
+Line charts use `method` at the card level to decide how each time bucket is built:
+
+| `method` | What it plots |
+|---|---|
+| `cum` | Cumulative running total up to each point. The line never dips. Default. |
+| `base` | Only the activity within each bucket (one day in month view, one week in year view). |
+
+Each individual series inside a line chart also has its own `method` field (separate from the card-level one) that controls aggregation: `sum` or `total`.
+In line charts, `flip_signs` only exists on series-level.
+
+See [Line Chart Cards](line-chart.md) for details.
 
 ---
 
@@ -178,9 +205,25 @@ positioning:
   height: 3
 ```
 
+The simplest line chart:
+
+```yaml
+type: line-chart
+title: Spending over time
+method: cum
+series:
+  - label: Expenses
+    query: type=expense
+positioning:
+  position: 15
+  width: 6
+  height: 3
+```
+
 For all the extra options available to each type, see:
 
 - [Cell Cards](cell.md)
 - [Bar Chart Cards](bar-chart.md)
 - [Pie Chart Cards](pie-chart.md)
 - [List Cards](list.md)
+- [Line Chart Cards](line-chart.md)

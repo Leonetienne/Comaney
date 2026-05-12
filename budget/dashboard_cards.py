@@ -2,14 +2,17 @@
 Dashboard card YAML parsing, data computation, and sandboxed Python execution.
 
 Card YAML schema:
-    type: cell | bar-chart | pie-chart | list
+    type: cell | bar-chart | pie-chart | list | line-chart
     title: "string"
     query: "query string"       # optional; filters the period queryset
     group: tags | categories    # required for bar-chart / pie-chart
     max_groups: N               # optional; top-N groups (bar-chart only)
     hide_groups: "a,b"          # optional; comma-sep group names to exclude
-    method: sum | total | count | custom   # required for cell; sum/total for charts;
-                                           # sum/total/count for list (controls sum row)
+    method:                     # meaning depends on card type:
+      cell:       sum | total | count | custom
+      bar-chart / pie-chart:  sum | total
+      list:       sum | total | count  (controls optional sum row)
+      line-chart: base | cum           (per-bucket vs cumulative; default cum)
     flip_signs: true/false      # optional; multiply computed value/sum by -1
     color: "#hex"               # optional; cell background color (both modes)
     color_lightmode: "#hex"    # optional; overrides color in light mode
@@ -32,6 +35,12 @@ Card YAML schema:
     type_colors: true/false          # colour rows by expense type; default true
     show_sum: true/false             # show computed sum row at top; default false
     sum_template: "$VALUE $CURRENCY_SYMBOL"  # template for the sum row
+    # line-chart fields:
+    series:                     # required; list of data series
+      - label: "Series name"
+        query: "..."            # optional; additional filter per series
+        method: sum | total     # per-series aggregation; default sum
+        color: "#hex"           # optional; derived from label if omitted
     positioning:
         position: N             # display order (1-based)
         width: N                # grid columns to span
@@ -51,12 +60,14 @@ from django.db.models import Case, DecimalField, F, Sum, When
 
 from .query_parser import apply_query
 
-VALID_TYPES = {'cell', 'bar-chart', 'pie-chart', 'list'}
+VALID_TYPES = {'cell', 'bar-chart', 'pie-chart', 'list', 'line-chart'}
 VALID_GROUPS = {'tags', 'categories'}
 VALID_METHODS = {'sum', 'total', 'count', 'custom'}
 VALID_LIST_METHODS = {'sum', 'total', 'count'}
 VALID_ORDER_BY = {'value', 'date', 'title'}
 VALID_ORDER_DIR = {'asc', 'desc'}
+VALID_LINE_METHODS = {'base', 'cum'}
+VALID_SERIES_METHODS = {'sum', 'total'}
 
 # Expense types that count as negative income under method=total
 _TOTAL_NEGATIVE_TYPES = {'income', 'savings_wit', 'carry_over'}
@@ -135,6 +146,32 @@ def parse_card_config(yaml_str: str) -> dict:
         if method not in ('sum', 'total'):
             raise CardConfigError("method for charts must be sum or total")
 
+    series = []
+    if card_type == 'line-chart':
+        method = cfg.get('method', 'cum')
+        if str(method) not in VALID_LINE_METHODS:
+            raise CardConfigError("method for line-chart must be base or cum")
+        raw_series = cfg.get('series', [])
+        if not isinstance(raw_series, list) or not raw_series:
+            raise CardConfigError("line-chart requires at least one series")
+        for i, s in enumerate(raw_series):
+            if not isinstance(s, dict):
+                raise CardConfigError(f"series[{i}] must be a mapping")
+            label = str(s.get('label', '')).strip()
+            if not label:
+                raise CardConfigError(f"series[{i}] must have a label")
+            s_method = str(s.get('method', 'sum'))
+            if s_method not in VALID_SERIES_METHODS:
+                raise CardConfigError(f"series[{i}].method must be sum or total")
+            series.append({
+                'label':         label,
+                'color':         str(s.get('color', '')),
+                'query':         str(s.get('query', '')),
+                'method':        s_method,
+                'flip_signs':    bool(s.get('flip_signs', False)),
+                'link_template': str(s.get('link_template', '')),
+            })
+
     pos = cfg.get('positioning') or {}
     mobile_pos = pos.get('mobile') if isinstance(pos, dict) else None
     mobile_positioning = {}
@@ -179,6 +216,8 @@ def parse_card_config(yaml_str: str) -> dict:
         'type_colors':   cfg.get('type_colors', True) is not False,
         'show_sum':      bool(cfg.get('show_sum', False)),
         'sum_template':  str(cfg.get('sum_template', '')),
+        # line-chart fields
+        'series':        series,
         'positioning':   positioning,
     }
 
@@ -187,11 +226,13 @@ def parse_card_config(yaml_str: str) -> dict:
 # Data computation
 # ---------------------------------------------------------------------------
 
-def compute_card_data(config: dict, period_qs, feuser) -> dict:
+def compute_card_data(config: dict, period_qs, feuser, period_info: dict = None) -> dict:
     """
     Compute the display data for a card given a period queryset (already
     scoped to feuser + date range + deactivated=False).
     Returns a dict suitable for JSON serialisation.
+    period_info is {'start': date, 'end': date, 'mode': 'month'|'year'};
+    required for line-chart cards.
     """
     card_type = config['type']
 
@@ -201,6 +242,10 @@ def compute_card_data(config: dict, period_qs, feuser) -> dict:
         return _compute_chart(config, period_qs)
     if card_type == 'list':
         return _compute_list(config, period_qs)
+    if card_type == 'line-chart':
+        if not period_info:
+            return {'labels': [], 'series': []}
+        return _compute_line_chart(config, period_qs, period_info)
     return {}
 
 
@@ -346,6 +391,88 @@ def _compute_list(config: dict, period_qs) -> dict:
         result['sum_value'] = float(sum_val)
 
     return result
+
+
+def _compute_line_chart(config: dict, period_qs, period_info: dict) -> dict:
+    from collections import defaultdict
+    from datetime import date, timedelta
+
+    method     = config.get('method', 'cum')   # 'base' or 'cum'
+    series_cfg = config.get('series', [])
+
+    p_start = period_info['start']
+    p_end   = period_info['end']
+    p_mode  = period_info['mode']
+    today   = date.today()
+    cutoff  = min(p_end, today)
+
+    # Build time buckets
+    if p_mode == 'month':
+        buckets = []
+        d = p_start
+        while d <= cutoff:
+            buckets.append((d, d))
+            d += timedelta(days=1)
+    else:
+        buckets = []
+        d = p_start
+        while d <= cutoff:
+            b_end = min(d + timedelta(days=6), cutoff)
+            buckets.append((d, b_end))
+            d += timedelta(days=7)
+
+    if not buckets:
+        return {'labels': [], 'series': []}
+
+    labels        = [b[1].isoformat() for b in buckets]
+    bucket_starts = [b[0].isoformat() for b in buckets]
+
+    base_qs = _filtered_qs(config, period_qs)
+
+    result_series = []
+    for sc in series_cfg:
+        s_method = sc.get('method', 'sum')
+        s_query  = sc.get('query', '').strip()
+
+        qs = base_qs
+        if s_query:
+            qs = apply_query(qs, s_query)
+
+        if s_method == 'total':
+            rows = list(qs.values('date_due', 'type', 'value'))
+            def _signed(row):
+                v = row['value']
+                return -v if row['type'] in _TOTAL_NEGATIVE_TYPES else v
+            by_date: dict = defaultdict(Decimal)
+            for row in rows:
+                by_date[row['date_due']] += _signed(row)
+        else:
+            rows = list(qs.values('date_due', 'value'))
+            by_date = defaultdict(Decimal)
+            for row in rows:
+                by_date[row['date_due']] += row['value']
+
+        invert = sc.get('flip_signs', False)
+        cumulative = Decimal('0')
+        values = []
+        for (b_start, b_end) in buckets:
+            bucket_sum = sum(
+                (v for dt, v in by_date.items() if b_start <= dt <= b_end),
+                Decimal('0'),
+            )
+            if method == 'cum':
+                cumulative += bucket_sum
+                values.append(float(-cumulative if invert else cumulative))
+            else:
+                values.append(float(-bucket_sum if invert else bucket_sum))
+
+        result_series.append({
+            'label':  sc.get('label', ''),
+            'color':  sc.get('color', ''),
+            'values': values,
+        })
+
+    return {'labels': labels, 'bucket_starts': bucket_starts, 'series': result_series}
 
 
 # ---------------------------------------------------------------------------

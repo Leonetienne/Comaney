@@ -218,10 +218,11 @@
   gap: 8px;
 
   @media (max-width: 600px) {
+    display: inline-flex;
     flex-direction: column;
     margin-top: 24px;
 
-    .btn { width: 100%; }
+    .btn { text-align: left; }
   }
 }
 
