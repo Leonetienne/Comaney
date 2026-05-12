@@ -70,6 +70,15 @@ class Expense(OwnedModel):
         "ScheduledExpense", null=True, blank=True, on_delete=models.SET_NULL,
         related_name="generated_expenses",
     )
+    # Buddy fields
+    is_dummy = models.BooleanField(default=False)
+    buddy_approved = models.BooleanField(default=True)
+    upfront_payee_dummy = models.ForeignKey(
+        "buddies.DummyUser",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="upfront_expenses",
+    )
 
     class Meta:
         ordering = ["-date_created"]

@@ -61,6 +61,7 @@ def _period_qs(request, feuser):
         date_due__gte=start,
         date_due__lte=end,
         deactivated=False,
+        is_dummy=False,
     )
     return qs, {'start': start, 'end': end, 'mode': mode}
 

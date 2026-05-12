@@ -1,0 +1,15 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - Invalid invitation{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Invitation not found</h1>
+</div>
+<div class="form-wrap">
+    <p>This invitation link is invalid or has expired. Ask your buddy to send a new one.</p>
+    <div class="form-actions">
+        <a href="{% url 'buddies:buddies_page' %}" class="btn btn-secondary">Go to Buddies</a>
+    </div>
+</div>
+{% endblock %}

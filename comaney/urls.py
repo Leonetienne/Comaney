@@ -21,6 +21,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("api.urls")),
     path("budget/", include("budget.urls")),
+    path("buddies/", include("buddies.urls")),
     re_path(r"^docs/(?P<path>.*)$", _serve_docs, name="docs"),
     path("", include("feusers.urls")),
 ]

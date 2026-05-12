@@ -1,0 +1,25 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - Buddy invitation{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Spending buddy invitation</h1>
+</div>
+
+<div class="form-wrap">
+    <p><strong>{{ inviter_name }}</strong> has invited you to be spending buddies on Comaney.</p>
+    <p class="text-muted">As spending buddies, you can log shared expenses, track who owes whom, and settle up occasionally instead of splitting every payment.</p>
+
+    <div class="form-actions">
+        <form method="post" action="{% url 'buddies:accept_invite' invite.token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn">Accept invitation</button>
+        </form>
+        <form method="post" action="{% url 'buddies:decline_invite' invite.token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary">Decline</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

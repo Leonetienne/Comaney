@@ -1,0 +1,17 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - Wrong account{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Invitation for a different account</h1>
+</div>
+<div class="form-wrap">
+    <p>This invitation was sent to <strong>{{ invite.invitee_email }}</strong>, but you are logged in as <strong>{{ request.feuser.email }}</strong>.</p>
+    <p>Please log in with the correct account to accept this invitation.</p>
+    <div class="form-actions">
+        <a href="{% url 'logout' %}" class="btn btn-secondary">Log out</a>
+        <a href="{% url 'buddies:buddies_page' %}" class="btn btn-secondary">Go to Buddies</a>
+    </div>
+</div>
+{% endblock %}

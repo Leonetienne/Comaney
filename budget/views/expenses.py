@@ -1,4 +1,5 @@
 import csv
+import json
 import urllib.parse
 from datetime import date
 
@@ -12,6 +13,65 @@ from ..forms import ExpenseForm
 from ..models import Expense, TransactionType
 from ..notifications import send_settled_notification, set_initial_notification_class
 from ._period import _get_month, _get_period_mode, _get_year, _month_nav_context, _year_nav_context
+
+
+# ---------------------------------------------------------------------------
+# Buddy payment helpers
+# ---------------------------------------------------------------------------
+
+def _buddy_context(feuser) -> dict:
+    from buddies.services import BuddyQueryService
+    return {
+        "buddy_actual": BuddyQueryService.get_actual_buddies(feuser),
+        "buddy_dummy": BuddyQueryService.get_dummy_buddies(feuser),
+    }
+
+
+def _parse_buddy_post(post, feuser):
+    """
+    Parse buddy payment fields from a POST request.
+    Returns None if buddy_payment is not set, else a dict with keys:
+      upfront_type ('me'|'feuser'|'dummy'), upfront_feuser, upfront_dummy, spendings, valid.
+    """
+    if not post.get("buddy_payment"):
+        return None
+
+    from buddies.models import DummyUser
+    from feusers.models import FeUser as FU
+
+    upfront_type = post.get("buddy_upfront_type", "me")
+    result = {"upfront_type": upfront_type, "upfront_feuser": None, "upfront_dummy": None, "valid": True}
+
+    if upfront_type == "feuser":
+        try:
+            uid = int(post.get("buddy_upfront_id", 0))
+            result["upfront_feuser"] = FU.objects.get(pk=uid, is_active=True)
+        except (ValueError, FU.DoesNotExist):
+            result["valid"] = False
+    elif upfront_type == "dummy":
+        try:
+            uid = int(post.get("buddy_upfront_id", 0))
+            result["upfront_dummy"] = DummyUser.objects.get(pk=uid, owning_feuser=feuser)
+        except (ValueError, DummyUser.DoesNotExist):
+            result["valid"] = False
+
+    try:
+        result["spendings"] = json.loads(post.get("buddy_spendings_json", "[]"))
+    except (json.JSONDecodeError, ValueError):
+        result["spendings"] = []
+
+    return result
+
+
+def _existing_buddy_json(expense) -> str:
+    """Serialise existing BuddySpending rows for a JS-editable expense form."""
+    rows = []
+    for bs in expense.buddy_spendings.select_related("participant_feuser", "participant_dummy").all():
+        if bs.participant_feuser_id:
+            rows.append({"type": "feuser", "id": bs.participant_feuser_id, "share_percent": float(bs.share_percent)})
+        else:
+            rows.append({"type": "dummy", "id": bs.participant_dummy_id, "share_percent": float(bs.share_percent)})
+    return json.dumps(rows)
 
 
 def _safe_back_url(url):
@@ -62,6 +122,7 @@ def expenses_export(request):
             owning_feuser=feuser,
             date_due__gte=start,
             date_due__lte=end,
+            is_dummy=False,
         )
         .select_related("category")
         .prefetch_related("tags")
@@ -88,33 +149,87 @@ def expenses_export(request):
 
 @feuser_required
 def expense_create(request):
+    feuser = request.feuser
     if request.method == "POST":
-        form = ExpenseForm(request.POST, feuser=request.feuser)
-        if form.is_valid():
+        form = ExpenseForm(request.POST, feuser=feuser)
+        buddy = _parse_buddy_post(request.POST, feuser)
+        if form.is_valid() and (buddy is None or buddy["valid"]):
             expense = form.save(commit=False)
-            expense.owning_feuser = request.feuser
-            expense.save()
-            form.save_m2m()
+            if buddy and buddy["upfront_type"] == "feuser" and buddy["upfront_feuser"]:
+                # Expense belongs to the other user; feuser initiated it
+                other = buddy["upfront_feuser"]
+                expense.owning_feuser = other
+                expense.buddy_approved = False
+                expense.save()
+                form.save_m2m()
+                from buddies.services import BuddyEmailService, BuddyExpenseService
+                BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
+                BuddyEmailService.send_expense_approval_request(expense, feuser)
+            else:
+                expense.owning_feuser = feuser
+                if buddy:
+                    expense.is_dummy = (buddy["upfront_type"] == "dummy")
+                    expense.upfront_payee_dummy = buddy.get("upfront_dummy")
+                expense.save()
+                form.save_m2m()
+                if buddy:
+                    from buddies.services import BuddyExpenseService
+                    BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
             set_initial_notification_class(expense)
             return redirect("budget:expenses_list")
     else:
-        form = ExpenseForm(feuser=request.feuser, initial={"type": "expense", "settled": True, "notify": True})
+        form = ExpenseForm(feuser=feuser, initial={"type": "expense", "settled": True, "notify": True})
     return render(request, "budget/expense_form.html", {
         "active_nav": "expenses",
         "form": form,
+        **_buddy_context(feuser),
     })
 
 
 @feuser_required
 def expense_edit(request, uid):
-    expense = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
+    feuser = request.feuser
+    expense = get_object_or_404(Expense, uid=uid, owning_feuser=feuser)
     if expense.type == TransactionType.CARRY_OVER:
         return redirect("budget:expenses_list")
     if request.method == "POST":
         was_settled = expense.settled
-        form = ExpenseForm(request.POST, instance=expense, feuser=request.feuser)
-        if form.is_valid():
+        form = ExpenseForm(request.POST, instance=expense, feuser=feuser)
+        buddy = _parse_buddy_post(request.POST, feuser)
+        if form.is_valid() and (buddy is None or buddy["valid"]):
             form.save()
+            if buddy:
+                new_type = buddy["upfront_type"]
+                new_feuser = buddy.get("upfront_feuser")
+                new_dummy = buddy.get("upfront_dummy")
+                # Detect payer change and apply service logic
+                payer_changed = (
+                    (new_type == "feuser" and new_feuser and new_feuser.pk != feuser.pk) or
+                    (new_type == "dummy" and new_dummy and new_dummy != expense.upfront_payee_dummy) or
+                    (new_type == "me" and expense.is_dummy)
+                )
+                if payer_changed:
+                    from buddies.services import BuddyExpenseService, BuddyEmailService
+                    expense = BuddyExpenseService.change_upfront_payer(
+                        expense,
+                        new_payer_feuser=(new_feuser if new_type == "feuser" else None),
+                        new_payer_dummy=(new_dummy if new_type == "dummy" else None),
+                    )
+                    if new_type == "feuser" and new_feuser:
+                        BuddyEmailService.send_expense_approval_request(expense, feuser)
+                        # Expense now belongs to other user; redirect without further editing
+                        return redirect("budget:expenses_list")
+                # Update BuddySpending rows
+                from buddies.services import BuddyExpenseService
+                BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
+            else:
+                # Buddy payment removed: clear all buddy data
+                expense.buddy_spendings.all().delete()
+                expense.is_dummy = False
+                expense.buddy_approved = True
+                expense.upfront_payee_dummy = None
+                expense.save(update_fields=["is_dummy", "buddy_approved", "upfront_payee_dummy"])
+
             if not was_settled and expense.settled:
                 send_settled_notification(expense)
             else:
@@ -122,12 +237,31 @@ def expense_edit(request, uid):
             back = _safe_back_url(request.POST.get("back", ""))
             return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
     else:
-        form = ExpenseForm(instance=expense, feuser=request.feuser)
+        form = ExpenseForm(instance=expense, feuser=feuser)
+
+    # Determine current upfront payer for pre-population
+    if expense.is_dummy and expense.upfront_payee_dummy_id:
+        existing_upfront_type = "dummy"
+        existing_upfront_id = expense.upfront_payee_dummy_id
+    elif not expense.is_dummy and expense.buddy_spendings.exists():
+        existing_upfront_type = "me"
+        existing_upfront_id = feuser.pk
+    else:
+        existing_upfront_type = "me"
+        existing_upfront_id = feuser.pk
+
+    is_buddy_expense = expense.buddy_spendings.exists() or expense.is_dummy
+
     return render(request, "budget/expense_form.html", {
         "active_nav": "expenses",
         "form": form,
         "expense": expense,
         "back_url": request.GET.get("back", ""),
+        "is_buddy_expense": is_buddy_expense,
+        "existing_upfront_type": existing_upfront_type,
+        "existing_upfront_id": existing_upfront_id,
+        "existing_spendings_json": _existing_buddy_json(expense),
+        **_buddy_context(feuser),
     })
 
 
@@ -153,7 +287,7 @@ def expense_bulk_action(request):
         uids = []
 
     if uids and action in ("settle", "unsettle", "delete"):
-        qs = Expense.objects.filter(owning_feuser=feuser, uid__in=uids)
+        qs = Expense.objects.filter(owning_feuser=feuser, uid__in=uids, is_dummy=False)
         if action == "settle":
             if len(uids) == 1:
                 single = qs.filter(settled=False).select_related("owning_feuser").first()

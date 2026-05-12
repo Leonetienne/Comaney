@@ -1,0 +1,14 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Buddy relationship ended</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ kicking_name }}</strong> has removed you as a spending buddy on Comaney.
+</p>
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
+    Your existing shared expense history has been preserved on your account. {{ kicking_name }} now appears as an offline buddy in your records, so your balances remain intact. No further automatic tracking will occur between you.
+</p>
+<div style="margin:24px 0;text-align:center;">
+    <a href="{{ site_url }}/buddies/" style="display:inline-block;background:#333;color:#ccc;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">View my Buddies</a>
+</div>
+{% endblock %}

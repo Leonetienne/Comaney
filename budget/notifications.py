@@ -182,6 +182,7 @@ def process_due_notifications() -> tuple[int, int]:
             settled=False,
             notify=True,
             deactivated=False,
+            is_dummy=False,
             date_due__isnull=False,
             auto_settle_on_due_date=False,  # auto-settle expenses need no manual-payment reminders
         )

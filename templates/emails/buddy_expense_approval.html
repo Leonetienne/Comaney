@@ -1,0 +1,31 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Shared expense needs your approval</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ initiating_name }}</strong> logged a shared expense that assigns you as the upfront payer.
+</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Title</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.title }}</td>
+    </tr>
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Amount</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.owning_feuser.currency }}{{ expense.value }}</td>
+    </tr>
+    {% if expense.date_due %}
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Date</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.date_due }}</td>
+    </tr>
+    {% endif %}
+</table>
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
+    Review the expense and approve or reject it. If you reject it, your participation is removed and the remaining shares are redistributed.
+</p>
+<div style="margin:24px 0;display:flex;gap:12px;text-align:center;">
+    <a href="{{ approve_url }}" style="display:inline-block;background:#e0e0e0;color:#141414;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;margin-right:8px;">Approve</a>
+    <a href="{{ reject_url }}" style="display:inline-block;background:#333;color:#ccc;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">Reject</a>
+</div>
+{% endblock %}

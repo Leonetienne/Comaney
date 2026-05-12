@@ -1,0 +1,24 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Shared expense rejected</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ rejecting_name }}</strong> rejected their participation in a shared expense.
+</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Expense</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.title }}</td>
+    </tr>
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Total amount</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.owning_feuser.currency }}{{ expense.value }}</td>
+    </tr>
+</table>
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
+    Their share has been redistributed equally among the remaining participants. Log in to review the updated breakdown.
+</p>
+<div style="margin:24px 0;text-align:center;">
+    <a href="{{ site_url }}/buddies/" style="display:inline-block;background:#e0e0e0;color:#141414;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">View in Buddies</a>
+</div>
+{% endblock %}

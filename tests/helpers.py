@@ -86,7 +86,9 @@ def fetch_email(to_email: str, subject_fragment: str, timeout: int = 60,
                 subject_match = subject_fragment.lower() in msg.get("Subject", "").lower()
                 if to_email in recipients and subject_match:
                     body = requests.get(f"{MAILPIT_API}/message/{msg['ID']}", timeout=5).json()
-                    return body.get("Text", "") or ""
+                    # Prefer HTML: it has proper href attributes with full paths.
+                    # Fall back to plain text for emails that send only text.
+                    return body.get("HTML", "") or body.get("Text", "") or ""
         except Exception:
             pass
         time.sleep(1)
@@ -94,8 +96,18 @@ def fetch_email(to_email: str, subject_fragment: str, timeout: int = 60,
 
 
 def extract_link(text: str) -> str:
-    for raw in re.findall(r'https?://\S+', text):
-        url = raw.rstrip('.,)')
+    # For HTML bodies, pull URLs from href attributes to avoid picking up
+    # bare-domain decorative links (e.g. the site logo in the email header).
+    hrefs = re.findall(r'href=["\']?(https?://[^"\'>\s]+)', text)
+    candidates = hrefs if hrefs else re.findall(r'https?://\S+', text)
+    # Return the first URL that has a real path (not just the bare domain).
+    for raw in candidates:
+        url = raw.rstrip('.,)"\'>')
+        if not re.match(r'https?://[^/]+/?$', url):
+            return re.sub(r'https?://[^/]+', BASE_URL, url)
+    # Fallback: return the first URL regardless.
+    for raw in candidates:
+        url = raw.rstrip('.,)"\'>')
         return re.sub(r'https?://[^/]+', BASE_URL, url)
     raise ValueError("No URL found in email body")
 
@@ -185,18 +197,22 @@ def get_api_key(driver, w) -> str:
     return key_el.get_attribute("value")
 
 
-def setup_user(driver, w) -> dict:
+def setup_user(driver, w, first_name: str = "", last_name: str = "") -> dict:
     """Create a confirmed user via management commands and generate an API key via shell.
 
     Bypasses the UI registration flow for speed. driver and w are accepted for
     call-site compatibility but are not used. Use register_user() + confirm_email()
     in tests that specifically exercise the registration UI.
+    Pass first_name / last_name to give the user a visible display name.
     """
     email = f"sel.{uuid.uuid4().hex[:8]}@example.com"
-    result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "create_user", email, "-p", PASSWORD],
-        capture_output=True, text=True, timeout=15,
-    )
+    cmd = ["docker", "exec", DOCKER_WEB, "python", "manage.py",
+           "create_user", email, "-p", PASSWORD]
+    if first_name:
+        cmd += ["--first-name", first_name]
+    if last_name:
+        cmd += ["--last-name", last_name]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
     assert result.returncode == 0, f"create_user failed:\n{result.stderr}"
 
     key_result = subprocess.run(

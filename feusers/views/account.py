@@ -194,6 +194,8 @@ def account_delete(request):
         if not feuser.check_password(password):
             error = "Incorrect password."
         else:
+            from buddies.services import BuddyLifecycleService
+            BuddyLifecycleService.handle_account_deletion(feuser)
             request.session.flush()
             feuser.delete()
             return redirect("landing_page")

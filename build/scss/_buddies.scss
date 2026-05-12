@@ -1,0 +1,404 @@
+// ── Buddies page ──────────────────────────────────────────────────────────────
+
+.buddies-section {
+  margin-bottom: 2.5rem;
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 1.2rem 0 0.6rem;
+  }
+}
+
+// ── Buddy cards ───────────────────────────────────────────────────────────────
+
+.buddy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.buddy-card {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  &.buddy-card-dummy {
+    border-left: 3px solid var(--text-muted);
+  }
+}
+
+.buddy-card-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.buddy-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.buddy-email {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.buddy-tag {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  padding: 1px 6px;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.buddy-card-balance {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+
+  &.balance-positive { color: #2da44e; }
+  &.balance-negative { color: var(--error); }
+  &.balance-zero     { color: var(--text-muted); }
+}
+
+.buddy-card-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+// ── Invitation cards ──────────────────────────────────────────────────────────
+
+.invite-card {
+  padding: 0.85rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+
+  p { margin: 0 0 0.6rem; }
+
+  &.invite-card-outgoing {
+    border-left: 3px solid var(--text-muted);
+  }
+}
+
+.invite-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+// ── Add-buddy panels ──────────────────────────────────────────────────────────
+
+.add-buddy-forms {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.add-buddy-panel {
+  padding: 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0 0 0.3rem;
+    text-transform: none;
+    color: var(--text);
+    letter-spacing: 0;
+    border: none;
+    padding: 0;
+  }
+
+  p { margin: 0 0 0.75rem; font-size: 0.875rem; }
+}
+
+.inline-form {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.input-inline {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 0.9rem;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+}
+
+// ── Shared expense list ───────────────────────────────────────────────────────
+
+.buddy-expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.buddy-expense-row {
+  padding: 0.85rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem 1rem;
+  align-items: start;
+
+  &.buddy-expense-pending {
+    border-left: 3px solid #e3a008;
+    background: color-mix(in srgb, #e3a008 6%, var(--bg-surface));
+  }
+
+  &.buddy-expense-dummy {
+    border-left: 3px solid var(--text-muted);
+  }
+}
+
+.bexp-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  grid-column: 1;
+}
+
+.bexp-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bexp-details {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--text-subtle);
+  grid-column: 1;
+}
+
+.bexp-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bexp-participants {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  grid-column: 1 / -1;
+}
+
+.bexp-share {
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.bexp-actions {
+  display: flex;
+  gap: 0.4rem;
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: center;
+}
+
+// ── Misc ──────────────────────────────────────────────────────────────────────
+
+.buddies-onboarding-hint {
+  padding: 1rem 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-subtle);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.warning-box {
+  padding: 1rem 1.25rem;
+  background: color-mix(in srgb, #e3a008 10%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, #e3a008 40%, var(--border));
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.info-box {
+  padding: 1rem 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  p { margin: 0 0 0.5rem; }
+  ul { margin: 0; padding-left: 1.25rem; }
+  li { margin-bottom: 0.3rem; font-size: 0.9rem; color: var(--text-subtle); }
+}
+
+// ── Expense form buddy section ────────────────────────────────────────────────
+
+.buddy-payment-section {
+  margin-top: 1.25rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.buddy-payment-section h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 0.85rem;
+}
+
+.buddy-payer-row,
+.buddy-participants-row {
+  margin-bottom: 0.75rem;
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-subtle);
+    margin-bottom: 0.3rem;
+  }
+
+  select { width: 100%; }
+}
+
+.buddy-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.buddy-slider-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 64px;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.buddy-slider-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-subtle);
+}
+
+.buddy-slider-pct {
+  text-align: right;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 48px;
+}
+
+.buddy-share-sum {
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  color: var(--text-muted);
+
+  &.share-sum-ok    { color: #2da44e; }
+  &.share-sum-error { color: var(--error); }
+}
+
+.buddy-equal-btn {
+  margin-top: 0.5rem;
+}
+
+// ── Pending approval banner in expense list ───────────────────────────────────
+
+.buddy-approval-banner {
+  background: color-mix(in srgb, #e3a008 10%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, #e3a008 40%, var(--border));
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.82rem;
+  color: var(--text-subtle);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+
+.badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 1px 6px;
+  letter-spacing: 0.02em;
+}
+
+.badge-warning {
+  background: color-mix(in srgb, #e3a008 18%, var(--bg-surface));
+  color: #e3a008;
+  border: 1px solid color-mix(in srgb, #e3a008 35%, var(--border));
+}
+
+.badge-muted {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+// ── Danger-subtle button variant ──────────────────────────────────────────────
+
+.btn-danger-subtle {
+  background: transparent;
+  border: 1px solid var(--error);
+  color: var(--error);
+
+  &:hover {
+    background: var(--error-bg);
+  }
+}
+
+.btn-danger {
+  background: var(--error);
+  color: #fff;
+  border: 1px solid var(--error);
+
+  &:hover { opacity: 0.88; }
+}

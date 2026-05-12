@@ -44,7 +44,7 @@ def expenses(request, feuser):
             sort_field = "-" + sort_field
         qs = (
             Expense.objects
-            .filter(owning_feuser=feuser, date_due__gte=start, date_due__lte=end)
+            .filter(owning_feuser=feuser, date_due__gte=start, date_due__lte=end, is_dummy=False)
             .select_related("category")
             .prefetch_related("tags")
             .order_by(sort_field, "date_created")

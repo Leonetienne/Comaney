@@ -22,6 +22,10 @@ def create_expense(
     auto_settle_on_due_date: bool = False,
     notify: bool = True,
     source_scheduled: Optional[ScheduledExpense] = None,
+    is_dummy: bool = False,
+    buddy_approved: bool = True,
+    upfront_payee_dummy=None,
+    buddy_spendings: Optional[list[dict]] = None,
 ) -> Expense:
     expense = Expense.objects.create(
         owning_feuser=owning_feuser,
@@ -36,7 +40,13 @@ def create_expense(
         auto_settle_on_due_date=auto_settle_on_due_date,
         notify=notify,
         source_scheduled=source_scheduled,
+        is_dummy=is_dummy,
+        buddy_approved=buddy_approved,
+        upfront_payee_dummy=upfront_payee_dummy,
     )
     if tags:
         expense.tags.set(tags)
+    if buddy_spendings:
+        from buddies.services import BuddyExpenseService
+        BuddyExpenseService.set_buddy_spendings(expense, buddy_spendings)
     return expense
