@@ -1,0 +1,22 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - Group invitation{% endblock %}
+
+{% block content %}
+<div class="form-wrap" style="max-width:480px;margin:3rem auto;">
+    <h1>You're invited!</h1>
+    <p><strong>{{ inviter_name }}</strong> has invited you to join the group <strong>{{ invite.group.name }}</strong> on Comaney.</p>
+    <p style="color:var(--text-subtle);font-size:0.9rem;">Accepting also connects you as spending buddies with {{ inviter_name }} if you aren't already.</p>
+
+    <div class="invite-actions" style="margin-top:1.5rem;">
+        <form method="post" action="{% url 'buddies:accept_group_invite' invite.token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn">Join group</button>
+        </form>
+        <form method="post" action="{% url 'buddies:decline_group_invite' invite.token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary">Decline</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

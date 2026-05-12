@@ -46,7 +46,11 @@ def expenses(request, feuser):
             Expense.objects
             .filter(owning_feuser=feuser, date_due__gte=start, date_due__lte=end, is_dummy=False)
             .select_related("category")
-            .prefetch_related("tags")
+            .prefetch_related(
+                "tags",
+                "buddy_spendings__participant_feuser",
+                "buddy_spendings__participant_dummy",
+            )
             .order_by(sort_field, "date_created")
         )
         qs = apply_query(qs, request.GET.get("q", ""))

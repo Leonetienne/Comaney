@@ -83,17 +83,25 @@ Build: `./docs/build/build-docs.sh` (uses Docker; requires Docker daemon).
 Chapters: Introduction · User Manual · Admin Manual · Developer Manual.
 
 ## Running tests
-Tests are end-to-end Selenium + requests against a live Docker stack.
+Two test suites exist under `tests/`:
+
+**Unit tests** (no Docker, no browser, pure Python):
+```bash
+venv/bin/pytest tests/unit/ -v
+```
+
+**End-to-end tests** (Selenium + requests against a live Docker stack):
 ```bash
 # Stack must be running: docker compose up
 # Mailpit at :8030, app at :8080
-cd tests && pytest -x
+cd tests/e2e && pytest -x
 ```
-- `DOCKER_WEB = "comaney-web-1"` (conftest.py)
-- Tests numbered by prefix; run in order
+- `DOCKER_WEB = "comaney-web-1"` (e2e/conftest.py)
+- E2E tests numbered by prefix; run in order
 - `run_cmd("management_command")` via docker exec
 - `ctx` dict is session-scoped state shared across tests in a file
 - **NEVER use `wait_url`, `wait_text`, or any `w.until(...)` / `WebDriverWait` condition after a browser action.** Always use `time.sleep()` and then assert on `driver.page_source` or `driver.current_url`. Conditional waits cause race conditions.
+- Pure algorithm logic (no Django/DB) goes in `tests/unit/`. Use `venv/bin/pytest tests/unit/` to run them without the Docker stack.
 
 ## Docker / build
 ```bash

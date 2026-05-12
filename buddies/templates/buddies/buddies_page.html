@@ -5,8 +5,8 @@
 {% block content %}
 <div class="page-header">
     <h1>Buddies</h1>
-    <p class="page-subtitle">Track shared spending with friends. Whoever pays upfront logs the full expense; the others' shares are recorded automatically. Settle up with one occasional payment instead of splitting every transaction.</p>
 </div>
+<p class="page-subtitle">Track shared spending with friends. Whoever pays upfront logs the full expense; the others' shares are recorded automatically. Settle up with one occasional payment instead of splitting every transaction.</p>
 
 {% if debts.actual or debts.dummy %}
 <section class="buddies-section">
@@ -55,7 +55,7 @@
             <div class="buddy-card-actions">
                 <button class="btn btn-sm btn-secondary"
                         onclick="this.style.display='none';document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='flex'">
-                    Invite to merge
+                    Invite as user
                 </button>
                 <form id="merge-form-{{ info.dummy.uid }}" method="post"
                       action="{% url 'buddies:send_merge_invite' info.dummy.uid %}"
@@ -176,7 +176,6 @@
             <div class="bexp-meta">
                 <span class="bexp-title">{{ exp.title }}</span>
                 {% if not exp.buddy_approved %}<span class="badge badge-warning">Needs approval</span>{% endif %}
-                {% if exp.is_dummy %}<span class="badge badge-muted">Offline payer</span>{% endif %}
             </div>
             <div class="bexp-details">
                 <span class="bexp-value">{{ exp.owning_feuser.currency }}{{ exp.value }}</span>

@@ -1,0 +1,327 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - {{ group.name }}{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ group.name }}</h1>
+    {% if is_admin %}<span class="buddy-tag">You are admin</span>{% endif %}
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+
+{# ── Balances ─────────────────────────────────────────────────────────────── #}
+<section class="buddies-section">
+    <h2>Balances</h2>
+
+    {% if breakdown.simplified %}
+    <div id="group-debt-graph" class="buddy-debt-graph" style="margin-bottom:1.25rem;"></div>
+
+    <div class="group-settle-list">
+        {% for t in breakdown.simplified %}
+        <div class="group-settle-row {% if t.from_is_me %}settle-row-me-owes{% elif t.to_is_me %}settle-row-me-receives{% endif %}">
+            <strong>{{ t.from_name }}</strong>
+            <span class="settle-arrow">owes</span>
+            <strong>{{ t.to_name }}</strong>
+            <span class="settle-amount">{{ currency }}{{ t.amount|floatformat:2 }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+    (function () {
+        var GRAPH = {{ breakdown_graph_json|safe }};
+        var CURRENCY = "{{ currency|escapejs }}";
+
+        function renderGroupGraph(nodes, links, currency) {
+            if (!nodes.length) return;
+            var container = document.getElementById('group-debt-graph');
+            if (!container) return;
+
+            var n = nodes.length;
+            var W = container.clientWidth || 600;
+            var R = 34;
+            var ORBIT = Math.max(90, Math.min(W / 2 - R - 32, 180));
+            var H = ORBIT * 2 + (R + 32) * 2;
+            var CX = W / 2, CY = H / 2;
+            var COL_DEBT = '#cf222e';
+
+            var svg = d3.select('#group-debt-graph').append('svg')
+                .attr('width', W).attr('height', H);
+
+            var defs = svg.append('defs');
+            defs.append('marker').attr('id', 'arr').attr('viewBox', '0 -5 10 10')
+                .attr('refX', 9).attr('refY', 0).attr('markerWidth', 7).attr('markerHeight', 7)
+                .attr('orient', 'auto').append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', COL_DEBT);
+
+            var pos = {};
+            nodes.forEach(function (nd, i) {
+                var angle = (2 * Math.PI * i / n) - Math.PI / 2;
+                pos[nd.key] = { x: CX + ORBIT * Math.cos(angle), y: CY + ORBIT * Math.sin(angle), name: nd.name, is_me: nd.is_me };
+            });
+
+            links.forEach(function (lk) {
+                var f = pos[lk.from], t = pos[lk.to];
+                if (!f || !t) return;
+                var dx = t.x - f.x, dy = t.y - f.y, len = Math.sqrt(dx*dx + dy*dy);
+                var x1 = f.x + dx/len*R, y1 = f.y + dy/len*R;
+                var x2 = t.x - dx/len*(R+14), y2 = t.y - dy/len*(R+14);
+                svg.append('line').attr('x1',x1).attr('y1',y1).attr('x2',x2).attr('y2',y2)
+                    .attr('stroke', COL_DEBT).attr('stroke-width', 2).attr('marker-end','url(#arr)');
+                var lx=(x1+x2)/2, ly=(y1+y2)/2, pl=14;
+                var px=-dy/len*pl, py=dx/len*pl;
+                svg.append('text').attr('x',lx+px).attr('y',ly+py)
+                    .attr('text-anchor','middle').attr('dominant-baseline','middle')
+                    .attr('font-size','11').attr('font-weight','600').attr('fill',COL_DEBT)
+                    .text(currency + lk.amount.toFixed(2));
+            });
+
+            Object.values(pos).forEach(function (nd) {
+                svg.append('circle').attr('cx',nd.x).attr('cy',nd.y).attr('r',R)
+                    .attr('fill', nd.is_me ? '#2da44e' : '#23272e')
+                    .attr('stroke', nd.is_me ? '#1a7f36' : '#444c56').attr('stroke-width', 2);
+                var parts = nd.name.split(' ');
+                if (parts.length > 1) {
+                    svg.append('text').attr('x',nd.x).attr('y',nd.y-7)
+                        .attr('text-anchor','middle').attr('dominant-baseline','middle')
+                        .attr('font-size','10').attr('fill','#fff').text(parts[0]);
+                    svg.append('text').attr('x',nd.x).attr('y',nd.y+7)
+                        .attr('text-anchor','middle').attr('dominant-baseline','middle')
+                        .attr('font-size','10').attr('fill','#fff').text(parts.slice(1).join(' '));
+                } else {
+                    svg.append('text').attr('x',nd.x).attr('y',nd.y)
+                        .attr('text-anchor','middle').attr('dominant-baseline','middle')
+                        .attr('font-size','10').attr('fill','#fff').text(nd.name);
+                }
+            });
+        }
+
+        renderGroupGraph(GRAPH.nodes, GRAPH.links, CURRENCY);
+    })();
+    </script>
+
+    {% else %}
+    <p style="color:var(--text-muted);font-size:0.9rem;">
+        {% if breakdown.expenses %}All settled up.{% else %}No expenses recorded yet.{% endif %}
+    </p>
+    {% endif %}
+</section>
+
+{# ── Expense Breakdown ────────────────────────────────────────────────────── #}
+{% if breakdown.expenses %}
+<section class="buddies-section">
+    <h2>Expense Breakdown</h2>
+    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">Each expense and how the shares were calculated.</p>
+
+    <div class="bexp-breakdown-list">
+        {% for e in breakdown.expenses %}
+        <div id="expense-{{ e.expense.uid }}" class="bexp-breakdown-card {% if e.payer_is_me %}bexp-card-i-paid{% elif e.i_am_participant %}bexp-card-other-paid{% else %}bexp-card-neutral{% endif %}">
+            <div class="bexp-breakdown-header">
+                <div class="bexp-breakdown-header-left">
+                    <span class="bexp-title">{{ e.expense.title }}</span>
+                    <span class="bexp-breakdown-meta">
+                        {% if e.expense.date_due %}{{ e.expense.date_due|date:"N j, Y" }} &middot; {% endif %}
+                        Total: <strong>{{ currency }}{{ e.total|floatformat:2 }}</strong> &middot;
+                        Paid by: <strong>{{ e.payer_name }}</strong>
+                    </span>
+                </div>
+                <div class="bexp-breakdown-header-right">
+                    {% if e.expense.owning_feuser == request.feuser %}
+                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Edit</a>
+                    {% endif %}
+                </div>
+            </div>
+            <table class="bexp-breakdown-table">
+                <thead>
+                    <tr><th>Person</th><th style="text-align:right">Share</th><th style="text-align:right">Amount</th><th>Role</th></tr>
+                </thead>
+                <tbody>
+                    <tr class="{% if e.payer_is_me %}bexp-row-me{% endif %}">
+                        <td>{{ e.payer_name }}</td>
+                        <td style="text-align:right">{{ e.payer_percent|floatformat:1 }}%</td>
+                        <td style="text-align:right">{{ currency }}{{ e.payer_amount|floatformat:2 }}</td>
+                        <td><span class="buddy-tag">Paid</span></td>
+                    </tr>
+                    {% for s in e.participant_shares %}
+                    <tr class="{% if s.is_me %}bexp-row-me{% endif %}">
+                        <td>{{ s.name }}</td>
+                        <td style="text-align:right">{{ s.percent|floatformat:1 }}%</td>
+                        <td style="text-align:right">{{ currency }}{{ s.amount|floatformat:2 }}</td>
+                        <td><span class="badge badge-muted">Owes</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ── Members ──────────────────────────────────────────────────────────────── #}
+<section class="buddies-section">
+    <h2>Members</h2>
+    <div class="buddy-list">
+
+        <div class="buddy-card">
+            <div class="buddy-card-identity">
+                <span class="buddy-name">{{ request.feuser.first_name }} {{ request.feuser.last_name }}</span>
+                <span class="buddy-email">{{ request.feuser.email }}</span>
+                <span class="buddy-tag">You{% if group.admin_feuser_id == request.feuser.pk %} &middot; Admin{% endif %}</span>
+            </div>
+            <div></div>
+            <div></div>
+        </div>
+
+        {% for m in feuser_members %}
+        <div class="buddy-card">
+            <div class="buddy-card-identity">
+                <span class="buddy-name">{{ m.feuser.first_name }} {{ m.feuser.last_name }}</span>
+                <span class="buddy-email">{{ m.feuser.email }}</span>
+                {% if m.feuser.pk == group.admin_feuser_id %}<span class="buddy-tag">Admin</span>{% endif %}
+            </div>
+            <div></div>
+            <div class="buddy-card-actions">
+                {% if is_admin %}
+                <form method="post" action="{% url 'buddies:group_remove_member' group.uid m.uid %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger-subtle"
+                            onclick="return confirm('Remove {{ m.feuser.first_name|default:m.feuser.email }} from the group? Their historical expenses will be preserved under an offline record.')">
+                        Remove
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        {% for m in dummy_members %}
+        <div class="buddy-card buddy-card-dummy">
+            <div class="buddy-card-identity">
+                <span class="buddy-name">{{ m.dummy.display_name }}</span>
+                <span class="buddy-tag">Offline</span>
+            </div>
+            <div></div>
+            <div class="buddy-card-actions">
+                {% if is_admin %}
+                <button class="btn btn-sm btn-secondary"
+                        onclick="this.style.display='none';document.getElementById('merge-form-{{ m.dummy.uid }}').style.display='flex'">
+                    Invite as user
+                </button>
+                <form id="merge-form-{{ m.dummy.uid }}" method="post"
+                      action="{% url 'buddies:group_send_merge' group.uid m.dummy.uid %}"
+                      style="display:none;gap:6px;flex-wrap:wrap;align-items:center;">
+                    {% csrf_token %}
+                    <input type="email" name="email" placeholder="Their email" class="input-inline" required>
+                    <button type="submit" class="btn btn-sm">Send</button>
+                    <button type="button" class="btn btn-sm btn-secondary"
+                            onclick="this.closest('form').style.display='none';this.closest('.buddy-card-actions').querySelector('.btn-secondary').style.display=''">
+                        Cancel
+                    </button>
+                </form>
+                <form method="post" action="{% url 'buddies:group_remove_member' group.uid m.uid %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger-subtle"
+                            onclick="return confirm('Remove {{ m.dummy.display_name }} from the group?')">
+                        Remove
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+</section>
+
+{% if is_admin %}
+<section class="buddies-section">
+    <h2>Invite members</h2>
+    <div class="add-buddy-forms">
+
+        <div class="add-buddy-panel">
+            <h3>Invite by email</h3>
+            <p class="text-muted">Sends a group invitation. If the person is not yet your buddy, a buddy connection is established at the same time.</p>
+            <form method="post" action="{% url 'buddies:group_invite_member' group.uid %}" class="inline-form">
+                {% csrf_token %}
+                <input type="email" name="email" placeholder="Email address" required class="input-inline">
+                <button type="submit" class="btn">Send invite</button>
+            </form>
+        </div>
+
+        <div class="add-buddy-panel">
+            <h3>Add offline member</h3>
+            <p class="text-muted">For people who don't use Comaney. You can invite them to the group later.</p>
+            <form method="post" action="{% url 'buddies:group_add_dummy' group.uid %}" class="inline-form">
+                {% csrf_token %}
+                <input type="text" name="display_name" placeholder="Display name" maxlength="128" required class="input-inline">
+                <button type="submit" class="btn">Add</button>
+            </form>
+        </div>
+
+    </div>
+
+    {% if pending_invites %}
+    <h3>Pending invitations</h3>
+    {% for invite in pending_invites %}
+    <div class="invite-card invite-card-outgoing">
+        <p>Sent to <strong>{{ invite.invitee_email }}</strong>. Expires {{ invite.expires_at|date:"N j, Y" }}.</p>
+        <form method="post" action="{% url 'buddies:group_revoke_invite' group.uid invite.token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-secondary">Revoke</button>
+        </form>
+    </div>
+    {% endfor %}
+    {% endif %}
+</section>
+
+<section class="buddies-section">
+    <h2>Admin actions</h2>
+    <div class="add-buddy-forms">
+
+        {% if feuser_members %}
+        <div class="add-buddy-panel">
+            <h3>Transfer admin rights</h3>
+            <p class="text-muted">Transfer your admin role to another member. You will remain a regular member.</p>
+            <form method="post" action="{% url 'buddies:group_transfer_admin' group.uid %}" class="inline-form" style="flex-wrap:wrap;">
+                {% csrf_token %}
+                <select name="new_admin_id" class="input-inline" style="flex:1;min-width:140px;">
+                    {% for m in feuser_members %}
+                    <option value="{{ m.feuser.pk }}">{{ m.feuser.first_name }} {{ m.feuser.last_name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-secondary">Transfer</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="add-buddy-panel">
+            <h3>Dissolve group</h3>
+            <p class="text-muted">Removes the group permanently. Offline members become your personal offline buddies. Existing expenses are kept but lose their group context.</p>
+            <form method="post" action="{% url 'buddies:group_dissolve' group.uid %}">
+                {% csrf_token %}
+                <input type="hidden" name="confirmed" value="yes">
+                <button type="submit" class="btn btn-danger-subtle"
+                        onclick="return confirm('Dissolve &quot;{{ group.name }}&quot;? This cannot be undone.')">
+                    Dissolve group
+                </button>
+            </form>
+        </div>
+
+    </div>
+</section>
+{% endif %}
+
+<div style="margin-top:1rem;">
+    <a href="{% url 'buddies:my_buddies' %}" class="btn btn-secondary btn-sm">&larr; Back to My Buddies</a>
+</div>
+
+{% endblock %}

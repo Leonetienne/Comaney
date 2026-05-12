@@ -5,6 +5,17 @@ from budget.models import Category, Tag
 from .utils import _err
 
 
+def _buddy_participant_names(exp) -> list:
+    names = []
+    for bs in exp.buddy_spendings.all():
+        if bs.participant_feuser_id:
+            fu = bs.participant_feuser
+            names.append(f"{fu.first_name} {fu.last_name}".strip() or fu.email)
+        elif bs.participant_dummy_id:
+            names.append(bs.participant_dummy.display_name)
+    return names
+
+
 def _expense_json(exp):
     return {
         "id":                           exp.uid,
@@ -22,6 +33,7 @@ def _expense_json(exp):
         "notify":                       exp.notify,
         "last_notification_class_sent": exp.last_notification_class_sent,
         "date_created":                 exp.date_created.isoformat(),
+        "buddy_participants":           _buddy_participant_names(exp),
     }
 
 

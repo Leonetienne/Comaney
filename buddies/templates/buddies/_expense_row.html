@@ -1,0 +1,39 @@
+<div id="expense-{{ exp.uid }}" class="buddy-expense-row {{ bexp_color_class }} {% if not exp.buddy_approved %}buddy-expense-pending{% endif %}">
+    <div class="bexp-meta">
+        <span class="bexp-title">{{ exp.title }}</span>
+        {% if not exp.buddy_approved %}<span class="badge badge-warning">Needs approval</span>{% endif %}
+    </div>
+    <div class="bexp-details">
+        <span class="bexp-value">{{ exp.owning_feuser.currency }}{{ exp.value }}</span>
+        <span class="bexp-owner">
+            Paid by:
+            {% if exp.is_dummy %}{{ exp.upfront_payee_dummy.display_name }}
+            {% else %}{{ exp.owning_feuser.first_name }} {{ exp.owning_feuser.last_name }}{% endif %}
+        </span>
+        {% if exp.date_due %}<span class="bexp-date">{{ exp.date_due|date:"N j, Y" }}</span>{% endif %}
+    </div>
+    <div class="bexp-participants">
+        {% for bs in exp.buddy_spendings.all %}
+        <span class="bexp-share">
+            {% if bs.participant_feuser %}{{ bs.participant_feuser.first_name }} {{ bs.participant_feuser.last_name }}
+            {% else %}{{ bs.participant_dummy.display_name }}{% endif %}:
+            {{ bs.share_percent|floatformat:1 }}%
+        </span>
+        {% endfor %}
+    </div>
+    <div class="bexp-actions">
+        {% if not exp.buddy_approved and exp.owning_feuser == request.feuser %}
+        <form method="post" action="{% url 'buddies:approve_expense' exp.uid %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm">Approve</button>
+        </form>
+        <form method="post" action="{% url 'buddies:reject_expense' exp.uid %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-secondary">Reject</button>
+        </form>
+        {% endif %}
+        {% if exp.owning_feuser == request.feuser %}
+        <a href="{% url 'budget:expense_edit' exp.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ exp.uid }}" class="btn btn-sm btn-secondary">Edit</a>
+        {% endif %}
+    </div>
+</div>

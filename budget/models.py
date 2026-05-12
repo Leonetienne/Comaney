@@ -79,6 +79,12 @@ class Expense(OwnedModel):
         on_delete=models.SET_NULL,
         related_name="upfront_expenses",
     )
+    buddy_group = models.ForeignKey(
+        "buddies.BuddyGroup",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="expenses",
+    )
 
     class Meta:
         ordering = ["-date_created"]

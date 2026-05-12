@@ -44,6 +44,8 @@ def register(request):
                 user.save()
                 from budget.fixtures import create_defaults
                 create_defaults(user)
+                from buddies.services import BuddyLifecycleService
+                BuddyLifecycleService.complete_onboarding_invites(user)
                 request.session["feuser_id"] = user.pk
                 return redirect("budget:dashboard")
 
@@ -246,6 +248,8 @@ def confirm_email(request, token):
     user.save(update_fields=["is_confirmed", "is_active", "confirmation_token"])
     from budget.fixtures import create_defaults
     create_defaults(user)
+    from buddies.services import BuddyLifecycleService
+    BuddyLifecycleService.complete_onboarding_invites(user)
     admin_email = getattr(settings, "ADMIN_NOTIFICATION_EMAIL", "")
     if admin_email and not settings.DISABLE_EMAILING:
         try:

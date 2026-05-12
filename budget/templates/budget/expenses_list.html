@@ -134,6 +134,10 @@ window.EXPENSE_CONFIG = {
 
                 <div x-show="exp.note" class="exp-row3" x-text="exp.note"></div>
 
+                <div x-show="exp.buddy_participants && exp.buddy_participants.length"
+                     class="exp-buddy-shared"
+                     x-text="'Shared with ' + (exp.buddy_participants || []).join(', ')"></div>
+
                 <label class="exp-checkbox-wrap" title="Select">
                     <input type="checkbox" class="exp-checkbox"
                            :checked="!!selected[exp.id]"

@@ -1,0 +1,30 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+{% if is_merge %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">You have been invited to Comaney</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ inviter_name }}</strong> uses Comaney to track shared expenses and has an offline record named <strong style="color:#e0e0e0;">{{ dummy_name }}</strong> that they want to link with your account.
+</p>
+<p style="color:#aaa;line-height:1.6;font-size:0.9rem;">
+    Create a free account using this email address and the link will be applied automatically once you confirm your email.
+</p>
+{% else %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Buddy invitation</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ inviter_name }}</strong> has invited you to be spending buddies on Comaney.
+</p>
+<p style="color:#aaa;line-height:1.6;font-size:0.9rem;">
+    Spending buddies track shared expenses together. Whoever pays upfront logs the full amount; the others' shares are recorded automatically. Settle up with one occasional payment instead of splitting every transaction.
+</p>
+<p style="color:#aaa;line-height:1.6;font-size:0.9rem;">
+    Create a free account using this email address and you will be automatically linked as spending buddies once you confirm your email.
+</p>
+{% endif %}
+<div style="margin:28px 0;text-align:center;">
+    <a href="{{ register_url }}" style="display:inline-block;background:#e0e0e0;color:#141414;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;">Create account</a>
+</div>
+<p style="color:#666;font-size:0.82rem;line-height:1.5;">
+    This invitation expires in 7 days. If you did not expect this email, you can safely ignore it.
+</p>
+{% endblock %}

@@ -1,0 +1,221 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - My Buddies{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>My Buddies</h1>
+</div>
+<p class="page-subtitle">Track shared spending with friends. Whoever pays upfront logs the full expense; the others' shares are recorded automatically.</p>
+
+{% if messages %}
+{% for message in messages %}
+<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+
+{% if unified_debts %}
+<section class="buddies-section">
+    <h2>Balances</h2>
+    <div class="buddy-list">
+        {% for info in unified_debts %}
+        <div class="buddy-card {% if info.type == 'dummy' %}buddy-card-dummy{% endif %}">
+            <div class="buddy-card-identity">
+                <span class="buddy-name">{{ info.display_name }}</span>
+                {% if info.type == 'feuser' and info.feuser %}
+                <span class="buddy-email">{{ info.feuser.email }}</span>
+                {% endif %}
+                <span class="buddy-sources">
+                    {% for src in info.sources %}
+                    <span class="buddy-tag">{{ src }}</span>
+                    {% endfor %}
+                </span>
+            </div>
+            <div class="buddy-card-balance {% if info.net > 0 %}balance-positive{% elif info.net < 0 %}balance-negative{% else %}balance-zero{% endif %}">
+                {% if info.net > 0 %}
+                    <span title="They owe you">+{{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}</span>
+                {% elif info.net < 0 %}
+                    <span title="You owe them">-{{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}</span>
+                {% else %}
+                    <span>Settled up</span>
+                {% endif %}
+            </div>
+            <div class="buddy-card-actions">
+                {% if info.type == 'feuser' and info.link_uid %}
+                <form method="post" action="{% url 'buddies:kick_actual' info.link_uid %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger-subtle"
+                            onclick="return confirm('Remove {{ info.display_name|escapejs }} as a spending buddy? Existing shared expenses are kept.')">
+                        Remove
+                    </button>
+                </form>
+                {% elif info.type == 'dummy' and info.dummy %}
+                <button class="btn btn-sm btn-secondary"
+                        onclick="this.style.display='none';document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='flex'">
+                    Invite as user
+                </button>
+                <form id="merge-form-{{ info.dummy.uid }}" method="post"
+                      action="{% url 'buddies:send_merge_invite' info.dummy.uid %}"
+                      style="display:none;gap:6px;flex-wrap:wrap;align-items:center;">
+                    {% csrf_token %}
+                    <input type="email" name="email" placeholder="Their email" class="input-inline" required>
+                    <button type="submit" class="btn btn-sm">Send</button>
+                    <button type="button" class="btn btn-sm btn-secondary"
+                            onclick="this.closest('form').style.display='none';this.closest('.buddy-card-actions').querySelector('button.btn-secondary').style.display=''">
+                        Cancel
+                    </button>
+                </form>
+                <form method="post" action="{% url 'buddies:kick_dummy' info.dummy.uid %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger-subtle"
+                            onclick="return confirm('Remove {{ info.dummy.display_name|escapejs }}? Existing shared expenses are kept.')">
+                        Remove
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if my_groups %}
+<section class="buddies-section">
+    <h2>Groups</h2>
+    <div class="buddy-list">
+        {% for group in my_groups %}
+        <div class="buddy-card">
+            <div class="buddy-card-identity">
+                <span class="buddy-name">{{ group.name }}</span>
+                <span class="buddy-email">
+                    {% for m in group.members.all %}{% if m.feuser %}{{ m.feuser.first_name|default:m.feuser.email }}{% else %}{{ m.dummy.display_name }}{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </span>
+                {% if group.admin_feuser_id == request.feuser.pk %}
+                <span class="buddy-tag">Admin</span>
+                {% endif %}
+            </div>
+            <div></div>
+            <div class="buddy-card-actions">
+                <a href="{% url 'buddies:group_detail' group.uid %}" class="btn btn-sm btn-secondary">Manage</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if group_invites_in or pending_invites_in or pending_invites_out or merge_invites_in %}
+<section class="buddies-section">
+    <h2>Pending Invitations</h2>
+
+    {% if group_invites_in %}
+    <h3>Group invitations</h3>
+    {% for invite in group_invites_in %}
+    <div class="invite-card">
+        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> ({{ invite.inviting_feuser.email }}) invited you to join the group <strong>{{ invite.group.name }}</strong>.</p>
+        <div class="invite-actions">
+            <a href="{% url 'buddies:view_group_invite' invite.token %}" class="btn btn-sm">View invite</a>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if pending_invites_in %}
+    <h3>Buddy invitations</h3>
+    {% for invite in pending_invites_in %}
+    <div class="invite-card">
+        <p><strong>{{ invite.inviter.first_name }} {{ invite.inviter.last_name }}</strong> ({{ invite.inviter.email }}) invited you to be spending buddies.</p>
+        <div class="invite-actions">
+            <form method="post" action="{% url 'buddies:accept_invite' invite.token %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm">Accept</button>
+            </form>
+            <form method="post" action="{% url 'buddies:decline_invite' invite.token %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-secondary">Decline</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if merge_invites_in %}
+    <h3>Account merge requests</h3>
+    {% for invite in merge_invites_in %}
+    <div class="invite-card">
+        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> wants to link their offline record "<strong>{{ invite.dummy.display_name }}</strong>" with your account. Accepting transfers all related expense history to your account.</p>
+        <div class="invite-actions">
+            <form method="post" action="{% url 'buddies:accept_merge' invite.token %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm">Accept merge</button>
+            </form>
+            <form method="post" action="{% url 'buddies:decline_merge' invite.token %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-secondary">Decline</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if pending_invites_out %}
+    <h3>Buddy invitations you sent</h3>
+    {% for invite in pending_invites_out %}
+    <div class="invite-card invite-card-outgoing">
+        <p>Sent to <strong>{{ invite.invitee_email }}</strong>. Expires {{ invite.expires_at|date:"N j, Y" }}.</p>
+        <form method="post" action="{% url 'buddies:revoke_invite' invite.token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-secondary">Revoke</button>
+        </form>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+</section>
+{% endif %}
+
+<section class="buddies-section">
+    <h2>Add</h2>
+    <div class="add-buddy-forms">
+
+        <div class="add-buddy-panel">
+            <h3>Create a group</h3>
+            <p class="text-muted">Groups let you split expenses among three or more people.</p>
+            <form method="post" action="{% url 'buddies:create_group' %}" class="inline-form">
+                {% csrf_token %}
+                <input type="text" name="name" placeholder="Group name" maxlength="128" required class="input-inline">
+                <button type="submit" class="btn">Create</button>
+            </form>
+        </div>
+
+        <div class="add-buddy-panel">
+            <h3>Invite a buddy</h3>
+            <p class="text-muted">For one-on-one expense sharing with another Comaney user.</p>
+            <form method="post" action="{% url 'buddies:invite_actual' %}" class="inline-form">
+                {% csrf_token %}
+                <input type="email" name="email" placeholder="Email address" required class="input-inline">
+                <button type="submit" class="btn">Send invite</button>
+            </form>
+        </div>
+
+        <div class="add-buddy-panel">
+            <h3>Add an offline buddy</h3>
+            <p class="text-muted">For people who don't use Comaney. You can invite them later.</p>
+            <form method="post" action="{% url 'buddies:add_dummy' %}" class="inline-form">
+                {% csrf_token %}
+                <input type="text" name="display_name" placeholder="Display name" maxlength="128" required class="input-inline">
+                <button type="submit" class="btn">Add</button>
+            </form>
+        </div>
+
+    </div>
+</section>
+
+{% if not unified_debts and not my_groups %}
+<div class="buddies-onboarding-hint">
+    <strong>How Buddies work:</strong> Create a group (for 3+ people) or add a direct buddy (for one-on-one splits). Then check "This is a buddy payment" on any expense. The balance updates automatically.
+</div>
+{% endif %}
+
+{% endblock %}

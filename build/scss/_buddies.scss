@@ -180,13 +180,24 @@
   gap: 0.4rem 1rem;
   align-items: start;
 
+  &.bexp-i-paid {
+    border-left: 3px solid #cf222e;
+    background: color-mix(in srgb, #cf222e 5%, var(--bg-surface));
+  }
+
+  &.bexp-other-paid {
+    border-left: 3px solid #2da44e;
+    background: color-mix(in srgb, #2da44e 5%, var(--bg-surface));
+  }
+
+  &.bexp-neutral {
+    border-left: 3px solid var(--text-muted);
+    opacity: 0.72;
+  }
+
   &.buddy-expense-pending {
     border-left: 3px solid #e3a008;
     background: color-mix(in srgb, #e3a008 6%, var(--bg-surface));
-  }
-
-  &.buddy-expense-dummy {
-    border-left: 3px solid var(--text-muted);
   }
 }
 
@@ -316,6 +327,15 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+
+    .buddy-slider-name { grid-column: 1; grid-row: 1; }
+    .buddy-slider-pct  { grid-column: 2; grid-row: 1; }
+    input[type="range"] { grid-column: 1 / -1; grid-row: 2; width: 100%; }
+  }
 }
 
 .buddy-slider-name {
@@ -343,6 +363,23 @@
 
 .buddy-equal-btn {
   margin-top: 0.5rem;
+}
+
+.buddy-mode-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.9rem;
+}
+
+.radio-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-weight: 500;
 }
 
 // ── Pending approval banner in expense list ───────────────────────────────────
@@ -401,4 +438,188 @@
   border: 1px solid var(--error);
 
   &:hover { opacity: 0.88; }
+}
+
+.buddy-flash {
+  padding: 0.7rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+
+  &.buddy-flash-info    { background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border)); }
+  &.buddy-flash-success { background: color-mix(in srgb, #2da44e 10%, var(--bg-surface)); border: 1px solid color-mix(in srgb, #2da44e 40%, var(--border)); }
+  &.buddy-flash-error   { background: color-mix(in srgb, var(--error) 10%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--error) 40%, var(--border)); }
+}
+
+.buddy-debt-graph {
+  width: 100%;
+  overflow-x: auto;
+
+  svg {
+    display: block;
+    max-width: 100%;
+  }
+}
+
+// ── Group link cards (summary page) ──────────────────────────────────────────
+
+.buddy-group-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.buddy-group-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: var(--accent);
+    background: var(--bg-elevated);
+  }
+}
+
+.buddy-group-card-name {
+  font-weight: 600;
+}
+
+.buddy-group-card-arrow {
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+// ── Group detail: settlement list ─────────────────────────────────────────────
+
+.group-settle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.group-settle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+
+  &.settle-row-me-owes {
+    border-left: 3px solid var(--error);
+    background: color-mix(in srgb, var(--error) 5%, var(--bg-surface));
+  }
+
+  &.settle-row-me-receives {
+    border-left: 3px solid #2da44e;
+    background: color-mix(in srgb, #2da44e 5%, var(--bg-surface));
+  }
+}
+
+.settle-arrow {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.settle-amount {
+  font-weight: 700;
+  margin-left: auto;
+  color: var(--text);
+}
+
+// ── Group detail: expense breakdown audit trail ───────────────────────────────
+
+.bexp-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.bexp-breakdown-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+
+  &.bexp-card-i-paid {
+    border-left: 3px solid #cf222e;
+    background: color-mix(in srgb, #cf222e 4%, var(--bg-surface));
+  }
+
+  &.bexp-card-other-paid {
+    border-left: 3px solid #2da44e;
+    background: color-mix(in srgb, #2da44e 4%, var(--bg-surface));
+  }
+
+  &.bexp-card-neutral {
+    border-left: 3px solid var(--text-muted);
+    opacity: 0.72;
+  }
+}
+
+.bexp-breakdown-header {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bexp-breakdown-header-left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.bexp-breakdown-header-right {
+  flex-shrink: 0;
+}
+
+.bexp-breakdown-meta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.bexp-breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  th {
+    padding: 0.45rem 1rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: var(--bg-elevated);
+    text-align: left;
+  }
+
+  td {
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-subtle);
+  }
+
+  tr.bexp-row-me td {
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg-surface));
+    color: var(--text);
+    font-weight: 500;
+  }
 }

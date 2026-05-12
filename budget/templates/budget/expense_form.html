@@ -1,10 +1,37 @@
 {% extends "budget_base.html" %}
+{% load static %}
 
 {% block title %}Comaney – {% if expense %}Edit expense{% else %}New expense{% endif %}{% endblock %}
 
+{% block extra_head %}
+{% if buddy_actual or buddy_dummy or buddy_groups %}
+<script>
+window.BUDDY_EXPENSE_CONFIG = {
+    mePk:              {{ request.feuser.pk }},
+    meFirstName:       "{{ request.feuser.first_name|escapejs }}",
+    meLastName:        "{{ request.feuser.last_name|escapejs }}",
+    groupsData:        {{ groups_data_json|safe }},
+    singleBuddies:     {{ single_buddies_json|safe }},
+    upfrontType:       "{{ existing_upfront_type|default:'me' }}",
+    upfrontId:         {{ existing_upfront_id|default:request.feuser.pk }},
+    existingSpendings: {{ existing_spendings_json|default:"[]"|safe }},
+    existingMode:      "{{ existing_mode|default:'single' }}",
+    existingGroupId:   {{ existing_group_id|default:"null" }},
+    urlBuddySummary:   "{% url 'buddies:buddy_summary' %}",
+};
+</script>
+<script src="{% static 'dist/buddy_expense.js' %}" defer></script>
+{% endif %}
+{% endblock %}
 
 {% block content %}
 <h1>{% if expense %}Edit expense{% else %}New expense{% endif %}</h1>
+
+{% if expense and expense.is_dummy %}
+<div class="info-box" style="margin-bottom:1.25rem;">
+    <p>This expense is managed on your account, but <strong>{{ expense.upfront_payee_dummy.display_name }}</strong> paid upfront. It won't appear in your regular expense list; you can always find it under <a href="{% url 'buddies:buddy_summary' %}">Buddy Expenses</a>.</p>
+</div>
+{% endif %}
 
 <div class="form-wrap">
     <form method="post" novalidate>
@@ -61,7 +88,7 @@
             <label class="checkbox-inline">{{ form.notify }} {{ form.notify.label }}</label>
         </div>
 
-        {% if buddy_actual or buddy_dummy %}
+        {% if buddy_actual or buddy_dummy or buddy_groups %}
         <div style="margin-top:20px;">
             <label class="checkbox-inline">
                 <input type="checkbox" id="buddy-payment-cb" name="buddy_payment" value="1"
@@ -74,39 +101,36 @@
         <div id="buddy-payment-section" class="buddy-payment-section" style="display:none;">
             <h3>Buddy payment details</h3>
 
+            {% if buddy_groups %}
+            <div class="buddy-mode-row">
+                <label class="radio-inline"><input type="radio" name="buddy_mode_ui" id="buddy-mode-single" value="single"> Single buddy</label>
+                <label class="radio-inline"><input type="radio" name="buddy_mode_ui" id="buddy-mode-group" value="group"> Group</label>
+                <div id="buddy-group-select-row" style="display:none;margin-top:0.5rem;">
+                    <select id="buddy-group-select">
+                        {% for g in buddy_groups %}
+                        <option value="{{ g.uid }}">{{ g.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="buddy-payer-row">
                 <label for="buddy-upfront-select">Upfront payer</label>
-                <select id="buddy-upfront-select">
-                    <option value="me:{{ request.feuser.pk }}">Me ({{ request.feuser.first_name }} {{ request.feuser.last_name }})</option>
-                    {% for buddy in buddy_actual %}
-                    <option value="feuser:{{ buddy.pk }}">{{ buddy.first_name }} {{ buddy.last_name }} ({{ buddy.email }})</option>
-                    {% endfor %}
-                    {% for dummy in buddy_dummy %}
-                    <option value="dummy:{{ dummy.uid }}">{{ dummy.display_name }} (offline)</option>
-                    {% endfor %}
-                </select>
+                <select id="buddy-upfront-select"></select>
             </div>
+            <div id="buddy-payer-notice" style="display:none;margin-top:0.75rem;"></div>
 
             <div class="buddy-participants-row">
                 <label>Participants (sharing the cost)</label>
-                <div id="buddy-participants-checkboxes">
-                    {% for buddy in buddy_actual %}
-                    <label class="checkbox-inline buddy-participant-cb" data-type="feuser" data-id="{{ buddy.pk }}" data-name="{{ buddy.first_name }} {{ buddy.last_name }}">
-                        <input type="checkbox"> {{ buddy.first_name }} {{ buddy.last_name }}
-                    </label>
-                    {% endfor %}
-                    {% for dummy in buddy_dummy %}
-                    <label class="checkbox-inline buddy-participant-cb" data-type="dummy" data-id="{{ dummy.uid }}" data-name="{{ dummy.display_name }}">
-                        <input type="checkbox"> {{ dummy.display_name }} (offline)
-                    </label>
-                    {% endfor %}
-                </div>
+                <div id="buddy-participants-checkboxes"></div>
             </div>
 
             <div id="buddy-sliders" class="buddy-sliders" style="display:none;"></div>
-            <div id="buddy-share-sum" class="buddy-share-sum"></div>
             <button type="button" id="buddy-equal-btn" class="btn btn-secondary btn-sm buddy-equal-btn">Equal shares</button>
 
+            <input type="hidden" name="buddy_mode" id="buddy-mode-input" value="single">
+            <input type="hidden" name="buddy_group_id" id="buddy-group-id-input" value="">
             <input type="hidden" name="buddy_upfront_type" id="buddy-upfront-type-input" value="me">
             <input type="hidden" name="buddy_upfront_id" id="buddy-upfront-id-input" value="{{ request.feuser.pk }}">
             <input type="hidden" name="buddy_spendings_json" id="buddy-spendings-json" value="[]">
@@ -117,6 +141,7 @@
             <button type="submit" class="btn">{% if expense %}Save changes{% else %}Create expense{% endif %}</button>
             <a href="{% url 'budget:expenses_list' %}" class="btn btn-secondary" onclick="if(history.length>1){history.back();return false;}">Cancel</a>
         </div>
+        <p id="buddy-no-participants-error" class="error-msg" style="display:none">A buddy payment requires at least one participant.</p>
     </form>
 </div>
 <script>
@@ -129,247 +154,4 @@
 })();
 </script>
 
-{% if buddy_actual or buddy_dummy %}
-<script>
-(function () {
-    // ── State ──────────────────────────────────────────────────────────────
-    const cb       = document.getElementById('buddy-payment-cb');
-    const section  = document.getElementById('buddy-payment-section');
-    const payerSel = document.getElementById('buddy-upfront-select');
-    const slidersEl= document.getElementById('buddy-sliders');
-    const sumEl    = document.getElementById('buddy-share-sum');
-    const equalBtn = document.getElementById('buddy-equal-btn');
-    const typeIn   = document.getElementById('buddy-upfront-type-input');
-    const idIn     = document.getElementById('buddy-upfront-id-input');
-    const jsonIn   = document.getElementById('buddy-spendings-json');
-
-    // Participants: [{type, id, name, share}]
-    let participants = [];
-    // Pre-existing data from edit form
-    const existingUpfrontType = '{{ existing_upfront_type|default:"me" }}';
-    const existingUpfrontId   = '{{ existing_upfront_id|default:request.feuser.pk }}';
-    const existingSpendings   = {{ existing_spendings_json|default:"[]"|safe }};
-
-    // ── Checkbox toggle ────────────────────────────────────────────────────
-    cb.addEventListener('change', function () {
-        section.style.display = cb.checked ? '' : 'none';
-        if (cb.checked) { initFromExisting(); }
-    });
-    if (cb.checked) { section.style.display = ''; initFromExisting(); }
-
-    // ── Payer select change ────────────────────────────────────────────────
-    payerSel.addEventListener('change', function () {
-        const [t, id] = payerSel.value.split(':');
-        typeIn.value = t;
-        idIn.value   = id;
-        refreshParticipantCheckboxes();
-        rebuildSliders();
-    });
-
-    // ── Participant checkboxes ─────────────────────────────────────────────
-    document.querySelectorAll('.buddy-participant-cb').forEach(function (label) {
-        label.querySelector('input').addEventListener('change', function () {
-            syncParticipantsFromCheckboxes();
-            rebuildSliders();
-        });
-    });
-
-    function refreshParticipantCheckboxes() {
-        const [payerType, payerId] = payerSel.value.split(':');
-        document.querySelectorAll('.buddy-participant-cb').forEach(function (label) {
-            const same = label.dataset.type === payerType && label.dataset.id === payerId;
-            label.style.display = same ? 'none' : '';
-            if (same) label.querySelector('input').checked = false;
-        });
-        syncParticipantsFromCheckboxes();
-    }
-
-    function syncParticipantsFromCheckboxes() {
-        const checked = [];
-        document.querySelectorAll('.buddy-participant-cb').forEach(function (label) {
-            const inp = label.querySelector('input');
-            if (inp.checked) {
-                const existing = participants.find(function (p) { return p.type === label.dataset.type && String(p.id) === label.dataset.id; });
-                checked.push({
-                    type: label.dataset.type,
-                    id:   parseInt(label.dataset.id),
-                    name: label.dataset.name,
-                    share: existing ? existing.share : 0,
-                });
-            }
-        });
-        // Redistribute equally if a new participant was added
-        if (checked.length !== participants.length) {
-            const n = checked.length + 1; // +1 for implicit payer
-            const per = +(100 / n).toFixed(3);
-            const payerShare = +(100 - per * checked.length).toFixed(3);
-            checked.forEach(function (p) { p.share = per; });
-        }
-        participants = checked;
-    }
-
-    // ── Sliders ────────────────────────────────────────────────────────────
-    function rebuildSliders() {
-        slidersEl.innerHTML = '';
-        if (participants.length === 0) {
-            slidersEl.style.display = 'none';
-            updateSum();
-            return;
-        }
-        slidersEl.style.display = '';
-
-        // Implicit payer row (read-only display)
-        const payerShare = implicitPayerShare();
-        const payerRow = document.createElement('div');
-        payerRow.className = 'buddy-slider-row';
-        payerRow.innerHTML =
-            '<span class="buddy-slider-name" id="buddy-payer-label"></span>' +
-            '<input type="range" min="0" max="100" step="0.1" value="0" disabled style="opacity:0.4">' +
-            '<span class="buddy-slider-pct" id="buddy-payer-pct"></span>';
-        slidersEl.appendChild(payerRow);
-        updatePayerRow();
-
-        participants.forEach(function (p, idx) {
-            const row = document.createElement('div');
-            row.className = 'buddy-slider-row';
-            const sliderId = 'bs-slider-' + idx;
-            row.innerHTML =
-                '<span class="buddy-slider-name">' + esc(p.name) + '</span>' +
-                '<input type="range" id="' + sliderId + '" min="0" max="100" step="0.1" value="' + p.share + '">' +
-                '<span class="buddy-slider-pct" id="bs-pct-' + idx + '">' + p.share.toFixed(1) + '%</span>';
-            slidersEl.appendChild(row);
-
-            row.querySelector('input').addEventListener('input', function () {
-                const val = +parseFloat(this.value).toFixed(3);
-                const old = participants[idx].share;
-                const delta = val - old;
-                participants[idx].share = val;
-                // Redistribute delta among other participants
-                const others = participants.filter(function (_, i) { return i !== idx; });
-                if (others.length > 0) {
-                    const perOther = delta / others.length;
-                    others.forEach(function (o) {
-                        o.share = Math.max(0, Math.min(100, +(o.share - perOther).toFixed(3)));
-                    });
-                }
-                clampSum();
-                refreshSliderDisplays();
-                updatePayerRow();
-                updateSum();
-                serializeJSON();
-            });
-        });
-
-        updateSum();
-        serializeJSON();
-    }
-
-    function refreshSliderDisplays() {
-        participants.forEach(function (p, idx) {
-            const slider = document.getElementById('bs-slider-' + idx);
-            const pct    = document.getElementById('bs-pct-' + idx);
-            if (slider) slider.value = p.share;
-            if (pct)    pct.textContent = p.share.toFixed(1) + '%';
-        });
-    }
-
-    function updatePayerRow() {
-        const lbl = document.getElementById('buddy-payer-label');
-        const pct = document.getElementById('buddy-payer-pct');
-        const slid= slidersEl.querySelector('input[disabled]');
-        const share = implicitPayerShare();
-        if (lbl) lbl.textContent = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
-        if (pct) pct.textContent = share.toFixed(1) + '%';
-        if (slid) slid.value = share;
-    }
-
-    function implicitPayerShare() {
-        const sum = participants.reduce(function (a, p) { return a + p.share; }, 0);
-        return Math.max(0, +(100 - sum).toFixed(3));
-    }
-
-    function clampSum() {
-        const sum = participants.reduce(function (a, p) { return a + p.share; }, 0);
-        if (sum > 100) {
-            const excess = sum - 100;
-            // Shave from the last participant
-            for (let i = participants.length - 1; i >= 0 && excess > 0; i--) {
-                const cut = Math.min(participants[i].share, excess);
-                participants[i].share = +(participants[i].share - cut).toFixed(3);
-            }
-        }
-    }
-
-    function updateSum() {
-        const sum = participants.reduce(function (a, p) { return a + p.share; }, 0);
-        const payer = +(100 - sum).toFixed(3);
-        const total = +(sum + payer).toFixed(3);
-        const ok = Math.abs(total - 100) < 0.01;
-        sumEl.textContent = 'Total: ' + total.toFixed(1) + '% (must equal 100%)';
-        sumEl.className = 'buddy-share-sum ' + (ok ? 'share-sum-ok' : 'share-sum-error');
-    }
-
-    // ── Equal shares ───────────────────────────────────────────────────────
-    equalBtn.addEventListener('click', function () {
-        const n = participants.length + 1;
-        const per = +(100 / n).toFixed(3);
-        let rem = +(100 - per * participants.length).toFixed(3); // payer share
-        participants.forEach(function (p) { p.share = per; });
-        refreshSliderDisplays();
-        updatePayerRow();
-        updateSum();
-        serializeJSON();
-    });
-
-    // ── Serialize ──────────────────────────────────────────────────────────
-    function serializeJSON() {
-        const rows = participants.map(function (p) {
-            return {type: p.type, id: p.id, share_percent: +p.share.toFixed(3)};
-        });
-        jsonIn.value = JSON.stringify(rows);
-    }
-
-    // ── Escape helper ──────────────────────────────────────────────────────
-    function esc(s) {
-        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    // ── Initialise from existing edit data ────────────────────────────────
-    function initFromExisting() {
-        // Set payer selector
-        const existingVal = existingUpfrontType + ':' + existingUpfrontId;
-        for (let i = 0; i < payerSel.options.length; i++) {
-            if (payerSel.options[i].value === existingVal) {
-                payerSel.selectedIndex = i;
-                break;
-            }
-        }
-        typeIn.value = existingUpfrontType;
-        idIn.value   = existingUpfrontId;
-
-        // Set participant checkboxes
-        refreshParticipantCheckboxes();
-        existingSpendings.forEach(function (sp) {
-            document.querySelectorAll('.buddy-participant-cb').forEach(function (label) {
-                if (label.dataset.type === sp.type && parseInt(label.dataset.id) === sp.id) {
-                    label.querySelector('input').checked = true;
-                }
-            });
-        });
-        syncParticipantsFromCheckboxes();
-        // Apply existing share percentages
-        existingSpendings.forEach(function (sp) {
-            const p = participants.find(function (x) { return x.type === sp.type && x.id === sp.id; });
-            if (p) p.share = sp.share_percent;
-        });
-
-        rebuildSliders();
-        refreshSliderDisplays();
-        updatePayerRow();
-        updateSum();
-        serializeJSON();
-    }
-})();
-</script>
-{% endif %}
 {% endblock %}

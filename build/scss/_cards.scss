@@ -102,3 +102,10 @@
   color: var(--text-muted);
   font-style: italic;
 }
+
+.exp-buddy-shared {
+  grid-column: 1;
+  grid-row: 5;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}

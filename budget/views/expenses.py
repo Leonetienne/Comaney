@@ -3,6 +3,7 @@ import json
 import urllib.parse
 from datetime import date
 
+from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -21,9 +22,20 @@ from ._period import _get_month, _get_period_mode, _get_year, _month_nav_context
 
 def _buddy_context(feuser) -> dict:
     from buddies.services import BuddyQueryService
+    actual = list(BuddyQueryService.get_actual_buddies(feuser))
+    dummy = list(BuddyQueryService.get_dummy_buddies(feuser))
+    single_buddies = [
+        *[{"type": "feuser", "id": b.pk, "name": f"{b.first_name} {b.last_name}".strip() or b.email, "email": b.email} for b in actual],
+        *[{"type": "dummy", "id": d.uid, "name": d.display_name} for d in dummy],
+    ]
     return {
-        "buddy_actual": BuddyQueryService.get_actual_buddies(feuser),
-        "buddy_dummy": BuddyQueryService.get_dummy_buddies(feuser),
+        "buddy_actual": actual,
+        "buddy_dummy": dummy,
+        "buddy_groups": BuddyQueryService.get_groups_for_feuser(feuser),
+        "groups_data_json": json.dumps(
+            BuddyQueryService.groups_data_for_expense_form(feuser)
+        ),
+        "single_buddies_json": json.dumps(single_buddies),
     }
 
 
@@ -31,16 +43,26 @@ def _parse_buddy_post(post, feuser):
     """
     Parse buddy payment fields from a POST request.
     Returns None if buddy_payment is not set, else a dict with keys:
-      upfront_type ('me'|'feuser'|'dummy'), upfront_feuser, upfront_dummy, spendings, valid.
+      mode ('single'|'group'), upfront_type ('me'|'feuser'|'dummy'),
+      upfront_feuser, upfront_dummy, group, spendings, valid.
+    Single mode: max 1 participant enforced.
     """
     if not post.get("buddy_payment"):
         return None
 
-    from buddies.models import DummyUser
+    from buddies.models import BuddyGroup, BuddyGroupMember, DummyUser
     from feusers.models import FeUser as FU
 
+    mode = post.get("buddy_mode", "single")
     upfront_type = post.get("buddy_upfront_type", "me")
-    result = {"upfront_type": upfront_type, "upfront_feuser": None, "upfront_dummy": None, "valid": True}
+    result = {
+        "mode": mode,
+        "upfront_type": upfront_type,
+        "upfront_feuser": None,
+        "upfront_dummy": None,
+        "group": None,
+        "valid": True,
+    }
 
     if upfront_type == "feuser":
         try:
@@ -51,14 +73,31 @@ def _parse_buddy_post(post, feuser):
     elif upfront_type == "dummy":
         try:
             uid = int(post.get("buddy_upfront_id", 0))
-            result["upfront_dummy"] = DummyUser.objects.get(pk=uid, owning_feuser=feuser)
+            result["upfront_dummy"] = DummyUser.objects.get(pk=uid)
         except (ValueError, DummyUser.DoesNotExist):
+            result["valid"] = False
+
+    if mode == "group":
+        try:
+            group_id = int(post.get("buddy_group_id", 0))
+            result["group"] = BuddyGroup.objects.get(
+                uid=group_id,
+                members__feuser=feuser,
+            )
+        except (ValueError, BuddyGroup.DoesNotExist):
             result["valid"] = False
 
     try:
         result["spendings"] = json.loads(post.get("buddy_spendings_json", "[]"))
     except (json.JSONDecodeError, ValueError):
         result["spendings"] = []
+
+    if not result["spendings"]:
+        result["valid"] = False
+
+    # Single-buddy mode: enforce max 1 participant
+    if mode == "single" and len(result["spendings"]) > 1:
+        result["valid"] = False
 
     return result
 
@@ -160,6 +199,7 @@ def expense_create(request):
                 other = buddy["upfront_feuser"]
                 expense.owning_feuser = other
                 expense.buddy_approved = False
+                expense.buddy_group = buddy.get("group")
                 expense.save()
                 form.save_m2m()
                 from buddies.services import BuddyEmailService, BuddyExpenseService
@@ -170,12 +210,24 @@ def expense_create(request):
                 if buddy:
                     expense.is_dummy = (buddy["upfront_type"] == "dummy")
                     expense.upfront_payee_dummy = buddy.get("upfront_dummy")
+                    expense.buddy_group = buddy.get("group")
                 expense.save()
                 form.save_m2m()
                 if buddy:
                     from buddies.services import BuddyExpenseService
                     BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
             set_initial_notification_class(expense)
+            if buddy and buddy["upfront_type"] == "dummy" and buddy.get("upfront_dummy"):
+                from django.urls import reverse
+                dummy_name = buddy["upfront_dummy"].display_name
+                summary_url = reverse("buddies:buddy_summary")
+                messages.info(
+                    request,
+                    f'"{expense.title}" was saved. Since <strong>{dummy_name}</strong> paid upfront, '
+                    f'this expense won\'t appear in your regular expense list — '
+                    f'you\'ll find it under <a href="{summary_url}">Buddy Expenses</a>.',
+                )
+                return redirect("buddies:buddy_summary")
             return redirect("budget:expenses_list")
     else:
         form = ExpenseForm(feuser=feuser, initial={"type": "expense", "settled": True, "notify": True})
@@ -202,6 +254,8 @@ def expense_edit(request, uid):
                 new_type = buddy["upfront_type"]
                 new_feuser = buddy.get("upfront_feuser")
                 new_dummy = buddy.get("upfront_dummy")
+                expense.buddy_group = buddy.get("group")
+                expense.save(update_fields=["buddy_group"])
                 # Detect payer change and apply service logic
                 payer_changed = (
                     (new_type == "feuser" and new_feuser and new_feuser.pk != feuser.pk) or
@@ -228,7 +282,8 @@ def expense_edit(request, uid):
                 expense.is_dummy = False
                 expense.buddy_approved = True
                 expense.upfront_payee_dummy = None
-                expense.save(update_fields=["is_dummy", "buddy_approved", "upfront_payee_dummy"])
+                expense.buddy_group = None
+                expense.save(update_fields=["is_dummy", "buddy_approved", "upfront_payee_dummy", "buddy_group"])
 
             if not was_settled and expense.settled:
                 send_settled_notification(expense)
@@ -261,6 +316,8 @@ def expense_edit(request, uid):
         "existing_upfront_type": existing_upfront_type,
         "existing_upfront_id": existing_upfront_id,
         "existing_spendings_json": _existing_buddy_json(expense),
+        "existing_mode": "group" if expense.buddy_group_id else "single",
+        "existing_group_id": expense.buddy_group_id or "",
         **_buddy_context(feuser),
     })
 

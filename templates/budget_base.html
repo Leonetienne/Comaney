@@ -20,8 +20,12 @@
             <li class="{% if active_nav == 'categories_tags' %}active{% endif %}">
                 <a href="{% url 'budget:categories_tags' %}">Categories &amp; Tags</a>
             </li>
-            <li class="{% if active_nav == 'buddies' %}active{% endif %}">
-                <a href="{% url 'buddies:buddies_page' %}">Buddies</a>
+            <li><span class="sidebar-section-label">Buddy</span></li>
+            <li class="{% if active_nav == 'my_buddies' %}active{% endif %}">
+                <a href="{% url 'buddies:my_buddies' %}">My Buddies</a>
+            </li>
+            <li class="{% if active_nav == 'buddy_summary' %}active{% endif %}">
+                <a href="{% url 'buddies:buddy_summary' %}">Buddy Expenses</a>
             </li>
 
             {% if ai_smart_create_available %}

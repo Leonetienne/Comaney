@@ -1,0 +1,209 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - Buddy Expenses{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Buddy Expenses</h1>
+</div>
+<p class="page-subtitle">All expenses involving you and a buddy, regardless of who holds the record.</p>
+
+{% if messages %}
+{% for message in messages %}
+<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message|safe }}</div>
+{% endfor %}
+{% endif %}
+
+{% if debts_json != "[]" %}
+<section class="buddies-section">
+    <h2>Balance Overview</h2>
+    <div id="buddy-debt-graph" class="buddy-debt-graph"></div>
+    <script>
+    (function () {
+        var DEBTS = {{ debts_json|safe }};
+        var CURRENCY = "{{ request.feuser.currency|escapejs }}";
+
+        function renderBuddyDebtGraph(debts, currency) {
+            if (!debts || !debts.length) return;
+            var container = document.getElementById('buddy-debt-graph');
+            if (!container) return;
+
+            var W = container.clientWidth || 600;
+            var n = debts.length;
+            var R_ME = 44;
+            var R_BUDDY = 34;
+            var ORBIT = Math.max(110, Math.min(W / 2 - R_BUDDY - 24, 180));
+            var H = ORBIT * 2 + (R_BUDDY + 24) * 2;
+            var CX = W / 2;
+            var CY = H / 2;
+
+            var COL_OWED    = '#2da44e';
+            var COL_OWE     = '#cf222e';
+            var COL_SETTLED = '#8c959f';
+
+            var svg = d3.select('#buddy-debt-graph')
+                .append('svg')
+                .attr('width', W)
+                .attr('height', H);
+
+            var defs = svg.append('defs');
+            function mkMarker(id, color) {
+                defs.append('marker')
+                    .attr('id', id)
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', 9)
+                    .attr('refY', 0)
+                    .attr('markerWidth', 7)
+                    .attr('markerHeight', 7)
+                    .attr('orient', 'auto')
+                  .append('path')
+                    .attr('d', 'M0,-5L10,0L0,5')
+                    .attr('fill', color);
+            }
+            mkMarker('arr-owed',    COL_OWED);
+            mkMarker('arr-owe',     COL_OWE);
+            mkMarker('arr-settled', COL_SETTLED);
+
+            var nodes = debts.map(function (d, i) {
+                var angle = (2 * Math.PI * i / n) - Math.PI / 2;
+                return { name: d.name, net: d.net,
+                         x: CX + ORBIT * Math.cos(angle),
+                         y: CY + ORBIT * Math.sin(angle) };
+            });
+
+            nodes.forEach(function (node) {
+                var owed    = node.net >  0.005;
+                var owes    = node.net < -0.005;
+                var color   = owed ? COL_OWED : owes ? COL_OWE : COL_SETTLED;
+                var marker  = owed ? 'arr-owed' : owes ? 'arr-owe' : 'arr-settled';
+
+                var fromX = owed ? node.x : CX;
+                var fromY = owed ? node.y : CY;
+                var toX   = owed ? CX     : node.x;
+                var toY   = owed ? CY     : node.y;
+
+                var dx = toX - fromX, dy = toY - fromY;
+                var len = Math.sqrt(dx*dx + dy*dy);
+                var r1 = owed ? R_BUDDY : R_ME;
+                var r2 = owed ? R_ME    : R_BUDDY;
+                var sx1 = fromX + dx/len * r1;
+                var sy1 = fromY + dy/len * r1;
+                var sx2 = toX   - dx/len * (r2 + 14);
+                var sy2 = toY   - dy/len * (r2 + 14);
+
+                if (!owed && !owes) {
+                    svg.append('line')
+                        .attr('x1', node.x).attr('y1', node.y)
+                        .attr('x2', CX).attr('y2', CY)
+                        .attr('stroke', COL_SETTLED)
+                        .attr('stroke-width', 1.5)
+                        .attr('stroke-dasharray', '5,4');
+                } else {
+                    svg.append('line')
+                        .attr('x1', sx1).attr('y1', sy1)
+                        .attr('x2', sx2).attr('y2', sy2)
+                        .attr('stroke', color)
+                        .attr('stroke-width', 2)
+                        .attr('marker-end', 'url(#' + marker + ')');
+
+                    var lx = (sx1 + sx2) / 2;
+                    var ly = (sy1 + sy2) / 2;
+                    var perpLen = 12;
+                    var px = -dy/len * perpLen;
+                    var py =  dx/len * perpLen;
+                    svg.append('text')
+                        .attr('x', lx + px).attr('y', ly + py)
+                        .attr('text-anchor', 'middle')
+                        .attr('dominant-baseline', 'middle')
+                        .attr('font-size', '11')
+                        .attr('font-weight', '600')
+                        .attr('fill', color)
+                        .text(currency + Math.abs(node.net).toFixed(2));
+                }
+
+                svg.append('circle')
+                    .attr('cx', node.x).attr('cy', node.y).attr('r', R_BUDDY)
+                    .style('fill', '#23272e')
+                    .attr('stroke', color)
+                    .attr('stroke-width', 2.5);
+
+                var nameParts = node.name.split(' ');
+                if (nameParts.length > 1) {
+                    svg.append('text')
+                        .attr('x', node.x).attr('y', node.y - 7)
+                        .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                        .attr('font-size', '10').attr('fill', '#fff')
+                        .text(nameParts[0]);
+                    svg.append('text')
+                        .attr('x', node.x).attr('y', node.y + 7)
+                        .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                        .attr('font-size', '10').attr('fill', '#fff')
+                        .text(nameParts.slice(1).join(' '));
+                } else {
+                    svg.append('text')
+                        .attr('x', node.x).attr('y', node.y)
+                        .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                        .attr('font-size', '10').attr('fill', '#fff')
+                        .text(node.name);
+                }
+            });
+
+            svg.append('circle')
+                .attr('cx', CX).attr('cy', CY).attr('r', R_ME)
+                .attr('fill', '#2da44e');
+            svg.append('text')
+                .attr('x', CX).attr('y', CY)
+                .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                .attr('font-size', '14').attr('font-weight', '700').attr('fill', '#fff')
+                .text('Me');
+        }
+
+        renderBuddyDebtGraph(DEBTS, CURRENCY);
+    })();
+    </script>
+</section>
+{% endif %}
+
+{% if my_groups %}
+<section class="buddies-section">
+    <h2>Groups</h2>
+    <div class="buddy-group-cards">
+        {% for g in my_groups %}
+        <a href="{% url 'buddies:group_detail' g.uid %}" class="buddy-group-card">
+            <span class="buddy-group-card-name">{{ g.name }}</span>
+            <span class="buddy-group-card-arrow">&rarr;</span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="buddies-section">
+    <h2>Direct Expenses</h2>
+    {% if direct_expenses %}
+    <div class="buddy-expense-list">
+        {% for exp in direct_expenses %}
+        {% if exp.owning_feuser == request.feuser and not exp.is_dummy %}
+        {% include "buddies/_expense_row.html" with bexp_color_class="bexp-i-paid" %}
+        {% else %}
+        {% include "buddies/_expense_row.html" with bexp_color_class="bexp-other-paid" %}
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No direct shared expenses yet. Add a buddy on <a href="{% url 'buddies:my_buddies' %}">My Buddies</a>, then check "This is a buddy payment" when creating an expense.</p>
+    </div>
+    {% endif %}
+</section>
+
+{% if not group_sections and not direct_expenses %}
+<div class="buddies-onboarding-hint">
+    <strong>No shared expenses yet.</strong> Add a buddy on <a href="{% url 'buddies:my_buddies' %}">My Buddies</a>, then check "This is a buddy payment" when creating an expense.
+</div>
+{% endif %}
+{% endblock %}
