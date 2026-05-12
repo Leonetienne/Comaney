@@ -179,20 +179,22 @@ DEFAULT_DASHBOARD_CARDS = [
     },
     {
         "yaml": (
-            "# Lists unsettled expenses due this week, largest first.\n"
-            "type: list\n"
+            "# Lists unsettled expenses that are due this week\n"
             "title: Bills due this week\n"
-            "query: type=expense settled=no date>=cur_week_start date<=cur_week_end\n"
+            "type: list\n"
+            "method: sum\n"
+            "query: type=expense settled=no date >= cur_week_start date <= cur_week_end\n"
+            "show_sum: true\n"
             "order_by: value\n"
             "order_dir: desc\n"
-            "show_sum: true\n"
-            "method: sum\n"
             "positioning:\n"
-            "  position: 8\n"
-            "  width: 6\n"
-            "  height: 4\n"
+            "  height: 3\n"
+            "  position: 10\n"
+            "  width: 4\n"
             "  mobile:\n"
-            "    position: 8\n"
+            "    height: 3\n"
+            "    position: 10\n"
+            "    width: 6\n"
         ),
     },
     {
