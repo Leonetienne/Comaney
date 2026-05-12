@@ -118,6 +118,15 @@ function dashboardBoard() {
             return p.toString();
         },
 
+        // ── Navigation helper ─────────────────────────────────────────────────
+        _navTo(url) {
+            if (!url) return;
+            if (this.periodMode === 'year') {
+                url += (url.includes('?') ? '&' : '?') + 'view=year';
+            }
+            window.location.href = url;
+        },
+
         // ── Fetch / refresh ───────────────────────────────────────────────────
         async fetchCards() {
             this.loading = true;
@@ -169,7 +178,7 @@ function dashboardBoard() {
                 if (!elements.length) return;
                 const label = this.charts[card.id].data.labels[elements[0].index];
                 const slug = label === 'Uncategorized' ? 'none' : encodeURIComponent(label);
-                window.location.href = linkTpl.replace('$GROUP_NAME', slug);
+                this._navTo(linkTpl.replace('$GROUP_NAME', slug));
             } : undefined;
             const onHoverFn = linkTpl ? (_evt, elements) => {
                 canvas.style.cursor = elements.length ? 'pointer' : 'default';
@@ -303,9 +312,9 @@ function dashboardBoard() {
                         const idx = elements[0].index;
                         const lt  = seriesCfg[si] && seriesCfg[si].link_template;
                         if (!lt) return;
-                        window.location.href = lt
+                        this._navTo(lt
                             .replace(/\$START_DATE/g, bucketStarts[idx])
-                            .replace(/\$END_DATE/g,   labels[idx]);
+                            .replace(/\$END_DATE/g,   labels[idx]));
                     } : undefined,
                     onHover: hasAnyLink ? (event, elements) => {
                         if (!event.native) return;
