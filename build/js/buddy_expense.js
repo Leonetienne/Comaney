@@ -14,6 +14,8 @@
 
     var payerSel        = document.getElementById('buddy-upfront-select');
     var participantsEl  = document.getElementById('buddy-participants-checkboxes');
+    var participantsRow  = participantsEl ? participantsEl.parentElement : null;
+    var participantsLbl  = participantsRow ? participantsRow.querySelector('label') : null;
     var slidersEl       = document.getElementById('buddy-sliders');
     var equalBtn        = document.getElementById('buddy-equal-btn');
     var typeIn          = document.getElementById('buddy-upfront-type-input');
@@ -64,6 +66,14 @@
         });
     }
 
+    function updateParticipantsLabel() {
+        if (participantsLbl) {
+            participantsLbl.textContent = currentMode === 'single'
+                ? 'Buddy (sharing the cost)'
+                : 'Participants (sharing the cost)';
+        }
+    }
+
     function switchMode(mode) {
         currentMode = mode;
         modeIn.value = mode;
@@ -78,6 +88,7 @@
             currentGroupId = null;
             groupIdIn.value = '';
         }
+        updateParticipantsLabel();
         buildPayerOptions();
         buildParticipantCheckboxes(mode === 'group');
         refreshParticipantCheckboxes();
@@ -130,36 +141,48 @@
 
     function buildParticipantCheckboxes(preCheckAll) {
         participantsEl.innerHTML = '';
-        var items = [];
         if (currentMode === 'single') {
-            items = singleBuddies.slice();
-        } else {
-            var grp = groupsData.find(function (g) { return g.id === currentGroupId; });
-            if (grp) items = grp.members.filter(function (m) { return !m.is_me; });
-        }
-        items.forEach(function (item) {
-            var lbl = document.createElement('label');
-            lbl.className = 'checkbox-inline buddy-participant-cb';
-            lbl.dataset.type = item.type;
-            lbl.dataset.id   = String(item.id);
-            lbl.dataset.name = item.name;
-            var inp = document.createElement('input');
-            inp.type = 'checkbox';
-            if (preCheckAll) inp.checked = true;
-            inp.addEventListener('change', function () {
-                // Single mode: only one participant allowed (besides auto-added Me)
-                if (currentMode === 'single' && this.checked) {
-                    participantsEl.querySelectorAll('.buddy-participant-cb input').forEach(function (other) {
-                        if (other !== inp) other.checked = false;
-                    });
-                }
+            var sel = document.createElement('select');
+            sel.id = 'buddy-participant-select';
+            var emptyOpt = document.createElement('option');
+            emptyOpt.value = '';
+            emptyOpt.textContent = '-- Select buddy --';
+            sel.appendChild(emptyOpt);
+            singleBuddies.forEach(function (item) {
+                var opt = document.createElement('option');
+                opt.value = item.type + ':' + item.id;
+                opt.dataset.type = item.type;
+                opt.dataset.id   = String(item.id);
+                opt.dataset.name = item.name;
+                opt.textContent  = item.name;
+                sel.appendChild(opt);
+            });
+            sel.addEventListener('change', function () {
                 syncParticipantsFromCheckboxes();
                 rebuildSliders();
             });
-            lbl.appendChild(inp);
-            lbl.appendChild(document.createTextNode(' ' + item.name));
-            participantsEl.appendChild(lbl);
-        });
+            participantsEl.appendChild(sel);
+        } else {
+            var grp = groupsData.find(function (g) { return g.id === currentGroupId; });
+            var items = grp ? grp.members.filter(function (m) { return !m.is_me; }) : [];
+            items.forEach(function (item) {
+                var lbl = document.createElement('label');
+                lbl.className = 'checkbox-inline buddy-participant-cb';
+                lbl.dataset.type = item.type;
+                lbl.dataset.id   = String(item.id);
+                lbl.dataset.name = item.name;
+                var inp = document.createElement('input');
+                inp.type = 'checkbox';
+                if (preCheckAll) inp.checked = true;
+                inp.addEventListener('change', function () {
+                    syncParticipantsFromCheckboxes();
+                    rebuildSliders();
+                });
+                lbl.appendChild(inp);
+                lbl.appendChild(document.createTextNode(' ' + item.name));
+                participantsEl.appendChild(lbl);
+            });
+        }
     }
 
     // ── Payer notice ───────────────────────────────────────────────────────
@@ -232,14 +255,20 @@
         var parts = payerSel.value.split(':');
         var payerType = parts[0];
         var payerId   = parts[1];
-        // Single mode: only two people share. If someone else pays, Me is the sole
-        // participant (auto-added by syncParticipantsFromCheckboxes). No choice needed.
-        var hideAll = (currentMode === 'single' && payerType !== 'me');
-        participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
-            var hide = hideAll || (lbl.dataset.type === payerType && lbl.dataset.id === payerId);
-            lbl.style.display = hide ? 'none' : 'block';
-            if (hide) lbl.querySelector('input').checked = false;
-        });
+        if (currentMode === 'single') {
+            // When the buddy pays, Me is the sole participant (auto-added). Hide the picker.
+            var show = (payerType === 'me');
+            if (participantsRow) participantsRow.style.display = show ? '' : 'none';
+            var sel = document.getElementById('buddy-participant-select');
+            if (!show && sel) sel.value = '';
+        } else {
+            if (participantsRow) participantsRow.style.display = '';
+            participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
+                var hide = (lbl.dataset.type === payerType && lbl.dataset.id === payerId);
+                lbl.style.display = hide ? 'none' : 'block';
+                if (hide) lbl.querySelector('input').checked = false;
+            });
+        }
         participants = [];
         syncParticipantsFromCheckboxes();
     }
@@ -250,22 +279,38 @@
         if (payerType !== 'me') {
             var existingMe = participants.find(function (p) { return p.type === 'feuser' && p.id === ME_PK; });
             checked.push({type: 'feuser', id: ME_PK, name: ME_NAME, share: existingMe ? existingMe.share : 0});
-        }
-        participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
-            if (lbl.style.display === 'none') return;
-            var inp = lbl.querySelector('input');
-            if (inp.checked) {
-                var existing = participants.find(function (p) {
-                    return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id;
-                });
+        } else if (currentMode === 'single') {
+            var sel = document.getElementById('buddy-participant-select');
+            if (sel && sel.value) {
+                var selParts = sel.value.split(':');
+                var selType  = selParts[0];
+                var selId    = parseInt(selParts[1]);
+                var selOpt   = sel.options[sel.selectedIndex];
+                var existing = participants.find(function (p) { return p.type === selType && p.id === selId; });
                 checked.push({
-                    type:  lbl.dataset.type,
-                    id:    parseInt(lbl.dataset.id),
-                    name:  lbl.dataset.name,
+                    type:  selType,
+                    id:    selId,
+                    name:  selOpt.dataset.name,
                     share: existing ? existing.share : 0,
                 });
             }
-        });
+        } else {
+            participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
+                if (lbl.style.display === 'none') return;
+                var inp = lbl.querySelector('input');
+                if (inp.checked) {
+                    var existing = participants.find(function (p) {
+                        return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id;
+                    });
+                    checked.push({
+                        type:  lbl.dataset.type,
+                        id:    parseInt(lbl.dataset.id),
+                        name:  lbl.dataset.name,
+                        share: existing ? existing.share : 0,
+                    });
+                }
+            });
+        }
         if (checked.length !== participants.length) {
             var per = +(100 / (checked.length + 1)).toFixed(3);
             checked.forEach(function (p) { p.share = per; });
@@ -420,6 +465,7 @@
             modeIn.value = 'single';
         }
 
+        updateParticipantsLabel();
         buildPayerOptions();
         buildParticipantCheckboxes(false);
 
@@ -431,15 +477,25 @@
         typeIn.value = payerSel.value.split(':')[0];
         idIn.value   = payerSel.value.split(':')[1];
 
-        // Restore checked checkboxes
+        // Restore participant selection
         refreshParticipantCheckboxes();
-        existingSpendings.forEach(function (sp) {
-            participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
-                if (lbl.dataset.type === sp.type && parseInt(lbl.dataset.id) === sp.id) {
-                    lbl.querySelector('input').checked = true;
-                }
+        if (currentMode === 'single') {
+            var sel = document.getElementById('buddy-participant-select');
+            if (sel) {
+                existingSpendings.forEach(function (sp) {
+                    var candidate = sel.querySelector('option[data-type="' + sp.type + '"][data-id="' + sp.id + '"]');
+                    if (candidate) sel.value = candidate.value;
+                });
+            }
+        } else {
+            existingSpendings.forEach(function (sp) {
+                participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
+                    if (lbl.dataset.type === sp.type && parseInt(lbl.dataset.id) === sp.id) {
+                        lbl.querySelector('input').checked = true;
+                    }
+                });
             });
-        });
+        }
         syncParticipantsFromCheckboxes();
 
         // Apply saved share percentages
