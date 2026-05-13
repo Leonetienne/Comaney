@@ -285,7 +285,7 @@
         <div class="add-buddy-panel">
             <h3>Transfer admin rights</h3>
             <p class="text-muted">Transfer your admin role to another member. You will remain a regular member.</p>
-            <form method="post" action="{% url 'buddies:group_transfer_admin' group.uid %}" class="inline-form" style="flex-wrap:wrap;">
+            <form method="post" action="{% url 'buddies:group_transfer_admin' group.uid %}" class="inline-form confirm-form" style="flex-wrap:wrap;" data-confirm="Transfer admin rights? You will become a regular member." data-ok="Transfer">
                 {% csrf_token %}
                 <select name="new_admin_id" class="input-inline" style="flex:1;min-width:140px;">
                     {% for m in feuser_members %}
