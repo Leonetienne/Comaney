@@ -27,7 +27,7 @@
                 {% endif %}
                 <span class="buddy-sources">
                     {% for src in info.sources %}
-                    <span class="buddy-tag">{{ src }}</span>
+                    <span class="pill">{{ src }}</span>
                     {% endfor %}
                 </span>
             </div>
@@ -92,7 +92,7 @@
                     {% for m in group.members.all %}{% if m.feuser %}{{ m.feuser.first_name|default:m.feuser.email }}{% else %}{{ m.dummy.display_name }}{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
                 </span>
                 {% if group.admin_feuser_id == request.feuser.pk %}
-                <span class="buddy-tag">Admin</span>
+                <span class="pill">Admin</span>
                 {% endif %}
             </div>
             <div></div>

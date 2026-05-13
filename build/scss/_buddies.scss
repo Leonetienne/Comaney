@@ -60,15 +60,6 @@
   color: var(--text-muted);
 }
 
-.buddy-tag {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  background: var(--bg-elevated);
-  border-radius: 4px;
-  padding: 1px 6px;
-  display: inline-block;
-  margin-top: 2px;
-}
 
 .buddy-card-balance {
   font-weight: 600;
@@ -237,11 +228,6 @@
   grid-column: 1 / -1;
 }
 
-.bexp-share {
-  background: var(--bg-elevated);
-  border-radius: 4px;
-  padding: 1px 6px;
-}
 
 .bexp-actions {
   display: flex;
@@ -397,28 +383,6 @@
   margin-bottom: 0.4rem;
 }
 
-// ── Badges ────────────────────────────────────────────────────────────────────
-
-.badge {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  border-radius: 4px;
-  padding: 1px 6px;
-  letter-spacing: 0.02em;
-}
-
-.badge-warning {
-  background: color-mix(in srgb, #e3a008 18%, var(--bg-surface));
-  color: #e3a008;
-  border: 1px solid color-mix(in srgb, #e3a008 35%, var(--border));
-}
-
-.badge-muted {
-  background: var(--bg-elevated);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-}
 
 // ── Danger-subtle button variant ──────────────────────────────────────────────
 
@@ -460,6 +424,112 @@
     display: block;
     max-width: 100%;
   }
+}
+
+// ── Group summary cards (buddy_summary top) ───────────────────────────────────
+
+.bgs-grid-section h2 {
+  margin-bottom: 0.9rem;
+}
+
+.bgs-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bgs-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-decoration: none;
+  color: var(--text);
+  padding: 1.25rem 1.4rem 1.1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  aspect-ratio: 4 / 2;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.22s ease, transform 0.22s ease,
+              border-color 0.22s ease, background 0.22s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+    background: var(--border);
+    transition: background 0.22s ease;
+  }
+
+  &.bgs-card-positive::before { background: #2da44e; }
+  &.bgs-card-negative::before { background: #cf222e; }
+
+  &:hover {
+    box-shadow: 0 10px 36px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-5px) scale(1.015);
+    background: var(--bg-elevated);
+    border-color: var(--accent);
+    z-index: 1;
+  }
+
+  &.bgs-card-positive:hover { border-color: #2da44e; }
+  &.bgs-card-negative:hover { border-color: #cf222e; }
+}
+
+.bgs-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.bgs-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+
+.bgs-balance {
+  font-size: 1.65rem;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: left;
+
+  &.bgs-balance-positive { color: #2da44e; }
+  &.bgs-balance-negative { color: #cf222e; }
+}
+
+.bgs-balance-settled-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.bgs-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.35rem;
+}
+
+
+.bgs-section-note {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: -0.5rem 0 1rem;
+  font-style: italic;
 }
 
 // ── Group link cards (summary page) ──────────────────────────────────────────
@@ -621,5 +691,26 @@
     background: color-mix(in srgb, var(--accent) 6%, var(--bg-surface));
     color: var(--text);
     font-weight: 500;
+  }
+
+  @media (max-width: 640px) {
+    thead { display: none; }
+
+    tbody tr {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      border-top: 1px solid var(--border);
+
+      td {
+        border-top: none;
+        padding: 0.3rem 1rem;
+
+        &:nth-child(1) { grid-column: 1; grid-row: 1; padding-top: 0.55rem; }
+        &:nth-child(2) { grid-column: 1; grid-row: 2; padding-bottom: 0.55rem; text-align: left; font-size: 0.82rem; color: var(--text-muted); }
+        &:nth-child(3) { grid-column: 2; grid-row: 2; padding-bottom: 0.55rem; text-align: right; }
+        &:nth-child(4) { grid-column: 2; grid-row: 1; padding-top: 0.55rem; text-align: right; }
+      }
+    }
   }
 }

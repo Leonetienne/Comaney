@@ -71,6 +71,89 @@ class BuddyQueryService:
         )
 
     @staticmethod
+    def get_group_summaries_for_feuser(feuser) -> list:
+        """
+        Lightweight summary of all groups for the buddy summary page.
+        Returns a list of dicts with group, is_admin, members_display,
+        extra_members, net, net_abs, and net_state ('positive'/'negative'/'settled').
+        Only approved expenses count toward the balance.
+        """
+        from budget.models import Expense
+
+        groups = list(
+            BuddyGroup.objects
+            .filter(members__feuser=feuser)
+            .prefetch_related("members__feuser", "members__dummy")
+            .distinct()
+            .order_by("name")
+        )
+
+        feuser_key = f"f{feuser.pk}"
+        MAX_SHOWN = 6
+        result = []
+
+        for group in groups:
+            net = Decimal("0")
+            expenses = (
+                Expense.objects
+                .filter(buddy_group=group, buddy_approved=True)
+                .prefetch_related("buddy_spendings")
+            )
+            for exp in expenses:
+                payer_key = (
+                    f"d{exp.upfront_payee_dummy_id}"
+                    if (exp.is_dummy and exp.upfront_payee_dummy_id)
+                    else f"f{exp.owning_feuser_id}"
+                )
+                for bs in exp.buddy_spendings.all():
+                    pk = (
+                        f"f{bs.participant_feuser_id}"
+                        if bs.participant_feuser_id
+                        else f"d{bs.participant_dummy_id}"
+                    )
+                    amount = exp.value * bs.share_percent / 100
+                    if pk == feuser_key:
+                        net -= amount
+                    if payer_key == feuser_key:
+                        net += amount
+
+            # Build member name list; current user shown as "You" and sorted first
+            member_names = []
+            for m in group.members.all():
+                if m.feuser_id:
+                    if m.feuser_id == feuser.pk:
+                        member_names.append(("You", True))
+                    else:
+                        name = f"{m.feuser.first_name} {m.feuser.last_name}".strip() or m.feuser.email
+                        member_names.append((name, False))
+                else:
+                    member_names.append((m.dummy.display_name, False))
+            member_names.sort(key=lambda x: (0 if x[1] else 1, x[0]))
+            all_names = [n for n, _ in member_names]
+            members_display = all_names[:MAX_SHOWN]
+            extra = max(0, len(all_names) - MAX_SHOWN)
+
+            net_abs = abs(net)
+            if net > Decimal("0.005"):
+                net_state = "positive"
+            elif net < Decimal("-0.005"):
+                net_state = "negative"
+            else:
+                net_state = "settled"
+
+            result.append({
+                "group": group,
+                "is_admin": group.admin_feuser_id == feuser.pk,
+                "members_display": members_display,
+                "extra_members": extra,
+                "net": net,
+                "net_abs": net_abs,
+                "net_state": net_state,
+            })
+
+        return result
+
+    @staticmethod
     def groups_data_for_expense_form(feuser) -> list:
         """
         Serialize group membership for JSON injection into the expense form.
@@ -129,6 +212,7 @@ class BuddyQueryService:
                     expense__owning_feuser=feuser,
                     expense__is_dummy=False,
                     expense__buddy_group__isnull=True,
+                    expense__buddy_approved=True,
                 ).select_related("expense")
             )
             i_owe = sum(
@@ -138,6 +222,7 @@ class BuddyQueryService:
                     expense__owning_feuser=buddy_feuser,
                     expense__is_dummy=False,
                     expense__buddy_group__isnull=True,
+                    expense__buddy_approved=True,
                 ).select_related("expense")
             )
 
@@ -149,6 +234,7 @@ class BuddyQueryService:
                     expense__owning_feuser=feuser,
                     expense__is_dummy=False,
                     expense__buddy_group__isnull=True,
+                    expense__buddy_approved=True,
                 ).select_related("expense")
             )
             dummy_expenses = Expense.objects.filter(
@@ -156,6 +242,7 @@ class BuddyQueryService:
                 upfront_payee_dummy=buddy_dummy,
                 is_dummy=True,
                 buddy_group__isnull=True,
+                buddy_approved=True,
             ).prefetch_related("buddy_spendings")
             for exp in dummy_expenses:
                 participant_sum = sum(bs.share_percent for bs in exp.buddy_spendings.all())
@@ -188,7 +275,7 @@ class BuddyQueryService:
 
         expenses = (
             Expense.objects
-            .filter(buddy_group=group)
+            .filter(buddy_group=group, buddy_approved=True)
             .prefetch_related("buddy_spendings")
             .select_related("owning_feuser", "upfront_payee_dummy")
         )
@@ -264,7 +351,7 @@ class BuddyQueryService:
         feuser_key = f"f{feuser.pk}"
         expenses_qs = (
             Expense.objects
-            .filter(buddy_group=group)
+            .filter(buddy_group=group)  # all expenses shown in list; unapproved excluded from balances below
             .prefetch_related("buddy_spendings")
             .select_related("owning_feuser", "upfront_payee_dummy")
             .order_by("-date_created")
@@ -296,10 +383,11 @@ class BuddyQueryService:
                     "amount": amount,
                     "percent": bs.share_percent,
                 })
-                if pk in balances:
-                    balances[pk] -= amount
-                if payer_key in balances:
-                    balances[payer_key] += amount
+                if exp.buddy_approved:
+                    if pk in balances:
+                        balances[pk] -= amount
+                    if payer_key in balances:
+                        balances[payer_key] += amount
 
             i_am_participant = any(
                 (f"f{bs.participant_feuser_id}" == feuser_key)

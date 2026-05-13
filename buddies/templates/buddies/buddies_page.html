@@ -41,7 +41,7 @@
         <div class="buddy-card buddy-card-dummy">
             <div class="buddy-card-identity">
                 <span class="buddy-name">{{ info.dummy.display_name }}</span>
-                <span class="buddy-tag">Offline buddy</span>
+                <span class="pill">Offline buddy</span>
             </div>
             <div class="buddy-card-balance {% if info.net > 0 %}balance-positive{% elif info.net < 0 %}balance-negative{% else %}balance-zero{% endif %}">
                 {% if info.net > 0 %}
@@ -175,7 +175,7 @@
         <div class="buddy-expense-row {% if not exp.buddy_approved %}buddy-expense-pending{% endif %} {% if exp.is_dummy %}buddy-expense-dummy{% endif %}">
             <div class="bexp-meta">
                 <span class="bexp-title">{{ exp.title }}</span>
-                {% if not exp.buddy_approved %}<span class="badge badge-warning">Needs approval</span>{% endif %}
+                {% if not exp.buddy_approved %}<span class="pill pill--warning">Needs approval</span>{% endif %}
             </div>
             <div class="bexp-details">
                 <span class="bexp-value">{{ exp.owning_feuser.currency }}{{ exp.value }}</span>
@@ -188,7 +188,7 @@
             </div>
             <div class="bexp-participants">
                 {% for bs in exp.buddy_spendings.all %}
-                <span class="bexp-share">
+                <span class="pill">
                     {% if bs.participant_feuser %}{{ bs.participant_feuser.first_name }} {{ bs.participant_feuser.last_name }}
                     {% else %}{{ bs.participant_dummy.display_name }}{% endif %}:
                     {{ bs.share_percent|floatformat:1 }}%

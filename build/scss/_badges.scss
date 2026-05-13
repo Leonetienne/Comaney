@@ -1,3 +1,5 @@
+// ── Expense type badges ───────────────────────────────────────────────────────
+
 .badge {
   display: inline-block;
   padding: 2px 8px;
@@ -18,5 +20,49 @@
     &-income      { background: #1a3326; color: #6ecf8a; }
     &-expense     { background: #331a1d; color: #cf7075; }
     &-carry_over  { background: #2a1a4a; color: #b89fe8; }
+  }
+}
+
+// ── Shared pill / label system ────────────────────────────────────────────────
+// Base: neutral chip. Modifiers: --accent, --warning, --rounded, --muted.
+
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--bg-elevated);
+  color: var(--text-subtle);
+  border: 1px solid var(--border);
+  line-height: 1.5;
+
+  &.pill--accent {
+    background: var(--accent);
+    color: var(--accent-fg);
+    border-color: transparent;
+    font-weight: 700;
+  }
+
+  &.pill--warning {
+    background: color-mix(in srgb, #e3a008 14%, var(--bg-surface));
+    color: #b07800;
+    border-color: color-mix(in srgb, #e3a008 30%, var(--border));
+    font-weight: 600;
+
+    @media (prefers-color-scheme: dark) {
+      color: #e3a008;
+      background: color-mix(in srgb, #e3a008 14%, var(--bg-surface));
+    }
+  }
+
+  &.pill--rounded {
+    border-radius: 20px;
+  }
+
+  &.pill--muted {
+    font-style: italic;
+    color: var(--text-muted);
   }
 }

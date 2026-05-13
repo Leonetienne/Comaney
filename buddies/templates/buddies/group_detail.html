@@ -9,7 +9,7 @@
 {% block content %}
 <div class="page-header">
     <h1>{{ group.name }}</h1>
-    {% if is_admin %}<span class="buddy-tag">You are admin</span>{% endif %}
+    {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
 </div>
 
 {% if messages %}
@@ -148,14 +148,14 @@
                         <td>{{ e.payer_name }}</td>
                         <td style="text-align:right">{{ e.payer_percent|floatformat:1 }}%</td>
                         <td style="text-align:right">{{ currency }}{{ e.payer_amount|floatformat:2 }}</td>
-                        <td><span class="buddy-tag">Paid</span></td>
+                        <td><span class="pill">Paid</span></td>
                     </tr>
                     {% for s in e.participant_shares %}
                     <tr class="{% if s.is_me %}bexp-row-me{% endif %}">
                         <td>{{ s.name }}</td>
                         <td style="text-align:right">{{ s.percent|floatformat:1 }}%</td>
                         <td style="text-align:right">{{ currency }}{{ s.amount|floatformat:2 }}</td>
-                        <td><span class="badge badge-muted">Owes</span></td>
+                        <td><span class="pill">Owes</span></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -175,7 +175,7 @@
             <div class="buddy-card-identity">
                 <span class="buddy-name">{{ request.feuser.first_name }} {{ request.feuser.last_name }}</span>
                 <span class="buddy-email">{{ request.feuser.email }}</span>
-                <span class="buddy-tag">You{% if group.admin_feuser_id == request.feuser.pk %} &middot; Admin{% endif %}</span>
+                <span class="pill">You{% if group.admin_feuser_id == request.feuser.pk %} &middot; Admin{% endif %}</span>
             </div>
             <div></div>
             <div></div>
@@ -186,7 +186,7 @@
             <div class="buddy-card-identity">
                 <span class="buddy-name">{{ m.feuser.first_name }} {{ m.feuser.last_name }}</span>
                 <span class="buddy-email">{{ m.feuser.email }}</span>
-                {% if m.feuser.pk == group.admin_feuser_id %}<span class="buddy-tag">Admin</span>{% endif %}
+                {% if m.feuser.pk == group.admin_feuser_id %}<span class="pill">Admin</span>{% endif %}
             </div>
             <div></div>
             <div class="buddy-card-actions">
@@ -207,7 +207,7 @@
         <div class="buddy-card buddy-card-dummy">
             <div class="buddy-card-identity">
                 <span class="buddy-name">{{ m.dummy.display_name }}</span>
-                <span class="buddy-tag">Offline</span>
+                <span class="pill">Offline</span>
             </div>
             <div></div>
             <div class="buddy-card-actions">

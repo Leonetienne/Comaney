@@ -63,12 +63,12 @@ def buddy_summary_page(request):
     unified_debts = BuddyQueryService.get_all_debts_unified(feuser)  # direct buddies only
     all_shared = BuddyQueryService.shared_expenses(feuser)
     direct_expenses = all_shared.filter(buddy_group__isnull=True)
-    my_groups = BuddyQueryService.get_groups_for_feuser(feuser)
+    my_groups_summary = BuddyQueryService.get_group_summaries_for_feuser(feuser)
 
     return render(request, "buddies/buddy_summary.html", {
         "active_nav": "buddy_summary",
         "direct_expenses": direct_expenses,
-        "my_groups": my_groups,
+        "my_groups_summary": my_groups_summary,
         "debts_json": _debts_to_json(unified_debts),
     })
 

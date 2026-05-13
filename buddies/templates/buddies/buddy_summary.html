@@ -18,6 +18,35 @@
 {% endfor %}
 {% endif %}
 
+{% if my_groups_summary %}
+<section class="buddies-section bgs-grid-section">
+    <h2>Groups</h2>
+    <div class="bgs-cards">
+        {% for gs in my_groups_summary %}
+        <a href="{% url 'buddies:group_detail' gs.group.uid %}" class="bgs-card bgs-card-{{ gs.net_state }}">
+            <div class="bgs-card-top">
+                <span class="bgs-name">{{ gs.group.name }}</span>
+                {% if gs.is_admin %}<span class="pill pill--accent">Admin</span>{% endif %}
+            </div>
+            <div class="bgs-balance bgs-balance-{{ gs.net_state }}">
+                {% if gs.net_state == "positive" %}+{{ request.feuser.currency }}{{ gs.net|floatformat:2 }}
+                {% elif gs.net_state == "negative" %}-{{ request.feuser.currency }}{{ gs.net_abs|floatformat:2 }}
+                {% else %}<span class="bgs-balance-settled-label">All settled</span>{% endif %}
+            </div>
+            <div class="bgs-members">
+                {% for name in gs.members_display %}
+                <span class="pill pill--rounded">{{ name }}</span>
+                {% endfor %}
+                {% if gs.extra_members > 0 %}
+                <span class="pill pill--rounded pill--muted">+{{ gs.extra_members }} more</span>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
 {% if debts_json != "[]" %}
 <section class="buddies-section">
     <h2>Balance Overview</h2>
@@ -168,22 +197,9 @@
 </section>
 {% endif %}
 
-{% if my_groups %}
-<section class="buddies-section">
-    <h2>Groups</h2>
-    <div class="buddy-group-cards">
-        {% for g in my_groups %}
-        <a href="{% url 'buddies:group_detail' g.uid %}" class="buddy-group-card">
-            <span class="buddy-group-card-name">{{ g.name }}</span>
-            <span class="buddy-group-card-arrow">&rarr;</span>
-        </a>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
-
 <section class="buddies-section">
     <h2>Direct Expenses</h2>
+    <p class="bgs-section-note">Only one-on-one buddy expenses appear here. Group expenses live on each group's page above.</p>
     {% if direct_expenses %}
     <div class="buddy-expense-list">
         {% for exp in direct_expenses %}
@@ -201,7 +217,7 @@
     {% endif %}
 </section>
 
-{% if not group_sections and not direct_expenses %}
+{% if not my_groups_summary and not direct_expenses %}
 <div class="buddies-onboarding-hint">
     <strong>No shared expenses yet.</strong> Add a buddy on <a href="{% url 'buddies:my_buddies' %}">My Buddies</a>, then check "This is a buddy payment" when creating an expense.
 </div>
