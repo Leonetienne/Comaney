@@ -16,7 +16,11 @@
     </tr>
 </table>
 <p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
+    {% if owner_rejected %}
+    The expense has been removed entirely.
+    {% else %}
     Their share has been redistributed equally among the remaining participants. Log in to review the updated breakdown.
+    {% endif %}
 </p>
 <div style="margin:24px 0;text-align:center;">
     <a href="{{ site_url }}/buddies/" style="display:inline-block;background:#e0e0e0;color:#141414;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">View in Buddies</a>

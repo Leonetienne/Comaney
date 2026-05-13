@@ -1457,7 +1457,19 @@ class BuddyLifecycleService:
             return False
 
         if expense.owning_feuser_id == rejecting_feuser.pk:
+            participants_to_notify = [
+                bs.participant_feuser
+                for bs in expense.buddy_spendings.select_related("participant_feuser").all()
+                if bs.participant_feuser_id
+            ]
             expense.delete()
+            for participant in participants_to_notify:
+                BuddyEmailService.send_rejection_notification(
+                    expense=expense,
+                    rejecting_feuser=rejecting_feuser,
+                    notifying_feuser=participant,
+                    owner_rejected=True,
+                )
             return True
 
         bs_row = expense.buddy_spendings.filter(participant_feuser=rejecting_feuser).first()
@@ -1594,15 +1606,16 @@ class BuddyEmailService:
         )
 
     @staticmethod
-    def send_rejection_notification(expense, rejecting_feuser, notifying_feuser):
+    def send_rejection_notification(expense, rejecting_feuser, notifying_feuser, owner_rejected=False):
         site_url = getattr(settings, "SITE_URL", "")
         BuddyEmailService._send(
-            subject=f"Shared expense rejected by {_display_name(rejecting_feuser)}: {expense.title}",
+            subject=f"Shared expense declined by {_display_name(rejecting_feuser)}: {expense.title}",
             template="emails/buddy_expense_rejected.html",
             ctx={
                 "expense": expense,
                 "rejecting_name": _display_name(rejecting_feuser),
                 "feuser_recipient": notifying_feuser,
+                "owner_rejected": owner_rejected,
             },
             recipient_email=notifying_feuser.email,
         )
