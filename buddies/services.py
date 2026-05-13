@@ -474,11 +474,29 @@ class BuddyQueryService:
         for link in BuddyLink.for_user(feuser).select_related("user_a", "user_b"):
             buddy = link.other(feuser)
             net = BuddyQueryService.get_net_debt(feuser, buddy_feuser=buddy)
-            _upsert(("feuser", buddy.pk), "feuser", buddy, "Personal Buddy", net, link_uid=link.uid)
+            _upsert(("feuser", buddy.pk), "feuser", buddy, "Direct", net, link_uid=link.uid)
 
         for dummy in DummyUser.objects.filter(owning_feuser=feuser):
             net = BuddyQueryService.get_net_debt(feuser, buddy_dummy=dummy)
-            _upsert(("dummy", dummy.pk), "dummy", dummy, "Personal Buddy", net)
+            _upsert(("dummy", dummy.pk), "dummy", dummy, "Direct", net)
+
+        # Annotate group membership for entries already in person_map
+        groups = (
+            BuddyGroup.objects
+            .filter(members__feuser=feuser)
+            .prefetch_related("members__feuser", "members__dummy")
+            .distinct()
+        )
+        for group in groups:
+            for m in group.members.all():
+                if m.feuser_id and m.feuser_id != feuser.pk:
+                    key = ("feuser", m.feuser_id)
+                    if key in person_map and group.name not in person_map[key]["sources"]:
+                        person_map[key]["sources"].append(group.name)
+                elif m.dummy_id:
+                    key = ("dummy", m.dummy_id)
+                    if key in person_map and group.name not in person_map[key]["sources"]:
+                        person_map[key]["sources"].append(group.name)
 
         result = list(person_map.values())
         for r in result:

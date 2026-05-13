@@ -17,30 +17,26 @@
 {% if unified_debts %}
 <section class="buddies-section">
     <h2>Balances</h2>
-    <div class="buddy-list">
+    <div class="buddy-balance-list">
         {% for info in unified_debts %}
-        <div class="buddy-card {% if info.type == 'dummy' %}buddy-card-dummy{% endif %}">
-            <div class="buddy-card-identity">
+        <div class="buddy-balance-row">
+            <div class="bbl-name-block {% if info.type == 'dummy' %}bbl-name-block--dummy{% endif %}">
                 <span class="buddy-name">{{ info.display_name }}</span>
                 {% if info.type == 'feuser' and info.feuser %}
                 <span class="buddy-email">{{ info.feuser.email }}</span>
                 {% endif %}
-                <span class="buddy-sources">
-                    {% for src in info.sources %}
-                    <span class="pill">{{ src }}</span>
-                    {% endfor %}
-                </span>
-            </div>
-            <div class="buddy-card-balance {% if info.net > 0 %}balance-positive{% elif info.net < 0 %}balance-negative{% else %}balance-zero{% endif %}">
-                {% if info.net > 0 %}
-                    <span title="They owe you">+{{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}</span>
-                {% elif info.net < 0 %}
-                    <span title="You owe them">-{{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}</span>
-                {% else %}
-                    <span>Settled up</span>
+                {% if info.sources %}
+                <div class="bbl-tags">
+                    {% for src in info.sources %}<span class="pill">{{ src }}</span>{% endfor %}
+                </div>
                 {% endif %}
             </div>
-            <div class="buddy-card-actions">
+            <div class="bbl-balance {% if info.net > 0 %}balance-positive{% elif info.net < 0 %}balance-negative{% else %}balance-zero{% endif %}">
+                {% if info.net > 0 %}<span title="They owe you">+{{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}</span>
+                {% elif info.net < 0 %}<span title="You owe them">-{{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}</span>
+                {% else %}<span>Settled</span>{% endif %}
+            </div>
+            <div class="bbl-actions">
                 {% if info.type == 'feuser' and info.link_uid %}
                 <form method="post" action="{% url 'buddies:kick_actual' info.link_uid %}">
                     {% csrf_token %}
@@ -61,7 +57,7 @@
                     <input type="email" name="email" placeholder="Their email" class="input-inline" required>
                     <button type="submit" class="btn btn-sm">Send</button>
                     <button type="button" class="btn btn-sm btn-secondary"
-                            onclick="this.closest('form').style.display='none';this.closest('.buddy-card-actions').querySelector('button.btn-secondary').style.display=''">
+                            onclick="this.closest('form').style.display='none';this.closest('.bbl-actions').querySelector('button.btn-secondary').style.display=''">
                         Cancel
                     </button>
                 </form>
