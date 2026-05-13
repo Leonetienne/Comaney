@@ -58,12 +58,21 @@
     })();
 
     document.addEventListener('submit', function(e) {
-        const form = e.target.closest('.delete-form');
-        if (!form) return;
-        e.preventDefault();
-        confirmDialog('Delete "' + (form.dataset.title || 'this item') + '"?')
-            .then(function() { form.submit(); })
-            .catch(function() {});
+        const deleteForm = e.target.closest('.delete-form');
+        if (deleteForm) {
+            e.preventDefault();
+            confirmDialog('Delete "' + (deleteForm.dataset.title || 'this item') + '"?')
+                .then(function() { deleteForm.submit(); })
+                .catch(function() {});
+            return;
+        }
+        const confirmForm = e.target.closest('.confirm-form');
+        if (confirmForm) {
+            e.preventDefault();
+            confirmDialog(confirmForm.dataset.confirm || 'Are you sure?', confirmForm.dataset.ok || 'OK')
+                .then(function() { confirmForm.submit(); })
+                .catch(function() {});
+        }
     });
 
     window.confirmDialog = function(message, okLabel) {

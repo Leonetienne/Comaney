@@ -38,12 +38,9 @@
             </div>
             <div class="bbl-actions">
                 {% if info.type == 'feuser' and info.link_uid %}
-                <form method="post" action="{% url 'buddies:kick_actual' info.link_uid %}">
+                <form method="post" action="{% url 'buddies:kick_actual' info.link_uid %}" class="confirm-form" data-confirm="Remove {{ info.display_name|escapejs }} as a spending buddy?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Existing shared expenses are kept." data-ok="Remove">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-danger-subtle"
-                            onclick="return confirm('Remove {{ info.display_name|escapejs }} as a spending buddy? Existing shared expenses are kept.')">
-                        Remove
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-danger-subtle">Remove</button>
                 </form>
                 {% elif info.type == 'dummy' and info.dummy %}
                 <button class="btn btn-sm btn-secondary"
@@ -61,12 +58,9 @@
                         Cancel
                     </button>
                 </form>
-                <form method="post" action="{% url 'buddies:kick_dummy' info.dummy.uid %}">
+                <form method="post" action="{% url 'buddies:kick_dummy' info.dummy.uid %}" class="confirm-form" data-confirm="Remove {{ info.dummy.display_name|escapejs }}?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Existing shared expenses are kept." data-ok="Remove">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-danger-subtle"
-                            onclick="return confirm('Remove {{ info.dummy.display_name|escapejs }}? Existing shared expenses are kept.')">
-                        Remove
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-danger-subtle">Remove</button>
                 </form>
                 {% endif %}
             </div>

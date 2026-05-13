@@ -91,16 +91,7 @@ def add_dummy(request):
 @require_POST
 def kick_dummy(request, dummy_id):
     dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_feuser=request.feuser)
-    accepted = request.POST.get("debt_warning_accepted") == "yes"
-    result = BuddyLifecycleService.kick_dummy(request.feuser, dummy, has_debt_warning_accepted=accepted)
-    if "debt_warning" in result:
-        return render(request, "buddies/kick_debt_warning.html", {
-            "active_nav": "buddies",
-            "buddy_name": dummy.display_name,
-            "net_debt": result["debt_warning"],
-            "confirm_url": request.path,
-            "back_url": "/buddies/",
-        })
+    BuddyLifecycleService.kick_dummy(request.feuser, dummy, has_debt_warning_accepted=True)
     return redirect("buddies:buddies_page")
 
 
@@ -186,18 +177,7 @@ def kick_actual(request, link_id):
         return redirect("buddies:buddies_page")
 
     other = link.other(request.feuser)
-    accepted = request.POST.get("debt_warning_accepted") == "yes"
-    result = BuddyLifecycleService.kick_actual(
-        request.feuser, other, has_debt_warning_accepted=accepted
-    )
-    if "debt_warning" in result:
-        return render(request, "buddies/kick_debt_warning.html", {
-            "active_nav": "buddies",
-            "buddy_name": _display_name(other),
-            "net_debt": result["debt_warning"],
-            "confirm_url": request.path,
-            "back_url": "/buddies/",
-        })
+    BuddyLifecycleService.kick_actual(request.feuser, other, has_debt_warning_accepted=True)
     return redirect("buddies:buddies_page")
 
 
@@ -228,7 +208,7 @@ def send_merge_invite(request, dummy_id):
 def view_merge_invite(request, token):
     try:
         invite = DummyMergeInvite.objects.select_related(
-            "inviting_feuser", "dummy"
+            "inviting_feuser", "dummy__owning_group"
         ).get(token=token)
     except DummyMergeInvite.DoesNotExist:
         return render(request, "buddies/invite_invalid.html", {"active_nav": "buddies"})
@@ -247,6 +227,7 @@ def view_merge_invite(request, token):
         "active_nav": "buddies",
         "invite": invite,
         "inviting_name": _display_name(invite.inviting_feuser),
+        "group": invite.dummy.owning_group,
     })
 
 
@@ -448,6 +429,28 @@ def group_transfer_admin(request, group_id):
     if not ok:
         django_messages.error(request, "That user is not a group member.")
     return redirect("buddies:group_detail", group_id=group_id)
+
+
+@feuser_required
+@require_POST
+def group_leave(request, group_id):
+    from .models import BuddyGroup
+    feuser = request.feuser
+    group = get_object_or_404(
+        BuddyGroup.objects.prefetch_related("members"),
+        uid=group_id,
+        members__feuser=feuser,
+    )
+    if group.admin_feuser_id == feuser.pk:
+        django_messages.error(request, "You are the group admin. Transfer admin rights to another member before leaving.")
+        return redirect("buddies:group_detail", group_id=group_id)
+    try:
+        member = BuddyGroupMember.objects.get(group=group, feuser=feuser)
+    except BuddyGroupMember.DoesNotExist:
+        return redirect("buddies:my_buddies")
+    BuddyGroupService.remove_member(group, group.admin_feuser, member)
+    django_messages.success(request, f'You have left the group "{group.name}".')
+    return redirect("buddies:my_buddies")
 
 
 @feuser_required

@@ -1361,8 +1361,7 @@ class BuddyLifecycleService:
         inviting_feuser = invite.inviting_feuser
 
         if dummy.owning_group_id:
-            # Group dummy merge: delegate to group service
-            invite.delete()
+            # Group dummy merge: delegate to group service (it handles invite deletion)
             return BuddyGroupService.accept_group_dummy_merge(token, accepting_feuser)
 
         for exp in Expense.objects.filter(upfront_payee_dummy=dummy, is_dummy=True):
@@ -1612,8 +1611,15 @@ class BuddyEmailService:
     def send_merge_invite(invite: DummyMergeInvite):
         site_url = getattr(settings, "SITE_URL", "")
         merge_url = f"{site_url}/buddies/merge/{invite.token}/"
+        group = invite.dummy.owning_group
+        is_group_merge = group is not None
+        subject = (
+            f"{_display_name(invite.inviting_feuser)} wants to add you to the group \"{group.name}\" on Comaney"
+            if is_group_merge else
+            f"{_display_name(invite.inviting_feuser)} wants to link your account with their buddy record on Comaney"
+        )
         BuddyEmailService._send(
-            subject=f"{_display_name(invite.inviting_feuser)} wants to link your account with their buddy record on Comaney",
+            subject=subject,
             template="emails/buddy_merge_invite.html",
             ctx={
                 "invite": invite,
@@ -1621,6 +1627,8 @@ class BuddyEmailService:
                 "dummy_name": invite.dummy.display_name,
                 "merge_url": merge_url,
                 "feuser_recipient": invite.invited_feuser,
+                "is_group_merge": is_group_merge,
+                "group_name": group.name if is_group_merge else None,
             },
             recipient_email=invite.invited_feuser.email,
         )

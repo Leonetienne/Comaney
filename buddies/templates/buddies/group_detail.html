@@ -191,12 +191,9 @@
             <div></div>
             <div class="buddy-card-actions">
                 {% if is_admin %}
-                <form method="post" action="{% url 'buddies:group_remove_member' group.uid m.uid %}">
+                <form method="post" action="{% url 'buddies:group_remove_member' group.uid m.uid %}" class="confirm-form" data-confirm="Remove {{ m.feuser.first_name|default:m.feuser.email }} from the group? Their historical expenses will be preserved under an offline record." data-ok="Remove">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-danger-subtle"
-                            onclick="return confirm('Remove {{ m.feuser.first_name|default:m.feuser.email }} from the group? Their historical expenses will be preserved under an offline record.')">
-                        Remove
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-danger-subtle">Remove</button>
                 </form>
                 {% endif %}
             </div>
@@ -227,12 +224,9 @@
                         Cancel
                     </button>
                 </form>
-                <form method="post" action="{% url 'buddies:group_remove_member' group.uid m.uid %}">
+                <form method="post" action="{% url 'buddies:group_remove_member' group.uid m.uid %}" class="confirm-form" data-confirm="Remove {{ m.dummy.display_name }} from the group?" data-ok="Remove">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-danger-subtle"
-                            onclick="return confirm('Remove {{ m.dummy.display_name }} from the group?')">
-                        Remove
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-danger-subtle">Remove</button>
                 </form>
                 {% endif %}
             </div>
@@ -306,17 +300,25 @@
         <div class="add-buddy-panel">
             <h3>Dissolve group</h3>
             <p class="text-muted">Removes the group permanently. Offline members become your personal offline buddies. Existing expenses are kept but lose their group context.</p>
-            <form method="post" action="{% url 'buddies:group_dissolve' group.uid %}">
+            <form method="post" action="{% url 'buddies:group_dissolve' group.uid %}" class="confirm-form" data-confirm='Dissolve "{{ group.name }}"? This cannot be undone.' data-ok="Dissolve">
                 {% csrf_token %}
                 <input type="hidden" name="confirmed" value="yes">
-                <button type="submit" class="btn btn-danger-subtle"
-                        onclick="return confirm('Dissolve &quot;{{ group.name }}&quot;? This cannot be undone.')">
-                    Dissolve group
-                </button>
+                <button type="submit" class="btn btn-danger-subtle">Dissolve group</button>
             </form>
         </div>
 
     </div>
+</section>
+{% endif %}
+
+{% if not is_admin %}
+<section class="buddies-section">
+    <h2>Leave group</h2>
+    <p class="text-muted">Removes you from this group. Your historical expenses will be preserved for other group members under an offline record.</p>
+    <form method="post" action="{% url 'buddies:group_leave' group.uid %}" class="confirm-form" data-confirm='Leave "{{ group.name }}"? Your historical expenses will be kept under an offline record.' data-ok="Leave">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger-subtle">Leave group</button>
+    </form>
 </section>
 {% endif %}
 
