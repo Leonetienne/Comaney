@@ -9,6 +9,7 @@ from django.utils import timezone
 from ..decorators import feuser_required
 from ..expense_factory import create_expense
 from ..models import Category, Tag, TransactionType
+from .expenses import _buddy_context
 
 _log = logging.getLogger(__name__)
 
@@ -279,6 +280,52 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
     return items, errors
 
 
+def _parse_buddy_item(item: dict, feuser) -> dict | None:
+    """Parse buddy payment fields from a preview item dict. Returns None if not a buddy payment."""
+    if not item.get("buddy_payment") or not item.get("buddy_spendings"):
+        return None
+
+    from buddies.models import BuddyGroup, DummyUser
+    from feusers.models import FeUser as FU
+
+    upfront_type = item.get("buddy_upfront_type", "me")
+    upfront_id   = item.get("buddy_upfront_id")
+    mode         = item.get("buddy_mode", "single")
+    group_id     = item.get("buddy_group_id")
+    spendings    = item.get("buddy_spendings", [])
+
+    group = None
+    if mode == "group" and group_id:
+        try:
+            group = BuddyGroup.objects.get(uid=group_id, members__feuser=feuser)
+        except BuddyGroup.DoesNotExist:
+            pass
+
+    upfront_feuser = None
+    upfront_dummy  = None
+    if upfront_type == "feuser":
+        try:
+            upfront_feuser = FU.objects.get(pk=upfront_id, is_active=True)
+        except (FU.DoesNotExist, TypeError, ValueError):
+            return None
+    elif upfront_type == "dummy":
+        try:
+            upfront_dummy = DummyUser.objects.get(pk=upfront_id)
+        except (DummyUser.DoesNotExist, TypeError, ValueError):
+            return None
+
+    if not spendings:
+        return None
+
+    return {
+        "upfront_type":   upfront_type,
+        "upfront_feuser": upfront_feuser,
+        "upfront_dummy":  upfront_dummy,
+        "group":          group,
+        "spendings":      spendings,
+    }
+
+
 def _trial_state(feuser):
     """Return (api_key, is_trial, trial_limit, trial_spent, trial_blocked)."""
     from django.conf import settings
@@ -324,6 +371,7 @@ def express_creation(request):
         "trial_disabled":     trial_disabled,
         "trial_just_exhausted": False,
     }
+    context.update(_buddy_context(feuser))
 
     if trial_disabled or trial_blocked:
         return render(request, "budget/express_creation.html", context)
@@ -457,8 +505,9 @@ def express_creation(request):
                         except (ValueError, TypeError):
                             pass
 
-                    create_expense(
-                        owning_feuser=feuser,
+                    buddy = _parse_buddy_item(item, feuser)
+
+                    common_kwargs = dict(
                         title=item["title"],
                         type=TransactionType(item["type"]),
                         value=Decimal(item["value"]),
@@ -469,6 +518,28 @@ def express_creation(request):
                         date_due=item_date,
                         settled=True,
                     )
+
+                    if buddy and buddy["upfront_type"] == "feuser" and buddy["upfront_feuser"]:
+                        from buddies.services import BuddyEmailService
+                        expense = create_expense(
+                            owning_feuser=buddy["upfront_feuser"],
+                            buddy_approved=False,
+                            buddy_group=buddy["group"],
+                            buddy_spendings=buddy["spendings"],
+                            **common_kwargs,
+                        )
+                        BuddyEmailService.send_expense_approval_request(expense, feuser)
+                    elif buddy:
+                        create_expense(
+                            owning_feuser=feuser,
+                            is_dummy=(buddy["upfront_type"] == "dummy"),
+                            upfront_payee_dummy=buddy["upfront_dummy"],
+                            buddy_group=buddy["group"],
+                            buddy_spendings=buddy["spendings"],
+                            **common_kwargs,
+                        )
+                    else:
+                        create_expense(owning_feuser=feuser, **common_kwargs)
                     count += 1
                 if not context.get("ai_error"):
                     return redirect(f"{request.path}?created={count}")

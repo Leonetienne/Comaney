@@ -2,6 +2,21 @@
 
 {% block title %}Comaney – Express Creation{% endblock %}
 
+{% block extra_head %}
+{% if buddy_actual or buddy_dummy or buddy_groups %}
+<script>
+window.BUDDY_EXPENSE_CONFIG = {
+    mePk:            {{ current_feuser.pk }},
+    meFirstName:     "{{ current_feuser.first_name|escapejs }}",
+    meLastName:      "{{ current_feuser.last_name|escapejs }}",
+    groupsData:      {{ groups_data_json|safe }},
+    singleBuddies:   {{ single_buddies_json|safe }},
+    urlBuddySummary: "{% url 'buddies:buddy_summary' %}",
+};
+</script>
+{% endif %}
+{% endblock %}
+
 
 {% block content %}
 <div class="express-creation-wrap">
@@ -180,6 +195,50 @@
                             <span class="pcard-label">Note</span>
                             <textarea class="edit-textarea edit-note" placeholder="—">{{ item.note }}</textarea>
                         </div>
+
+                        {% if buddy_actual or buddy_dummy or buddy_groups %}
+                        <!-- Buddy payment -->
+                        <div class="pcard-field pcard-buddy">
+                            <label class="checkbox-inline">
+                                <input type="checkbox" class="buddy-payment-cb">
+                                This is a buddy payment
+                            </label>
+                            <div class="pcard-buddy-details" style="display:none;">
+                                <div class="buddy-payment-section">
+                                    <h4 class="buddy-section-title">Buddy payment details</h4>
+
+                                    {% if buddy_groups %}
+                                    <div class="buddy-mode-row">
+                                        <label class="radio-inline"><input type="radio" name="buddy_mode_ui_{{ forloop.counter0 }}" class="buddy-mode-single" value="single" checked> Single buddy</label>
+                                        <label class="radio-inline"><input type="radio" name="buddy_mode_ui_{{ forloop.counter0 }}" class="buddy-mode-group" value="group"> Group</label>
+                                        <div class="buddy-group-select-row" style="display:none;margin-top:0.5rem;">
+                                            <select class="buddy-group-select">
+                                                {% for g in buddy_groups %}
+                                                <option value="{{ g.uid }}">{{ g.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <div class="buddy-payer-row">
+                                        <label>Upfront payer</label>
+                                        <select class="buddy-upfront-select"></select>
+                                    </div>
+                                    <div class="buddy-payer-notice" style="display:none;"></div>
+
+                                    <div class="buddy-participants-row">
+                                        <label class="buddy-participants-label">Participants (sharing the cost)</label>
+                                        <div class="buddy-participants-checkboxes"></div>
+                                    </div>
+
+                                    <div class="buddy-sliders-wrap buddy-sliders" style="display:none;"></div>
+                                    <button type="button" class="btn btn-secondary btn-sm buddy-equal-btn" style="margin-top:8px;">Equal shares</button>
+                                    <p class="buddy-no-participants-error error-msg" style="display:none;">A buddy payment requires at least one participant.</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
 
                 </div>
@@ -284,7 +343,253 @@ document.getElementById('parse-form').addEventListener('submit', function () {
 try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
 {% endif %}
 
+// ── Per-card buddy payment ────────────────────────────────────────────────────
+{% if buddy_actual or buddy_dummy or buddy_groups %}
+function initCardBuddy(cardEl) {
+    var cfg = window.BUDDY_EXPENSE_CONFIG;
+    if (!cfg) return null;
+    function q(s) { return cardEl.querySelector(s); }
+    var cb          = q('.buddy-payment-cb');
+    var detailsEl   = q('.pcard-buddy-details');
+    if (!cb || !detailsEl) return null;
+    var payerSel    = q('.buddy-upfront-select');
+    var partEl      = q('.buddy-participants-checkboxes');
+    var partRow     = q('.buddy-participants-row');
+    var partLbl     = q('.buddy-participants-label');
+    var slidersEl   = q('.buddy-sliders-wrap');
+    var equalBtn    = q('.buddy-equal-btn');
+    var payerNotice = q('.buddy-payer-notice');
+    var noPartErr   = q('.buddy-no-participants-error');
+    var modeSngl    = q('.buddy-mode-single');
+    var modeGrp     = q('.buddy-mode-group');
+    var grpSelRow   = q('.buddy-group-select-row');
+    var grpSel      = q('.buddy-group-select');
+    var ME_PK       = cfg.mePk;
+    var ME_NAME     = (cfg.meFirstName + ' ' + cfg.meLastName).trim() || 'Me';
+    var groups      = cfg.groupsData    || [];
+    var singles     = cfg.singleBuddies || [];
+    var summaryUrl  = cfg.urlBuddySummary || '';
+    var mode = 'single', groupId = null, parts = [];
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    if (modeSngl) modeSngl.addEventListener('change', function() { if (this.checked) switchMode('single'); });
+    if (modeGrp)  modeGrp.addEventListener('change',  function() { if (this.checked) switchMode('group'); });
+    if (grpSel)   grpSel.addEventListener('change', function() {
+        groupId = parseInt(this.value);
+        buildPayer(); buildParts(true); refreshParts(); rebuildSliders();
+    });
+    function switchMode(m) {
+        mode = m;
+        if (grpSelRow) grpSelRow.style.display = m === 'group' ? 'block' : 'none';
+        if (m === 'group' && grpSel && grpSel.value) groupId = parseInt(grpSel.value);
+        if (m === 'single') groupId = null;
+        if (partLbl) partLbl.textContent = m === 'single' ? 'Buddy (sharing the cost)' : 'Participants (sharing the cost)';
+        buildPayer(); buildParts(m === 'group'); refreshParts(); rebuildSliders();
+    }
+    function buildPayer() {
+        var prev = payerSel.value;
+        payerSel.innerHTML = '';
+        var opts = [];
+        if (mode === 'single') {
+            opts.push({v:'me:'+ME_PK, t:'Me ('+ME_NAME+')'});
+            singles.forEach(function(b) {
+                opts.push(b.type === 'feuser'
+                    ? {v:'feuser:'+b.id, t:b.name+(b.email?' ('+b.email+')':'')}
+                    : {v:'dummy:'+b.id,  t:b.name});
+            });
+        } else {
+            var grp = groups.find(function(g) { return g.id === groupId; });
+            if (grp) grp.members.forEach(function(m) {
+                opts.push({v:(m.is_me?'me':m.type)+':'+(m.is_me?ME_PK:m.id), t:m.is_me?'Me ('+m.name+')':m.name});
+            });
+        }
+        opts.forEach(function(o) {
+            var el = document.createElement('option'); el.value = o.v; el.textContent = o.t; payerSel.appendChild(el);
+        });
+        if (opts.some(function(o) { return o.v === prev; })) payerSel.value = prev;
+        updateNotice();
+    }
+    payerSel.addEventListener('change', function() { updateNotice(); refreshParts(); rebuildSliders(); });
+    function updateNotice() {
+        if (!payerNotice || !payerSel.options.length) { if (payerNotice) payerNotice.style.display = 'none'; return; }
+        var pt = payerSel.value.split(':')[0];
+        if (pt === 'dummy') {
+            var n = esc(payerSel.options[payerSel.selectedIndex].text);
+            payerNotice.className = 'info-box';
+            payerNotice.innerHTML = '<p>Since <strong>'+n+'</strong> paid upfront, this expense won\'t appear in your regular expense list. You\'ll find it under <a href="'+summaryUrl+'">Buddy Expenses</a> instead.</p>';
+            payerNotice.style.display = 'block';
+        } else if (pt === 'feuser') {
+            var n2 = esc(payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim());
+            payerNotice.className = 'warning-box';
+            payerNotice.innerHTML = '<p><strong>Heads up:</strong> This expense will be recorded on <strong>'+n2+'\'s</strong> account and will require their approval.</p>';
+            payerNotice.style.display = 'block';
+        } else { payerNotice.style.display = 'none'; }
+    }
+    function buildParts(preCheck) {
+        partEl.innerHTML = '';
+        if (mode === 'single') {
+            var sel = document.createElement('select'); sel.className = 'buddy-participant-select';
+            var emp = document.createElement('option'); emp.value = ''; emp.textContent = '-- Select buddy --';
+            sel.appendChild(emp);
+            singles.forEach(function(b) {
+                var o = document.createElement('option');
+                o.value = b.type+':'+b.id; o.dataset.type = b.type; o.dataset.id = String(b.id); o.dataset.name = b.name; o.textContent = b.name;
+                sel.appendChild(o);
+            });
+            sel.addEventListener('change', function() { syncParts(); rebuildSliders(); });
+            partEl.appendChild(sel);
+        } else {
+            var grp = groups.find(function(g) { return g.id === groupId; });
+            (grp ? grp.members.filter(function(m) { return !m.is_me; }) : []).forEach(function(item) {
+                var lbl = document.createElement('label'); lbl.className = 'checkbox-inline buddy-participant-cb';
+                lbl.dataset.type = item.type; lbl.dataset.id = String(item.id); lbl.dataset.name = item.name;
+                var inp = document.createElement('input'); inp.type = 'checkbox'; if (preCheck) inp.checked = true;
+                inp.addEventListener('change', function() { syncParts(); rebuildSliders(); });
+                lbl.appendChild(inp); lbl.appendChild(document.createTextNode(' '+item.name));
+                partEl.appendChild(lbl);
+            });
+        }
+    }
+    function refreshParts() {
+        var p = payerSel.value.split(':'), pt = p[0], pid = p[1];
+        if (mode === 'single') {
+            var show = pt === 'me';
+            if (partRow) partRow.style.display = show ? '' : 'none';
+            var sel = partEl.querySelector('.buddy-participant-select'); if (!show && sel) sel.value = '';
+        } else {
+            if (partRow) partRow.style.display = '';
+            partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
+                var hide = lbl.dataset.type === pt && lbl.dataset.id === pid;
+                lbl.style.display = hide ? 'none' : 'block'; if (hide) lbl.querySelector('input').checked = false;
+            });
+        }
+        parts = []; syncParts();
+    }
+    function syncParts() {
+        var pt = payerSel.value.split(':')[0], checked = [];
+        if (pt !== 'me') {
+            var em = parts.find(function(p) { return p.type === 'feuser' && p.id === ME_PK; });
+            checked.push({type:'feuser', id:ME_PK, name:ME_NAME, share:em?em.share:0});
+            if (mode !== 'single') partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
+                if (lbl.style.display === 'none') return;
+                if (lbl.querySelector('input').checked) {
+                    var ex = parts.find(function(p) { return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id; });
+                    checked.push({type:lbl.dataset.type, id:parseInt(lbl.dataset.id), name:lbl.dataset.name, share:ex?ex.share:0});
+                }
+            });
+        } else if (mode === 'single') {
+            var sel = partEl.querySelector('.buddy-participant-select');
+            if (sel && sel.value) {
+                var sp = sel.value.split(':'), so = sel.options[sel.selectedIndex];
+                var ex = parts.find(function(p) { return p.type === sp[0] && p.id === parseInt(sp[1]); });
+                checked.push({type:sp[0], id:parseInt(sp[1]), name:so.dataset.name, share:ex?ex.share:0});
+            }
+        } else {
+            partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
+                if (lbl.style.display === 'none') return;
+                if (lbl.querySelector('input').checked) {
+                    var ex = parts.find(function(p) { return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id; });
+                    checked.push({type:lbl.dataset.type, id:parseInt(lbl.dataset.id), name:lbl.dataset.name, share:ex?ex.share:0});
+                }
+            });
+        }
+        if (checked.length !== parts.length) {
+            var per = +(100/(checked.length+1)).toFixed(3);
+            checked.forEach(function(p) { p.share = per; });
+        }
+        parts = checked;
+    }
+    function implicitShare() { return Math.max(0, +(100-parts.reduce(function(a,p){return a+p.share;},0)).toFixed(3)); }
+    function clamp() {
+        var sum = parts.reduce(function(a,p){return a+p.share;},0);
+        if (sum>100) for (var i=parts.length-1;i>=0;i--) {
+            var cut=Math.min(parts[i].share,sum-100); parts[i].share=+(parts[i].share-cut).toFixed(3);
+            sum=parts.reduce(function(a,p){return a+p.share;},0); if (sum<=100) break;
+        }
+    }
+    function refreshSliders() {
+        var pr = slidersEl.querySelector('.buddy-payer-row');
+        if (pr) {
+            var s = implicitShare();
+            var sl = pr.querySelector('input'); if (sl) sl.value = s;
+            var pc = pr.querySelector('.buddy-slider-pct'); if (pc) pc.textContent = s.toFixed(1)+'%';
+            var lbl = pr.querySelector('.buddy-slider-name');
+            if (lbl) lbl.textContent = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
+        }
+        parts.forEach(function(p,idx) {
+            var row = slidersEl.querySelector('[data-sidx="'+idx+'"]'); if (!row) return;
+            var sl = row.querySelector('input'); if (sl) sl.value = p.share;
+            var pc = row.querySelector('.buddy-slider-pct'); if (pc) pc.textContent = p.share.toFixed(1)+'%';
+        });
+    }
+    function rebuildSliders() {
+        slidersEl.innerHTML = '';
+        if (!parts.length) { slidersEl.style.display = 'none'; return; }
+        slidersEl.style.display = 'block';
+        var ps = implicitShare();
+        var pr = document.createElement('div'); pr.className = 'buddy-slider-row buddy-payer-row';
+        pr.innerHTML = '<span class="buddy-slider-name">'+esc(payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim())+'</span>'
+            +'<input type="range" min="0" max="100" step="0.1" value="'+ps+'">'
+            +'<span class="buddy-slider-pct">'+ps.toFixed(1)+'%</span>';
+        slidersEl.appendChild(pr);
+        pr.querySelector('input').addEventListener('input', function() {
+            var ns=+parseFloat(this.value).toFixed(3), d=ns-implicitShare();
+            if (Math.abs(d)<0.001) return;
+            var tp=parts.reduce(function(a,p){return a+p.share;},0);
+            if (tp>0.001) parts.forEach(function(p){p.share=Math.max(0,+(p.share-d*(p.share/tp)).toFixed(3));});
+            else { var pp=-d/parts.length; parts.forEach(function(p){p.share=Math.max(0,+(p.share+pp).toFixed(3));}); }
+            clamp(); refreshSliders(); this.value=implicitShare();
+            var pc=pr.querySelector('.buddy-slider-pct'); if(pc) pc.textContent=implicitShare().toFixed(1)+'%';
+        });
+        parts.forEach(function(p,idx) {
+            var row=document.createElement('div'); row.className='buddy-slider-row'; row.dataset.sidx=idx;
+            row.innerHTML='<span class="buddy-slider-name">'+esc(p.name)+'</span>'
+                +'<input type="range" min="0" max="100" step="0.1" value="'+p.share+'">'
+                +'<span class="buddy-slider-pct">'+p.share.toFixed(1)+'%</span>';
+            slidersEl.appendChild(row);
+            row.querySelector('input').addEventListener('input', function() {
+                var val=+parseFloat(this.value).toFixed(3), d=val-parts[idx].share;
+                parts[idx].share=val;
+                var others=parts.filter(function(_,i){return i!==idx;});
+                if (others.length){var po=d/others.length;others.forEach(function(o){o.share=Math.max(0,Math.min(100,+(o.share-po).toFixed(3)));});}
+                clamp(); refreshSliders();
+            });
+        });
+    }
+    equalBtn.addEventListener('click', function() {
+        var per=+(100/(parts.length+1)).toFixed(3); parts.forEach(function(p){p.share=per;}); refreshSliders();
+    });
+    cb.addEventListener('change', function() {
+        detailsEl.style.display = cb.checked ? 'block' : 'none';
+        if (cb.checked && !payerSel.options.length) { buildPayer(); buildParts(false); refreshParts(); rebuildSliders(); }
+    });
+    return {
+        validate: function() {
+            if (!cb.checked) return true;
+            if (!parts.length) { if (noPartErr) noPartErr.style.display = 'block'; return false; }
+            if (noPartErr) noPartErr.style.display = 'none'; return true;
+        },
+        getState: function() {
+            if (!cb.checked) return null;
+            var pp = payerSel.value.split(':');
+            return {
+                buddy_payment: true, buddy_mode: mode, buddy_group_id: groupId,
+                buddy_upfront_type: pp[0], buddy_upfront_id: parseInt(pp[1]),
+                buddy_spendings: parts.map(function(p) { return {type:p.type, id:p.id, share_percent:+p.share.toFixed(3)}; })
+            };
+        }
+    };
+}
+{% endif %}
+
 {% if preview_items %}
+var _cardBuddy = {};
+{% if buddy_actual or buddy_dummy or buddy_groups %}
+document.querySelectorAll('.preview-card[data-idx]').forEach(function(card) {
+    var inst = initCardBuddy(card);
+    if (inst) _cardBuddy[card.dataset.idx] = inst;
+});
+{% endif %}
+
 // ── Checkbox / deselect logic ────────────────────────────────────────────────
 (function () {
     const checkboxes = document.querySelectorAll('#confirm-form input[type=checkbox][name=selected]');
@@ -335,7 +640,15 @@ document.querySelectorAll('.edit-type').forEach(sel => {
 });
 
 // ── Serialize edits → preview_json before confirm submit ────────────────────
-document.getElementById('confirm-form').addEventListener('submit', function () {
+document.getElementById('confirm-form').addEventListener('submit', function (e) {
+    // Validate buddy sections for selected cards
+    var allBuddyValid = true;
+    document.querySelectorAll('#confirm-form input[name=selected]:checked').forEach(function(selCb) {
+        var inst = _cardBuddy[selCb.value];
+        if (inst && !inst.validate()) allBuddyValid = false;
+    });
+    if (!allBuddyValid) { e.preventDefault(); return; }
+
     const cards   = document.querySelectorAll('.preview-card[data-idx]');
     const payload = JSON.parse(document.getElementById('preview_json_input').value);
 
@@ -355,6 +668,13 @@ document.getElementById('confirm-form').addEventListener('submit', function () {
 
         item.tag_uids = Array.from(card.querySelectorAll('.edit-tag-cb:checked'))
             .map(cb => parseInt(cb.value, 10));
+
+        // Buddy state
+        var inst = _cardBuddy[card.dataset.idx];
+        if (inst) {
+            var state = inst.getState();
+            if (state) Object.assign(item, state);
+        }
     });
 
     document.getElementById('preview_json_input').value = JSON.stringify(payload);
