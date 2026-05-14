@@ -279,6 +279,23 @@
         if (payerType !== 'me') {
             var existingMe = participants.find(function (p) { return p.type === 'feuser' && p.id === ME_PK; });
             checked.push({type: 'feuser', id: ME_PK, name: ME_NAME, share: existingMe ? existingMe.share : 0});
+            if (currentMode !== 'single') {
+                participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
+                    if (lbl.style.display === 'none') return;
+                    var inp = lbl.querySelector('input');
+                    if (inp.checked) {
+                        var existing = participants.find(function (p) {
+                            return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id;
+                        });
+                        checked.push({
+                            type:  lbl.dataset.type,
+                            id:    parseInt(lbl.dataset.id),
+                            name:  lbl.dataset.name,
+                            share: existing ? existing.share : 0,
+                        });
+                    }
+                });
+            }
         } else if (currentMode === 'single') {
             var sel = document.getElementById('buddy-participant-select');
             if (sel && sel.value) {
