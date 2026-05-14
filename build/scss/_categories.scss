@@ -82,7 +82,24 @@
 
 .ct-add {
   margin-top: 8px;
-  input { margin-top: 0; border-radius: 6px; }
+  input {
+    margin-top: 0;
+    border-radius: 6px;
+    padding: 6px 10px;
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--input-border);
+    font-size: inherit;
+    font-family: inherit;
+    outline: none;
+
+    &:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(128,128,128,.15);
+    }
+  }
 }
 
 .ct-empty {
