@@ -1,0 +1,17 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">An expense was unlinked from your group</h2>
+<p style="color:#ccc;line-height:1.6;">
+    The group admin (<strong style="color:#e0e0e0;">{{ admin_name }}</strong>) has unlinked the expense
+    <strong style="color:#e0e0e0;">&ldquo;{{ expense_title }}&rdquo;</strong> from
+    <strong style="color:#e0e0e0;">{{ group_name }}</strong>.
+</p>
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
+    The expense has been removed from the group breakdown and no longer affects any group balances.
+    {% if is_owner %}It remains in your personal expense list.{% endif %}
+</p>
+<div style="margin:24px 0;text-align:center;">
+    <a href="{{ site_url }}/buddies/groups/{{ group_id }}/" style="display:inline-block;background:#333;color:#ccc;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">View group</a>
+</div>
+{% endblock %}

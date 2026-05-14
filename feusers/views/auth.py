@@ -12,7 +12,11 @@ from ..utils import _POW_DIFFICULTY, _check_pow, _new_pow_challenge, _record_log
 
 def landing_page(request):
     if request.session.get("feuser_id"):
-        return redirect("budget:dashboard")
+        try:
+            FeUser.objects.get(pk=request.session["feuser_id"], is_active=True)
+            return redirect("budget:dashboard")
+        except FeUser.DoesNotExist:
+            request.session.flush()
     return render(request, "feusers/landing_page.html", {"active_nav": "home"})
 
 

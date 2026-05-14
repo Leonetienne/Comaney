@@ -55,6 +55,7 @@ comaney/        Settings, root urls, middleware, public_pages context processor
 - REST API: Bearer token → `FeUser.api_key`
 
 ## Key conventions
+- **Settlement expenses** (`buddies/`): A settlement record created by the debtor (A) has `settled=True`, `buddy_approved=False`. `buddy_approved=False` means the creditor (B) has not yet confirmed receipt; it does NOT prevent the expense from appearing in A's personal budget. The buddy balance is only cleared once B confirms (`buddy_approved=True`). Settlement expenses must never appear in the "Did you pay for this?" section (`pending_as_expense_owner` filters `settled=False` to prevent self-approval).
 - **No Django auth backend**: never use `request.user`, `login()`, `@login_required`
 - **Migrations**: `./venv/bin/python3 manage.py makemigrations` locally to generate the file, then `docker compose restart web`; the entrypoint runs `migrate` automatically on start
 - **Notification classes**: `"" < soon < tomorrow < today < late < settled`; each sent at most once per expense

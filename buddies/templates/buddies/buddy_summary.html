@@ -47,9 +47,121 @@
 </section>
 {% endif %}
 
+{% if pending_as_expense_owner %}
+<section class="buddies-section">
+    <h2>Did you pay for this?</h2>
+    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">A group member logged an expense on your behalf. Confirm if it's correct.</p>
+    <div class="bexp-breakdown-list">
+        {% for exp in pending_as_expense_owner %}
+        <div class="bexp-breakdown-card bexp-card-i-paid">
+            <div class="bexp-breakdown-header">
+                <div class="bexp-breakdown-header-left">
+                    <span class="bexp-title">{{ exp.title }}</span>
+                    <span class="bexp-breakdown-meta">
+                        Amount: <strong>{{ request.feuser.currency }}{{ exp.value|floatformat:2 }}</strong>
+                    </span>
+                </div>
+                <div class="bexp-breakdown-header-right" style="display:flex;gap:0.4rem;">
+                    <form method="post" action="{% url 'buddies:approve_expense' exp.uid %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm" style="background:#2da44e;color:#fff;">Approve</button>
+                    </form>
+                    <form method="post" action="{% url 'buddies:reject_expense' exp.uid %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-secondary">Reject</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if pending_as_creditor %}
+<section class="buddies-section">
+    <h2>Pending settlement receipts</h2>
+    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">Someone recorded a payment to you. Open each one to confirm you received it or report that you did not.</p>
+    <div class="bexp-breakdown-list">
+        {% for exp in pending_as_creditor %}
+        <div class="bexp-breakdown-card bexp-card-other-paid">
+            <div class="bexp-breakdown-header">
+                <div class="bexp-breakdown-header-left">
+                    <span class="bexp-title">{{ exp.title }}</span>
+                    <span class="bexp-breakdown-meta">
+                        Amount: <strong>{{ exp.owning_feuser.currency }}{{ exp.value|floatformat:2 }}</strong> &middot;
+                        From: <strong>{% if exp.is_dummy and exp.upfront_payee_dummy %}{{ exp.upfront_payee_dummy.display_name }}{% else %}{{ exp.owning_feuser.first_name }} {{ exp.owning_feuser.last_name }}{% endif %}</strong>
+                    </span>
+                </div>
+                <div class="bexp-breakdown-header-right">
+                    <a href="{% url 'buddies:approve_settlement_as_creditor' exp.uid %}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if pending_dummy_expense_owners %}
+<section class="buddies-section">
+    <h2>Confirm expenses for offline members</h2>
+    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">An expense was logged for an offline group member. Confirm if they actually paid for it.</p>
+    <div class="bexp-breakdown-list">
+        {% for exp in pending_dummy_expense_owners %}
+        <div class="bexp-breakdown-card bexp-card-neutral">
+            <div class="bexp-breakdown-header">
+                <div class="bexp-breakdown-header-left">
+                    <span class="bexp-title">{{ exp.title }}</span>
+                    <span class="bexp-breakdown-meta">
+                        Amount: <strong>{{ request.feuser.currency }}{{ exp.value|floatformat:2 }}</strong>
+                        {% if exp.upfront_payee_dummy %} &middot; Offline payer: <strong>{{ exp.upfront_payee_dummy.display_name }}</strong>{% endif %}
+                    </span>
+                </div>
+                <div class="bexp-breakdown-header-right">
+                    <form method="post" action="{% url 'buddies:admin_approve_dummy_settlement' exp.buddy_group_id exp.uid %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm" style="background:#2da44e;color:#fff;">Approve</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if pending_dummy_creditor_settlements %}
+<section class="buddies-section">
+    <h2>Confirm paybacks to offline members</h2>
+    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">A payment to an offline group member is waiting for your confirmation.</p>
+    <div class="bexp-breakdown-list">
+        {% for item in pending_dummy_creditor_settlements %}
+        <div class="bexp-breakdown-card bexp-card-other-paid">
+            <div class="bexp-breakdown-header">
+                <div class="bexp-breakdown-header-left">
+                    <span class="bexp-title">{{ item.expense.title }}</span>
+                    <span class="bexp-breakdown-meta">
+                        Amount: <strong>{{ request.feuser.currency }}{{ item.expense.value|floatformat:2 }}</strong> &middot;
+                        Paid to: <strong>{{ item.dummy.display_name }}</strong>
+                    </span>
+                </div>
+                <div class="bexp-breakdown-header-right">
+                    <form method="post" action="{% url 'buddies:admin_approve_dummy_settlement' item.expense.buddy_group_id item.expense.uid %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm" style="background:#2da44e;color:#fff;">Approve</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
 {% if debts_json != "[]" %}
 <section class="buddies-section">
-    <h2>Balance Overview</h2>
+    <h2>Who owes who</h2>
     <div id="buddy-debt-graph" class="buddy-debt-graph"></div>
     <script>
     (function () {
@@ -197,9 +309,60 @@
 </section>
 {% endif %}
 
+{% if settle_candidates %}
 <section class="buddies-section">
-    <h2>Direct Expenses</h2>
-    <p class="bgs-section-note">Only one-on-one buddy expenses appear here. Group expenses live on each group's page above.</p>
+    <h2>Settle Up</h2>
+    <p class="page-subtitle">The amount is pre-filled with what you owe, but you can change it. You still need to send the actual money yourself.</p>
+    <div class="settle-candidate-list">
+        {% for c in settle_candidates %}
+        <form method="post" action="{% url 'buddies:settle_direct_individual' c.key %}"
+              class="settle-candidate-row direct-settle-form"
+              data-name="{{ c.name|escapejs }}"
+              data-is-real="{{ c.is_real_user|yesno:'true,false' }}">
+            {% csrf_token %}
+            <span class="settle-candidate-name">{{ c.name }}</span>
+            <span class="settle-candidate-amount-wrap">
+                <span class="settle-candidate-currency">{{ request.feuser.currency }}</span>
+                <input type="number" name="amount" min="0.01" step="0.01"
+                       class="input-inline settle-amount-input"
+                       value="{{ c.amount|floatformat:2 }}" required>
+            </span>
+            <button type="submit" class="btn btn-sm btn-danger-subtle">Settle</button>
+        </form>
+        {% endfor %}
+    </div>
+    <script>
+    (function () {
+        document.querySelectorAll('.direct-settle-form').forEach(function (form) {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var name = form.dataset.name;
+                var isRealUser = form.dataset.isReal === 'true';
+                var amountRaw = parseFloat(form.querySelector('.settle-amount-input').value);
+                var amount = isNaN(amountRaw) ? '?' : amountRaw.toFixed(2);
+                var currency = '{{ request.feuser.currency|escapejs }}';
+                var msg;
+                if (isRealUser) {
+                    msg = 'Record a payment of ' + currency + amount + ' to ' + name + '? '
+                        + name + ' will be asked to confirm receipt. '
+                        + 'You still need to actually send the money yourself!';
+                } else {
+                    msg = 'Record a payment of ' + currency + amount + ' to ' + name + '? '
+                        + 'You still need to actually send the money yourself!';
+                }
+                window.confirmDialog(msg, 'Record payment')
+                    .then(function () { form.submit(); })
+                    .catch(function () {});
+            });
+        });
+    })();
+    </script>
+</section>
+{% endif %}
+
+<section class="buddies-section">
+    <h2>One-on-one expenses</h2>
+    <p class="bgs-section-note">Only expenses shared directly between you and one other person appear here. Group expenses live on each group's page above.</p>
     {% if direct_expenses %}
     <div class="buddy-expense-list">
         {% for exp in direct_expenses %}

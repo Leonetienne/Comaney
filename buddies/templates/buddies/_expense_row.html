@@ -22,7 +22,7 @@
         {% endfor %}
     </div>
     <div class="bexp-actions">
-        {% if not exp.buddy_approved and exp.owning_feuser == request.feuser %}
+        {% if not exp.buddy_approved and exp.owning_feuser == request.feuser and not exp.is_buddies_settlement %}
         <form method="post" action="{% url 'buddies:approve_expense' exp.uid %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm">Approve</button>

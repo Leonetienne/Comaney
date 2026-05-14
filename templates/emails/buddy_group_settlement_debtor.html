@@ -1,0 +1,28 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Group settlement for {{ group.name }}</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ admin_name }}</strong> has settled all outstanding debts in the group <strong style="color:#e0e0e0;">{{ group.name }}</strong>.
+    You need to arrange the following payments in real life:
+</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+    <thead>
+        <tr>
+            <th style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:left;border-bottom:1px solid #333;">Pay to</th>
+            <th style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:right;border-bottom:1px solid #333;">Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for creditor_name, amount in items %}
+        <tr>
+            <td style="color:#e0e0e0;padding:8px 0;font-size:0.9rem;border-bottom:1px solid #222;">{{ creditor_name }}</td>
+            <td style="color:#e0e0e0;padding:8px 0;font-size:0.9rem;text-align:right;font-weight:600;border-bottom:1px solid #222;">{{ amount|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
+    Settlement records have been created in Comaney. Each creditor will confirm receipt once you have paid them.
+</p>
+{% endblock %}

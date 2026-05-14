@@ -1,0 +1,32 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Group settlement for {{ group.name }}: please confirm receipts</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ admin_name }}</strong> has settled all outstanding debts in the group <strong style="color:#e0e0e0;">{{ group.name }}</strong>.
+    You should receive the following payments. Please confirm each one once you have the money.
+</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+    <thead>
+        <tr>
+            <th style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:left;border-bottom:1px solid #333;">From</th>
+            <th style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:right;border-bottom:1px solid #333;">Amount</th>
+            <th style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:right;border-bottom:1px solid #333;">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for debtor_name, amount, confirm_url in items %}
+        <tr>
+            <td style="color:#e0e0e0;padding:8px 0;font-size:0.9rem;border-bottom:1px solid #222;">{{ debtor_name }}</td>
+            <td style="color:#e0e0e0;padding:8px 0;font-size:0.9rem;text-align:right;font-weight:600;border-bottom:1px solid #222;">{{ amount|floatformat:2 }}</td>
+            <td style="padding:8px 0;text-align:right;border-bottom:1px solid #222;">
+                <a href="{{ confirm_url }}" style="display:inline-block;background:#2da44e;color:#fff;text-decoration:none;padding:5px 14px;border-radius:6px;font-size:0.85rem;font-weight:600;">Confirm</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
+    Only confirm once you have actually received the money. The settlement will not affect the group balance until confirmed.
+</p>
+{% endblock %}

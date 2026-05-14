@@ -1,0 +1,28 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Settlement confirmed</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ creditor_name }}</strong> has confirmed that they received your payment{% if expense.buddy_group %} in the group <strong style="color:#e0e0e0;">{{ expense.buddy_group.name }}</strong>{% endif %}.
+    The debt has been cleared.
+</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Description</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.title }}</td>
+    </tr>
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Amount</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;font-weight:600;">{{ expense.owning_feuser.currency }}{{ expense.value }}</td>
+    </tr>
+    {% if expense.buddy_group %}
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Group</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.buddy_group.name }}</td>
+    </tr>
+    {% endif %}
+</table>
+<div style="margin:24px 0;">
+    <a href="{{ site_url }}/buddies/summary/" style="display:inline-block;background:#2da44e;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">View Buddy Summary</a>
+</div>
+{% endblock %}

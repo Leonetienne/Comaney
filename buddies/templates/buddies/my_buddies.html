@@ -38,7 +38,7 @@
             </div>
             <div class="bbl-actions">
                 {% if info.type == 'feuser' and info.link_uid %}
-                <form method="post" action="{% url 'buddies:kick_actual' info.link_uid %}" class="confirm-form" data-confirm="Remove {{ info.display_name|escapejs }} as a spending buddy?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Existing shared expenses are kept." data-ok="Remove">
+                <form method="post" action="{% url 'buddies:kick_actual' info.link_uid %}" class="confirm-form" data-confirm="Remove {{ info.display_name|escapejs }} as a spending buddy?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Your shared expenses will stay in your history." data-ok="Remove">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-danger-subtle">Remove</button>
                 </form>
@@ -58,7 +58,7 @@
                         Cancel
                     </button>
                 </form>
-                <form method="post" action="{% url 'buddies:kick_dummy' info.dummy.uid %}" class="confirm-form" data-confirm="Remove {{ info.dummy.display_name|escapejs }}?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Existing shared expenses are kept." data-ok="Remove">
+                <form method="post" action="{% url 'buddies:kick_dummy' info.dummy.uid %}" class="confirm-form" data-confirm="Remove {{ info.dummy.display_name|escapejs }}?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Your shared expenses will stay in your history." data-ok="Remove">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-danger-subtle">Remove</button>
                 </form>
@@ -131,14 +131,14 @@
     {% endif %}
 
     {% if merge_invites_in %}
-    <h3>Account merge requests</h3>
+    <h3>Offline record link requests</h3>
     {% for invite in merge_invites_in %}
     <div class="invite-card">
-        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> wants to link their offline record "<strong>{{ invite.dummy.display_name }}</strong>" with your account. Accepting transfers all related expense history to your account.</p>
+        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> has you listed as an offline member under the name "<strong>{{ invite.dummy.display_name }}</strong>". If you accept, all expense history under that entry will be linked to your real account.</p>
         <div class="invite-actions">
             <form method="post" action="{% url 'buddies:accept_merge' invite.token %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm">Accept merge</button>
+                <button type="submit" class="btn btn-sm">Accept</button>
             </form>
             <form method="post" action="{% url 'buddies:decline_merge' invite.token %}">
                 {% csrf_token %}

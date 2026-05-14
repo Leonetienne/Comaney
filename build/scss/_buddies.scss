@@ -684,6 +684,69 @@
   font-size: 1rem;
 }
 
+// ── Group detail: dual D3 debt graphs ────────────────────────────────────────
+
+.group-debt-graphs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.group-debt-graph-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem 1rem 0.6rem;
+
+  h3 {
+    margin: 0 0 0.15rem;
+  }
+}
+
+// ── Group detail: individual settle form ─────────────────────────────────────
+
+.settle-form-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.settle-form-label {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.settle-form-select {
+  flex: 1;
+  min-width: 160px;
+  max-width: 320px;
+}
+
+// ── Expense card: pending state ───────────────────────────────────────────────
+
+.bexp-card-pending {
+  opacity: 0.85;
+  border-style: dashed !important;
+}
+
+.pill--warn {
+  background: color-mix(in srgb, #e3a000 18%, var(--bg-surface));
+  color: #e3a000;
+  border: 1px solid color-mix(in srgb, #e3a000 35%, transparent);
+  font-size: 0.75rem;
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
 // ── Group detail: settlement list ─────────────────────────────────────────────
 
 .group-settle-list {
@@ -780,6 +843,55 @@
 .bexp-breakdown-meta {
   font-size: 0.82rem;
   color: var(--text-muted);
+}
+
+.settle-candidate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.settle-candidate-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--bg-elevated);
+  }
+}
+
+.settle-candidate-name {
+  flex: 1;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.settle-candidate-amount-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+
+  .settle-candidate-currency {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--danger, #cf222e);
+  }
+
+  .settle-amount-input {
+    width: 90px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--danger, #cf222e);
+    text-align: right;
+  }
 }
 
 .bexp-breakdown-table {

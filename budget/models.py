@@ -72,6 +72,7 @@ class Expense(OwnedModel):
     )
     # Buddy fields
     is_dummy = models.BooleanField(default=False)
+    is_buddies_settlement = models.BooleanField(default=False)
     buddy_approved = models.BooleanField(default=True)
     upfront_payee_dummy = models.ForeignKey(
         "buddies.DummyUser",

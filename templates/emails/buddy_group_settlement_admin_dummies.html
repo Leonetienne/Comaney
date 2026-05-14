@@ -1,0 +1,30 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Group settlement for {{ group.name }}: offline member receipts</h2>
+<p style="color:#ccc;line-height:1.6;">
+    The following offline members are creditors in the group settlement for <strong style="color:#e0e0e0;">{{ group.name }}</strong>.
+    As group admin, please confirm their receipts once the money has been handed over in real life.
+</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+    <thead>
+        <tr>
+            <th style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:left;border-bottom:1px solid #333;">Offline member</th>
+            <th style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:left;border-bottom:1px solid #333;">Receives from</th>
+            <th style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:right;border-bottom:1px solid #333;">Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td style="color:#e0e0e0;padding:8px 0;font-size:0.9rem;border-bottom:1px solid #222;font-weight:600;">{{ item.dummy.display_name }}</td>
+            <td style="color:#e0e0e0;padding:8px 0;font-size:0.9rem;border-bottom:1px solid #222;">{{ item.debtor_name }}</td>
+            <td style="color:#e0e0e0;padding:8px 0;font-size:0.9rem;text-align:right;font-weight:600;border-bottom:1px solid #222;">{{ item.amount|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
+    You can confirm each receipt on the group detail page in Comaney. Look for the "Confirm" button next to each pending settlement in the expense breakdown.
+</p>
+{% endblock %}

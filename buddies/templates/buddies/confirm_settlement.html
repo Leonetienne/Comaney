@@ -1,0 +1,63 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - Confirm Settlement{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Confirm you received the money</h1>
+</div>
+
+<div class="buddies-section" style="max-width:480px;">
+    <p style="color:var(--text-muted);margin-bottom:1.5rem;">
+        Did you actually receive this payment? Confirming marks the debt as cleared.
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;">
+        <tr>
+            <td style="color:var(--text-muted);padding:6px 0;font-size:0.9rem;">Description</td>
+            <td style="color:var(--text);padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.title }}</td>
+        </tr>
+        <tr>
+            <td style="color:var(--text-muted);padding:6px 0;font-size:0.9rem;">Amount</td>
+            <td style="color:var(--text);padding:6px 0;font-size:0.9rem;text-align:right;font-weight:600;">{{ expense.owning_feuser.currency }}{{ expense.value|floatformat:2 }}</td>
+        </tr>
+        {% if expense.buddy_group %}
+        <tr>
+            <td style="color:var(--text-muted);padding:6px 0;font-size:0.9rem;">Group</td>
+            <td style="color:var(--text);padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.buddy_group.name }}</td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+        <form method="post" action="{% url 'buddies:approve_settlement_as_creditor' expense.uid %}">
+            {% csrf_token %}
+            <button type="submit" class="btn" style="background:#2da44e;color:#fff;">Yes, I got the money</button>
+        </form>
+
+        <form method="post" action="{% url 'buddies:reject_settlement_as_creditor' expense.uid %}" id="reject-settlement-form">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger-subtle">No, I did not receive it</button>
+        </form>
+
+        {% if expense.buddy_group_id %}
+        <a href="{% url 'buddies:group_detail' expense.buddy_group_id %}" class="btn btn-secondary">Cancel</a>
+        {% else %}
+        <a href="{% url 'buddies:buddy_summary' %}" class="btn btn-secondary">Cancel</a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function () {
+    var form = document.getElementById('reject-settlement-form');
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        window.confirmDialog(
+            'Reject this settlement? The payment record will be deleted and the debtor will be notified that you have not received the money.',
+            'Reject settlement'
+        ).then(function () { form.submit(); }).catch(function () {});
+    });
+})();
+</script>
+{% endblock %}

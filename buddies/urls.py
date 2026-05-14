@@ -49,4 +49,17 @@ urlpatterns = [
     # Expense approval
     path("expense/<int:expense_id>/approve/", views.approve_expense, name="approve_expense"),
     path("expense/<int:expense_id>/reject/", views.reject_expense, name="reject_expense"),
+    path("expense/<int:expense_id>/approve-settlement/", views.approve_settlement_as_creditor, name="approve_settlement_as_creditor"),
+    path("expense/<int:expense_id>/reject-settlement/", views.reject_settlement_as_creditor, name="reject_settlement_as_creditor"),
+
+    # Group settlement actions
+    path("groups/<int:group_id>/expense/<int:expense_id>/approve-dummy/", views.admin_approve_dummy_settlement, name="admin_approve_dummy_settlement"),
+    path("groups/<int:group_id>/expense/<int:expense_id>/delete/", views.group_expense_delete, name="group_expense_delete"),
+    path("groups/<int:group_id>/expense/<int:expense_id>/unlink/", views.group_expense_unlink, name="group_expense_unlink"),
+    path("groups/<int:group_id>/settle-individual/", views.group_settle_individual, name="group_settle_individual"),
+    path("groups/<int:group_id>/settle-all/", views.group_settle_all, name="group_settle_all"),
+
+    # Direct settlements
+    path("settle/", views.settle_direct, name="settle_direct"),
+    path("settle/<str:buddy_key>/", views.settle_direct_individual, name="settle_direct_individual"),
 ]
