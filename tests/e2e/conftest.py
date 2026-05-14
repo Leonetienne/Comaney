@@ -6,7 +6,12 @@ destroys a user.  This file only provides the shared browser (driver, w)
 and the reachability guard.
 """
 import subprocess
+import sys
+import os
 import tempfile
+
+# Ensure tests/e2e/ is on sys.path regardless of where pytest is invoked from.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import pytest
 import requests

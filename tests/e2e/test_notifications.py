@@ -190,8 +190,12 @@ class TestEmailActions:
         return eid, body
 
     def _find_link(self, body, keyword):
-        for raw in re.findall(r'https?://\S+', body):
-            url = raw.rstrip('.,)')
+        # Extract from href attributes first (HTML emails), fall back to bare URLs.
+        candidates = re.findall(r'href=["\']?(https?://[^"\'>\s]+)', body)
+        if not candidates:
+            candidates = [raw.rstrip('.,)"\'>')
+                          for raw in re.findall(r'https?://\S+', body)]
+        for url in candidates:
             if keyword in url:
                 return re.sub(r'https?://[^/]+', BASE_URL, url)
         return None
@@ -409,8 +413,12 @@ class TestMuteAll:
         return eid, body
 
     def _find_link(self, body, keyword):
-        for raw in re.findall(r'https?://\S+', body):
-            url = raw.rstrip('.,)')
+        # Extract from href attributes first (HTML emails), fall back to bare URLs.
+        candidates = re.findall(r'href=["\']?(https?://[^"\'>\s]+)', body)
+        if not candidates:
+            candidates = [raw.rstrip('.,)"\'>')
+                          for raw in re.findall(r'https?://\S+', body)]
+        for url in candidates:
             if keyword in url:
                 return re.sub(r'https?://[^/]+', BASE_URL, url)
         return None
