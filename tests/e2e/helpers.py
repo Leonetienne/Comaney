@@ -33,8 +33,16 @@ def _url(path: str) -> str:
 
 def fill(w, by, locator, value):
     el = w.until(EC.element_to_be_clickable((by, locator)))
-    el.clear()
-    el.send_keys(value)
+    # Set value via JS to avoid macOS background-window focus issues where
+    # send_keys silently drops keystrokes. Dispatch input+change so that
+    # Alpine.js x-model bindings pick up the new value.
+    el.parent.execute_script("arguments[0].value = arguments[1];", el, value)
+    el.parent.execute_script(
+        "var e = arguments[0];"
+        "e.dispatchEvent(new Event('input', {bubbles:true}));"
+        "e.dispatchEvent(new Event('change', {bubbles:true}));",
+        el,
+    )
     time.sleep(CLICK_PACE)
 
 

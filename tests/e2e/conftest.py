@@ -17,9 +17,42 @@ import pytest
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 
 from helpers import BASE_URL, MAILPIT_API, DOCKER_WEB, TIMEOUT
+
+# On macOS, native Selenium clicks are silently dropped when the browser window
+# is in the background. Patch WebElement.click to always dispatch via JS so
+# tests are focus-independent.
+_orig_click = WebElement.click
+
+def _js_click(self):
+    try:
+        if self.tag_name.lower() == "option":
+            # Clicking <option> via JS doesn't fire the change event on the
+            # parent <select>. Set the value and dispatch change explicitly.
+            self._parent.execute_script("""
+                var opt = arguments[0];
+                var sel = opt.closest('select');
+                if (sel) {
+                    sel.value = opt.value;
+                    sel.dispatchEvent(new Event('change', {bubbles: true}));
+                }
+            """, self)
+        else:
+            # Use setTimeout to defer the click so execute_script returns before
+            # any resulting navigation begins. A direct .click() call causes
+            # ChromeDriver to block execute_script until the new page loads,
+            # which can exceed urllib3's read timeout and raise ReadTimeoutError.
+            self._parent.execute_script(
+                "var el = arguments[0]; setTimeout(function(){ el.click(); }, 0);",
+                self,
+            )
+    except Exception:
+        _orig_click(self)
+
+WebElement.click = _js_click
 
 
 def pytest_configure(config):

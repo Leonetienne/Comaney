@@ -811,7 +811,7 @@ def decline_group_invite(request, token):
 @require_POST
 def approve_expense(request, expense_id):
     from budget.models import Expense
-    expense = get_object_or_404(Expense, uid=expense_id, owning_feuser=request.feuser, buddy_approved=False)
+    expense = get_object_or_404(Expense, uid=expense_id, owning_feuser=request.feuser, buddy_approved=False, settled=False)
     BuddyLifecycleService.approve_expense(expense)
     return redirect("budget:expenses_list")
 

@@ -1701,7 +1701,13 @@ class BuddySettlementService:
             bs = [{"type": "dummy", "id": creditor_dummy.pk, "share_percent": Decimal("100")}]
 
         both_dummies = (debtor_dummy is not None) and (creditor_dummy is not None)
-        auto_approve = both_dummies
+        admin_is_debtor_paying_dummy = (
+            debtor_feuser is not None
+            and debtor_feuser.pk == acting_feuser.pk
+            and acting_feuser.pk == group.admin_feuser_id
+            and creditor_dummy is not None
+        )
+        auto_approve = both_dummies or admin_is_debtor_paying_dummy
 
         from datetime import date as _date
         title = f"Settlement: {debtor_name} to {creditor_name} ({group.name})"
@@ -1785,7 +1791,8 @@ class BuddySettlementService:
                     bs = [{"type": "dummy", "id": creditor_dummy.pk, "share_percent": Decimal("100")}]
 
                 both_dummies = (debtor_dummy is not None) and (creditor_dummy is not None)
-                auto_approve = both_dummies
+                # Admin always triggers group-wide settle, so any dummy creditor is auto-approved
+                auto_approve = both_dummies or (creditor_dummy is not None)
 
                 from datetime import date as _date
                 title = f"Settlement: {debtor_name} to {creditor_name} ({group.name})"

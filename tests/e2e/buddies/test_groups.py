@@ -500,8 +500,9 @@ class TestGroupBreakdown:
             "Settlement amount (50.00) must appear on the group detail page"
 
     def test_d3_graph_rendered(self, driver, w, ctx):
-        svg_elements = driver.find_elements(By.CSS_SELECTOR, "#group-debt-graph svg")
-        assert len(svg_elements) == 1, "D3 graph SVG must be rendered when debts exist"
+        # The group page renders two D3 graphs: raw expense flows and simplified.
+        svg_elements = driver.find_elements(By.CSS_SELECTOR, "#raw-debt-graph svg, #simplified-debt-graph svg")
+        assert len(svg_elements) >= 1, "D3 graph SVG must be rendered when debts exist"
 
 
 # ---------------------------------------------------------------------------

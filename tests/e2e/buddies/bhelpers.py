@@ -27,8 +27,10 @@ def _login_as(driver, ctx_user: dict) -> None:
     driver.execute_script("sessionStorage.clear(); localStorage.clear();")
     driver.get(_url("/login/"))
     time.sleep(1)
-    driver.find_element(By.ID, "id_email").send_keys(ctx_user["email"])
-    driver.find_element(By.ID, "id_password").send_keys(ctx_user["password"])
+    email_el = driver.find_element(By.ID, "id_email")
+    driver.execute_script("arguments[0].value = arguments[1];", email_el, ctx_user["email"])
+    pass_el = driver.find_element(By.ID, "id_password")
+    driver.execute_script("arguments[0].value = arguments[1];", pass_el, ctx_user["password"])
     driver.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
     time.sleep(2)
 
