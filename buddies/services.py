@@ -134,9 +134,9 @@ class BuddyQueryService:
             extra = max(0, len(all_names) - MAX_SHOWN)
 
             net_abs = abs(net)
-            if net > Decimal("0.005"):
+            if net > Decimal("0.02"):
                 net_state = "positive"
-            elif net < Decimal("-0.005"):
+            elif net < Decimal("-0.02"):
                 net_state = "negative"
             else:
                 net_state = "settled"
