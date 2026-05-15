@@ -42,7 +42,7 @@ class TestSettlementEmailLinkApproval:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" in driver.page_source, \
+        assert "Pay someone back" in driver.page_source, \
             "Settle Up section must appear before test can run"
         driver.find_element(
             "css selector", ".direct-settle-form button[type=submit]"
@@ -92,7 +92,7 @@ class TestSettlementEmailLinkApproval:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" not in driver.page_source, \
+        assert "Pay someone back" not in driver.page_source, \
             "Settle Up section must disappear once the creditor has confirmed via email link"
 
     def test_income_expense_created_for_creditor(self, driver, w, ctx):

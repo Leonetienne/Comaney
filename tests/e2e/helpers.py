@@ -192,7 +192,9 @@ def browser_login(driver, w, email: str, password: str):
     fill(w, By.ID, "id_email", email)
     fill(w, By.ID, "id_password", password)
     click(w, By.CSS_SELECTOR, "button[type=submit]")
-    wait_url(w, "/budget/")
+    time.sleep(2)
+    assert "/budget/" in driver.current_url, \
+        f"Login failed; landed at {driver.current_url}"
 
 
 def get_api_key(driver, w) -> str:

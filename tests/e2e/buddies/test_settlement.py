@@ -58,7 +58,7 @@ class TestDirectSettlement:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" in driver.page_source, \
+        assert "Pay someone back" in driver.page_source, \
             "Settle Up section must appear when user has outstanding direct debt"
 
     def test_settle_section_shows_creditor_name(self, driver, w, ctx):
@@ -131,7 +131,7 @@ class TestDirectSettlement:
         # Debt is not cleared until creditor confirms, so Settle Up must still appear
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" in driver.page_source, \
+        assert "Pay someone back" in driver.page_source, \
             "Settle Up section must remain while creditor has not yet confirmed"
 
     def test_settlement_not_in_did_you_pay_for_this(self, driver, w, ctx):
@@ -214,7 +214,7 @@ class TestDirectSettlement:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" not in driver.page_source, \
+        assert "Pay someone back" not in driver.page_source, \
             "Settle Up section must disappear once the creditor has confirmed"
 
 
@@ -246,7 +246,7 @@ class TestDirectSettlementNoDebt:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" not in driver.page_source, \
+        assert "Pay someone back" not in driver.page_source, \
             "Settle Up section must not appear when user has no outstanding debt"
 
 
@@ -358,7 +358,7 @@ class TestDirectSettlementRejection:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" in driver.page_source, \
+        assert "Pay someone back" in driver.page_source, \
             "Settle Up section must reappear for debtor after creditor rejects"
 
     def test_debtor_notified_by_email(self, driver, w, ctx):

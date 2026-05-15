@@ -40,7 +40,7 @@ class TestApproveOwnSettlementBlocked:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" in driver.page_source, \
+        assert "Pay someone back" in driver.page_source, \
             "Settle Up section must be visible before test can run"
         driver.find_element(
             "css selector", ".direct-settle-form button[type=submit]"

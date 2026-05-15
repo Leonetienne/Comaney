@@ -96,7 +96,7 @@ class TestDirectFullSettlementZeroBalance:
     def test_no_settle_up_section_on_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" not in driver.page_source, \
+        assert "Pay someone back" not in driver.page_source, \
             "Settle Up section must be absent when remaining debt = 0"
 
     def test_net_debt_zero_via_shell(self, driver, w, ctx):
@@ -170,7 +170,7 @@ class TestDirectPartialThenFullSettlement:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" in driver.page_source, \
+        assert "Pay someone back" in driver.page_source, \
             "Settle Up section must still appear: 40.00 remains unpaid"
         inp = driver.find_element(By.CSS_SELECTOR, ".settle-amount-input")
         assert inp.get_attribute("value") == "40.00", \
@@ -209,7 +209,7 @@ class TestDirectPartialThenFullSettlement:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" not in driver.page_source, \
+        assert "Pay someone back" not in driver.page_source, \
             "Settle Up section must be absent once the remaining 40.00 is also confirmed"
 
     def test_balance_settled_on_buddies_page(self, driver, w, ctx):
@@ -290,7 +290,7 @@ class TestGroupFullSettlementZeroBalance:
     def test_no_settle_up_for_member_on_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" not in driver.page_source, \
+        assert "Pay someone back" not in driver.page_source, \
             "Settle Up section must not appear on buddy summary when group debt = 0"
 
     def test_admin_balance_zero_on_group_page(self, driver, w, ctx):

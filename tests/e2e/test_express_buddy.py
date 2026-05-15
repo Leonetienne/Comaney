@@ -347,8 +347,7 @@ class TestExpressBuddyCardUI:
         driver.get(_url("/budget/ai/express-creation/"))
         time.sleep(1)
         ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
-        ta.clear()
-        ta.send_keys("Coffee 3.50 euros")
+        driver.execute_script("arguments[0].value = arguments[1];", ta, "Coffee 3.50 euros")
         driver.find_element(By.ID, "parse-btn").click()
         deadline = time.time() + AI_TIMEOUT
         while time.time() < deadline:

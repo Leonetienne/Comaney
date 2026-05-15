@@ -7,7 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
 from helpers import (
-    _url, wait_text, BASE_URL, MAILPIT_API,
+    _url, wait_text, fill, BASE_URL, MAILPIT_API,
     setup_user, cleanup_user,
 )
 
@@ -64,13 +64,12 @@ class TestContact:
             ("id_subject", "Selenium test message"),
             ("id_message", "Automated contact form test. Please ignore."),
         ]:
-            el = driver.find_element(By.ID, fid)
-            el.clear()
-            el.send_keys(val)
+            fill(w, By.ID, fid, val)
         w.until(EC.element_to_be_clickable((By.ID, "submit-btn")))
         driver.find_element(By.ID, "submit-btn").click()
-        w.until(lambda d: "sent=1" in d.current_url)
-        wait_text(driver, w, "Your message has been sent")
+        time.sleep(3)
+        assert "sent=1" in driver.current_url
+        assert "Your message has been sent" in driver.page_source
 
     def test_email_delivered(self, driver, w, ctx):
         if not _contact_available():

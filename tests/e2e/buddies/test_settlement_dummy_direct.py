@@ -56,7 +56,7 @@ class TestDirectSettlementToPersonalDummy:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Settle Up" in driver.page_source, \
+        assert "Pay someone back" in driver.page_source, \
             "Settle Up section must appear when user owes their personal dummy"
         assert "Dusty Dummy" in driver.page_source, \
             "Dummy name must appear in the Settle Up section"
@@ -94,5 +94,5 @@ class TestDirectSettlementToPersonalDummy:
             "No creditor confirmation is needed; pending section must not appear"
 
     def test_settle_up_disappears_after_auto_approval(self, driver, w, ctx):
-        assert "Settle Up" not in driver.page_source, \
+        assert "Pay someone back" not in driver.page_source, \
             "Settle Up section must disappear once the dummy settlement is auto-approved"

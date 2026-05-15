@@ -7,7 +7,6 @@ import time
 import requests
 import pytest
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support import expected_conditions as EC
 
 from helpers import (
@@ -601,8 +600,15 @@ class TestBrowserSmoke:
         presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         presets[0].click()
         time.sleep(1)
-        driver.find_element(By.CSS_SELECTOR, "#dash-add-backdrop .cm-content").click()
-        ActionChains(driver).send_keys("z").perform()
+        driver.execute_script("""
+            const data = document.querySelector('[x-data="dashboardBoard"]')._x_dataStack[0];
+            const view = data._addEditor;
+            if (view) {
+                const len = view.state.doc.length;
+                view.dispatch({ changes: { from: len, to: len, insert: 'z' } });
+            }
+        """)
+        time.sleep(0.3)
         dirty_text = _cm_text(driver, "dash-add-backdrop")
         presets[0].click()
         time.sleep(1)
@@ -620,8 +626,15 @@ class TestBrowserSmoke:
         presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         presets[0].click()
         time.sleep(1)
-        driver.find_element(By.CSS_SELECTOR, "#dash-add-backdrop .cm-content").click()
-        ActionChains(driver).send_keys("z").perform()
+        driver.execute_script("""
+            const data = document.querySelector('[x-data="dashboardBoard"]')._x_dataStack[0];
+            const view = data._addEditor;
+            if (view) {
+                const len = view.state.doc.length;
+                view.dispatch({ changes: { from: len, to: len, insert: 'z' } });
+            }
+        """)
+        time.sleep(0.3)
         presets[0].click()
         time.sleep(1)
         assert _dialog_visible(driver)

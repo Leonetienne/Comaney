@@ -80,8 +80,7 @@ def _parse(driver, description="", image_path=None, clear_image=False):
     if description:
         time.sleep(1)
         ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
-        ta.clear()
-        ta.send_keys(description)
+        driver.execute_script("arguments[0].value = arguments[1];", ta, description)
     if image_path:
         inp = driver.find_element(By.ID, "img-file-input")
         driver.execute_script("arguments[0].style.display = 'block';", inp)
@@ -100,8 +99,7 @@ def _parse_await_outcome(driver, description):
     driver.get(_url("/budget/ai/express-creation/"))
     time.sleep(1)
     ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
-    ta.clear()
-    ta.send_keys(description)
+    driver.execute_script("arguments[0].value = arguments[1];", ta, description)
     driver.find_element(By.ID, "parse-btn").click()
     deadline = time.time() + AI_TIMEOUT
     while time.time() < deadline:
@@ -258,8 +256,7 @@ class TestExpressCreation:
             assert cost_val > 0
         first_card = cards[0]
         title_area = first_card.find_element(By.CSS_SELECTOR, ".edit-title")
-        driver.execute_script("arguments[0].value = '';", title_area)
-        title_area.send_keys("XExpressTestEdited")
+        driver.execute_script("arguments[0].value = 'XExpressTestEdited';", title_area)
         driver.find_element(By.ID, "confirm-btn").click()
         time.sleep(5)
         assert driver.find_elements(By.CSS_SELECTOR, ".success-banner"), "No success banner appeared"

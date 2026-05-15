@@ -3,10 +3,8 @@ import time
 
 import pytest
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as EC
 
-from helpers import _url, wait_text, setup_user, cleanup_user
+from helpers import _url, setup_user, cleanup_user
 
 
 @pytest.fixture(scope="module")
@@ -20,9 +18,15 @@ class TestCategories:
 
     def test_create_category(self, driver, w, ctx):
         driver.get(_url("/budget/categories-tags/"))
-        inp = w.until(EC.element_to_be_clickable((By.ID, "category-input")))
-        inp.send_keys("My Category" + Keys.RETURN)
-        w.until(lambda d: "My Category" in d.find_element(By.ID, "category-list").text)
+        time.sleep(1)
+        assert "/budget/" in driver.current_url, \
+            f"Expected categories page, got {driver.current_url}"
+        driver.execute_script(
+            "var inp = document.getElementById('category-input');"
+            "inp.value = 'My Category';"
+            "inp.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));")
+        time.sleep(1)
+        assert "My Category" in driver.find_element(By.ID, "category-list").text
 
     def test_rename_category(self, driver, w, ctx):
         ctx["cat_uid"] = driver.execute_script(
@@ -30,19 +34,23 @@ class TestCategories:
         driver.execute_script(
             "var el=document.querySelector('#category-list .ct-name');"
             "el.scrollIntoView({block:'center'}); el.click();")
-        w.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#category-list .ct-name-input")))
+        time.sleep(0.5)
         driver.execute_script(
             "var inp=document.querySelector('#category-list .ct-name-input');"
             "inp.value='Renamed Category';"
             "inp.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));")
         time.sleep(0.5)
         driver.get(_url("/budget/categories-tags/"))
-        wait_text(driver, w, "Renamed Category")
+        time.sleep(1)
+        assert "Renamed Category" in driver.page_source
 
     def test_create_tag(self, driver, w, ctx):
-        inp = w.until(EC.element_to_be_clickable((By.ID, "tag-input")))
-        inp.send_keys("My Tag" + Keys.RETURN)
-        w.until(lambda d: "My Tag" in d.find_element(By.ID, "tag-list").text)
+        driver.execute_script(
+            "var inp = document.getElementById('tag-input');"
+            "inp.value = 'My Tag';"
+            "inp.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));")
+        time.sleep(1)
+        assert "My Tag" in driver.find_element(By.ID, "tag-list").text
 
     def test_rename_tag(self, driver, w, ctx):
         ctx["tag_uid"] = driver.execute_script(
@@ -50,25 +58,26 @@ class TestCategories:
         driver.execute_script(
             "var el=document.querySelector('#tag-list .ct-name');"
             "el.scrollIntoView({block:'center'}); el.click();")
-        w.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#tag-list .ct-name-input")))
+        time.sleep(0.5)
         driver.execute_script(
             "var inp=document.querySelector('#tag-list .ct-name-input');"
             "inp.value='Renamed Tag';"
             "inp.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));")
         time.sleep(0.5)
         driver.get(_url("/budget/categories-tags/"))
-        wait_text(driver, w, "Renamed Tag")
+        time.sleep(1)
+        assert "Renamed Tag" in driver.page_source
 
     def test_delete_category(self, driver, w, ctx):
-        btn = w.until(EC.element_to_be_clickable(
-            (By.CSS_SELECTOR, f"#category-{ctx['cat_uid']} .ct-delete")))
-        btn.click()
-        w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-        w.until(EC.invisibility_of_element_located((By.ID, f"category-{ctx['cat_uid']}")))
+        driver.find_element(By.CSS_SELECTOR, f"#category-{ctx['cat_uid']} .ct-delete").click()
+        time.sleep(0.5)
+        driver.find_element(By.ID, "cdialog-ok").click()
+        time.sleep(1)
+        assert f"category-{ctx['cat_uid']}" not in driver.page_source
 
     def test_delete_tag(self, driver, w, ctx):
-        btn = w.until(EC.element_to_be_clickable(
-            (By.CSS_SELECTOR, f"#tag-{ctx['tag_uid']} .ct-delete")))
-        btn.click()
-        w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-        w.until(EC.invisibility_of_element_located((By.ID, f"tag-{ctx['tag_uid']}")))
+        driver.find_element(By.CSS_SELECTOR, f"#tag-{ctx['tag_uid']} .ct-delete").click()
+        time.sleep(0.5)
+        driver.find_element(By.ID, "cdialog-ok").click()
+        time.sleep(1)
+        assert f"tag-{ctx['tag_uid']}" not in driver.page_source
