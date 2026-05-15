@@ -60,6 +60,12 @@ nav:
         - Pie Chart Cards: user-manual/dashboard/cards/pie-chart.md
         - Line Chart Cards: user-manual/dashboard/cards/line-chart.md
         - List Cards: user-manual/dashboard/cards/list.md
+    - Buddies:
+      - Overview: user-manual/buddies/index.md
+      - Adding Buddies: user-manual/buddies/adding-buddies.md
+      - Shared Expenses: user-manual/buddies/shared-expenses.md
+      - Settling Up: user-manual/buddies/settling-up.md
+      - Managing Groups: user-manual/buddies/groups.md
     - AI Express Creation: user-manual/ai-express-creation.md
     - Notifications: user-manual/notifications.md
     - Account & Settings: user-manual/account-settings.md
