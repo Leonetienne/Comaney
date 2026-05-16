@@ -26,6 +26,7 @@
     var noParticipantsErr = document.getElementById('buddy-no-participants-error');
     var payerNotice     = document.getElementById('buddy-payer-notice');
     var theForm         = cb.closest('form');
+    var valueInput      = document.getElementById('id_value');
 
     var modeRadioSingle = document.getElementById('buddy-mode-single');
     var modeRadioGroup  = document.getElementById('buddy-mode-group');
@@ -238,6 +239,15 @@
     });
     if (cb.checked) { section.style.display = 'block'; initFromExisting(); }
 
+    // ── Live amount update when expense value changes ──────────────────────
+
+    if (valueInput) {
+        valueInput.addEventListener('input', function () {
+            refreshSliderDisplays();
+            updatePayerRow();
+        });
+    }
+
     // ── Payer select change ────────────────────────────────────────────────
 
     payerSel.addEventListener('change', function () {
@@ -347,7 +357,8 @@
         payerRow.innerHTML =
             '<span class="buddy-slider-name" id="buddy-payer-label"></span>' +
             '<input type="range" id="buddy-payer-slider" min="0" max="100" step="0.1" value="0">' +
-            '<span class="buddy-slider-pct" id="buddy-payer-pct"></span>';
+            '<span class="buddy-slider-pct" id="buddy-payer-pct"></span>' +
+            '<span class="buddy-slider-amt secondary" id="buddy-payer-amt"></span>';
         slidersEl.appendChild(payerRow);
         updatePayerRow();
 
@@ -369,6 +380,8 @@
             this.value = implicitPayerShare();
             var pct = document.getElementById('buddy-payer-pct');
             if (pct) pct.textContent = implicitPayerShare().toFixed(1) + '%';
+            var amt = document.getElementById('buddy-payer-amt');
+            if (amt) amt.textContent = formatAmount(implicitPayerShare());
             serializeJSON();
         });
 
@@ -378,7 +391,8 @@
             row.innerHTML =
                 '<span class="buddy-slider-name">' + esc(p.name) + '</span>' +
                 '<input type="range" id="bs-slider-' + idx + '" min="0" max="100" step="0.1" value="' + p.share + '">' +
-                '<span class="buddy-slider-pct" id="bs-pct-' + idx + '">' + p.share.toFixed(1) + '%</span>';
+                '<span class="buddy-slider-pct" id="bs-pct-' + idx + '">' + p.share.toFixed(1) + '%</span>' +
+                '<span class="buddy-slider-amt secondary" id="bs-amt-' + idx + '">' + formatAmount(p.share) + '</span>';
             slidersEl.appendChild(row);
             row.querySelector('input').addEventListener('input', function () {
                 var val   = +parseFloat(this.value).toFixed(3);
@@ -404,8 +418,10 @@
         participants.forEach(function (p, idx) {
             var slider = document.getElementById('bs-slider-' + idx);
             var pct    = document.getElementById('bs-pct-' + idx);
+            var amt    = document.getElementById('bs-amt-' + idx);
             if (slider) slider.value = p.share;
             if (pct)    pct.textContent = p.share.toFixed(1) + '%';
+            if (amt)    amt.textContent = formatAmount(p.share);
         });
     }
 
@@ -413,9 +429,11 @@
         var share = implicitPayerShare();
         var lbl   = document.getElementById('buddy-payer-label');
         var pct   = document.getElementById('buddy-payer-pct');
+        var amt   = document.getElementById('buddy-payer-amt');
         var slide = document.getElementById('buddy-payer-slider');
         if (lbl)   lbl.textContent = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
         if (pct)   pct.textContent = share.toFixed(1) + '%';
+        if (amt)   amt.textContent = formatAmount(share);
         if (slide) slide.value = share;
     }
 
@@ -452,6 +470,21 @@
         jsonIn.value = JSON.stringify(participants.map(function (p) {
             return {type: p.type, id: p.id, share_percent: +p.share.toFixed(3)};
         }));
+    }
+
+    // ── Currency amount helpers ────────────────────────────────────────────
+
+    function getExpenseValue() {
+        if (!valueInput) return 0;
+        var v = parseFloat(String(valueInput.value).replace(',', '.'));
+        return isNaN(v) || v <= 0 ? 0 : v;
+    }
+
+    function formatAmount(pct) {
+        var val = getExpenseValue();
+        if (val <= 0) return '';
+        var amt = (pct / 100 * val).toFixed(2);
+        return amt + ' ' + (cfg.currencySymbol || '');
     }
 
     // ── Escape helper ──────────────────────────────────────────────────────

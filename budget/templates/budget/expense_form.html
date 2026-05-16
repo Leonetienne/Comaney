@@ -18,6 +18,7 @@ window.BUDDY_EXPENSE_CONFIG = {
     existingMode:      "{{ existing_mode|default:'single' }}",
     existingGroupId:   {{ existing_group_id|default:"null" }},
     urlBuddySummary:   "{% url 'buddies:buddy_summary' %}",
+    currencySymbol:    "{{ request.feuser.currency|escapejs }}",
 };
 </script>
 <script src="{% static 'dist/buddy_expense.js' %}" defer></script>
