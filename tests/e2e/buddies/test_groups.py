@@ -287,9 +287,11 @@ class TestGroupDummyManagement:
 
     def test_remove_group_dummy(self, driver, w, ctx):
         dummy_card = driver.find_element(By.CSS_SELECTOR, ".buddy-card-dummy")
-        dummy_card.find_element(By.CSS_SELECTOR,
-            "form[action*='member'] button[type=submit]").click()
-        _confirm(driver)
+        dummy_card.find_element(By.CSS_SELECTOR, "a[href*='remove']").click()
+        time.sleep(1)
+        assert "remove" in driver.current_url
+        driver.find_element(By.CSS_SELECTOR, "button.btn-danger-subtle").click()
+        time.sleep(1)
         assert "Group Offline Member" not in driver.page_source
 
 

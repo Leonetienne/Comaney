@@ -31,6 +31,7 @@ class DummyUser(models.Model):
         BuddyGroup, null=True, blank=True, on_delete=models.CASCADE, related_name="dummy_members"
     )
     display_name = models.CharField(max_length=128)
+    is_archive = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

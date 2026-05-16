@@ -179,14 +179,37 @@ class BuddyGroupService:
 
     @staticmethod
     @transaction.atomic
-    def delete_group_dummy(group, admin_feuser, dummy: DummyUser) -> None:
-        """Delete a group dummy. Clears expense references."""
+    def delete_group_dummy(group, admin_feuser, dummy: DummyUser) -> bool:
+        """
+        Remove a group dummy.
+
+        If the dummy is the archive, deletion is only permitted when the archive
+        holds no expenses (caller must enforce this guard). Returns False.
+
+        Otherwise, all expense references are merged into the group's Achim Archive
+        (created lazily). The dummy is then deleted. Returns True if the archive
+        was newly created, False if it already existed.
+        """
         from budget.models import Expense
-        BuddySpending.objects.filter(participant_dummy=dummy).delete()
-        Expense.objects.filter(upfront_payee_dummy=dummy).update(
-            upfront_payee_dummy=None, is_dummy=False
+        from .archive import BuddyArchiveService
+
+        if dummy.is_archive:
+            dummy.delete()
+            return False
+
+        has_expenses = (
+            BuddySpending.objects.filter(participant_dummy=dummy).exists()
+            or Expense.objects.filter(upfront_payee_dummy=dummy).exists()
         )
+
+        if has_expenses:
+            archive, created = BuddyArchiveService.get_or_create_group_archive(group)
+            BuddyArchiveService.merge_dummy_into_archive(dummy, archive)
+        else:
+            created = False
+
         dummy.delete()
+        return created
 
     @staticmethod
     @transaction.atomic
@@ -303,10 +326,23 @@ class BuddyGroupService:
     @transaction.atomic
     def dissolve_group(group, admin_feuser) -> None:
         """
-        Dissolve a group. Group dummies are transferred to the admin as personal dummies.
-        Group expenses lose their group context (buddy_group becomes NULL via FK cascade).
+        Dissolve a group. Regular group dummies are transferred to the admin as
+        personal dummies. The group's Achim Archive (if any) is merged into the
+        admin's personal Achim Archive so history is preserved. Group expenses
+        lose their group context (buddy_group becomes NULL via FK SET_NULL).
         """
-        DummyUser.objects.filter(owning_group=group).update(
+        from .archive import BuddyArchiveService
+
+        group_archive = DummyUser.objects.filter(owning_group=group, is_archive=True).first()
+        if group_archive:
+            if BuddyArchiveService.archive_has_expenses(group_archive):
+                personal_archive, _ = BuddyArchiveService.get_or_create_personal_archive(
+                    admin_feuser
+                )
+                BuddyArchiveService.merge_dummy_into_archive(group_archive, personal_archive)
+            group_archive.delete()
+
+        DummyUser.objects.filter(owning_group=group, is_archive=False).update(
             owning_group=None,
             owning_feuser=admin_feuser,
         )

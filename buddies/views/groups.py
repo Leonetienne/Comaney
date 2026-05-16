@@ -3,12 +3,13 @@ from decimal import Decimal
 
 from django.contrib import messages as django_messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
 from feusers.models import FeUser
-from ..models import BuddyGroup, BuddyGroupInvite, BuddyGroupMember, DummyUser
-from ..services import BuddyGroupService, BuddyQueryService, _display_name
+from ..models import BuddyGroup, BuddyGroupInvite, BuddyGroupMember, BuddySpending, DummyUser
+from ..services import BuddyArchiveService, BuddyGroupService, BuddyQueryService, _display_name
 
 
 @feuser_required
@@ -75,6 +76,8 @@ def group_detail(request, group_id):
 
     netted_flows: dict = {}
     for (frm, to), amount in raw_flows.items():
+        if frm == to:
+            continue
         if (to, frm) in netted_flows:
             opposite = netted_flows[(to, frm)]
             if amount > opposite:
@@ -82,6 +85,8 @@ def group_detail(request, group_id):
                 netted_flows[(frm, to)] = amount - opposite
             elif amount < opposite:
                 netted_flows[(to, frm)] = opposite - amount
+            else:
+                del netted_flows[(to, frm)]
         else:
             netted_flows[(frm, to)] = amount
     raw_flows = netted_flows
@@ -96,7 +101,7 @@ def group_detail(request, group_id):
         "links": [
             {"from": f, "to": t, "amount": float(a)}
             for (f, t), a in raw_flows.items()
-            if a > Decimal("0.005")
+            if a > Decimal("0.005") and f != t
         ],
     })
 
@@ -115,7 +120,7 @@ def group_detail(request, group_id):
     raw_debts_json = json.dumps([
         {"from": frm, "to": to, "amount": float(amount)}
         for (frm, to), amount in raw_flows.items()
-        if amount > Decimal("0.005")
+        if amount > Decimal("0.005") and frm != to
     ])
 
     my_balances = []
@@ -213,7 +218,6 @@ def group_revoke_invite(request, group_id, token):
 
 
 @feuser_required
-@require_POST
 def group_remove_member(request, group_id, member_id):
     feuser = request.feuser
     group = get_object_or_404(BuddyGroup, uid=group_id, admin_feuser=feuser)
@@ -224,11 +228,82 @@ def group_remove_member(request, group_id, member_id):
         return redirect("buddies:group_detail", group_id=group_id)
 
     if member.dummy_id:
-        BuddyGroupService.delete_group_dummy(group, feuser, member.dummy)
-    else:
-        BuddyGroupService.remove_member(group, feuser, member)
+        dummy = member.dummy
 
+        if dummy.is_archive:
+            # Archive removal only allowed when empty; enforced here and in template
+            if BuddyArchiveService.archive_has_expenses(dummy):
+                django_messages.error(request, "Achim Archive still holds expenses. Delete all archived expenses first.")
+                return redirect("buddies:group_detail", group_id=group_id)
+            if request.method == "POST" and request.POST.get("confirmed") == "yes":
+                dummy.delete()
+            return redirect("buddies:group_detail", group_id=group_id)
+
+        if request.method == "POST" and request.POST.get("confirmed") == "yes":
+            archive_created = BuddyGroupService.delete_group_dummy(group, feuser, dummy)
+            url = reverse("buddies:group_detail", kwargs={"group_id": group_id})
+            if archive_created:
+                url += "?achim=new"
+            return redirect(url)
+
+        # GET: show rich confirmation page
+        from budget.models import Expense
+        net = BuddyArchiveService.get_group_dummy_balance(dummy, group)
+        expense_count = (
+            BuddySpending.objects.filter(participant_dummy=dummy).values("expense").distinct().count()
+            + Expense.objects.filter(upfront_payee_dummy=dummy, is_dummy=True).count()
+        )
+        archive_exists = DummyUser.objects.filter(owning_group=group, is_archive=True).exists()
+
+        return render(request, "buddies/group_remove_dummy_confirm.html", {
+            "active_nav": "my_buddies",
+            "group": group,
+            "member": member,
+            "dummy": dummy,
+            "net": net,
+            "net_abs": abs(net),
+            "has_balance": abs(net) > Decimal("0.005"),
+            "expense_count": expense_count,
+            "archive_exists": archive_exists,
+            "currency": feuser.currency,
+        })
+
+    # Real feuser removal: require POST (confirm-form JS dialog in template handles UX)
+    if request.method != "POST":
+        return redirect("buddies:group_detail", group_id=group_id)
+
+    BuddyGroupService.remove_member(group, feuser, member)
     return redirect("buddies:group_detail", group_id=group_id)
+
+
+@feuser_required
+def group_archive_wipe(request, group_id, dummy_id):
+    """GET: big-warning page. POST with confirmed=yes: wipe all archive expenses."""
+    feuser = request.feuser
+    group = get_object_or_404(BuddyGroup, uid=group_id, admin_feuser=feuser)
+    dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_group=group, is_archive=True)
+
+    if request.method == "POST" and request.POST.get("confirmed") == "yes":
+        BuddyArchiveService.wipe_archive(dummy)
+        django_messages.success(request, "Achim Archive has been cleared.")
+        return redirect("buddies:group_detail", group_id=group_id)
+
+    user_impact = BuddyArchiveService.get_user_impact_in_group_archive(feuser, dummy, group)
+    participant_count, payer_count = BuddyArchiveService.get_archive_expense_counts_split(dummy)
+    expense_count = participant_count + payer_count
+
+    return render(request, "buddies/archive_wipe_confirm.html", {
+        "active_nav": "my_buddies",
+        "dummy": dummy,
+        "group": group,
+        "cancel_url": reverse("buddies:group_detail", kwargs={"group_id": group_id}),
+        "user_impact": user_impact,
+        "user_impact_abs": abs(user_impact),
+        "expense_count": expense_count,
+        "participant_count": participant_count,
+        "payer_count": payer_count,
+        "currency": feuser.currency,
+    })
 
 
 @feuser_required

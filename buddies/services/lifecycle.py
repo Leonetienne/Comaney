@@ -117,19 +117,42 @@ class BuddyLifecycleService:
     @staticmethod
     @transaction.atomic
     def kick_dummy(feuser, dummy: DummyUser, has_debt_warning_accepted: bool = False) -> dict:
+        """
+        Remove a personal dummy.
+
+        If the dummy is an archive, refuse if it holds expenses
+        (returns {'archive_has_expenses': True}); otherwise delete it.
+
+        Otherwise, all expense references are merged into the user's personal
+        Achim Archive (created lazily). Returns {'kicked': True,
+        'archive_created': bool}.
+        """
+        from .archive import BuddyArchiveService
+        from budget.models import Expense
+
+        if dummy.is_archive:
+            if BuddyArchiveService.archive_has_expenses(dummy):
+                return {"archive_has_expenses": True}
+            dummy.delete()
+            return {"kicked": True, "archive_created": False}
+
         net = BuddyQueryService.get_net_debt(feuser, buddy_dummy=dummy)
         if abs(net) > Decimal("0.05") and not has_debt_warning_accepted:
             return {"debt_warning": net}
 
-        BuddySpending.objects.filter(participant_dummy=dummy).delete()
-        from budget.models import Expense
-        Expense.objects.filter(
-            owning_feuser=feuser,
-            upfront_payee_dummy=dummy,
-            is_dummy=True,
-        ).delete()
+        has_expenses = (
+            BuddySpending.objects.filter(participant_dummy=dummy).exists()
+            or Expense.objects.filter(upfront_payee_dummy=dummy, is_dummy=True).exists()
+        )
+
+        if has_expenses:
+            archive, created = BuddyArchiveService.get_or_create_personal_archive(feuser)
+            BuddyArchiveService.merge_dummy_into_archive(dummy, archive)
+        else:
+            created = False
+
         dummy.delete()
-        return {"kicked": True}
+        return {"kicked": True, "archive_created": created}
 
     @staticmethod
     @transaction.atomic

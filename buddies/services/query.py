@@ -354,11 +354,9 @@ class BuddyQueryService:
                     "amount": amount,
                     "percent": bs.share_percent,
                 })
-                if exp.buddy_approved:
-                    if pk in balances:
-                        balances[pk] -= amount
-                    if payer_key in balances:
-                        balances[payer_key] += amount
+                if exp.buddy_approved and pk in balances:
+                    balances[pk] -= amount
+                    balances[payer_key] += amount
 
             i_am_participant = any(
                 (f"f{bs.participant_feuser_id}" == feuser_key)

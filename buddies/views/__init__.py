@@ -4,7 +4,7 @@ from .settlement import (
     group_settle_individual, group_settle_all,
 )
 from .buddies import (
-    add_dummy, kick_dummy,
+    add_dummy, kick_dummy, personal_archive_wipe,
     invite_actual, view_invite, accept_invite, decline_invite, revoke_invite,
     kick_actual,
     send_merge_invite, view_merge_invite, accept_merge, decline_merge,
@@ -12,7 +12,7 @@ from .buddies import (
 from .groups import (
     create_group, group_detail,
     group_invite_member, group_revoke_invite, group_remove_member,
-    group_add_dummy, group_send_merge,
+    group_add_dummy, group_send_merge, group_archive_wipe,
     group_transfer_admin, group_leave, group_dissolve,
     view_group_invite, accept_group_invite, decline_group_invite,
 )

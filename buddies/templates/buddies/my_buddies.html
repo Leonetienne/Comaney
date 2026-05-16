@@ -14,6 +14,19 @@
 {% endfor %}
 {% endif %}
 
+{% if request.GET.achim == "new" %}
+<div id="achim-modal" class="cdialog-backdrop" style="display:flex;">
+    <div class="cdialog">
+        <p style="margin:0 0 0.6rem;font-weight:600;">Say hello to Achim Archive</p>
+        <p style="margin:0 0 0.75rem;font-size:0.95rem;line-height:1.5;">The offline buddy you removed had shared expenses, so rather than deleting them, they've been passed on to <strong>Achim Archive</strong>, a special buddy that holds the history of removed offline buddies.</p>
+        <p style="margin:0 0 1.25rem;font-size:0.875rem;color:var(--text-muted);line-height:1.5;">Your balances stay accurate. You can delete Achim's expenses at any time, but that will permanently change your financial history, so there's a warning before you do so.</p>
+        <div class="cdialog-actions">
+            <button type="button" class="btn" onclick="document.getElementById('achim-modal').style.display='none';history.replaceState(null,'',location.pathname);">Got it</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% if unified_debts %}
 <section class="buddies-section">
     <h2>Balances</h2>
@@ -25,8 +38,9 @@
                 {% if info.type == 'feuser' and info.feuser %}
                 <span class="buddy-email">{{ info.feuser.email }}</span>
                 {% endif %}
-                {% if info.sources %}
+                {% if info.type == 'dummy' and info.dummy and info.dummy.is_archive or info.sources %}
                 <div class="bbl-tags">
+                    {% if info.type == 'dummy' and info.dummy and info.dummy.is_archive %}<span class="pill" style="opacity:0.7;">Archive</span>{% endif %}
                     {% for src in info.sources %}<span class="pill">{{ src }}</span>{% endfor %}
                 </div>
                 {% endif %}
@@ -43,6 +57,9 @@
                     <button type="submit" class="btn btn-sm btn-danger-subtle">Remove</button>
                 </form>
                 {% elif info.type == 'dummy' and info.dummy %}
+                {% if info.dummy.is_archive %}
+                <a href="{% url 'buddies:personal_archive_wipe' info.dummy.uid %}" class="btn btn-sm btn-danger-subtle">Delete expenses</a>
+                {% else %}
                 <button class="btn btn-sm btn-secondary"
                         onclick="this.style.display='none';document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='flex'">
                     Invite as user
@@ -58,10 +75,8 @@
                         Cancel
                     </button>
                 </form>
-                <form method="post" action="{% url 'buddies:kick_dummy' info.dummy.uid %}" class="confirm-form" data-confirm="Remove {{ info.dummy.display_name|escapejs }}?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Your shared expenses will stay in your history." data-ok="Remove">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-danger-subtle">Remove</button>
-                </form>
+                <a href="{% url 'buddies:kick_dummy' info.dummy.uid %}" class="btn btn-sm btn-danger-subtle">Remove</a>
+                {% endif %}
                 {% endif %}
             </div>
         </div>

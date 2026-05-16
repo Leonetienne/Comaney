@@ -1,0 +1,51 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - Remove Offline Buddy{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Remove {{ dummy.display_name }}</h1>
+</div>
+
+<div class="buddies-section" style="max-width:560px;">
+
+    {% if has_balance %}
+    <div class="buddy-flash buddy-flash-warning" style="margin-bottom:1.25rem;">
+        <strong>Outstanding balance:</strong>
+        {% if net > 0 %}
+            {{ dummy.display_name }} owes you <strong>{{ currency }}{{ net_abs|floatformat:2 }}</strong>.
+        {% else %}
+            You owe {{ dummy.display_name }} <strong>{{ currency }}{{ net_abs|floatformat:2 }}</strong>.
+        {% endif %}
+        This balance will be carried into Achim Archive.
+    </div>
+    {% endif %}
+
+    {% if expense_count > 0 %}
+    <div class="invite-card" style="margin-bottom:1.25rem;">
+        <p><strong>{{ expense_count }} shared expense{{ expense_count|pluralize }}</strong> will be moved to <strong>Achim Archive</strong> instead of being deleted.</p>
+        <p style="margin:0;font-size:0.9rem;color:var(--text-muted);">
+            Achim Archive is a special offline buddy that holds the history of removed members.
+            {% if archive_exists %}
+            Your existing Achim Archive will absorb {{ dummy.display_name }}'s share.
+            {% else %}
+            A new Achim Archive entry will appear in your buddy list.
+            {% endif %}
+            You can delete the archived expenses later from Achim Archive, but that will
+            permanently change your financial history.
+        </p>
+    </div>
+    {% else %}
+    <p style="margin-bottom:1.25rem;">{{ dummy.display_name }} has no shared expenses, so removing them is clean.</p>
+    {% endif %}
+
+    <form method="post" action="">
+        {% csrf_token %}
+        <input type="hidden" name="debt_warning_accepted" value="yes">
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+            <button type="submit" class="btn btn-danger-subtle">Remove {{ dummy.display_name }}</button>
+            <a href="{% url 'buddies:my_buddies' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

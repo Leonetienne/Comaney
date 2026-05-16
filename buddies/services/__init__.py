@@ -5,6 +5,7 @@ Import these classes wherever buddy logic is needed; never import model-level
 logic directly from views or the API layer.
 """
 from ._helpers import _display_name
+from .archive import BuddyArchiveService
 from .email import BuddyEmailService
 from .expense import BuddyExpenseService
 from .group import BuddyGroupService
@@ -13,6 +14,7 @@ from .query import BuddyQueryService
 from .settlement import BuddySettlementService
 
 __all__ = [
+    "BuddyArchiveService",
     "BuddyEmailService",
     "BuddyExpenseService",
     "BuddyGroupService",

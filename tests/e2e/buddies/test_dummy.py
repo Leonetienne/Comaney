@@ -50,13 +50,13 @@ class TestDummyCRUD:
     def test_kick_dummy_no_debt_shows_confirm(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
         time.sleep(1)
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='kick'] button[type=submit]").click()
-        time.sleep(0.5)
-        assert driver.find_element(By.ID, "cdialog-ok").is_displayed()
+        driver.find_element(By.CSS_SELECTOR, "a[href*='kick']").click()
+        time.sleep(1)
+        assert "kick" in driver.current_url
+        assert "Remove" in driver.page_source
 
     def test_kick_dummy_confirm_removes_dummy(self, driver, w, ctx):
-        driver.find_element(By.ID, "cdialog-ok").click()
+        driver.find_element(By.CSS_SELECTOR, "button.btn-danger-subtle").click()
         time.sleep(1)
         assert "Offline Alice" not in driver.page_source
         assert "/buddies/" in driver.current_url
@@ -106,14 +106,15 @@ class TestDummyKickWithDebt:
         # The form's data-confirm contains the balance amount (50.00 = 50% of 100)
         assert "50.00" in driver.page_source
 
-    def test_kick_dummy_with_debt_shows_dialog(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='kick'] button[type=submit]").click()
-        time.sleep(0.5)
-        assert driver.find_element(By.ID, "cdialog-ok").is_displayed()
+    def test_kick_dummy_with_debt_shows_confirm_page(self, driver, w, ctx):
+        driver.find_element(By.CSS_SELECTOR, "a[href*='kick']").click()
+        time.sleep(1)
+        assert "kick" in driver.current_url
+        assert "50.00" in driver.page_source, \
+            "Confirmation page must show the outstanding balance"
 
     def test_kick_dummy_confirm_removes_dummy(self, driver, w, ctx):
-        driver.find_element(By.ID, "cdialog-ok").click()
+        driver.find_element(By.CSS_SELECTOR, "button.btn-danger-subtle").click()
         time.sleep(1)
         assert "Debt Dummy" not in driver.page_source
         assert "/buddies/" in driver.current_url

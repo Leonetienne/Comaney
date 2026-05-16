@@ -13,6 +13,7 @@ urlpatterns = [
     path("add-dummy/", views.add_dummy, name="add_dummy"),
     path("dummy/<int:dummy_id>/kick/", views.kick_dummy, name="kick_dummy"),
     path("dummy/<int:dummy_id>/send-merge/", views.send_merge_invite, name="send_merge_invite"),
+    path("dummy/<int:dummy_id>/archive-wipe/", views.personal_archive_wipe, name="personal_archive_wipe"),
 
     # Actual-user invitations
     path("invite-actual/", views.invite_actual, name="invite_actual"),
@@ -37,6 +38,7 @@ urlpatterns = [
     path("groups/<int:group_id>/member/<int:member_id>/remove/", views.group_remove_member, name="group_remove_member"),
     path("groups/<int:group_id>/add-dummy/", views.group_add_dummy, name="group_add_dummy"),
     path("groups/<int:group_id>/dummy/<int:dummy_id>/send-merge/", views.group_send_merge, name="group_send_merge"),
+    path("groups/<int:group_id>/dummy/<int:dummy_id>/archive-wipe/", views.group_archive_wipe, name="group_archive_wipe"),
     path("groups/<int:group_id>/leave/", views.group_leave, name="group_leave"),
     path("groups/<int:group_id>/transfer-admin/", views.group_transfer_admin, name="group_transfer_admin"),
     path("groups/<int:group_id>/dissolve/", views.group_dissolve, name="group_dissolve"),

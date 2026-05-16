@@ -18,6 +18,19 @@
 {% endfor %}
 {% endif %}
 
+{% if request.GET.achim == "new" %}
+<div id="achim-modal" class="cdialog-backdrop" style="display:flex;">
+    <div class="cdialog">
+        <p style="margin:0 0 0.6rem;font-weight:600;">Say hello to Achim Archive</p>
+        <p style="margin:0 0 0.75rem;font-size:0.95rem;line-height:1.5;">The member you removed had shared expenses, so rather than wiping them from the books, they've been handed off to <strong>Achim Archive</strong>, a special group member who quietly holds onto historical records.</p>
+        <p style="margin:0 0 1.25rem;font-size:0.875rem;color:var(--text-muted);line-height:1.5;">Group balances and the debt graph stay accurate. The admin can delete Achim's expenses at any time from the Members section, though that will permanently change the group's financial history.</p>
+        <div class="cdialog-actions">
+            <button type="button" class="btn" onclick="document.getElementById('achim-modal').style.display='none';history.replaceState(null,'',location.pathname);">Got it</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {# ── Balances ─────────────────────────────────────────────────────────────── #}
 <section class="buddies-section">
     <h2>Your balances</h2>
@@ -151,7 +164,7 @@
                     el.style.color = '#2da44e';
                 }
             } else {
-                el.textContent = 'Total debt: ' + CURRENCY + simplifiedTotal.toFixed(2);
+                el.textContent = 'Total group debt: ' + CURRENCY + simplifiedTotal.toFixed(2);
                 el.style.color = '#cf222e';
             }
         }
@@ -495,7 +508,7 @@
         </div>
         {% endfor %}
 
-        {% for m in dummy_members %}
+        {% for m in dummy_members %}{% if not m.dummy.is_archive %}
         <div class="buddy-card buddy-card-dummy">
             <div class="buddy-card-identity">
                 <span class="buddy-name">{{ m.dummy.display_name }}</span>
@@ -519,14 +532,27 @@
                         Cancel
                     </button>
                 </form>
-                <form method="post" action="{% url 'buddies:group_remove_member' group.uid m.uid %}" class="confirm-form" data-confirm="Remove {{ m.dummy.display_name }} from the group?" data-ok="Remove">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-danger-subtle">Remove</button>
-                </form>
+                <a href="{% url 'buddies:group_remove_member' group.uid m.uid %}" class="btn btn-sm btn-danger-subtle">Remove</a>
                 {% endif %}
             </div>
         </div>
-        {% endfor %}
+        {% endif %}{% endfor %}
+
+        {# ── Achim Archive (shown last, styled distinctly) ──────────────────── #}
+        {% for m in dummy_members %}{% if m.dummy.is_archive %}
+        <div class="buddy-card buddy-card-dummy" style="opacity:0.75;border-style:dashed;">
+            <div class="buddy-card-identity">
+                <span class="buddy-name">{{ m.dummy.display_name }}</span>
+                <span class="pill">Archive</span>
+            </div>
+            <div></div>
+            <div class="buddy-card-actions">
+                {% if is_admin %}
+                <a href="{% url 'buddies:group_archive_wipe' group.uid m.dummy.uid %}" class="btn btn-sm btn-danger-subtle">Delete expenses</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}{% endfor %}
 
     </div>
 </section>

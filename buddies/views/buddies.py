@@ -1,10 +1,11 @@
 from django.contrib import messages as django_messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
-from ..models import BuddyInvite, BuddyLink, DummyMergeInvite, DummyUser
-from ..services import BuddyLifecycleService, _display_name
+from ..models import BuddyInvite, BuddyLink, BuddySpending, DummyMergeInvite, DummyUser
+from ..services import BuddyArchiveService, BuddyLifecycleService, BuddyQueryService, _display_name
 
 
 @feuser_required
@@ -18,11 +19,86 @@ def add_dummy(request):
 
 
 @feuser_required
-@require_POST
 def kick_dummy(request, dummy_id):
-    dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_feuser=request.feuser)
-    BuddyLifecycleService.kick_dummy(request.feuser, dummy, has_debt_warning_accepted=True)
-    return redirect("buddies:buddies_page")
+    """GET: confirmation page. POST: execute removal."""
+    feuser = request.feuser
+    dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_feuser=feuser)
+
+    if dummy.is_archive:
+        if BuddyArchiveService.archive_has_expenses(dummy):
+            django_messages.error(
+                request,
+                "Achim Archive still holds expenses. Delete all archived expenses first.",
+            )
+        elif request.method == "POST" and request.POST.get("confirmed") == "yes":
+            dummy.delete()
+        return redirect("buddies:my_buddies")
+
+    if request.method == "POST":
+        debt_warning_accepted = request.POST.get("debt_warning_accepted") == "yes"
+        result = BuddyLifecycleService.kick_dummy(
+            feuser, dummy, has_debt_warning_accepted=debt_warning_accepted
+        )
+        if result.get("kicked"):
+            url = reverse("buddies:my_buddies")
+            if result.get("archive_created"):
+                url += "?achim=new"
+            return redirect(url)
+        return redirect("buddies:my_buddies")
+
+    # GET: build confirmation page data
+    net = BuddyQueryService.get_net_debt(feuser, buddy_dummy=dummy)
+    from budget.models import Expense
+    expense_count = (
+        BuddySpending.objects.filter(participant_dummy=dummy)
+        .values("expense")
+        .distinct()
+        .count()
+        + Expense.objects.filter(
+            owning_feuser=feuser, upfront_payee_dummy=dummy, is_dummy=True
+        ).count()
+    )
+    archive_exists = DummyUser.objects.filter(owning_feuser=feuser, is_archive=True).exists()
+
+    return render(request, "buddies/kick_dummy_confirm.html", {
+        "active_nav": "my_buddies",
+        "dummy": dummy,
+        "net": net,
+        "net_abs": abs(net),
+        "has_balance": abs(net) > 0.005,
+        "expense_count": expense_count,
+        "archive_exists": archive_exists,
+        "currency": feuser.currency,
+    })
+
+
+@feuser_required
+def personal_archive_wipe(request, dummy_id):
+    """GET: big-warning confirmation page. POST with confirmed=yes: wipe."""
+    feuser = request.feuser
+    dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_feuser=feuser, is_archive=True)
+
+    if request.method == "POST" and request.POST.get("confirmed") == "yes":
+        BuddyArchiveService.wipe_archive(dummy)
+        django_messages.success(request, "Achim Archive has been cleared.")
+        return redirect("buddies:my_buddies")
+
+    user_impact = BuddyArchiveService.get_user_impact_in_personal_archive(feuser, dummy)
+    participant_count, payer_count = BuddyArchiveService.get_archive_expense_counts_split(dummy)
+    expense_count = participant_count + payer_count
+
+    return render(request, "buddies/archive_wipe_confirm.html", {
+        "active_nav": "my_buddies",
+        "dummy": dummy,
+        "group": None,
+        "cancel_url": reverse("buddies:my_buddies"),
+        "user_impact": user_impact,
+        "user_impact_abs": abs(user_impact),
+        "expense_count": expense_count,
+        "participant_count": participant_count,
+        "payer_count": payer_count,
+        "currency": feuser.currency,
+    })
 
 
 @feuser_required
