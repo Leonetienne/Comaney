@@ -48,12 +48,21 @@ def group_detail(request, group_id):
     for exp_data in breakdown["expenses"]:
         exp = exp_data["expense"]
         exp_data["creditor_approval_needed"] = False
+        exp_data["admin_approval_needed"] = False
 
         if not exp.buddy_approved:
             for share in exp_data["participant_shares"]:
                 if share["key"] == feuser_key:
                     exp_data["creditor_approval_needed"] = True
                     break
+            if is_admin and not exp_data["creditor_approval_needed"]:
+                has_dummy_creditor = any(
+                    share["key"].startswith("d")
+                    and int(share["key"][1:]) in dummy_pks_in_group
+                    for share in exp_data["participant_shares"]
+                )
+                if has_dummy_creditor:
+                    exp_data["admin_approval_needed"] = True
 
         is_feuser_direct_owner = exp.owning_feuser_id == feuser.pk and not exp.is_dummy
         is_dummy_exp_in_group = (

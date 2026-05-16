@@ -319,14 +319,18 @@
             var debtorIsDummy  = !!(memberMap[dk] && memberMap[dk].is_dummy);
             var creditorIsDummy = !!(memberMap[ck] && memberMap[ck].is_dummy);
 
+            var debtorName = memberMap[dk] ? memberMap[dk].name : dk;
             var msg;
             if (debtorIsDummy && creditorIsDummy) {
                 msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' from ' +
-                      (memberMap[dk] ? memberMap[dk].name : dk) + ' to ' + creditorName +
-                      '? Both parties are offline members, so this will be approved automatically.';
+                      debtorName + ' (offline member) to ' + creditorName +
+                      ' (offline member)? This will be approved automatically.';
+            } else if (creditorIsDummy && IS_ADMIN) {
+                msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' to ' + creditorName +
+                      ' (offline member)? This will be approved automatically.';
             } else if (creditorIsDummy) {
                 msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' to ' + creditorName +
-                      ' (offline member)? As group admin you will need to confirm receipt on the buddy summary page.';
+                      ' (offline member)? The group admin will be asked to confirm receipt.';
             } else {
                 msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' to ' + creditorName +
                       '? A settlement expense will be created and ' + creditorName + ' will be asked to confirm receipt.';
@@ -347,7 +351,7 @@
     <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">These expenses are not yet confirmed and do not count toward the current balances.</p>
     <div class="bexp-breakdown-list">
         {% for e in pending_expenses %}
-        <div id="pending-{{ e.expense.uid }}" class="bexp-breakdown-card {% if e.payer_is_me %}bexp-card-i-paid{% elif e.i_am_participant %}bexp-card-other-paid{% else %}bexp-card-neutral{% endif %} bexp-card-pending">
+        <div id="pending-{{ e.expense.uid }}" class="bexp-breakdown-card {% if e.payer_is_me %}bexp-card-i-paid{% elif e.i_am_participant %}bexp-card-other-paid{% else %}bexp-card-neutral{% endif %} bexp-card-pending{% if e.creditor_approval_needed or e.admin_approval_needed %} bexp-card-approvable{% endif %}">
             <div class="bexp-breakdown-header">
                 <div class="bexp-breakdown-header-left">
                     <span class="bexp-title">
@@ -367,6 +371,9 @@
 
                     {% if e.creditor_approval_needed %}
                     <a href="{% url 'buddies:approve_settlement_as_creditor' e.expense.uid %}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
+                    {% endif %}
+                    {% if e.admin_approval_needed %}
+                    <a href="{% url 'buddies:admin_approve_dummy_settlement' group.uid e.expense.uid %}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
                     {% endif %}
 
                     {% if e.can_delete %}

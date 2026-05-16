@@ -19,6 +19,6 @@ from .groups import (
 from .expenses import (
     approve_expense, reject_expense,
     approve_settlement_as_creditor, reject_settlement_as_creditor,
-    admin_approve_dummy_settlement,
+    admin_approve_dummy_settlement, admin_reject_dummy_settlement,
     group_expense_delete, group_expense_unlink,
 )

@@ -1,5 +1,6 @@
 from django.contrib import messages as django_messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
@@ -102,9 +103,8 @@ def reject_settlement_as_creditor(request, expense_id):
 
 
 @feuser_required
-@require_POST
 def admin_approve_dummy_settlement(request, group_id, expense_id):
-    """Admin confirms on behalf of a dummy upfront-payer or dummy creditor in their group."""
+    """Admin reviews and confirms a settlement involving a dummy creditor in their group."""
     feuser = request.feuser
     group = get_object_or_404(BuddyGroup, uid=group_id, admin_feuser=feuser)
     expense = get_object_or_404(
@@ -119,10 +119,50 @@ def admin_approve_dummy_settlement(request, group_id, expense_id):
     ).exists()
     if not (has_dummy_upfront or has_dummy_creditor):
         django_messages.error(request, "This expense does not involve an offline member of this group.")
-        return redirect("buddies:buddy_summary")
-    BuddyLifecycleService.approve_expense(expense)
-    django_messages.success(request, "Approved on behalf of the offline member.")
-    return redirect("buddies:buddy_summary")
+        return redirect("buddies:group_detail", group_id=group_id)
+    if request.method == "POST":
+        BuddyLifecycleService.approve_expense(expense)
+        django_messages.success(request, "Settlement confirmed. Thank you!")
+        return redirect("buddies:group_detail", group_id=group_id)
+    dummy_bs = expense.buddy_spendings.filter(
+        participant_dummy__owning_group=group
+    ).select_related("participant_dummy").first()
+    creditor_name = (
+        f"{dummy_bs.participant_dummy.display_name} (offline member)" if dummy_bs else None
+    )
+    return render(request, "buddies/confirm_settlement.html", {
+        "active_nav": "buddies",
+        "expense": expense,
+        "approve_url": reverse("buddies:admin_approve_dummy_settlement", args=[group_id, expense_id]),
+        "reject_url": reverse("buddies:admin_reject_dummy_settlement", args=[group_id, expense_id]),
+        "creditor_name": creditor_name,
+        "confirm_question": f"Did {creditor_name} actually receive this payment?" if creditor_name else None,
+    })
+
+
+@feuser_required
+@require_POST
+def admin_reject_dummy_settlement(request, group_id, expense_id):
+    """Admin rejects a settlement on behalf of a dummy creditor: deletes it and notifies the debtor."""
+    feuser = request.feuser
+    group = get_object_or_404(BuddyGroup, uid=group_id, admin_feuser=feuser)
+    expense = get_object_or_404(
+        Expense,
+        uid=expense_id,
+        buddy_group=group,
+        buddy_approved=False,
+    )
+    has_dummy_creditor = expense.buddy_spendings.filter(
+        participant_dummy__owning_group=group
+    ).exists()
+    if not has_dummy_creditor:
+        django_messages.error(request, "This expense does not involve an offline member of this group.")
+        return redirect("buddies:group_detail", group_id=group_id)
+    debtor = expense.owning_feuser
+    BuddyEmailService.send_settlement_rejection_notification(expense, feuser, debtor)
+    expense.delete()
+    django_messages.warning(request, "Settlement rejected. The debtor has been notified.")
+    return redirect("buddies:group_detail", group_id=group_id)
 
 
 @feuser_required

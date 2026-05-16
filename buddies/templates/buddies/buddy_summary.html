@@ -147,10 +147,7 @@
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
-                    <form method="post" action="{% url 'buddies:admin_approve_dummy_settlement' item.expense.buddy_group_id item.expense.uid %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm" style="background:#2da44e;color:#fff;">Approve</button>
-                    </form>
+                    <a href="{% url 'buddies:admin_approve_dummy_settlement' item.expense.buddy_group_id item.expense.uid %}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
                 </div>
             </div>
         </div>

@@ -56,6 +56,7 @@ urlpatterns = [
 
     # Group settlement actions
     path("groups/<int:group_id>/expense/<int:expense_id>/approve-dummy/", views.admin_approve_dummy_settlement, name="admin_approve_dummy_settlement"),
+    path("groups/<int:group_id>/expense/<int:expense_id>/reject-dummy/", views.admin_reject_dummy_settlement, name="admin_reject_dummy_settlement"),
     path("groups/<int:group_id>/expense/<int:expense_id>/delete/", views.group_expense_delete, name="group_expense_delete"),
     path("groups/<int:group_id>/expense/<int:expense_id>/unlink/", views.group_expense_unlink, name="group_expense_unlink"),
     path("groups/<int:group_id>/settle-individual/", views.group_settle_individual, name="group_settle_individual"),

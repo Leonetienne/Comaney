@@ -817,6 +817,11 @@
     border-left: 3px solid var(--text-muted);
     opacity: 0.72;
   }
+
+  &.bexp-card-pending.bexp-card-approvable {
+    opacity: 1;
+    border-style: solid !important;
+  }
 }
 
 .bexp-breakdown-header {

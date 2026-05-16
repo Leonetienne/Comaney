@@ -83,7 +83,23 @@ def group_settle_individual(request, group_id):
         feuser, group, debtor_key, creditor_key, amount
     )
     if ok:
-        django_messages.success(request, "Settlement record created. The creditor will be asked to confirm receipt.")
+        creditor_is_dummy = creditor_key.startswith("d")
+        debtor_is_dummy = debtor_key.startswith("d")
+        both_dummies = debtor_is_dummy and creditor_is_dummy
+        admin_is_debtor_paying_dummy = (
+            not debtor_is_dummy
+            and debtor_key == feuser_key
+            and is_admin
+            and creditor_is_dummy
+        )
+        auto_approve = both_dummies or admin_is_debtor_paying_dummy
+        if auto_approve:
+            msg = "Settlement record created."
+        elif creditor_is_dummy:
+            msg = "Settlement record created. The group admin will be asked to confirm receipt."
+        else:
+            msg = "Settlement record created. The creditor will be asked to confirm receipt."
+        django_messages.success(request, msg)
     else:
         django_messages.error(request, "Settlement could not be created. Check the selected members and amount.")
     return redirect("buddies:group_detail", group_id=group_id)
