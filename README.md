@@ -4,7 +4,7 @@ Budgeting that actually fits into your life.
 
 ![image](https://raw.githubusercontent.com/Leonetienne/Comaney/refs/heads/master/github-assets/lightdark.png)
 
-> Full documentation is available at [https://comaney.app/docs](/docs/).
+> Full documentation is available at [https://comaney.app/docs](https://comaney.app/docs/).
 
 ---
 
