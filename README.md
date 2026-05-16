@@ -137,7 +137,7 @@ Full reference: **[Admin Manual → Environment Variables](https://comaney.app/d
 ./build/build-assets.sh
 ```
 
-Runs `npm install && npm run build` inside a `node:25.9.0-slim linux/amd64` container. Never run npm directly on the host; see [Dev Manual: Building Assets](https://comaney.app/docs/src/docs/dev-manual/building-assets/).
+Runs `npm install && npm run build` inside a `node:25.9.0-slim linux/amd64` container. Never run npm directly on the host; see [Dev Manual: Building Assets](https://comaney.app/docs/dev-manual/building-assets/).
 
 ### Building the documentation
 
