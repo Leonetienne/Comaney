@@ -34,7 +34,7 @@ The admin label appears next to your name on the group page when you have this r
 Admin only. On the group detail page, click the **Remove** button next to the member's name.
 
 - When you remove a real user, they lose access to the group and a read-only offline entry with their name is added so that past expenses still reference them correctly.
-- When you remove an offline member, they are simply removed. Their expenses are gone too.
+- When you remove an offline member (someone without a Comaney account), their shared expense history is moved to **Achim Archive** rather than deleted. See [Achim Archive](achim-archive.md) for details.
 
 !!! note
     You cannot remove yourself as admin. Transfer admin rights first, or dissolve the group.

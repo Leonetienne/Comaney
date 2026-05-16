@@ -20,3 +20,4 @@ Whoever pays upfront logs the full expense and marks which people share the cost
 | Log an expense and split it | [Shared Expenses](shared-expenses.md) |
 | Record a payment to clear a debt | [Settling Up](settling-up.md) |
 | Invite or remove group members, leave or dissolve a group | [Managing Groups](groups.md) |
+| Understand what happens to history when an offline member is removed | [Achim Archive](achim-archive.md) |
