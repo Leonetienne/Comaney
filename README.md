@@ -8,6 +8,32 @@ Budgeting that actually fits into your life.
 
 ---
 
+## What is Comaney?
+
+Comaney is a **personal budgeting app** available as a hosted service at [comaney.app](https://comaney.app) or self-hosted on your own server.
+
+### Track your spending
+
+Log expenses with a title, amount, date, and category. Tag them however you like and search or filter across your whole history in seconds. Export everything to CSV at any time.
+
+### Stay on top of recurring costs
+
+Set up scheduled expenses (subscriptions, rent, insurance) once and Comaney generates them automatically. Get notified when a payment is coming up or overdue.
+
+### See the big picture
+
+The **modular dashboard** lets you build your own overview from scratch: spend-by-category charts, running totals, custom lists, and more. Each card is fully configurable and can link through to the matching filtered expense list.
+
+### Share costs with others
+
+The **Buddies** feature lets Comaney users split expenses and track who owes whom. One person logs the shared expense; the other confirms it. When the debt is settled, both sides record the settlement and the balance clears once both parties confirm.
+
+### Add expenses fast
+
+**AI express entry** lets you jot down a quick note like *"strawberries for date night with Ann, 4 EUR"* and Comaney turns it into a properly categorised and tagged expense. Snap a photo of a receipt and it splits it into individual line items automatically.
+
+---
+
 ## Self-hosting
 
 Comaney runs as a Docker container backed by MariaDB.
