@@ -1,0 +1,428 @@
+from __future__ import annotations
+
+from decimal import Decimal
+
+from django.conf import settings
+from django.db import transaction
+
+from ..models import (
+    BuddyGroupMember,
+    BuddyInvite,
+    BuddyLink,
+    BuddyOnboardingInvite,
+    BuddySpending,
+    DummyMergeInvite,
+    DummyUser,
+)
+from ._helpers import _create_link, _display_name
+from .email import BuddyEmailService
+from .expense import BuddyExpenseService
+from .group import BuddyGroupService
+from .query import BuddyQueryService
+
+
+class BuddyLifecycleService:
+    """Buddy relationship management: add, invite, kick, merge."""
+
+    @staticmethod
+    def add_dummy(feuser, display_name: str) -> DummyUser:
+        return DummyUser.objects.create(
+            owning_feuser=feuser,
+            display_name=display_name.strip(),
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def invite_actual(feuser, email: str):
+        """
+        Invite an actual user by email as a personal buddy.
+        Returns ('link'|'invite'|'onboarding'|'onboarding_no_email'|
+                 'already_buddies'|'self'|'registration_disabled', obj).
+        """
+        from feusers.models import FeUser
+
+        email = email.strip().lower()
+
+        if email == feuser.email.lower():
+            return ("self", None)
+
+        try:
+            invitee = FeUser.objects.get(email__iexact=email, is_active=True)
+        except FeUser.DoesNotExist:
+            invitee = None
+
+        if invitee and BuddyLink.between(feuser, invitee):
+            return ("already_buddies", None)
+
+        if settings.DISABLE_EMAILING:
+            if invitee:
+                link = _create_link(feuser, invitee)
+                return ("link", link)
+            if not settings.ENABLE_REGISTRATION:
+                return ("registration_disabled", None)
+            ob = BuddyOnboardingInvite(inviting_feuser=feuser, invitee_email=email)
+            ob.save()
+            return ("onboarding_no_email", ob)
+
+        if invitee:
+            invite = BuddyInvite(inviter=feuser, invitee_email=email)
+            invite.save()
+            BuddyEmailService.send_buddy_invite(invite)
+            return ("invite", invite)
+
+        if not settings.ENABLE_REGISTRATION:
+            return ("registration_disabled", None)
+        ob = BuddyOnboardingInvite(inviting_feuser=feuser, invitee_email=email)
+        ob.save()
+        BuddyEmailService.send_onboarding_invite(ob)
+        return ("onboarding", ob)
+
+    @staticmethod
+    @transaction.atomic
+    def accept_invite(token: str, accepting_feuser) -> BuddyLink | None:
+        try:
+            invite = BuddyInvite.objects.get(token=token)
+        except BuddyInvite.DoesNotExist:
+            return None
+
+        if not invite.is_valid():
+            invite.delete()
+            return None
+
+        if invite.invitee_email.lower() != accepting_feuser.email.lower():
+            return None
+
+        link = _create_link(invite.inviter, accepting_feuser)
+        invite.delete()
+        return link
+
+    @staticmethod
+    def decline_invite(token: str, declining_feuser) -> bool:
+        try:
+            invite = BuddyInvite.objects.get(token=token, invitee_email=declining_feuser.email)
+        except BuddyInvite.DoesNotExist:
+            return False
+        invite.delete()
+        return True
+
+    @staticmethod
+    def revoke_invite(token: str, revoking_feuser) -> bool:
+        try:
+            invite = BuddyInvite.objects.get(token=token, inviter=revoking_feuser)
+        except BuddyInvite.DoesNotExist:
+            return False
+        invite.delete()
+        return True
+
+    @staticmethod
+    @transaction.atomic
+    def kick_dummy(feuser, dummy: DummyUser, has_debt_warning_accepted: bool = False) -> dict:
+        net = BuddyQueryService.get_net_debt(feuser, buddy_dummy=dummy)
+        if abs(net) > Decimal("0.05") and not has_debt_warning_accepted:
+            return {"debt_warning": net}
+
+        BuddySpending.objects.filter(participant_dummy=dummy).delete()
+        from budget.models import Expense
+        Expense.objects.filter(
+            owning_feuser=feuser,
+            upfront_payee_dummy=dummy,
+            is_dummy=True,
+        ).delete()
+        dummy.delete()
+        return {"kicked": True}
+
+    @staticmethod
+    @transaction.atomic
+    def kick_actual(feuser, other_feuser, has_debt_warning_accepted: bool = False) -> dict:
+        from budget.models import Expense
+
+        net = BuddyQueryService.get_net_debt(feuser, buddy_feuser=other_feuser)
+        if abs(net) > Decimal("0.05") and not has_debt_warning_accepted:
+            return {"debt_warning": net}
+
+        link = BuddyLink.between(feuser, other_feuser)
+        if not link:
+            return {"kicked": True}
+
+        feuser_expenses_with_other = Expense.objects.filter(
+            owning_feuser=feuser,
+            is_dummy=False,
+            buddy_group__isnull=True,
+            buddy_spendings__participant_feuser=other_feuser,
+        ).distinct()
+        for exp in feuser_expenses_with_other:
+            new_dummy = DummyUser.objects.create(
+                owning_feuser=other_feuser,
+                display_name=_display_name(feuser),
+            )
+            BuddyExpenseService.clone_expense_for_feuser(exp, other_feuser, new_dummy)
+            exp.buddy_spendings.filter(participant_feuser=other_feuser).delete()
+
+        kicker_dummy_for_other = DummyUser.objects.create(
+            owning_feuser=other_feuser,
+            display_name=_display_name(feuser),
+        )
+        BuddySpending.objects.filter(
+            participant_feuser=feuser,
+            expense__owning_feuser=other_feuser,
+            expense__buddy_group__isnull=True,
+        ).update(participant_feuser=None, participant_dummy=kicker_dummy_for_other)
+
+        link.delete()
+        BuddyEmailService.send_kicked_notification(
+            kicked_feuser=other_feuser,
+            kicking_display_name=_display_name(feuser),
+        )
+        return {"kicked": True}
+
+    @staticmethod
+    @transaction.atomic
+    def handle_account_deletion(feuser):
+        """
+        Called before feuser.delete().
+        Converts all actual buddy relationships to dummy relationships.
+        Also handles group memberships.
+        """
+        from budget.models import Expense
+
+        for link in BuddyLink.for_user(feuser):
+            other = link.other(feuser)
+
+            ghost_dummy = DummyUser.objects.create(
+                owning_feuser=other,
+                display_name=_display_name(feuser),
+            )
+
+            BuddySpending.objects.filter(
+                participant_feuser=feuser,
+                expense__owning_feuser=other,
+                expense__buddy_group__isnull=True,
+            ).update(participant_feuser=None, participant_dummy=ghost_dummy)
+
+            feuser_exps = Expense.objects.filter(
+                owning_feuser=feuser,
+                is_dummy=False,
+                buddy_group__isnull=True,
+                buddy_spendings__participant_feuser=other,
+            ).distinct()
+            for exp in feuser_exps:
+                BuddyExpenseService.clone_expense_for_feuser(exp, other, ghost_dummy)
+
+        BuddyLink.for_user(feuser).delete()
+
+        for membership in BuddyGroupMember.objects.filter(feuser=feuser).select_related("group"):
+            group = membership.group
+            if group.admin_feuser_id == feuser.pk:
+                other_member = (
+                    BuddyGroupMember.objects
+                    .filter(group=group, feuser__isnull=False)
+                    .exclude(feuser=feuser)
+                    .select_related("feuser")
+                    .first()
+                )
+                if other_member:
+                    group.admin_feuser = other_member.feuser
+                    group.save(update_fields=["admin_feuser"])
+                else:
+                    BuddyGroupService.dissolve_group(group, feuser)
+                    continue
+
+            BuddyGroupService.remove_member(group, group.admin_feuser, membership)
+
+    @staticmethod
+    @transaction.atomic
+    def send_merge_invite(feuser, dummy: DummyUser, target_email: str):
+        from feusers.models import FeUser
+
+        target_email = target_email.strip().lower()
+        try:
+            invited = FeUser.objects.get(email__iexact=target_email, is_active=True)
+        except FeUser.DoesNotExist:
+            invited = None
+
+        if invited is None:
+            if settings.DISABLE_EMAILING:
+                if not settings.ENABLE_REGISTRATION:
+                    return ("registration_disabled", None)
+                ob = BuddyOnboardingInvite(
+                    inviting_feuser=feuser, dummy=dummy, invitee_email=target_email
+                )
+                ob.save()
+                return ("onboarding_no_email", ob)
+            if not settings.ENABLE_REGISTRATION:
+                return ("registration_disabled", None)
+            ob = BuddyOnboardingInvite(
+                inviting_feuser=feuser, dummy=dummy, invitee_email=target_email
+            )
+            ob.save()
+            BuddyEmailService.send_onboarding_invite(ob)
+            return ("onboarding", ob)
+
+        invite = DummyMergeInvite(
+            inviting_feuser=feuser,
+            dummy=dummy,
+            invited_feuser=invited,
+        )
+        invite.save()
+        BuddyEmailService.send_merge_invite(invite)
+        return ("invite", invite)
+
+    @staticmethod
+    @transaction.atomic
+    def accept_merge(token: str, accepting_feuser) -> bool:
+        from budget.models import Expense
+
+        try:
+            invite = DummyMergeInvite.objects.select_related(
+                "dummy", "inviting_feuser"
+            ).get(token=token)
+        except DummyMergeInvite.DoesNotExist:
+            return False
+
+        if not invite.is_valid():
+            invite.delete()
+            return False
+
+        if invite.invited_feuser_id != accepting_feuser.pk:
+            return False
+
+        dummy = invite.dummy
+        inviting_feuser = invite.inviting_feuser
+
+        if dummy.owning_group_id:
+            return BuddyGroupService.accept_group_dummy_merge(token, accepting_feuser)
+
+        for exp in Expense.objects.filter(upfront_payee_dummy=dummy, is_dummy=True):
+            exp.owning_feuser = accepting_feuser
+            exp.is_dummy = False
+            exp.upfront_payee_dummy = None
+            BuddyExpenseService.reconcile_categories_tags(exp, accepting_feuser)
+            exp.save()
+
+        BuddySpending.objects.filter(participant_dummy=dummy).update(
+            participant_dummy=None,
+            participant_feuser=accepting_feuser,
+        )
+
+        _create_link(inviting_feuser, accepting_feuser)
+
+        dummy.delete()
+        invite.delete()
+        return True
+
+    @staticmethod
+    @transaction.atomic
+    def complete_onboarding_invites(new_feuser) -> None:
+        from django.utils import timezone
+        from budget.models import Expense
+
+        pending = BuddyOnboardingInvite.objects.filter(
+            invitee_email__iexact=new_feuser.email,
+            expires_at__gt=timezone.now(),
+        ).select_related("inviting_feuser", "dummy", "group")
+
+        for invite in pending:
+            if invite.group_id and invite.dummy_id:
+                _create_link(invite.inviting_feuser, new_feuser)
+                dummy = invite.dummy
+                group = invite.group
+                for exp in Expense.objects.filter(upfront_payee_dummy=dummy, is_dummy=True):
+                    exp.owning_feuser = new_feuser
+                    exp.is_dummy = False
+                    exp.upfront_payee_dummy = None
+                    BuddyExpenseService.reconcile_categories_tags(exp, new_feuser)
+                    exp.save()
+                BuddySpending.objects.filter(participant_dummy=dummy).update(
+                    participant_dummy=None, participant_feuser=new_feuser
+                )
+                dummy_member = BuddyGroupMember.objects.filter(group=group, dummy=dummy).first()
+                if dummy_member:
+                    dummy_member.delete()
+                BuddyGroupMember.objects.get_or_create(group=group, feuser=new_feuser)
+                dummy.delete()
+
+            elif invite.group_id:
+                _create_link(invite.inviting_feuser, new_feuser)
+                BuddyGroupMember.objects.get_or_create(group=invite.group, feuser=new_feuser)
+
+            elif invite.dummy_id:
+                dummy = invite.dummy
+                inviting_feuser = invite.inviting_feuser
+                for exp in Expense.objects.filter(upfront_payee_dummy=dummy, is_dummy=True):
+                    exp.owning_feuser = new_feuser
+                    exp.is_dummy = False
+                    exp.upfront_payee_dummy = None
+                    BuddyExpenseService.reconcile_categories_tags(exp, new_feuser)
+                    exp.save()
+                BuddySpending.objects.filter(participant_dummy=dummy).update(
+                    participant_dummy=None, participant_feuser=new_feuser
+                )
+                _create_link(inviting_feuser, new_feuser)
+                dummy.delete()
+
+            else:
+                _create_link(invite.inviting_feuser, new_feuser)
+
+            invite.delete()
+
+    @staticmethod
+    @transaction.atomic
+    def approve_expense(expense) -> bool:
+        if expense.buddy_approved:
+            return False
+        expense.buddy_approved = True
+        expense.save(update_fields=["buddy_approved"])
+        return True
+
+    @staticmethod
+    @transaction.atomic
+    def reject_expense(expense, rejecting_feuser) -> bool:
+        if expense.buddy_approved:
+            return False
+
+        if expense.owning_feuser_id == rejecting_feuser.pk:
+            participants_to_notify = [
+                bs.participant_feuser
+                for bs in expense.buddy_spendings.select_related("participant_feuser").all()
+                if bs.participant_feuser_id
+            ]
+            expense.delete()
+            for participant in participants_to_notify:
+                BuddyEmailService.send_rejection_notification(
+                    expense=expense,
+                    rejecting_feuser=rejecting_feuser,
+                    notifying_feuser=participant,
+                    owner_rejected=True,
+                )
+            return True
+
+        bs_row = expense.buddy_spendings.filter(participant_feuser=rejecting_feuser).first()
+        if not bs_row:
+            return False
+
+        released_share = bs_row.share_percent
+        bs_row.delete()
+
+        remaining = list(expense.buddy_spendings.all())
+        if remaining:
+            per_participant = released_share / len(remaining)
+            for bs in remaining:
+                bs.share_percent += per_participant
+            BuddySpending.objects.bulk_update(remaining, ["share_percent"])
+
+        expense.buddy_approved = True
+        expense.save(update_fields=["buddy_approved"])
+
+        remaining_actual = [
+            bs.participant_feuser
+            for bs in expense.buddy_spendings.select_related("participant_feuser").all()
+            if bs.participant_feuser_id
+        ]
+        for participant in remaining_actual:
+            BuddyEmailService.send_rejection_notification(
+                expense=expense,
+                rejecting_feuser=rejecting_feuser,
+                notifying_feuser=participant,
+            )
+
+        return True
