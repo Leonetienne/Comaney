@@ -4,7 +4,7 @@ Budgeting that actually fits into your life.
 
 ![image](https://raw.githubusercontent.com/Leonetienne/Comaney/refs/heads/master/github-assets/lightdark.png)
 
-> Full documentation is available at `/docs/` on any running instance, or see [`docs/src/`](docs/src/) for the source. Build it with [`docs/build/build-docs.sh`](docs/build/build-docs.sh).
+> Full documentation is available at [https://comaney.app/docs](/docs/).
 
 ---
 
@@ -125,7 +125,7 @@ docker exec -it comaney-web-1 python manage.py set_user_password you@example.com
 | `PUBLIC_PAGE_EUDATENSCHUTZ_MD` | *(unset)* | Path to a Markdown file served at `/datenschutzerklaerung/`. |
 | `GUNICORN_WORKERS` | `1` | Number of Gunicorn worker processes. |
 
-Full reference: **[Admin Manual → Environment Variables](docs/src/docs/admin-manual/environment-variables.md)**
+Full reference: **[Admin Manual → Environment Variables](https://comaney.app/docs/admin-manual/environment-variables/)**
 
 ---
 
@@ -137,7 +137,7 @@ Full reference: **[Admin Manual → Environment Variables](docs/src/docs/admin-m
 ./build/build-assets.sh
 ```
 
-Runs `npm install && npm run build` inside a `node:25.9.0-slim linux/amd64` container. Never run npm directly on the host; see [Dev Manual: Building Assets](docs/src/docs/dev-manual/building-assets.md).
+Runs `npm install && npm run build` inside a `node:25.9.0-slim linux/amd64` container. Never run npm directly on the host; see [Dev Manual: Building Assets](https://comaney.app/docs/src/docs/dev-manual/building-assets/).
 
 ### Building the documentation
 
@@ -153,10 +153,10 @@ Builds the mkdocs site to `docs/build/site/`, then served by Django at `/docs/`.
 # Stack must be running: docker compose up
 # Mailpit at :8030, app at :8080
 pip install -r requirements-test.txt
-cd tests && pytest -vsx
+pytest ./tests/ -vsx
 ```
 
-See [Dev Manual → Testing](docs/src/docs/dev-manual/testing.md) for full details.
+See [Dev Manual → Testing](https://comaney.app/docs/dev-manual/testing/) for full details.
 
 ### Building the Docker image
 
