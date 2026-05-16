@@ -54,7 +54,7 @@
                 {% if info.type == 'feuser' and info.link_uid %}
                 <form method="post" action="{% url 'buddies:kick_actual' info.link_uid %}" class="confirm-form" data-confirm="Remove {{ info.display_name|escapejs }} as a spending buddy?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Your shared expenses will stay in your history." data-ok="Remove">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-danger-subtle">Remove</button>
+                    <button type="submit" id="btn-kick-{{ info.link_uid }}" class="btn btn-sm btn-danger-subtle">Remove</button>
                 </form>
                 {% elif info.type == 'dummy' and info.dummy %}
                 {% if info.dummy.is_archive %}
@@ -75,7 +75,7 @@
                         Cancel
                     </button>
                 </form>
-                <a href="{% url 'buddies:kick_dummy' info.dummy.uid %}" class="btn btn-sm btn-danger-subtle">Remove</a>
+                <a href="{% url 'buddies:kick_dummy' info.dummy.uid %}" id="btn-kick-dummy-{{ info.dummy.uid }}" class="btn btn-sm btn-danger-subtle">Remove</a>
                 {% endif %}
                 {% endif %}
             </div>
@@ -134,11 +134,11 @@
         <div class="invite-actions">
             <form method="post" action="{% url 'buddies:accept_invite' invite.token %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm">Accept</button>
+                <button type="submit" id="btn-accept-invite-{{ invite.token }}" class="btn btn-sm">Accept</button>
             </form>
             <form method="post" action="{% url 'buddies:decline_invite' invite.token %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-secondary">Decline</button>
+                <button type="submit" id="btn-decline-invite-{{ invite.token }}" class="btn btn-sm btn-secondary">Decline</button>
             </form>
         </div>
     </div>
@@ -153,11 +153,11 @@
         <div class="invite-actions">
             <form method="post" action="{% url 'buddies:accept_merge' invite.token %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm">Accept</button>
+                <button type="submit" id="btn-accept-merge-{{ invite.token }}" class="btn btn-sm">Accept</button>
             </form>
             <form method="post" action="{% url 'buddies:decline_merge' invite.token %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-secondary">Decline</button>
+                <button type="submit" id="btn-decline-merge-{{ invite.token }}" class="btn btn-sm btn-secondary">Decline</button>
             </form>
         </div>
     </div>
@@ -171,7 +171,7 @@
         <p>Sent to <strong>{{ invite.invitee_email }}</strong>. Expires {{ invite.expires_at|date:"N j, Y" }}.</p>
         <form method="post" action="{% url 'buddies:revoke_invite' invite.token %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-secondary">Revoke</button>
+            <button type="submit" id="btn-revoke-invite-{{ invite.token }}" class="btn btn-sm btn-secondary">Revoke</button>
         </form>
     </div>
     {% endfor %}
@@ -190,7 +190,7 @@
             <form method="post" action="{% url 'buddies:invite_actual' %}" class="inline-form">
                 {% csrf_token %}
                 <input type="email" name="email" placeholder="Email address" required class="input-inline">
-                <button type="submit" class="btn">Send invite</button>
+                <button type="submit" id="btn-invite-actual" class="btn">Send invite</button>
             </form>
         </div>
 
@@ -200,7 +200,7 @@
             <form method="post" action="{% url 'buddies:add_dummy' %}" class="inline-form">
                 {% csrf_token %}
                 <input type="text" name="display_name" placeholder="Display name" maxlength="128" required class="input-inline">
-                <button type="submit" class="btn">Add</button>
+                <button type="submit" id="btn-add-dummy" class="btn">Add</button>
             </form>
         </div>
 
@@ -210,7 +210,7 @@
             <form method="post" action="{% url 'buddies:create_group' %}" class="inline-form">
                 {% csrf_token %}
                 <input type="text" name="name" placeholder="Group name" maxlength="128" required class="input-inline">
-                <button type="submit" class="btn">Create</button>
+                <button type="submit" id="btn-create-group" class="btn">Create</button>
             </form>
         </div>
 

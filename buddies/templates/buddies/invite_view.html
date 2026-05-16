@@ -14,11 +14,11 @@
     <div class="form-actions">
         <form method="post" action="{% url 'buddies:accept_invite' invite.token %}">
             {% csrf_token %}
-            <button type="submit" class="btn">Accept invitation</button>
+            <button type="submit" id="btn-accept-invite" class="btn">Accept invitation</button>
         </form>
         <form method="post" action="{% url 'buddies:decline_invite' invite.token %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-secondary">Decline</button>
+            <button type="submit" id="btn-decline-invite" class="btn btn-secondary">Decline</button>
         </form>
     </div>
 </div>

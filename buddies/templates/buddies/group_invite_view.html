@@ -11,11 +11,11 @@
     <div class="invite-actions" style="margin-top:1.5rem;">
         <form method="post" action="{% url 'buddies:accept_group_invite' invite.token %}">
             {% csrf_token %}
-            <button type="submit" class="btn">Join group</button>
+            <button type="submit" id="btn-accept-group-invite" class="btn">Join group</button>
         </form>
         <form method="post" action="{% url 'buddies:decline_group_invite' invite.token %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-secondary">Decline</button>
+            <button type="submit" id="btn-decline-group-invite" class="btn btn-secondary">Decline</button>
         </form>
     </div>
 </div>

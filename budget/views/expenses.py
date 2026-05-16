@@ -241,12 +241,23 @@ def expense_create(request):
 @feuser_required
 def expense_edit(request, uid):
     feuser = request.feuser
-    expense = get_object_or_404(Expense, uid=uid, owning_feuser=feuser)
+    expense = Expense.objects.filter(uid=uid, owning_feuser=feuser).first()
+    is_admin_edit = False
+    if expense is None:
+        # Group admins may edit dummy-upfront expenses in their group.
+        expense = get_object_or_404(
+            Expense,
+            uid=uid,
+            is_dummy=True,
+            buddy_group__admin_feuser=feuser,
+        )
+        is_admin_edit = True
+    form_feuser = expense.owning_feuser if is_admin_edit else feuser
     if expense.type == TransactionType.CARRY_OVER:
         return redirect("budget:expenses_list")
     if request.method == "POST":
         was_settled = expense.settled
-        form = ExpenseForm(request.POST, instance=expense, feuser=feuser)
+        form = ExpenseForm(request.POST, instance=expense, feuser=form_feuser)
         buddy = _parse_buddy_post(request.POST, feuser)
         if form.is_valid() and (buddy is None or buddy["valid"]):
             form.save()
@@ -292,7 +303,7 @@ def expense_edit(request, uid):
             back = _safe_back_url(request.POST.get("back", ""))
             return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
     else:
-        form = ExpenseForm(instance=expense, feuser=feuser)
+        form = ExpenseForm(instance=expense, feuser=form_feuser)
 
     # Determine current upfront payer for pre-population
     if expense.is_dummy and expense.upfront_payee_dummy_id:
@@ -300,10 +311,10 @@ def expense_edit(request, uid):
         existing_upfront_id = expense.upfront_payee_dummy_id
     elif not expense.is_dummy and expense.buddy_spendings.exists():
         existing_upfront_type = "me"
-        existing_upfront_id = feuser.pk
+        existing_upfront_id = form_feuser.pk
     else:
         existing_upfront_type = "me"
-        existing_upfront_id = feuser.pk
+        existing_upfront_id = form_feuser.pk
 
     is_buddy_expense = expense.buddy_spendings.exists() or expense.is_dummy
 

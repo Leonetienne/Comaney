@@ -43,7 +43,7 @@
         {% csrf_token %}
         <input type="hidden" name="debt_warning_accepted" value="yes">
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-            <button type="submit" class="btn btn-danger-subtle">Remove {{ dummy.display_name }}</button>
+            <button type="submit" id="btn-confirm-kick" class="btn btn-danger-subtle">Remove {{ dummy.display_name }}</button>
             <a href="{% url 'buddies:my_buddies' %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>

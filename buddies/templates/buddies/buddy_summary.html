@@ -64,11 +64,11 @@
                 <div class="bexp-breakdown-header-right" style="display:flex;gap:0.4rem;">
                     <form method="post" action="{% url 'buddies:approve_expense' exp.uid %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-sm" style="background:#2da44e;color:#fff;">Approve</button>
+                        <button type="submit" id="btn-approve-pending-{{ exp.uid }}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Approve</button>
                     </form>
                     <form method="post" action="{% url 'buddies:reject_expense' exp.uid %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-secondary">Reject</button>
+                        <button type="submit" id="btn-reject-pending-{{ exp.uid }}" class="btn btn-sm btn-secondary">Reject</button>
                     </form>
                 </div>
             </div>
@@ -94,7 +94,7 @@
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
-                    <a href="{% url 'buddies:approve_settlement_as_creditor' exp.uid %}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
+                    <a href="{% url 'buddies:approve_settlement_as_creditor' exp.uid %}" id="btn-review-settlement-{{ exp.uid }}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
                 </div>
             </div>
         </div>
@@ -121,7 +121,7 @@
                 <div class="bexp-breakdown-header-right">
                     <form method="post" action="{% url 'buddies:admin_approve_dummy_settlement' exp.buddy_group_id exp.uid %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-sm" style="background:#2da44e;color:#fff;">Approve</button>
+                        <button type="submit" id="btn-admin-approve-{{ exp.uid }}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Approve</button>
                     </form>
                 </div>
             </div>
@@ -147,7 +147,7 @@
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
-                    <a href="{% url 'buddies:admin_approve_dummy_settlement' item.expense.buddy_group_id item.expense.uid %}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
+                    <a href="{% url 'buddies:admin_approve_dummy_settlement' item.expense.buddy_group_id item.expense.uid %}" id="btn-review-dummy-{{ item.expense.uid }}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
                 </div>
             </div>
         </div>
@@ -324,7 +324,7 @@
                        class="input-inline settle-amount-input"
                        value="{{ c.amount|floatformat:2 }}" required>
             </span>
-            <button type="submit" class="btn btn-sm btn-danger-subtle">Settle</button>
+            <button type="submit" id="btn-direct-settle-{{ c.key }}" class="btn btn-sm btn-danger-subtle">Settle</button>
         </form>
         {% endfor %}
     </div>
