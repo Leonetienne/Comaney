@@ -502,3 +502,109 @@ class TestRecurringCheckbox:
         time.sleep(0.5)
         _set_search(driver, "coffee recurring=yes")
         assert not _checkbox_checked(driver)
+
+
+def _shell(code: str) -> str:
+    return run_cmd("shell", "-c", code)
+
+
+class TestBuddyFilter:
+
+    def test_setup(self, driver, w, ctx):
+        today = server_today()
+        year, month, day = today.split("-")
+        ctx["qp_buddy_year"] = year
+
+        # Regular non-buddy expense for contrast
+        r = api_post("/api/v1/expenses/", ctx, json={
+            "title": "QP NoBuddy", "type": "expense", "value": "10.00",
+            "date_due": today,
+        })
+        assert r.status_code == 201
+        ctx["qp_no_buddy_uid"] = r.json()["id"]
+
+        # Group with two dummies: one is a participant, one is just a member
+        group_pk = _shell(
+            f"from buddies.services import BuddyGroupService; "
+            f"from feusers.models import FeUser; "
+            f"u = FeUser.objects.get(email='{ctx['email']}'); "
+            f"g = BuddyGroupService.create_group(u, 'QPBuddyGroup'); "
+            f"print(g.pk)"
+        )
+        ctx["qp_buddy_group_pk"] = group_pk.strip()
+
+        expense_pk = _shell(
+            f"from budget.models import Expense; "
+            f"from buddies.models import BuddyGroup, BuddyGroupMember, BuddySpending, DummyUser; "
+            f"from feusers.models import FeUser; "
+            f"from decimal import Decimal; import datetime; "
+            f"u = FeUser.objects.get(email='{ctx['email']}'); "
+            f"g = BuddyGroup.objects.get(pk={group_pk.strip()}); "
+            f"participant = DummyUser.objects.create(owning_group=g, display_name='QPParticipant'); "
+            f"BuddyGroupMember.objects.get_or_create(group=g, dummy=participant); "
+            f"member_only = DummyUser.objects.create(owning_group=g, display_name='QPMemberOnly'); "
+            f"BuddyGroupMember.objects.get_or_create(group=g, dummy=member_only); "
+            f"e = Expense.objects.create(owning_feuser=u, title='QP BuddyExpense', "
+            f"  type='expense', value=Decimal('50.00'), settled=False, "
+            f"  buddy_approved=True, buddy_group=g, "
+            f"  date_due=datetime.date({int(year)}, {int(month)}, {int(day)})); "
+            f"BuddySpending.objects.create(expense=e, participant_dummy=participant, "
+            f"  share_percent=Decimal('50.0')); "
+            f"print(e.pk)"
+        )
+        ctx["qp_buddy_expense_pk"] = expense_pk.strip()
+
+    def _titles(self, ctx, q):
+        resp = api_get("/api/v1/expenses/", ctx, params={
+            "q": q, "view": "year", "year": ctx["qp_buddy_year"],
+        })
+        return [e["title"] for e in resp.json()["expenses"]]
+
+    def test_buddy_yes_includes_buddy_expense(self, driver, w, ctx):
+        assert "QP BuddyExpense" in self._titles(ctx, "buddy=yes")
+
+    def test_buddy_yes_excludes_non_buddy(self, driver, w, ctx):
+        assert "QP NoBuddy" not in self._titles(ctx, "buddy=yes")
+
+    def test_buddy_no_includes_non_buddy(self, driver, w, ctx):
+        assert "QP NoBuddy" in self._titles(ctx, "buddy=no")
+
+    def test_buddy_no_excludes_buddy_expense(self, driver, w, ctx):
+        assert "QP BuddyExpense" not in self._titles(ctx, "buddy=no")
+
+    def test_buddy_group_name_match(self, driver, w, ctx):
+        assert "QP BuddyExpense" in self._titles(ctx, "buddy=QPBuddyGroup")
+
+    def test_buddy_participant_name_match(self, driver, w, ctx):
+        assert "QP BuddyExpense" in self._titles(ctx, "buddy=QPParticipant")
+
+    def test_buddy_group_member_only_name_match(self, driver, w, ctx):
+        # QPMemberOnly is in the group but not a BuddySpending participant
+        assert "QP BuddyExpense" in self._titles(ctx, "buddy=QPMemberOnly")
+
+    def test_buddy_name_excludes_non_buddy(self, driver, w, ctx):
+        assert "QP NoBuddy" not in self._titles(ctx, "buddy=QPBuddyGroup")
+
+    def test_freetext_participant_name(self, driver, w, ctx):
+        assert "QP BuddyExpense" in self._titles(ctx, "QPParticipant")
+
+    def test_freetext_group_name(self, driver, w, ctx):
+        assert "QP BuddyExpense" in self._titles(ctx, "QPBuddyGroup")
+
+    def test_freetext_does_not_bleed_into_non_buddy(self, driver, w, ctx):
+        assert "QP NoBuddy" not in self._titles(ctx, "QPBuddyGroup")
+
+    def test_cleanup(self, driver, w, ctx):
+        if "qp_no_buddy_uid" in ctx:
+            api_delete(f"/api/v1/expenses/{ctx.pop('qp_no_buddy_uid')}/", ctx)
+        if "qp_buddy_expense_pk" in ctx:
+            _shell(
+                f"from budget.models import Expense; "
+                f"Expense.objects.filter(pk={ctx.pop('qp_buddy_expense_pk')}).delete()"
+            )
+        if "qp_buddy_group_pk" in ctx:
+            _shell(
+                f"from buddies.models import BuddyGroup; "
+                f"BuddyGroup.objects.filter(pk={ctx.pop('qp_buddy_group_pk')}).delete()"
+            )
+        ctx.pop("qp_buddy_year", None)
