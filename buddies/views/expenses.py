@@ -120,6 +120,12 @@ def admin_approve_dummy_settlement(request, group_id, expense_id):
     if not (has_dummy_upfront or has_dummy_creditor):
         django_messages.error(request, "This expense does not involve an offline member of this group.")
         return redirect("buddies:group_detail", group_id=group_id)
+    has_real_feuser_creditor = expense.buddy_spendings.filter(
+        participant_feuser__isnull=False
+    ).exists()
+    if expense.is_buddies_settlement and has_real_feuser_creditor:
+        django_messages.error(request, "Only the creditor can confirm this settlement.")
+        return redirect("buddies:group_detail", group_id=group_id)
     if request.method == "POST":
         BuddyLifecycleService.approve_expense(expense)
         django_messages.success(request, "Settlement confirmed. Thank you!")

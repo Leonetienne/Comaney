@@ -1151,3 +1151,83 @@ class TestGroupNonAdminDebtorCannotModifyApprovedDummyCreditorSettlement:
         time.sleep(2)
         assert _expense_exists(ctx["debtor"], ctx["exp_pk"]), \
             "[G19] Admin must not be able to delete another member's approved dummy-creditor group settlement"
+
+
+# ============================================================================
+# G20: Admin editing a dummy-debtor group settlement must not add themselves
+#      as a participant
+# ============================================================================
+
+class TestGroupAdminEditDoesNotAddSelfToSettlement:
+    """[G20] When an admin edits a settlement from an offline member (debtor) to a
+    real user (creditor) and saves without changes, the admin must not appear in
+    BuddySpending. Before the fix the JS force-added 'Me' whenever the upfront
+    payer was not 'me', causing the admin to gain a share in the expense."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        admin = setup_user(driver, w, first_name="G20Admin", last_name="A")
+        creditor = setup_user(None, None, first_name="G20Creditor", last_name="B")
+        grp_pk = int(_create_group(admin["email"], "G20Group"))
+        _add_group_member(grp_pk, creditor["email"])
+        creditor_pk = int(_get_pk(creditor["email"]))
+        dummy_pk = _mk_group_dummy(grp_pk, "G20Offline")
+        exp_pk = _mk_group_dummy_debtor_settlement(
+            admin["email"], dummy_pk, creditor_pk, grp_pk, value="60.00"
+        )
+        yield {
+            "admin": admin, "creditor": creditor, "creditor_pk": creditor_pk,
+            "grp_pk": grp_pk, "dummy_pk": dummy_pk, "exp_pk": exp_pk,
+        }
+        cleanup_user(admin["email"])
+        cleanup_user(creditor["email"])
+
+    def test_initial_participants_are_only_creditor(self, driver, w, ctx):
+        """Precondition: only the creditor is in BuddySpending before any edit."""
+        participants = _shell(
+            f"from buddies.models import BuddySpending; "
+            f"rows = BuddySpending.objects.filter(expense_id={ctx['exp_pk']}); "
+            f"print(','.join(str(r.participant_feuser_id) for r in rows if r.participant_feuser_id))"
+        ).strip()
+        assert str(ctx["creditor_pk"]) in participants, \
+            "[G20] Creditor must be in BuddySpending before edit"
+        assert str(int(_get_pk(ctx["admin"]["email"]))) not in (participants or ""), \
+            "[G20] Admin must NOT be in BuddySpending before edit"
+
+    def test_admin_saves_edit_unchanged(self, driver, w, ctx):
+        """Admin visits the edit form and submits without changing anything."""
+        _login_as(driver, ctx["admin"])
+        driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
+        time.sleep(2)
+        driver.execute_script(
+            "document.querySelector('.form-wrap button[type=submit]').click();"
+        )
+        time.sleep(2)
+
+    def test_admin_not_added_as_participant_after_save(self, driver, w, ctx):
+        """[G20] After saving, the admin must still not appear in BuddySpending."""
+        admin_pk = int(_get_pk(ctx["admin"]["email"]))
+        participants = _shell(
+            f"from buddies.models import BuddySpending; "
+            f"rows = BuddySpending.objects.filter(expense_id={ctx['exp_pk']}); "
+            f"print(','.join(str(r.participant_feuser_id) for r in rows if r.participant_feuser_id))"
+        ).strip()
+        assert str(admin_pk) not in (participants or ""), \
+            f"[G20] Admin (pk={admin_pk}) must NOT be added as a BuddySpending participant " \
+            f"when saving an unchanged settlement edit. Participants: {participants!r}"
+
+    def test_creditor_still_only_participant_after_save(self, driver, w, ctx):
+        """[G20] The creditor must remain the sole participant after the edit."""
+        participants = _shell(
+            f"from buddies.models import BuddySpending; "
+            f"rows = BuddySpending.objects.filter(expense_id={ctx['exp_pk']}); "
+            f"print(','.join(str(r.participant_feuser_id) for r in rows if r.participant_feuser_id))"
+        ).strip()
+        assert str(ctx["creditor_pk"]) in participants, \
+            "[G20] Creditor must remain a BuddySpending participant after admin saves the edit"
+        count = _shell(
+            f"from buddies.models import BuddySpending; "
+            f"print(BuddySpending.objects.filter(expense_id={ctx['exp_pk']}).count())"
+        ).strip()
+        assert count == "1", \
+            f"[G20] Exactly 1 BuddySpending row expected after save, got {count}"

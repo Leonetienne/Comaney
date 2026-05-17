@@ -90,7 +90,7 @@ class TestDirectSettlementToPersonalDummy:
     def test_no_pending_settlement_receipts_section(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Pending settlement receipts" not in driver.page_source, \
+        assert "Waiting for your approval" not in driver.page_source, \
             "No creditor confirmation is needed; pending section must not appear"
 
     def test_amount_cleared_after_settlement(self, driver, w, ctx):
@@ -150,7 +150,7 @@ class TestDirectSettlementFromDummy:
     def test_selecting_dummy_as_debtor_locks_pay_to_you(self, driver, w, ctx):
         from selenium.webdriver.support.ui import Select
         debtor_sel = Select(driver.find_element("id", "direct-settle-debtor-select"))
-        debtor_sel.select_by_visible_text("Owing Offline (offline member)")
+        debtor_sel.select_by_visible_text("Owing Offline (offline buddy)")
         time.sleep(0.3)
         creditor_sel = Select(driver.find_element("id", "direct-settle-creditor"))
         options = [o.text for o in creditor_sel.options]

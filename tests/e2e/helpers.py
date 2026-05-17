@@ -163,10 +163,6 @@ def register_user(driver, w) -> dict:
     driver.delete_all_cookies()
     driver.execute_script("sessionStorage.clear(); localStorage.clear();")
     email = f"sel.{uuid.uuid4().hex[:8]}@example.com"
-    try:
-        requests.delete(f"{MAILPIT_API}/messages", timeout=5)
-    except Exception:
-        pass
     driver.get(_url("/register/"))
     fill(w, By.ID, "id_first_name", "Selenium")
     fill(w, By.ID, "id_last_name", "Tester")

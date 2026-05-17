@@ -5,8 +5,8 @@ Two sub-scenarios:
 
 1. Non-admin member B settles toward dummy D:
    - Settlement created with buddy_approved=False.
-   - Admin A sees it in "Confirm paybacks to offline members" on /buddies/summary/.
-   - Admin A approves it via the Approve button.
+   - Admin A sees it in "Waiting for your approval" on /buddies/summary/.
+   - Admin A approves it via the Review button.
 
 2. Admin A settles toward dummy D (auto-approve fix):
    - With the code fix in create_individual_group_settlement, when admin is
@@ -98,18 +98,16 @@ class TestGroupSettlementNonAdminPaysDummy:
         assert count == "1", \
             "Non-admin settlement to dummy must start with buddy_approved=False"
 
-    def test_admin_sees_confirm_paybacks_section(self, driver, w, ctx):
+    def test_admin_sees_pending_approvals_section(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Confirm paybacks to offline members" in driver.page_source, \
-            "Admin must see 'Confirm paybacks to offline members' section"
+        assert "Waiting for your approval" in driver.page_source, \
+            "Admin must see 'Waiting for your approval' section"
         assert "Cash Dummy" in driver.page_source, \
-            "Dummy name must appear in the paybacks section"
+            "Dummy name must appear in the pending section"
 
     def test_admin_approves_dummy_settlement(self, driver, w, ctx):
-        # "Confirm paybacks to offline members" shows a Review link that leads to
-        # confirm_settlement.html; click Review then approve on that page.
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-review-dummy-']").click()
         time.sleep(1)
         driver.find_element(By.ID, "btn-approve-settlement").click()
@@ -121,7 +119,7 @@ class TestGroupSettlementNonAdminPaysDummy:
     def test_section_gone_after_approval(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Confirm paybacks to offline members" not in driver.page_source, \
+        assert "Waiting for your approval" not in driver.page_source, \
             "Section must disappear after admin has approved"
 
     def test_settlement_is_now_approved(self, driver, w, ctx):
@@ -185,8 +183,8 @@ class TestGroupSettlementAdminPaysDummyAutoApprove:
         assert approved == "True", \
             "Admin settling to dummy creditor must be auto-approved (buddy_approved=True)"
 
-    def test_no_confirm_paybacks_section_for_admin(self, driver, w, ctx):
+    def test_no_pending_section_for_admin_after_auto_approve(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Confirm paybacks to offline members" not in driver.page_source, \
-            "Auto-approved settlement must not create a pending item in section 4"
+        assert "Waiting for your approval" not in driver.page_source, \
+            "Auto-approved settlement must not create a pending item"

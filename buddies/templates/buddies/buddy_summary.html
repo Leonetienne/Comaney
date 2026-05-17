@@ -47,12 +47,14 @@
 </section>
 {% endif %}
 
-{% if pending_as_expense_owner %}
+{% if pending_approvals %}
 <section class="buddies-section">
-    <h2>Did you pay for this?</h2>
-    <p class="page-subtitle">A group member logged an expense on your behalf. Confirm if it's correct.</p>
+    <h2>Waiting for your approval</h2>
+    <p class="page-subtitle">These expenses and settlements need your action.</p>
     <div class="bexp-breakdown-list">
-        {% for exp in pending_as_expense_owner %}
+        {% for item in pending_approvals %}
+        {% with exp=item.expense %}
+        {% if item.kind == "expense_owner" %}
         <div class="bexp-breakdown-card bexp-card-i-paid">
             <div class="bexp-breakdown-header">
                 <div class="bexp-breakdown-header-left">
@@ -73,17 +75,7 @@
                 </div>
             </div>
         </div>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
-
-{% if pending_as_creditor %}
-<section class="buddies-section">
-    <h2>Pending settlement receipts</h2>
-    <p class="page-subtitle">Someone recorded a payment to you. Open each one to confirm you received it or report that you did not.</p>
-    <div class="bexp-breakdown-list">
-        {% for exp in pending_as_creditor %}
+        {% elif item.kind == "feuser_creditor" %}
         <div class="bexp-breakdown-card bexp-card-other-paid">
             <div class="bexp-breakdown-header">
                 <div class="bexp-breakdown-header-left">
@@ -98,24 +90,14 @@
                 </div>
             </div>
         </div>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
-
-{% if pending_dummy_expense_owners %}
-<section class="buddies-section">
-    <h2>Confirm expenses for offline members</h2>
-    <p class="page-subtitle">An expense was logged for an offline group member. Confirm if they actually paid for it.</p>
-    <div class="bexp-breakdown-list">
-        {% for exp in pending_dummy_expense_owners %}
+        {% elif item.kind == "dummy_payer" %}
         <div class="bexp-breakdown-card bexp-card-neutral">
             <div class="bexp-breakdown-header">
                 <div class="bexp-breakdown-header-left">
                     <span class="bexp-title">{{ exp.title }}</span>
                     <span class="bexp-breakdown-meta">
                         Amount: <strong>{{ request.feuser.currency }}{{ exp.value|floatformat:2 }}</strong>
-                        {% if exp.upfront_payee_dummy %} &middot; Offline payer: <strong>{{ exp.upfront_payee_dummy.display_name }} (offline member)</strong>{% endif %}
+                        {% if item.dummy %} &middot; Offline payer: <strong>{{ item.dummy.display_name }} (offline member)</strong>{% endif %}
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
@@ -126,31 +108,23 @@
                 </div>
             </div>
         </div>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
-
-{% if pending_dummy_creditor_settlements %}
-<section class="buddies-section">
-    <h2>Confirm paybacks to offline members</h2>
-    <p class="page-subtitle">A payment to an offline group member is waiting for your confirmation.</p>
-    <div class="bexp-breakdown-list">
-        {% for item in pending_dummy_creditor_settlements %}
+        {% elif item.kind == "dummy_creditor" %}
         <div class="bexp-breakdown-card bexp-card-other-paid">
             <div class="bexp-breakdown-header">
                 <div class="bexp-breakdown-header-left">
-                    <span class="bexp-title">{{ item.expense.title }}</span>
+                    <span class="bexp-title">{{ exp.title }}</span>
                     <span class="bexp-breakdown-meta">
-                        Amount: <strong>{{ request.feuser.currency }}{{ item.expense.value|floatformat:2 }}</strong> &middot;
+                        Amount: <strong>{{ request.feuser.currency }}{{ exp.value|floatformat:2 }}</strong> &middot;
                         Paid to: <strong>{{ item.dummy.display_name }} (offline member)</strong>
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
-                    <a href="{% url 'buddies:admin_approve_dummy_settlement' item.expense.buddy_group_id item.expense.uid %}" id="btn-review-dummy-{{ item.expense.uid }}" class="btn btn-sm btn-success">Review</a>
+                    <a href="{% url 'buddies:admin_approve_dummy_settlement' exp.buddy_group_id exp.uid %}" id="btn-review-dummy-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>
                 </div>
             </div>
         </div>
+        {% endif %}
+        {% endwith %}
         {% endfor %}
     </div>
 </section>
@@ -421,7 +395,7 @@
             var msg;
             if (debtorIsDummy) {
                 var debtorName = memberMap[dk] ? memberMap[dk].name : dk;
-                msg = 'Record a payment of ' + CURRENCY + amountStr + ' from ' + debtorName + ' (offline buddy) to you? '
+                msg = 'Record a payment of ' + CURRENCY + amountStr + ' from ' + debtorName + ' (offline member) to you? '
                     + 'This will be approved automatically.';
             } else if (creditorIsDummy) {
                 msg = 'Record a payment of ' + CURRENCY + amountStr + ' to ' + creditorName + '? '

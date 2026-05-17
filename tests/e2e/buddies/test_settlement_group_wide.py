@@ -164,8 +164,8 @@ class TestGroupWideSettlementCamping:
         _login_as(driver, ANNA)
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Pending settlement receipts" in driver.page_source, \
-            "Anna (creditor) must see pending settlement receipts on buddy summary"
+        assert "Waiting for your approval" in driver.page_source, \
+            "Anna (creditor) must see the pending approvals section on buddy summary"
 
     def test_anna_sees_review_buttons(self, driver, w, camping):
         links = driver.find_elements(By.CSS_SELECTOR, "a[href*='/approve-settlement/']")

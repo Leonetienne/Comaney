@@ -138,7 +138,7 @@
     }
 
     // ── Build participant checkboxes ───────────────────────────────────────
-    // Me is never rendered as a checkbox; auto-add logic handles it.
+    // In single mode Me is auto-added; in group mode Me is rendered as an opt-in checkbox.
 
     function buildParticipantCheckboxes(preCheckAll) {
         participantsEl.innerHTML = '';
@@ -165,13 +165,14 @@
             participantsEl.appendChild(sel);
         } else {
             var grp = groupsData.find(function (g) { return g.id === currentGroupId; });
-            var items = grp ? grp.members.filter(function (m) { return !m.is_me; }) : [];
+            var items = grp ? grp.members : [];
             items.forEach(function (item) {
                 var lbl = document.createElement('label');
                 lbl.className = 'checkbox-inline buddy-participant-cb';
-                lbl.dataset.type = item.type;
-                lbl.dataset.id   = String(item.id);
-                lbl.dataset.name = item.name;
+                lbl.dataset.type = item.is_me ? 'feuser' : item.type;
+                lbl.dataset.id   = item.is_me ? String(ME_PK) : String(item.id);
+                lbl.dataset.name = item.is_me ? ME_NAME : item.name;
+                if (item.is_me) lbl.dataset.isMe = '1';
                 var inp = document.createElement('input');
                 inp.type = 'checkbox';
                 if (preCheckAll) inp.checked = true;
@@ -180,7 +181,7 @@
                     rebuildSliders();
                 });
                 lbl.appendChild(inp);
-                lbl.appendChild(document.createTextNode(' ' + item.name));
+                lbl.appendChild(document.createTextNode(' ' + (item.is_me ? 'Me (' + ME_NAME + ')' : item.name)));
                 participantsEl.appendChild(lbl);
             });
         }
@@ -274,9 +275,17 @@
         } else {
             if (participantsRow) participantsRow.style.display = '';
             participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
-                var hide = (lbl.dataset.type === payerType && lbl.dataset.id === payerId);
+                var hide = lbl.dataset.isMe
+                    ? (payerType === 'me')
+                    : (lbl.dataset.type === payerType && lbl.dataset.id === payerId);
+                var wasHidden = lbl.style.display === 'none';
                 lbl.style.display = hide ? 'none' : 'block';
-                if (hide) lbl.querySelector('input').checked = false;
+                if (hide) {
+                    lbl.querySelector('input').checked = false;
+                } else if (wasHidden) {
+                    // Was hidden as the previous payer; restore as a checked participant.
+                    lbl.querySelector('input').checked = true;
+                }
             });
         }
         participants = [];
@@ -286,42 +295,29 @@
     function syncParticipantsFromCheckboxes() {
         var payerType = payerSel.value.split(':')[0];
         var checked = [];
-        if (payerType !== 'me') {
-            var existingMe = participants.find(function (p) { return p.type === 'feuser' && p.id === ME_PK; });
-            checked.push({type: 'feuser', id: ME_PK, name: ME_NAME, share: existingMe ? existingMe.share : 0});
-            if (currentMode !== 'single') {
-                participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
-                    if (lbl.style.display === 'none') return;
-                    var inp = lbl.querySelector('input');
-                    if (inp.checked) {
-                        var existing = participants.find(function (p) {
-                            return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id;
-                        });
-                        checked.push({
-                            type:  lbl.dataset.type,
-                            id:    parseInt(lbl.dataset.id),
-                            name:  lbl.dataset.name,
-                            share: existing ? existing.share : 0,
-                        });
-                    }
-                });
-            }
-        } else if (currentMode === 'single') {
-            var sel = document.getElementById('buddy-participant-select');
-            if (sel && sel.value) {
-                var selParts = sel.value.split(':');
-                var selType  = selParts[0];
-                var selId    = parseInt(selParts[1]);
-                var selOpt   = sel.options[sel.selectedIndex];
-                var existing = participants.find(function (p) { return p.type === selType && p.id === selId; });
-                checked.push({
-                    type:  selType,
-                    id:    selId,
-                    name:  selOpt.dataset.name,
-                    share: existing ? existing.share : 0,
-                });
+        if (currentMode === 'single') {
+            if (payerType !== 'me') {
+                // Single mode: buddy/dummy paid upfront, Me is always the sole participant.
+                var existingMe = participants.find(function (p) { return p.type === 'feuser' && p.id === ME_PK; });
+                checked.push({type: 'feuser', id: ME_PK, name: ME_NAME, share: existingMe ? existingMe.share : 0});
+            } else {
+                var sel = document.getElementById('buddy-participant-select');
+                if (sel && sel.value) {
+                    var selParts = sel.value.split(':');
+                    var selType  = selParts[0];
+                    var selId    = parseInt(selParts[1]);
+                    var selOpt   = sel.options[sel.selectedIndex];
+                    var existing = participants.find(function (p) { return p.type === selType && p.id === selId; });
+                    checked.push({
+                        type:  selType,
+                        id:    selId,
+                        name:  selOpt.dataset.name,
+                        share: existing ? existing.share : 0,
+                    });
+                }
             }
         } else {
+            // Group mode: Me is a regular checkbox; read whatever is checked (including Me).
             participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
                 if (lbl.style.display === 'none') return;
                 var inp = lbl.querySelector('input');

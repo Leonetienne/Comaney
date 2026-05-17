@@ -123,8 +123,8 @@ class TestBothDummiesSettlementAutoApprove:
         assert "Waiting for approval" not in driver.page_source, \
             "No waiting-for-approval section must appear for both-dummy auto-approved settlement"
 
-    def test_no_confirm_paybacks_section_on_summary(self, driver, w, ctx):
+    def test_no_pending_section_on_summary_for_both_dummy(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Confirm paybacks to offline members" not in driver.page_source, \
+        assert "Waiting for your approval" not in driver.page_source, \
             "No admin confirmation needed for both-dummy settlement"

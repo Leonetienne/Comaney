@@ -132,10 +132,10 @@ class TestDirectSettlement:
         assert "Pay someone back" in driver.page_source, \
             "Settle Up section must remain while creditor has not yet confirmed"
 
-    def test_settlement_not_in_did_you_pay_for_this(self, driver, w, ctx):
-        # A must not see the settlement in "Did you pay for this?" (req 14.7 / BF-2)
-        assert "Did you pay for this?" not in driver.page_source, \
-            "Settlement expense must not appear in 'Did you pay for this?' for the debtor"
+    def test_settlement_not_in_waiting_for_approval_for_debtor(self, driver, w, ctx):
+        # BF-2: debtor must not see an approval action for their own settlement
+        assert "btn-approve-pending" not in driver.page_source, \
+            "Settlement expense must not expose an Approve button for the debtor"
 
     def test_settlement_row_has_no_approve_reject_buttons(self, driver, w, ctx):
         # BF-3: Approve/Reject buttons must not appear on the settlement row for the debtor
@@ -152,8 +152,8 @@ class TestDirectSettlement:
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Pending settlement receipts" in driver.page_source, \
-            "Creditor must see the 'Pending settlement receipts' section"
+        assert "Waiting for your approval" in driver.page_source, \
+            "Creditor must see the 'Waiting for your approval' section"
         assert "Seth" in driver.page_source, \
             "Pending section must show the debtor's name"
 
@@ -351,8 +351,8 @@ class TestDirectSettlementRejection:
     def test_b_no_longer_sees_pending_section(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Pending settlement receipts" not in driver.page_source, \
-            "Creditor must no longer see the pending settlement section after rejecting"
+        assert "Waiting for your approval" not in driver.page_source, \
+            "Creditor must no longer see the pending section after rejecting"
 
     def test_settle_up_reappears_for_a(self, driver, w, ctx):
         _login_as(driver, ctx["a"])

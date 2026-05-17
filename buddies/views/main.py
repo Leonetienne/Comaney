@@ -70,44 +70,53 @@ def buddy_summary_page(request):
             "is_dummy": _is_dummy,
         })
 
-    # Expenses where feuser must confirm they paid (owning_feuser, buddy_approved=False).
-    # Settlement expenses (settled=True) are excluded: the debtor must never see Approve/Reject
-    # controls for their own settlement record.
-    pending_as_expense_owner = (
+    admin_group_ids = list(BuddyGroup.objects.filter(admin_feuser=feuser).values_list("uid", flat=True))
+    admin_group_id_set = set(admin_group_ids)
+
+    pending_approvals = []
+
+    # Expenses logged on feuser's behalf where feuser must confirm they paid.
+    # Settlements (settled=True) are excluded: the debtor must never self-approve.
+    for exp in (
         Expense.objects
         .filter(owning_feuser=feuser, buddy_approved=False, settled=False)
-        .select_related("upfront_payee_dummy", "buddy_group")
+        .select_related("buddy_group")
         .order_by("-date_created")
-    )
+    ):
+        pending_approvals.append({"expense": exp, "kind": "expense_owner", "dummy": None})
 
-    # Settlements where feuser is the creditor and must confirm receipt.
-    pending_as_creditor = (
+    # Settlements where feuser is the direct feuser creditor.
+    for exp in (
         Expense.objects
-        .filter(buddy_spendings__participant_feuser=feuser, buddy_approved=False)
+        .filter(
+            buddy_spendings__participant_feuser=feuser,
+            buddy_approved=False,
+            is_buddies_settlement=True,
+        )
         .select_related("owning_feuser", "upfront_payee_dummy", "buddy_group")
         .distinct()
         .order_by("-date_created")
-    )
-
-    admin_group_ids = list(BuddyGroup.objects.filter(admin_feuser=feuser).values_list("uid", flat=True))
-
-    pending_dummy_expense_owners = []
-    pending_dummy_creditor_settlements = []
+    ):
+        pending_approvals.append({"expense": exp, "kind": "feuser_creditor", "dummy": None})
 
     if admin_group_ids:
-        dummy_expense_qs = (
+        # Non-settlement expenses where a group dummy paid upfront (admin confirms).
+        for exp in (
             Expense.objects
             .filter(
                 buddy_group_id__in=admin_group_ids,
                 is_dummy=True,
+                is_buddies_settlement=False,
                 buddy_approved=False,
             )
-            .select_related("owning_feuser", "upfront_payee_dummy", "buddy_group")
+            .select_related("upfront_payee_dummy", "buddy_group")
             .order_by("-date_created")
-        )
-        pending_dummy_expense_owners = list(dummy_expense_qs)
+        ):
+            pending_approvals.append({"expense": exp, "kind": "dummy_payer", "dummy": exp.upfront_payee_dummy})
 
-        dummy_cred_qs = (
+        # Settlements where a group dummy is the creditor (admin confirms dummy received payment).
+        seen_dummy_cred = set()
+        for exp in (
             Expense.objects
             .filter(
                 buddy_spendings__participant_dummy__owning_group_id__in=admin_group_ids,
@@ -117,15 +126,13 @@ def buddy_summary_page(request):
             .prefetch_related("buddy_spendings__participant_dummy")
             .distinct()
             .order_by("-date_created")
-        )
-        admin_group_id_set = set(admin_group_ids)
-        for exp in dummy_cred_qs:
+        ):
+            if exp.pk in seen_dummy_cred:
+                continue
             for bs in exp.buddy_spendings.all():
                 if bs.participant_dummy_id and bs.participant_dummy.owning_group_id in admin_group_id_set:
-                    pending_dummy_creditor_settlements.append({
-                        "expense": exp,
-                        "dummy": bs.participant_dummy,
-                    })
+                    pending_approvals.append({"expense": exp, "kind": "dummy_creditor", "dummy": bs.participant_dummy})
+                    seen_dummy_cred.add(exp.pk)
                     break
 
     return render(request, "buddies/buddy_summary.html", {
@@ -136,8 +143,5 @@ def buddy_summary_page(request):
         "feuser_key": feuser_key,
         "direct_settle_members_json": json.dumps(direct_settle_members),
         "settle_debts_json": json.dumps(settle_debts),
-        "pending_as_expense_owner": pending_as_expense_owner,
-        "pending_as_creditor": pending_as_creditor,
-        "pending_dummy_expense_owners": pending_dummy_expense_owners,
-        "pending_dummy_creditor_settlements": pending_dummy_creditor_settlements,
+        "pending_approvals": pending_approvals,
     })
