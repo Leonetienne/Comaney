@@ -8,6 +8,7 @@ from .buddies import (
     invite_actual, view_invite, accept_invite, decline_invite, revoke_invite,
     kick_actual,
     send_merge_invite, view_merge_invite, accept_merge, decline_merge,
+    dummy_picture,
 )
 from .groups import (
     create_group, group_detail,

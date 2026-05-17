@@ -44,12 +44,17 @@
 
   &.buddy-card-dummy {
     border-left: 3px solid var(--text-muted);
-    opacity: 0.75;
-    border-style: dashed;
   }
 }
 
 .buddy-card-identity {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.buddy-card-identity-text {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -108,14 +113,22 @@
   padding: 0.85rem 0.75rem 0.85rem 1rem;
   background: var(--bg-surface);
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
   min-width: 0;
 
   &.bbl-name-block--dummy {
     border-left: 3px solid var(--text-muted);
     padding-left: calc(1rem - 3px);
   }
+}
+
+.bbl-name-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .bbl-balance {

@@ -7,6 +7,7 @@
 {% endblock %}
 
 {% block content %}
+{% load feuser_tags %}
 <div class="page-header">
     <h1>{{ group.name }}</h1>
     {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
@@ -467,9 +468,12 @@
 
         <div class="buddy-card">
             <div class="buddy-card-identity">
-                <span class="buddy-name">{{ request.feuser.first_name }} {{ request.feuser.last_name }}</span>
-                <span class="buddy-email">{{ request.feuser.email }}</span>
-                <span class="pill">You{% if group.admin_feuser_id == request.feuser.pk %} &middot; Admin{% endif %}</span>
+                {% include 'partials/_avatar.html' with user_obj=request.feuser %}
+                <div class="buddy-card-identity-text">
+                    <span class="buddy-name">{{ request.feuser.first_name }} {{ request.feuser.last_name }}</span>
+                    <span class="buddy-email">{{ request.feuser.email }}</span>
+                    <span class="pill">You{% if group.admin_feuser_id == request.feuser.pk %} &middot; Admin{% endif %}</span>
+                </div>
             </div>
             <div></div>
             <div></div>
@@ -478,9 +482,12 @@
         {% for m in feuser_members %}
         <div class="buddy-card">
             <div class="buddy-card-identity">
-                <span class="buddy-name">{{ m.feuser.first_name }} {{ m.feuser.last_name }}</span>
-                <span class="buddy-email">{{ m.feuser.email }}</span>
-                {% if m.feuser.pk == group.admin_feuser_id %}<span class="pill">Admin</span>{% endif %}
+                {% include 'partials/_avatar.html' with user_obj=m.feuser %}
+                <div class="buddy-card-identity-text">
+                    <span class="buddy-name">{{ m.feuser.first_name }} {{ m.feuser.last_name }}</span>
+                    <span class="buddy-email">{{ m.feuser.email }}</span>
+                    {% if m.feuser.pk == group.admin_feuser_id %}<span class="pill">Admin</span>{% endif %}
+                </div>
             </div>
             <div></div>
             <div class="buddy-card-actions">
@@ -497,13 +504,26 @@
         {% for m in dummy_members %}{% if not m.dummy.is_archive %}
         <div class="buddy-card buddy-card-dummy">
             <div class="buddy-card-identity">
-                <span class="buddy-name">{{ m.dummy.display_name }}</span>
-                <span class="pill">Offline member</span>
+                {% include 'partials/_avatar.html' with user_obj=m.dummy avatar_data_id=m.dummy.uid %}
+                <div class="buddy-card-identity-text">
+                    <span class="buddy-name">{{ m.dummy.display_name }}</span>
+                    <span class="pill">Offline member</span>
+                </div>
             </div>
             <div></div>
             <div class="buddy-card-actions">
                 {% if is_admin %}
                 <button class="btn btn-sm btn-secondary"
+                        data-dummy-id="{{ m.dummy.uid }}"
+                        data-dummy-name="{{ m.dummy.display_name|escapejs }}"
+                        data-has-pic="{% if m.dummy.profile_picture %}1{% else %}0{% endif %}"
+                        data-ppic-url="{{ m.dummy.ppic_url }}"
+                        data-initials="{{ m.dummy.initials }}"
+                        data-avatar-color="{{ m.dummy.initials|avatar_color }}"
+                        onclick="openDummyPicModal(this)">
+                    Upload picture
+                </button>
+                <button class="btn btn-sm btn-secondary" id="merge-btn-{{ m.dummy.uid }}"
                         onclick="this.style.display='none';document.getElementById('merge-form-{{ m.dummy.uid }}').style.display='flex'">
                     Invite as user
                 </button>
@@ -514,7 +534,7 @@
                     <input type="email" name="email" placeholder="Their email" class="input-inline" required>
                     <button type="submit" class="btn btn-sm">Send</button>
                     <button type="button" class="btn btn-sm btn-secondary"
-                            onclick="this.closest('form').style.display='none';this.closest('.buddy-card-actions').querySelector('.btn-secondary').style.display=''">
+                            onclick="this.closest('form').style.display='none';document.getElementById('merge-btn-{{ m.dummy.uid }}').style.display=''">
                         Cancel
                     </button>
                 </form>
@@ -528,8 +548,11 @@
         {% for m in dummy_members %}{% if m.dummy.is_archive %}
         <div class="buddy-card buddy-card-dummy">
             <div class="buddy-card-identity">
-                <span class="buddy-name">{{ m.dummy.display_name }}</span>
-                <span class="pill">Archive</span>
+                {% include 'partials/_avatar.html' with user_obj=m.dummy %}
+                <div class="buddy-card-identity-text">
+                    <span class="buddy-name">{{ m.dummy.display_name }}</span>
+                    <span class="pill">Archive</span>
+                </div>
             </div>
             <div></div>
             <div class="buddy-card-actions">
@@ -632,5 +655,7 @@
 <div class="mt-1">
     <a href="{% url 'buddies:my_buddies' %}" class="btn btn-secondary btn-sm">&larr; Back to My Buddies</a>
 </div>
+
+{% include 'partials/_dummy_pic_modal.html' %}
 
 {% endblock %}

@@ -14,6 +14,7 @@ urlpatterns = [
     path("dummy/<int:dummy_id>/kick/", views.kick_dummy, name="kick_dummy"),
     path("dummy/<int:dummy_id>/send-merge/", views.send_merge_invite, name="send_merge_invite"),
     path("dummy/<int:dummy_id>/archive-wipe/", views.personal_archive_wipe, name="personal_archive_wipe"),
+    path("dummy/<int:dummy_id>/picture/", views.dummy_picture, name="dummy_picture"),
 
     # Actual-user invitations
     path("invite-actual/", views.invite_actual, name="invite_actual"),

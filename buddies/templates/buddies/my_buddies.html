@@ -3,6 +3,7 @@
 {% block title %}Comaney - My Buddies{% endblock %}
 
 {% block content %}
+{% load feuser_tags %}
 <div class="page-header">
     <h1>My Buddies</h1>
 </div>
@@ -34,6 +35,12 @@
         {% for info in unified_debts %}
         <div class="buddy-balance-row">
             <div class="bbl-name-block {% if info.type == 'dummy' %}bbl-name-block--dummy{% endif %}">
+                {% if info.type == 'feuser' and info.feuser %}
+                {% include 'partials/_avatar.html' with user_obj=info.feuser %}
+                {% elif info.type == 'dummy' and info.dummy %}
+                {% include 'partials/_avatar.html' with user_obj=info.dummy avatar_data_id=info.dummy.uid %}
+                {% endif %}
+                <div class="bbl-name-text">
                 <span class="buddy-name">{{ info.display_name }}</span>
                 {% if info.type == 'feuser' and info.feuser %}
                 <span class="buddy-email">{{ info.feuser.email }}</span>
@@ -45,6 +52,7 @@
                     {% for src in info.sources %}<span class="pill">{{ src }}</span>{% endfor %}
                 </div>
                 {% endif %}
+                </div>
             </div>
             <div class="bbl-balance {% if info.net > 0 %}balance-positive{% elif info.net < 0 %}balance-negative{% else %}balance-zero{% endif %}">
                 {% if info.net > 0 %}<span title="They owe you">+{{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}</span>
@@ -62,6 +70,16 @@
                 <a href="{% url 'buddies:personal_archive_wipe' info.dummy.uid %}" class="btn btn-sm btn-danger-subtle">Delete expenses</a>
                 {% else %}
                 <button class="btn btn-sm btn-secondary"
+                        data-dummy-id="{{ info.dummy.uid }}"
+                        data-dummy-name="{{ info.dummy.display_name|escapejs }}"
+                        data-has-pic="{% if info.dummy.profile_picture %}1{% else %}0{% endif %}"
+                        data-ppic-url="{{ info.dummy.ppic_url }}"
+                        data-initials="{{ info.dummy.initials }}"
+                        data-avatar-color="{{ info.dummy.initials|avatar_color }}"
+                        onclick="openDummyPicModal(this)">
+                    Upload picture
+                </button>
+                <button class="btn btn-sm btn-secondary" id="merge-btn-{{ info.dummy.uid }}"
                         onclick="this.style.display='none';document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='flex'">
                     Invite as user
                 </button>
@@ -72,7 +90,7 @@
                     <input type="email" name="email" placeholder="Their email" class="input-inline" required>
                     <button type="submit" class="btn btn-sm">Send</button>
                     <button type="button" class="btn btn-sm btn-secondary"
-                            onclick="this.closest('form').style.display='none';this.closest('.bbl-actions').querySelector('button.btn-secondary').style.display=''">
+                            onclick="this.closest('form').style.display='none';document.getElementById('merge-btn-{{ info.dummy.uid }}').style.display=''">
                         Cancel
                     </button>
                 </form>
@@ -223,5 +241,7 @@
     <strong>How Buddies work:</strong> Create a group (for 3+ people) or add a direct buddy (for one-on-one splits). Then check "This is a buddy payment" on any expense. The balance updates automatically.
 </div>
 {% endif %}
+
+{% include 'partials/_dummy_pic_modal.html' %}
 
 {% endblock %}

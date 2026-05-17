@@ -75,6 +75,16 @@
         ctx.restore();
     }
 
+    function applyZoom(newScale) {
+        newScale = Math.max(minScale(), Math.min(6, newScale));
+        var ratio = newScale / scale;
+        offsetX = CX - (CX - offsetX) * ratio;
+        offsetY = CY - (CY - offsetY) * ratio;
+        scale   = newScale;
+        clamp();
+        draw();
+    }
+
     function initImage(imageEl) {
         img    = imageEl;
         scale  = minScale();
@@ -133,9 +143,7 @@
             var dy = e.touches[0].clientY - e.touches[1].clientY;
             var dist = Math.hypot(dx, dy);
             if (lastPinchDist > 0) {
-                scale = Math.max(minScale(), Math.min(6, scale * (dist / lastPinchDist)));
-                clamp();
-                draw();
+                applyZoom(scale * (dist / lastPinchDist));
             }
             lastPinchDist = dist;
         } else {
@@ -155,9 +163,7 @@
     canvas.addEventListener('wheel', function (e) {
         e.preventDefault();
         var factor = e.deltaY < 0 ? 1.08 : 0.93;
-        scale = Math.max(minScale(), Math.min(6, scale * factor));
-        clamp();
-        draw();
+        applyZoom(scale * factor);
     }, { passive: false });
 
     /* ── keyboard ────────────────────────────────────────────────── */

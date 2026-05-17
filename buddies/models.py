@@ -32,6 +32,7 @@ class DummyUser(models.Model):
     )
     display_name = models.CharField(max_length=128)
     is_archive = models.BooleanField(default=False)
+    profile_picture = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -39,6 +40,24 @@ class DummyUser(models.Model):
 
     def __str__(self):
         return self.display_name
+
+    @property
+    def initials(self) -> str:
+        parts = self.display_name.split()
+        if len(parts) >= 2:
+            return (parts[0][:1] + parts[-1][:1]).upper()
+        return self.display_name[:2].upper()
+
+    @property
+    def ppic_url(self) -> str:
+        return f"/media/offline-buddy-ppic/{self.pk}.jpg"
+
+    def delete(self, *args, **kwargs):
+        if self.profile_picture:
+            from django.conf import settings
+            ppic_path = settings.MEDIA_ROOT / "offline-buddy-ppic" / f"{self.pk}.jpg"
+            ppic_path.unlink(missing_ok=True)
+        super().delete(*args, **kwargs)
 
 
 class BuddyGroupMember(models.Model):

@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.contrib import messages as django_messages
+from django.http import Http404, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -248,3 +250,65 @@ def decline_merge(request, token):
     except DummyMergeInvite.DoesNotExist:
         pass
     return redirect("buddies:buddies_page")
+
+
+@feuser_required
+def dummy_picture(request, dummy_id):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    feuser = request.feuser
+    try:
+        dummy = DummyUser.objects.select_related(
+            "owning_feuser", "owning_group"
+        ).get(pk=dummy_id)
+    except DummyUser.DoesNotExist:
+        raise Http404
+
+    is_authorized = (
+        (dummy.owning_feuser_id is not None and dummy.owning_feuser_id == feuser.pk)
+        or (
+            dummy.owning_group_id is not None
+            and dummy.owning_group.admin_feuser_id == feuser.pk
+        )
+    )
+    if not is_authorized:
+        raise Http404
+
+    action = request.POST.get("action")
+
+    if action == "picture":
+        upload = request.FILES.get("profile_picture")
+        if not upload:
+            return JsonResponse({"ok": False, "error": "No file selected."}, status=400)
+        if upload.size > 5 * 1024 * 1024:
+            return JsonResponse({"ok": False, "error": "File too large. Maximum is 5 MB."}, status=400)
+        try:
+            from PIL import Image, ImageOps
+            img = Image.open(upload)
+            img.verify()
+            upload.seek(0)
+            img = Image.open(upload)
+            img = ImageOps.fit(img, (256, 256), Image.LANCZOS)
+            if img.mode in ("RGBA", "P", "LA"):
+                img = img.convert("RGB")
+            ppics_dir = settings.MEDIA_ROOT / "offline-buddy-ppic"
+            ppics_dir.mkdir(exist_ok=True)
+            img.save(ppics_dir / f"{dummy.pk}.jpg", "JPEG", quality=85)
+            dummy.profile_picture = True
+            dummy.save(update_fields=["profile_picture"])
+            return JsonResponse({"ok": True})
+        except Exception:
+            return JsonResponse(
+                {"ok": False, "error": "Could not process the image. Please upload a valid image file."},
+                status=400,
+            )
+
+    elif action == "picture_delete":
+        ppic_path = settings.MEDIA_ROOT / "offline-buddy-ppic" / f"{dummy.pk}.jpg"
+        ppic_path.unlink(missing_ok=True)
+        dummy.profile_picture = False
+        dummy.save(update_fields=["profile_picture"])
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"ok": False, "error": "Unknown action."}, status=400)
