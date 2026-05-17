@@ -55,6 +55,8 @@ class BuddyArchiveService:
         """
         from budget.models import Expense
 
+        buddy_name = dummy.display_name
+
         for bs in BuddySpending.objects.filter(participant_dummy=dummy).select_related("expense"):
             existing = BuddySpending.objects.filter(
                 participant_dummy=archive, expense_id=bs.expense_id
@@ -66,8 +68,18 @@ class BuddyArchiveService:
             else:
                 bs.participant_dummy = archive
                 bs.save(update_fields=["participant_dummy"])
+            suffix = f"\nOriginal participant was: {buddy_name}"
+            expense = bs.expense
+            if suffix not in expense.note:
+                expense.note = (expense.note + suffix).strip()
+                expense.save(update_fields=["note"])
 
-        Expense.objects.filter(upfront_payee_dummy=dummy).update(upfront_payee_dummy=archive)
+        for expense in Expense.objects.filter(upfront_payee_dummy=dummy).select_related():
+            expense.upfront_payee_dummy = archive
+            suffix = f"\nArchived from: {buddy_name}"
+            if suffix not in expense.note:
+                expense.note = (expense.note + suffix).strip()
+            expense.save(update_fields=["upfront_payee_dummy", "note"])
 
     @staticmethod
     def archive_has_expenses(archive: DummyUser) -> bool:
