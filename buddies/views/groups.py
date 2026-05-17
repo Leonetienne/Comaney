@@ -295,8 +295,10 @@ def group_remove_member(request, group_id, member_id):
         if request.method == "POST" and request.POST.get("confirmed") == "yes":
             archive_created = BuddyGroupService.delete_group_dummy(group, feuser, dummy)
             url = reverse("buddies:group_detail", kwargs={"group_id": group_id})
-            if archive_created:
+            if archive_created and not feuser.has_seen_achim_intro:
                 url += "?achim=new"
+                feuser.has_seen_achim_intro = True
+                feuser.save(update_fields=["has_seen_achim_intro"])
             return redirect(url)
 
         # GET: show rich confirmation page

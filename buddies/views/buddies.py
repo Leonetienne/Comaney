@@ -41,8 +41,10 @@ def kick_dummy(request, dummy_id):
         )
         if result.get("kicked"):
             url = reverse("buddies:my_buddies")
-            if result.get("archive_created"):
+            if result.get("archive_created") and not feuser.has_seen_achim_intro:
                 url += "?achim=new"
+                feuser.has_seen_achim_intro = True
+                feuser.save(update_fields=["has_seen_achim_intro"])
             return redirect(url)
         return redirect("buddies:my_buddies")
 
