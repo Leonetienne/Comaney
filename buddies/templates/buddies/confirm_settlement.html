@@ -32,12 +32,12 @@
     <div class="action-row">
         <form method="post" action="{% if approve_url %}{{ approve_url }}{% else %}{% url 'buddies:approve_settlement_as_creditor' expense.uid %}{% endif %}">
             {% csrf_token %}
-            <button type="submit" id="btn-approve-settlement" class="btn btn-success">Yes, I got the money</button>
+            <button type="submit" id="btn-approve-settlement" class="btn btn-success">{% if creditor_name %}Yes, they got the money{% else %}Yes, I got the money{% endif %}</button>
         </form>
 
         <form method="post" action="{% if reject_url %}{{ reject_url }}{% else %}{% url 'buddies:reject_settlement_as_creditor' expense.uid %}{% endif %}" id="reject-settlement-form">
             {% csrf_token %}
-            <button type="submit" id="btn-reject-settlement" class="btn btn-danger-subtle">No, I did not receive it</button>
+            <button type="submit" id="btn-reject-settlement" class="btn btn-danger-subtle">{% if creditor_name %}No, they did not receive it{% else %}No, I did not receive it{% endif %}</button>
         </form>
 
         {% if expense.buddy_group_id %}
