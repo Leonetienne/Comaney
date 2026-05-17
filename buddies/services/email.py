@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
@@ -348,3 +350,239 @@ class BuddyEmailService:
             },
             recipient_email=kicked_feuser.email,
         )
+
+    # ------------------------------------------------------------------
+    # Buddy expense participation notifications
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_expense_rows(expense):
+        """
+        Returns (payer_row, participant_rows) for use in email templates.
+        payer_row: dict with name, share_percent, share_value, is_payer=True
+        participant_rows: list of dicts with same keys plus is_payer=False
+        """
+        spendings = list(
+            expense.buddy_spendings
+            .select_related("participant_feuser", "participant_dummy")
+            .all()
+        )
+        participant_sum = sum(bs.share_percent for bs in spendings) if spendings else Decimal("0")
+        payer_share = Decimal("100") - participant_sum
+        payer_value = expense.value * payer_share / Decimal("100")
+
+        if expense.is_dummy and expense.upfront_payee_dummy_id:
+            payer_name = expense.upfront_payee_dummy.display_name + " (offline member)"
+        else:
+            payer_name = _display_name(expense.owning_feuser)
+
+        payer_row = {
+            "name": payer_name,
+            "share_percent": payer_share,
+            "share_value": payer_value,
+            "is_payer": True,
+        }
+
+        participant_rows = []
+        for bs in spendings:
+            if bs.participant_feuser_id:
+                name = _display_name(bs.participant_feuser)
+            else:
+                name = bs.participant_dummy.display_name + " (offline member)"
+            participant_rows.append({
+                "name": name,
+                "share_percent": bs.share_percent,
+                "share_value": expense.value * bs.share_percent / Decimal("100"),
+                "is_payer": False,
+            })
+
+        return payer_row, participant_rows
+
+    @staticmethod
+    def send_expense_participant_notice(
+        expense, actor_feuser, recipient_feuser, currency, is_added_to_existing=False
+    ):
+        """Notify a participant that they have been included in a shared expense."""
+        actor_name = _display_name(actor_feuser)
+        bs = expense.buddy_spendings.filter(participant_feuser=recipient_feuser).first()
+        if bs is None:
+            return
+        share_percent = bs.share_percent
+        share_value = expense.value * share_percent / Decimal("100")
+        payer_row, participant_rows = BuddyEmailService._build_expense_rows(expense)
+        subject = (
+            f"{actor_name} added you to a shared expense: {expense.title}"
+            if is_added_to_existing
+            else f"{actor_name} included you in a shared expense: {expense.title}"
+        )
+        BuddyEmailService._send(
+            subject=subject,
+            template="emails/buddy_expense_participant_notice.html",
+            ctx={
+                "expense": expense,
+                "actor_name": actor_name,
+                "share_percent": share_percent,
+                "share_value": share_value,
+                "payer_row": payer_row,
+                "participant_rows": participant_rows,
+                "currency": currency,
+                "is_added_to_existing": is_added_to_existing,
+                "feuser_recipient": recipient_feuser,
+            },
+            recipient_email=recipient_feuser.email,
+        )
+
+    @staticmethod
+    def send_expense_updated_notice(expense, actor_feuser, recipient_feuser, currency, changes):
+        """Notify an existing participant that a shared expense was updated."""
+        actor_name = _display_name(actor_feuser)
+        bs = expense.buddy_spendings.filter(participant_feuser=recipient_feuser).first()
+        share_percent = bs.share_percent if bs else None
+        share_value = (expense.value * share_percent / Decimal("100")) if share_percent is not None else None
+        payer_row, participant_rows = BuddyEmailService._build_expense_rows(expense)
+        BuddyEmailService._send(
+            subject=f"{actor_name} updated a shared expense: {expense.title}",
+            template="emails/buddy_expense_updated.html",
+            ctx={
+                "expense": expense,
+                "actor_name": actor_name,
+                "share_percent": share_percent,
+                "share_value": share_value,
+                "payer_row": payer_row,
+                "participant_rows": participant_rows,
+                "currency": currency,
+                "changes": changes,
+                "feuser_recipient": recipient_feuser,
+            },
+            recipient_email=recipient_feuser.email,
+        )
+
+    @staticmethod
+    def send_expense_removed_notice(
+        expense, actor_feuser, recipient_feuser, currency,
+        old_share_percent, old_share_value, old_title,
+    ):
+        """Notify a participant who was removed from a shared expense."""
+        actor_name = _display_name(actor_feuser)
+        BuddyEmailService._send(
+            subject=f"{actor_name} removed you from a shared expense: {old_title}",
+            template="emails/buddy_expense_removed.html",
+            ctx={
+                "expense": expense,
+                "actor_name": actor_name,
+                "old_title": old_title,
+                "old_share_percent": old_share_percent,
+                "old_share_value": old_share_value,
+                "currency": currency,
+                "feuser_recipient": recipient_feuser,
+            },
+            recipient_email=recipient_feuser.email,
+        )
+
+    @staticmethod
+    def notify_expense_created(expense, actor_feuser):
+        """
+        High-level: notify all real feuser participants (except actor) that they
+        are included in a new buddy expense. Skips settlement expenses.
+        """
+        if getattr(expense, "is_buddies_settlement", False):
+            return
+        currency = actor_feuser.currency
+        for bs in expense.buddy_spendings.select_related("participant_feuser").filter(
+            participant_feuser__isnull=False
+        ):
+            recipient = bs.participant_feuser
+            if recipient.pk == actor_feuser.pk:
+                continue
+            BuddyEmailService.send_expense_participant_notice(expense, actor_feuser, recipient, currency)
+
+    @staticmethod
+    def notify_expense_updated(
+        expense, actor_feuser, old_title, old_value, old_participants,
+        extra_notify_feuser=None,
+    ):
+        """
+        High-level: notify participants of changes to a buddy expense.
+
+        old_participants: {feuser_pk: (feuser, share_percent)} snapshot taken before editing.
+        extra_notify_feuser: optional FeUser to also notify (e.g. expense owner in admin edits).
+        Skips settlement expenses.
+        """
+        if getattr(expense, "is_buddies_settlement", False):
+            return
+
+        currency = actor_feuser.currency
+
+        new_participants = {
+            bs.participant_feuser_id: (bs.participant_feuser, bs.share_percent)
+            for bs in expense.buddy_spendings.select_related("participant_feuser").filter(
+                participant_feuser__isnull=False
+            )
+        }
+
+        old_pks = set(old_participants.keys())
+        new_pks = set(new_participants.keys())
+        added_pks = new_pks - old_pks
+        removed_pks = old_pks - new_pks
+        share_changed_pks = {
+            pk for pk in (old_pks & new_pks)
+            if old_participants[pk][1] != new_participants[pk][1]
+        }
+
+        title_changed = old_title != expense.title
+        value_changed = old_value != expense.value
+        buddy_changed = bool(added_pks or removed_pks or share_changed_pks)
+
+        if not (title_changed or value_changed or buddy_changed):
+            return
+
+        added_names = [_display_name(new_participants[pk][0]) for pk in added_pks]
+        removed_names = [_display_name(old_participants[pk][0]) for pk in removed_pks]
+
+        changes = {
+            "title_changed": title_changed,
+            "old_title": old_title,
+            "value_changed": value_changed,
+            "old_value": old_value,
+            "participants_added": added_names,
+            "participants_removed": removed_names,
+        }
+
+        # Notify newly added participants
+        for pk in added_pks:
+            feuser, _ = new_participants[pk]
+            if feuser.pk == actor_feuser.pk:
+                continue
+            BuddyEmailService.send_expense_participant_notice(
+                expense, actor_feuser, feuser, currency, is_added_to_existing=True
+            )
+
+        # Notify existing participants of changes
+        for pk in (old_pks & new_pks):
+            feuser, _ = new_participants[pk]
+            if feuser.pk == actor_feuser.pk:
+                continue
+            if title_changed or value_changed or pk in share_changed_pks or added_pks or removed_pks:
+                BuddyEmailService.send_expense_updated_notice(
+                    expense, actor_feuser, feuser, currency, changes
+                )
+
+        # Notify removed participants
+        for pk in removed_pks:
+            feuser, old_share_percent = old_participants[pk]
+            if feuser.pk == actor_feuser.pk:
+                continue
+            old_share_value = old_value * old_share_percent / Decimal("100")
+            BuddyEmailService.send_expense_removed_notice(
+                expense, actor_feuser, feuser, currency,
+                old_share_percent=old_share_percent,
+                old_share_value=old_share_value,
+                old_title=old_title,
+            )
+
+        # Optionally notify the expense owner (admin edit scenario)
+        if extra_notify_feuser and extra_notify_feuser.pk != actor_feuser.pk:
+            if extra_notify_feuser.pk not in new_pks and extra_notify_feuser.pk not in removed_pks:
+                BuddyEmailService.send_expense_updated_notice(
+                    expense, actor_feuser, extra_notify_feuser, currency, changes
+                )

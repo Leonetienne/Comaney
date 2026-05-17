@@ -205,6 +205,7 @@ def expense_create(request):
                 from buddies.services import BuddyEmailService, BuddyExpenseService
                 BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
                 BuddyEmailService.send_expense_approval_request(expense, feuser)
+                BuddyEmailService.notify_expense_created(expense, feuser)
             else:
                 expense.owning_feuser = feuser
                 if buddy:
@@ -214,8 +215,9 @@ def expense_create(request):
                 expense.save()
                 form.save_m2m()
                 if buddy:
-                    from buddies.services import BuddyExpenseService
+                    from buddies.services import BuddyExpenseService, BuddyEmailService
                     BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
+                    BuddyEmailService.notify_expense_created(expense, feuser)
             set_initial_notification_class(expense)
             if buddy and buddy["upfront_type"] == "dummy" and buddy.get("upfront_dummy"):
                 from django.urls import reverse
@@ -257,6 +259,15 @@ def expense_edit(request, uid):
         return redirect("budget:expenses_list")
     if request.method == "POST":
         was_settled = expense.settled
+        # Snapshot old buddy state before any changes are applied
+        _old_title = expense.title
+        _old_value = expense.value
+        _old_participants = {
+            bs.participant_feuser_id: (bs.participant_feuser, bs.share_percent)
+            for bs in expense.buddy_spendings
+            .select_related("participant_feuser")
+            .filter(participant_feuser__isnull=False)
+        }
         form = ExpenseForm(request.POST, instance=expense, feuser=form_feuser)
         buddy = _parse_buddy_post(request.POST, feuser)
         if form.is_valid() and (buddy is None or buddy["valid"]):
@@ -282,11 +293,19 @@ def expense_edit(request, uid):
                     )
                     if new_type == "feuser" and new_feuser:
                         BuddyEmailService.send_expense_approval_request(expense, feuser)
+                        BuddyEmailService.notify_expense_updated(
+                            expense, feuser, _old_title, _old_value, _old_participants,
+                            extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
+                        )
                         # Expense now belongs to other user; redirect without further editing
                         return redirect("budget:expenses_list")
                 # Update BuddySpending rows
-                from buddies.services import BuddyExpenseService
+                from buddies.services import BuddyExpenseService, BuddyEmailService
                 BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
+                BuddyEmailService.notify_expense_updated(
+                    expense, feuser, _old_title, _old_value, _old_participants,
+                    extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
+                )
             else:
                 # Buddy payment removed: clear all buddy data
                 expense.buddy_spendings.all().delete()
@@ -295,6 +314,12 @@ def expense_edit(request, uid):
                 expense.upfront_payee_dummy = None
                 expense.buddy_group = None
                 expense.save(update_fields=["is_dummy", "buddy_approved", "upfront_payee_dummy", "buddy_group"])
+                if _old_participants:
+                    from buddies.services import BuddyEmailService
+                    BuddyEmailService.notify_expense_updated(
+                        expense, feuser, _old_title, _old_value, _old_participants,
+                        extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
+                    )
 
             if not was_settled and expense.settled:
                 send_settled_notification(expense)

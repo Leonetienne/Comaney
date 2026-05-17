@@ -214,8 +214,9 @@ def express_creation(request):
                             **common_kwargs,
                         )
                         BuddyEmailService.send_expense_approval_request(expense, feuser)
+                        BuddyEmailService.notify_expense_created(expense, feuser)
                     elif buddy:
-                        create_expense(
+                        expense = create_expense(
                             owning_feuser=feuser,
                             is_dummy=(buddy["upfront_type"] == "dummy"),
                             upfront_payee_dummy=buddy["upfront_dummy"],
@@ -223,6 +224,8 @@ def express_creation(request):
                             buddy_spendings=buddy["spendings"],
                             **common_kwargs,
                         )
+                        from buddies.services import BuddyEmailService
+                        BuddyEmailService.notify_expense_created(expense, feuser)
                     else:
                         create_expense(owning_feuser=feuser, **common_kwargs)
                     count += 1

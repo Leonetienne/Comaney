@@ -1,0 +1,49 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">You were removed from a shared expense</h2>
+<p style="color:#ccc;line-height:1.6;">
+  <strong style="color:#e0e0e0;">{{ actor_name }}</strong> removed you from the following shared expense.
+  Your share will no longer be tracked.
+</p>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Title</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">
+      {% if expense.title != old_title %}
+        <span style="text-decoration:line-through;color:#666;">{{ old_title }}</span>
+        &rarr; {{ expense.title }}
+      {% else %}
+        {{ old_title }}
+      {% endif %}
+    </td>
+  </tr>
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Total amount</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ currency }}{{ expense.value }}</td>
+  </tr>
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Your former share</td>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:right;">{{ currency }}{{ old_share_value|floatformat:2 }} ({{ old_share_percent|floatformat:1 }}%)</td>
+  </tr>
+  {% if expense.date_due %}
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Date</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.date_due }}</td>
+  </tr>
+  {% endif %}
+  {% if expense.payee %}
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Payee</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.payee }}</td>
+  </tr>
+  {% endif %}
+  {% if expense.buddy_group %}
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Group</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.buddy_group.name }}</td>
+  </tr>
+  {% endif %}
+</table>
+{% endblock %}

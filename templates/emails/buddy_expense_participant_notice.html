@@ -1,0 +1,74 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">
+  {% if is_added_to_existing %}
+    You were added to a shared expense
+  {% else %}
+    You are participating in a shared expense
+  {% endif %}
+</h2>
+<p style="color:#ccc;line-height:1.6;">
+  {% if is_added_to_existing %}
+    <strong style="color:#e0e0e0;">{{ actor_name }}</strong> added you to an existing shared expense.
+  {% else %}
+    <strong style="color:#e0e0e0;">{{ actor_name }}</strong> logged a shared expense that includes you.
+  {% endif %}
+</p>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Title</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.title }}</td>
+  </tr>
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Total amount</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ currency }}{{ expense.value }}</td>
+  </tr>
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Your share</td>
+    <td style="color:#4caf50;padding:6px 0;font-size:0.9rem;text-align:right;font-weight:600;">{{ currency }}{{ share_value|floatformat:2 }} ({{ share_percent|floatformat:1 }}%)</td>
+  </tr>
+  {% if expense.date_due %}
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Date</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.date_due }}</td>
+  </tr>
+  {% endif %}
+  {% if expense.payee %}
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Payee</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.payee }}</td>
+  </tr>
+  {% endif %}
+  {% if expense.buddy_group %}
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Group</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.buddy_group.name }}</td>
+  </tr>
+  {% endif %}
+</table>
+
+<h3 style="margin:20px 0 10px;font-size:0.95rem;color:#aaa;text-transform:uppercase;letter-spacing:0.05em;">Participants</h3>
+<table style="width:100%;border-collapse:collapse;margin:0 0 16px;">
+  <tr>
+    <th style="color:#777;font-size:0.8rem;font-weight:500;padding:4px 0;text-align:left;">Name</th>
+    <th style="color:#777;font-size:0.8rem;font-weight:500;padding:4px 0;text-align:right;">Share</th>
+    <th style="color:#777;font-size:0.8rem;font-weight:500;padding:4px 0;text-align:right;">Amount</th>
+  </tr>
+  <tr>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;border-top:1px solid #333;">
+      {{ payer_row.name }} <span style="color:#888;font-size:0.8rem;">(paid upfront)</span>
+    </td>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:right;border-top:1px solid #333;">{{ payer_row.share_percent|floatformat:1 }}%</td>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:right;border-top:1px solid #333;">{{ currency }}{{ payer_row.share_value|floatformat:2 }}</td>
+  </tr>
+  {% for row in participant_rows %}
+  <tr>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;border-top:1px solid #2a2a2a;">{{ row.name }}</td>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:right;border-top:1px solid #2a2a2a;">{{ row.share_percent|floatformat:1 }}%</td>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;text-align:right;border-top:1px solid #2a2a2a;">{{ currency }}{{ row.share_value|floatformat:2 }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}
