@@ -97,6 +97,32 @@ class Expense(OwnedModel):
     def is_income(self) -> bool:
         return self.type == TransactionType.INCOME
 
+    def _settlement_locked(self) -> bool:
+        """
+        True when this approved settlement is locked (no further editing/deletion).
+        A settlement is locked when approved AND a real user confirmed it
+        (i.e. at least one feuser appears as creditor in buddy_spendings).
+        Settlements with only offline-member creditors, or with no spendings at all
+        (personal dummy-debtor settlements), are never locked.
+        """
+        return self.buddy_spendings.filter(participant_feuser__isnull=False).exists()
+
+    @property
+    def settlement_can_delete(self) -> bool:
+        if not self.is_buddies_settlement:
+            return True
+        if not self.buddy_approved:
+            return True
+        return not self._settlement_locked()
+
+    @property
+    def settlement_can_edit(self) -> bool:
+        if not self.is_buddies_settlement:
+            return True
+        if not self.buddy_approved:
+            return True
+        return not self._settlement_locked()
+
 
 class ScheduledExpense(OwnedModel):
     title = models.CharField(max_length=128)

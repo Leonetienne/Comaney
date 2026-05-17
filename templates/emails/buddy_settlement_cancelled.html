@@ -1,0 +1,28 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Settlement cancelled</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ debtor_name }}</strong> has cancelled their settlement record before you confirmed it.
+    The outstanding balance remains unchanged.
+</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Description</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense_title }}</td>
+    </tr>
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Amount</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;font-weight:600;">{{ currency }}{{ expense_value }}</td>
+    </tr>
+    {% if group_name %}
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Group</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ group_name }}</td>
+    </tr>
+    {% endif %}
+</table>
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
+    No action is required on your part. You do not need to confirm or reject anything.
+</p>
+{% endblock %}

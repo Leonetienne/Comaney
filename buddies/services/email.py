@@ -339,6 +339,60 @@ class BuddyEmailService:
         )
 
     @staticmethod
+    def send_settlement_updated_notification(expense, creditor_feuser):
+        """Sent to the creditor when the debtor edits an unapproved settlement."""
+        if expense.is_dummy and expense.upfront_payee_dummy_id:
+            debtor_name = expense.upfront_payee_dummy.display_name + " (offline member)"
+        else:
+            debtor_name = _display_name(expense.owning_feuser)
+        group_name = expense.buddy_group.name if expense.buddy_group_id else None
+        subject = (
+            f"{debtor_name} updated their settlement in {group_name}"
+            if group_name
+            else f"{debtor_name} updated their settlement with you"
+        )
+        BuddyEmailService._send(
+            subject=subject,
+            template="emails/buddy_settlement_updated.html",
+            ctx={
+                "expense_title": expense.title,
+                "expense_value": expense.value,
+                "debtor_name": debtor_name,
+                "group_name": group_name,
+                "currency": expense.owning_feuser.currency,
+                "feuser_recipient": creditor_feuser,
+            },
+            recipient_email=creditor_feuser.email,
+        )
+
+    @staticmethod
+    def send_settlement_cancelled_notification(expense, creditor_feuser):
+        """Sent to the creditor when the debtor deletes an unapproved settlement."""
+        if expense.is_dummy and expense.upfront_payee_dummy_id:
+            debtor_name = expense.upfront_payee_dummy.display_name + " (offline member)"
+        else:
+            debtor_name = _display_name(expense.owning_feuser)
+        group_name = expense.buddy_group.name if expense.buddy_group_id else None
+        subject = (
+            f"{debtor_name} cancelled their settlement in {group_name}"
+            if group_name
+            else f"{debtor_name} cancelled their settlement with you"
+        )
+        BuddyEmailService._send(
+            subject=subject,
+            template="emails/buddy_settlement_cancelled.html",
+            ctx={
+                "expense_title": expense.title,
+                "expense_value": expense.value,
+                "debtor_name": debtor_name,
+                "group_name": group_name,
+                "currency": expense.owning_feuser.currency,
+                "feuser_recipient": creditor_feuser,
+            },
+            recipient_email=creditor_feuser.email,
+        )
+
+    @staticmethod
     def send_kicked_notification(kicked_feuser, kicking_display_name: str):
         site_url = getattr(settings, "SITE_URL", "")
         BuddyEmailService._send(

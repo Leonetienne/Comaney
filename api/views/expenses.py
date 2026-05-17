@@ -83,6 +83,27 @@ def expense_detail(request, feuser, uid):
     if exp.type == "carry_over":
         return _err("Carry-over entries cannot be modified or deleted.", 403)
 
+    if exp.is_buddies_settlement:
+        if request.method == "PATCH":
+            return _err("Settlement expenses cannot be edited.", 403)
+        if request.method == "DELETE":
+            has_dummy_creditor = exp.buddy_spendings.filter(
+                participant_dummy__isnull=False
+            ).exists()
+            if not has_dummy_creditor:
+                if exp.buddy_approved:
+                    return _err("Approved settlement expenses cannot be deleted.", 403)
+                from buddies.services import BuddyEmailService
+                bs = exp.buddy_spendings.select_related("participant_feuser").filter(
+                    participant_feuser__isnull=False
+                ).first()
+                if bs:
+                    BuddyEmailService.send_settlement_cancelled_notification(
+                        exp, bs.participant_feuser
+                    )
+            exp.delete()
+            return JsonResponse({}, status=204)
+
     if request.method == "PATCH":
         was_settled = exp.settled
         data = _parse_body(request)

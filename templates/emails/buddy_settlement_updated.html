@@ -1,0 +1,28 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Settlement updated</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ debtor_name }}</strong> has updated their settlement record before you confirmed it.
+    Please review the new details below.
+</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Description</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense_title }}</td>
+    </tr>
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Amount</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;font-weight:600;">{{ currency }}{{ expense_value }}</td>
+    </tr>
+    {% if group_name %}
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Group</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ group_name }}</td>
+    </tr>
+    {% endif %}
+</table>
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
+    You can still confirm or reject this settlement. The link in your original notification email remains valid.
+</p>
+{% endblock %}

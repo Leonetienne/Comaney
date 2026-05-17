@@ -257,6 +257,20 @@ def expense_edit(request, uid):
     form_feuser = expense.owning_feuser if is_admin_edit else feuser
     if expense.type == TransactionType.CARRY_OVER:
         return redirect("budget:expenses_list")
+    if expense.is_buddies_settlement and not expense.settlement_can_edit:
+        return redirect("budget:expenses_list")
+    # Non-admin group members cannot edit an approved group settlement: only the
+    # group admin may do so. (The is_admin_edit path already bypasses this for
+    # dummy-upfront expenses; here we catch dummy-creditor group settlements.)
+    if (not is_admin_edit
+            and expense.is_buddies_settlement
+            and expense.buddy_approved
+            and expense.buddy_group_id):
+        from buddies.models import BuddyGroup
+        admin_pk = BuddyGroup.objects.filter(uid=expense.buddy_group_id) \
+            .values_list("admin_feuser_id", flat=True).first()
+        if admin_pk != feuser.pk:
+            return redirect("budget:expenses_list")
     if request.method == "POST":
         was_settled = expense.settled
         # Snapshot old buddy state before any changes are applied
@@ -321,6 +335,21 @@ def expense_edit(request, uid):
                         extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
                     )
 
+            if expense.is_buddies_settlement and not expense.buddy_approved:
+                # Notify the creditor using the pre-edit participant snapshot.
+                # We cannot rely on the post-edit spendings because the JS
+                # auto-adds ME as a participant when the upfront payer is a
+                # dummy, which would incorrectly pick the admin as the creditor.
+                from buddies.services import BuddyEmailService
+                _creditor = next(
+                    (fu for (fu, _) in _old_participants.values()
+                     if fu.pk != expense.owning_feuser_id),
+                    None,
+                )
+                if _creditor:
+                    BuddyEmailService.send_settlement_updated_notification(
+                        expense, _creditor
+                    )
             if not was_settled and expense.settled:
                 send_settled_notification(expense)
             else:
@@ -364,8 +393,30 @@ def expense_delete(request, uid):
     expense = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
     if expense.type == TransactionType.CARRY_OVER:
         return redirect("budget:expenses_list")
+    if expense.is_buddies_settlement:
+        if not expense.settlement_can_delete:
+            return redirect("budget:expenses_list")
+        # Non-admin group members cannot delete an approved group settlement via
+        # this endpoint; the group-specific delete view handles permissions there.
+        if expense.buddy_approved and expense.buddy_group_id:
+            from buddies.models import BuddyGroup
+            admin_pk = BuddyGroup.objects.filter(uid=expense.buddy_group_id) \
+                .values_list("admin_feuser_id", flat=True).first()
+            if admin_pk != request.feuser.pk:
+                return redirect("budget:expenses_list")
+        # Notify real-user creditor when an unapproved settlement is cancelled
+        if not expense.buddy_approved:
+            from buddies.services import BuddyEmailService
+            bs = expense.buddy_spendings.select_related("participant_feuser").filter(
+                participant_feuser__isnull=False
+            ).first()
+            if bs:
+                BuddyEmailService.send_settlement_cancelled_notification(
+                    expense, bs.participant_feuser
+                )
     expense.delete()
-    return redirect("budget:expenses_list")
+    back = _safe_back_url(request.POST.get("back", ""))
+    return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
 
 
 @feuser_required
@@ -393,7 +444,7 @@ def expense_bulk_action(request):
         elif action == "unsettle":
             qs.update(settled=False)
         elif action == "delete":
-            qs.delete()
+            qs.exclude(is_buddies_settlement=True).delete()
 
     referer = request.META.get("HTTP_REFERER")
     if referer:
@@ -434,6 +485,8 @@ def mute_all_notifications(request):
 def expense_clone(request, uid):
     original = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
     if original.type == TransactionType.CARRY_OVER:
+        return redirect("budget:expenses_list")
+    if original.is_buddies_settlement:
         return redirect("budget:expenses_list")
     tags = list(original.tags.all())
     original.pk = None

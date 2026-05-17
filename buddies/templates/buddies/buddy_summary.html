@@ -358,7 +358,7 @@
             offlineBuddies.forEach(function (m) {
                 var opt = document.createElement('option');
                 opt.value = m.key;
-                opt.textContent = m.name + ' (offline member)';
+                opt.textContent = m.name + ' (offline buddy)';
                 debtorSelect.appendChild(opt);
             });
             debtorRow.style.display = '';
@@ -387,7 +387,7 @@
                     if (m.key === FEUSER_KEY) return;
                     var opt = document.createElement('option');
                     opt.value = m.key;
-                    opt.textContent = m.name;
+                    opt.textContent = m.is_dummy ? m.name + ' (offline buddy)' : m.name;
                     if (m.key === prev) opt.selected = true;
                     creditorEl.appendChild(opt);
                 });
@@ -421,10 +421,10 @@
             var msg;
             if (debtorIsDummy) {
                 var debtorName = memberMap[dk] ? memberMap[dk].name : dk;
-                msg = 'Record a payment of ' + CURRENCY + amountStr + ' from ' + debtorName + ' (offline member) to you? '
+                msg = 'Record a payment of ' + CURRENCY + amountStr + ' from ' + debtorName + ' (offline buddy) to you? '
                     + 'This will be approved automatically.';
             } else if (creditorIsDummy) {
-                msg = 'Record a payment of ' + CURRENCY + amountStr + ' to ' + creditorName + ' (offline member)? '
+                msg = 'Record a payment of ' + CURRENCY + amountStr + ' to ' + creditorName + '? '
                     + 'You still need to actually send the money yourself!';
             } else {
                 msg = 'Record a payment of ' + CURRENCY + amountStr + ' to ' + creditorName + '? '

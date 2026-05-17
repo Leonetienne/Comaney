@@ -70,8 +70,52 @@ def group_detail(request, group_id):
             and exp.upfront_payee_dummy_id
             and exp.upfront_payee_dummy_id in dummy_pks_in_group
         )
-        exp_data["can_delete"] = is_feuser_direct_owner or (is_admin and is_dummy_exp_in_group)
+        # Admin can manage their OWN settlements to group dummies (admin is the debtor).
+        # Another member's settlement to a group dummy is that member's business only.
+        is_settlement_to_group_dummy = (
+            exp.is_buddies_settlement
+            and is_admin
+            and is_feuser_direct_owner
+            and any(
+                share["key"].startswith("d") and int(share["key"][1:]) in dummy_pks_in_group
+                for share in exp_data["participant_shares"]
+            )
+        )
+        # True when no real feuser appears as a creditor (dummy-only or no spendings).
+        # Such settlements are never truly "locked" by a real approval.
+        no_feuser_creditor = not any(
+            not share["key"].startswith("d")
+            for share in exp_data["participant_shares"]
+        )
+        exp_data["can_delete"] = (
+            is_feuser_direct_owner
+            or (is_admin and is_dummy_exp_in_group)
+            or is_settlement_to_group_dummy
+        )
+        # Once a group settlement is approved, only specific admin-owned paths may delete it:
+        # - admin's own settlement to a group dummy (is_settlement_to_group_dummy)
+        # - admin managing an all-dummy expense (G5: no real feuser creditor)
+        # Everyone else, including the non-admin debtor, is locked out.
+        if exp.is_buddies_settlement and exp.buddy_approved:
+            can_delete_approved = (
+                is_settlement_to_group_dummy
+                or (is_admin and is_dummy_exp_in_group and no_feuser_creditor)
+            )
+            if not can_delete_approved:
+                exp_data["can_delete"] = False
         exp_data["can_unlink"] = is_feuser_direct_owner or is_admin
+        # Settlements to a real feuser creditor cannot be edited; dummy-creditor settlements can
+        if exp.is_buddies_settlement:
+            # Admin's own dummy-creditor settlement: always editable.
+            # Real-user creditor: debtor can edit while unapproved; locked once approved.
+            # Admin managing dummy-upfront expense: editable unless a real feuser creditor approved it.
+            exp_data["can_edit"] = (
+                is_settlement_to_group_dummy
+                or (is_feuser_direct_owner and not exp.buddy_approved)
+                or (is_admin and is_dummy_exp_in_group and (not exp.buddy_approved or no_feuser_creditor))
+            )
+        else:
+            exp_data["can_edit"] = is_feuser_direct_owner or (is_admin and is_dummy_exp_in_group)
 
     # Aggregate approved payer->participant flows per pair, then net opposing pairs.
     raw_flows: dict = {}

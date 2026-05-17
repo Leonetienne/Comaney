@@ -364,7 +364,7 @@
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
-                    {% if e.expense.owning_feuser == request.feuser and not e.expense.is_dummy or is_admin and e.expense.is_dummy %}
+                    {% if e.can_edit %}
                     <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23pending-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Edit</a>
                     {% endif %}
 
@@ -435,7 +435,7 @@
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
-                    {% if e.expense.owning_feuser == request.feuser and not e.expense.is_dummy or is_admin and e.expense.is_dummy %}
+                    {% if e.can_edit %}
                     <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Edit</a>
                     {% endif %}
 

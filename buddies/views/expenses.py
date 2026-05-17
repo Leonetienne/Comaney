@@ -187,10 +187,44 @@ def group_expense_delete(request, group_id, expense_id):
         and expense.upfront_payee_dummy_id
         and expense.upfront_payee_dummy_id in dummy_pks_in_group
     )
+    # Admin can only manage their OWN settlements to group dummies (is_feuser_direct_owner).
+    # Another member's settlement to a group dummy is not the admin's to delete.
+    is_settlement_to_group_dummy = (
+        expense.is_buddies_settlement
+        and is_admin
+        and is_feuser_direct_owner
+        and expense.buddy_spendings.filter(
+            participant_dummy_id__in=dummy_pks_in_group
+        ).exists()
+    )
 
-    if not (is_feuser_direct_owner or (is_admin and is_dummy_exp_in_group)):
+    if not (is_feuser_direct_owner or (is_admin and is_dummy_exp_in_group) or is_settlement_to_group_dummy):
         django_messages.error(request, "You do not have permission to delete this expense.")
         return redirect("buddies:group_detail", group_id=group_id)
+
+    # Once a group settlement is approved, only specific admin-owned paths may delete it:
+    # - admin's own settlement to a group dummy (is_settlement_to_group_dummy)
+    # - admin managing an all-dummy expense with no real feuser creditor (G5)
+    # Non-admin debtors are always locked out of approved group settlements.
+    if expense.is_buddies_settlement and expense.buddy_approved:
+        has_real_creditor = expense.buddy_spendings.filter(participant_feuser__isnull=False).exists()
+        can_delete_approved = (
+            is_settlement_to_group_dummy
+            or (is_admin and is_dummy_exp_in_group and not has_real_creditor)
+        )
+        if not can_delete_approved:
+            django_messages.error(request, "An approved settlement cannot be deleted.")
+            return redirect("buddies:group_detail", group_id=group_id)
+
+    # Notify the real-user creditor when their unapproved settlement is deleted
+    if expense.is_buddies_settlement and not expense.buddy_approved and not is_settlement_to_group_dummy:
+        bs = expense.buddy_spendings.select_related("participant_feuser").filter(
+            participant_feuser__isnull=False
+        ).first()
+        if bs:
+            BuddyEmailService.send_settlement_cancelled_notification(
+                expense, bs.participant_feuser
+            )
 
     expense.delete()
     django_messages.success(request, "Expense deleted.")

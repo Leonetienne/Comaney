@@ -108,15 +108,21 @@ window.EXPENSE_CONFIG = {
                 <div class="exp-actions">
                     <template x-if="exp.type !== 'carry_over'">
                         <div class="d-contents">
-                            <a :href="editUrl(exp.id) + '?back=' + encodedBackUrl()" class="btn btn-sm btn-secondary">Edit</a>
-                            <form method="post" :action="cloneUrl(exp.id)">
-                                <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
-                                <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
-                            </form>
-                            <form method="post" :action="deleteUrl(exp.id)" class="delete-form" :data-title="exp.title">
-                                <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
-                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                            </form>
+                            <template x-if="!exp.is_buddies_settlement">
+                                <a :href="editUrl(exp.id) + '?back=' + encodedBackUrl()" class="btn btn-sm btn-secondary">Edit</a>
+                            </template>
+                            <template x-if="!exp.is_buddies_settlement">
+                                <form method="post" :action="cloneUrl(exp.id)">
+                                    <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
+                                    <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
+                                </form>
+                            </template>
+                            <template x-if="exp.can_delete !== false">
+                                <form method="post" :action="deleteUrl(exp.id)" class="delete-form" :data-title="exp.title">
+                                    <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </template>
                         </div>
                     </template>
                 </div>
