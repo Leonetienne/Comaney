@@ -98,7 +98,7 @@ class TestOwnerUnlinksOwnExpense:
         assert unlink_forms, "Owner must see an Unlink button for their own group expense"
 
     def test_owner_unlinks_expense_and_flash_shown(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR, "form[action*='/unlink/'] button[type=submit]").click()
+        driver.find_element(By.CSS_SELECTOR, "[id^='btn-unlink-']").click()
         time.sleep(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(1)
@@ -168,7 +168,7 @@ class TestAdminUnlinksMemberExpense:
     def test_admin_unlinks_members_expense(self, driver, w, ctx):
         seen_before = mailpit_seen_ids()
         ctx["seen_before"] = seen_before
-        driver.find_element(By.CSS_SELECTOR, "form[action*='/unlink/'] button[type=submit]").click()
+        driver.find_element(By.CSS_SELECTOR, "[id^='btn-unlink-']").click()
         time.sleep(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(1)

@@ -337,11 +337,11 @@ class TestSettledNotifications:
         """Bulk settle with 2+ expenses does NOT send settled notifications."""
         a = api_post("/api/v1/expenses/", ctx, json={
             "title": "BulkNoNotify A", "type": "expense", "value": "1.00",
-            "date_due": IN_3_DAYS, "settled": False,
+            "date_due": TODAY, "settled": False,
         })
         b = api_post("/api/v1/expenses/", ctx, json={
             "title": "BulkNoNotify B", "type": "expense", "value": "1.00",
-            "date_due": IN_3_DAYS, "settled": False,
+            "date_due": TODAY, "settled": False,
         })
         assert a.status_code == 201 and b.status_code == 201
         eid_a, eid_b = a.json()["id"], b.json()["id"]
@@ -373,7 +373,7 @@ class TestSettledNotifications:
 
     def test_settled_on_bulk_exactly_1(self, driver, w, ctx):
         """Bulk settle with exactly 1 expense DOES send settled notification."""
-        e = _mk(ctx, "BulkNotify Single", IN_3_DAYS)
+        e = _mk(ctx, "BulkNotify Single", TODAY)
         eid = e["id"]
         seen = mailpit_seen_ids()
         # Bulk settle via browser

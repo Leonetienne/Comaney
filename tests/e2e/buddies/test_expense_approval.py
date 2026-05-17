@@ -55,8 +55,7 @@ class TestExpenseApproval:
         assert "Approval Expense" in driver.page_source
 
     def test_b_approves_expense(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR,
-            ".bexp-actions form[action*='approve'] button[type=submit]").click()
+        driver.find_element(By.ID, f"btn-approve-exp-{ctx['exp_pk']}").click()
         time.sleep(1)
         assert "/budget/expenses/" in driver.current_url
 
@@ -110,8 +109,7 @@ class TestExpenseOwnerRejection:
     def test_b_rejects_expense(self, driver, w, ctx):
         seen_before = mailpit_seen_ids()
         ctx["seen_before"] = seen_before
-        driver.find_element(By.CSS_SELECTOR,
-            ".bexp-actions form[action*='reject'] button[type=submit]").click()
+        driver.find_element(By.ID, f"btn-reject-exp-{ctx['exp_pk']}").click()
         time.sleep(1)
         assert "/budget/expenses/" in driver.current_url
 
@@ -177,9 +175,7 @@ class TestParticipantSeesNeedsApproval:
 
     def test_a_has_no_approve_reject_buttons(self, driver, w, ctx):
         # Only the expense owner (B) gets Approve/Reject; A must not
-        approve_buttons = driver.find_elements(By.CSS_SELECTOR,
-            ".bexp-actions form[action*='approve'] button")
-        reject_buttons = driver.find_elements(By.CSS_SELECTOR,
-            ".bexp-actions form[action*='reject'] button")
+        approve_buttons = driver.find_elements(By.CSS_SELECTOR, "[id^='btn-approve-exp-']")
+        reject_buttons = driver.find_elements(By.CSS_SELECTOR, "[id^='btn-reject-exp-']")
         assert len(approve_buttons) == 0, "Participant A must not see the Approve button"
         assert len(reject_buttons) == 0, "Participant A must not see the Reject button"

@@ -34,7 +34,7 @@ class TestKickActualBuddyNoDebt:
 
     def test_kick_shows_confirm_dialog(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR,
-            "form[action*='link'][action*='kick'] button[type=submit]").click()
+            "[id^='btn-kick-']:not([id^='btn-kick-dummy-'])").click()
         time.sleep(0.5)
         assert driver.find_element(By.ID, "cdialog-ok").is_displayed()
 
@@ -92,7 +92,7 @@ class TestKickActualBuddyWithDebt:
 
     def test_kick_dialog_contains_balance(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR,
-            "form[action*='link'][action*='kick'] button[type=submit]").click()
+            "[id^='btn-kick-']:not([id^='btn-kick-dummy-'])").click()
         time.sleep(0.5)
         dialog_msg = driver.find_element(By.ID, "cdialog-msg").text
         assert "100.00" in dialog_msg, \

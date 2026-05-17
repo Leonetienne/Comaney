@@ -75,7 +75,7 @@ class TestGroupSettlementNonAdminPaysDummy:
         amt.send_keys("25.00")
 
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/settle-individual/'] button[type=submit]"
+            By.ID, "btn-settle-individual"
         ).click()
         time.sleep(0.5)
         # Dialog must say admin needs to confirm
@@ -108,14 +108,19 @@ class TestGroupSettlementNonAdminPaysDummy:
             "Dummy name must appear in the paybacks section"
 
     def test_admin_approves_dummy_settlement(self, driver, w, ctx):
-        driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/approve-dummy/'] button[type=submit]"
-        ).click()
+        # "Confirm paybacks to offline members" shows a Review link that leads to
+        # confirm_settlement.html; click Review then approve on that page.
+        driver.find_element(By.CSS_SELECTOR, "[id^='btn-review-dummy-']").click()
         time.sleep(1)
-        assert "approved" in driver.page_source.lower(), \
+        driver.find_element(By.ID, "btn-approve-settlement").click()
+        time.sleep(1)
+        assert "confirmed" in driver.page_source.lower() or \
+               "approved" in driver.page_source.lower(), \
             "Flash must confirm approval on behalf of the offline member"
 
     def test_section_gone_after_approval(self, driver, w, ctx):
+        driver.get(_url("/buddies/summary/"))
+        time.sleep(1)
         assert "Confirm paybacks to offline members" not in driver.page_source, \
             "Section must disappear after admin has approved"
 
@@ -162,7 +167,7 @@ class TestGroupSettlementAdminPaysDummyAutoApprove:
         amt.send_keys("15.00")
 
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/settle-individual/'] button[type=submit]"
+            By.ID, "btn-settle-individual"
         ).click()
         time.sleep(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()

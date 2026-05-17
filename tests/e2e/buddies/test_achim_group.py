@@ -81,7 +81,7 @@ class TestAchimGroupCreated:
         assert "Achim Archive" in driver.page_source
 
     def test_submit_redirects_to_group_page(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR, "button.btn-danger-subtle").click()
+        driver.find_element(By.ID, "btn-confirm-kick").click()
         time.sleep(1.5)
         assert f"/buddies/groups/{ctx['group_id']}/" in driver.current_url
 
@@ -171,7 +171,7 @@ class TestAchimGroupWipe:
             "Wipe page must show feuser's share (50% of 100.00 = 50.00)"
 
     def test_submit_wipes_and_redirects(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR, "button.btn-danger-subtle").click()
+        driver.find_element(By.ID, "btn-confirm-wipe").click()
         time.sleep(1.5)
         assert f"/buddies/groups/{ctx['group_id']}/" in driver.current_url
 

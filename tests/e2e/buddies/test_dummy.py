@@ -33,8 +33,7 @@ class TestDummyCRUD:
         inp = driver.find_element(By.CSS_SELECTOR, "input[name='display_name']")
         inp.clear()
         inp.send_keys("Offline Alice")
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='add-dummy'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-add-dummy").click()
         time.sleep(1)
         assert "Offline Alice" in driver.page_source
 
@@ -56,7 +55,7 @@ class TestDummyCRUD:
         assert "Remove" in driver.page_source
 
     def test_kick_dummy_confirm_removes_dummy(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR, "button.btn-danger-subtle").click()
+        driver.find_element(By.ID, "btn-confirm-kick").click()
         time.sleep(1)
         assert "Offline Alice" not in driver.page_source
         assert "/buddies/" in driver.current_url
@@ -114,7 +113,7 @@ class TestDummyKickWithDebt:
             "Confirmation page must show the outstanding balance"
 
     def test_kick_dummy_confirm_removes_dummy(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR, "button.btn-danger-subtle").click()
+        driver.find_element(By.ID, "btn-confirm-kick").click()
         time.sleep(1)
         assert "Debt Dummy" not in driver.page_source
         assert "/buddies/" in driver.current_url

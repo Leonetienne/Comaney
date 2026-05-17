@@ -85,7 +85,7 @@ class TestGroupWideSettlementCamping:
         time.sleep(2)
         assert f"/buddies/groups/{camping['group_id']}/" in driver.current_url, \
             f"Anna must land on the group page, got: {driver.current_url}"
-        btn = driver.find_element(By.CSS_SELECTOR, "#settle-all-form button[type=submit]")
+        btn = driver.find_element(By.ID, "btn-settle-all")
         assert btn.is_displayed(), \
             "Admin must see the Settle entire group button"
 
@@ -98,7 +98,7 @@ class TestGroupWideSettlementCamping:
         seen_before = mailpit_seen_ids()
         camping["seen_before"] = seen_before
 
-        driver.find_element(By.CSS_SELECTOR, "#settle-all-form button[type=submit]").click()
+        driver.find_element(By.ID, "btn-settle-all").click()
         time.sleep(0.5)
         msg = driver.find_element(By.ID, "cdialog-msg").text
         assert "payment records" in msg.lower() or "settle" in msg.lower(), \
@@ -110,7 +110,7 @@ class TestGroupWideSettlementCamping:
 
     def test_submit_settle_all_creates_records(self, driver, w, camping):
         existing = _settlement_count()
-        driver.find_element(By.CSS_SELECTOR, "#settle-all-form button[type=submit]").click()
+        driver.find_element(By.ID, "btn-settle-all").click()
         time.sleep(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(2)
@@ -177,7 +177,7 @@ class TestGroupWideSettlementCamping:
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
         time.sleep(1)
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/approve-settlement/'] button[type=submit]"
+            By.ID, "btn-approve-settlement"
         ).click()
         time.sleep(1)
         assert "confirmed" in driver.page_source.lower(), \

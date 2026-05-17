@@ -101,7 +101,7 @@ class TestOwnerDeletesOwnGroupExpense:
         assert delete_forms, "Owner must see at least one delete button for their own expense"
 
     def test_owner_deletes_expense_and_flash_shown(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR, "form[action*='/delete/'] button[type=submit]").click()
+        driver.find_element(By.CSS_SELECTOR, "[id^='btn-delete-']").click()
         time.sleep(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(1)
@@ -147,7 +147,7 @@ class TestMemberDeletesOwnGroupExpense:
         assert delete_forms, "Member must see delete button for their own group expense"
 
     def test_member_deletes_own_expense(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR, "form[action*='/delete/'] button[type=submit]").click()
+        driver.find_element(By.CSS_SELECTOR, "[id^='btn-delete-']").click()
         time.sleep(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(1)
@@ -236,7 +236,7 @@ class TestAdminDeletesDummyGroupExpense:
         assert delete_forms, "Admin must see a delete button for the dummy member's expense"
 
     def test_admin_deletes_dummy_expense(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR, "form[action*='/delete/'] button[type=submit]").click()
+        driver.find_element(By.CSS_SELECTOR, "[id^='btn-delete-']").click()
         time.sleep(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(1)

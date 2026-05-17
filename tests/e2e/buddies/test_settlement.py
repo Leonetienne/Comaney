@@ -19,6 +19,7 @@ Tests cover:
 import time
 
 import pytest
+from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user, fetch_email
 from bhelpers import (
@@ -141,7 +142,6 @@ class TestDirectSettlement:
 
     def test_settlement_row_has_no_approve_reject_buttons(self, driver, w, ctx):
         # BF-3: Approve/Reject buttons must not appear on the settlement row for the debtor
-        from selenium.webdriver.common.by import By
         rows = driver.find_elements(By.CSS_SELECTOR, ".buddy-expense-row")
         settlement_rows = [r for r in rows if "Settlement to Beth" in r.text]
         assert settlement_rows, "Settlement row must be visible in One-on-one expenses"
@@ -162,7 +162,6 @@ class TestDirectSettlement:
 
     def test_list_button_says_review_not_approve(self, driver, w, ctx):
         # The list-view action must not pre-emptively say "Approve"
-        from selenium.webdriver.common.by import By
         link = driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']")
         assert link.text.strip() == "Review", \
             f"List-view link must say 'Review', got '{link.text.strip()}'"
@@ -176,9 +175,7 @@ class TestDirectSettlement:
         # Now on confirm_settlement page — click the approve form's submit button specifically
         assert "Confirm" in driver.page_source, \
             "Must land on the settlement confirmation page"
-        driver.find_element(
-            "css selector", "form[action*='/approve-settlement/'] button[type=submit]"
-        ).click()
+        driver.find_element(By.ID, "btn-approve-settlement").click()
         time.sleep(1)
         assert "confirmed" in driver.page_source.lower(), \
             "Flash must confirm that the settlement was accepted"
@@ -322,9 +319,7 @@ class TestDirectSettlementRejection:
 
     def test_b_rejects_with_confirmation_dialog(self, driver, w, ctx):
         # Click the reject button — a confirmation dialog must appear first
-        driver.find_element(
-            "css selector", "#reject-settlement-form button[type=submit]"
-        ).click()
+        driver.find_element(By.ID, "btn-reject-settlement").click()
         time.sleep(0.5)
         dialog_msg = driver.find_element("id", "cdialog-msg").text
         assert "reject" in dialog_msg.lower(), \
@@ -413,7 +408,7 @@ class TestGroupSettlement:
 
     def test_submit_creates_group_settlement_record(self, driver, w, ctx):
         driver.find_element(
-            "css selector", "form[action*='/settle-individual/'] button[type=submit]"
+            By.ID, "btn-settle-individual"
         ).click()
         _confirm(driver)
         time.sleep(1)
@@ -478,7 +473,7 @@ class TestGroupSettlementReviewFlow:
         driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
         time.sleep(1)
         driver.find_element(
-            "css selector", "form[action*='/settle-individual/'] button[type=submit]"
+            By.ID, "btn-settle-individual"
         ).click()
         _confirm(driver)
         time.sleep(1)
@@ -498,7 +493,6 @@ class TestGroupSettlementReviewFlow:
 
     def test_no_review_button_for_debtor(self, driver, w, ctx):
         # The debtor must not see a Review button for their own settlement
-        from selenium.webdriver.common.by import By
         review_links = driver.find_elements(By.CSS_SELECTOR, "a[href*='/approve-settlement/']")
         assert not review_links, \
             "Debtor must not see a Review button for their own settlement"
@@ -513,13 +507,11 @@ class TestGroupSettlementReviewFlow:
             "Debtor's name must appear in the waiting-for-approval section"
 
     def test_creditor_review_button_says_review(self, driver, w, ctx):
-        from selenium.webdriver.common.by import By
         link = driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']")
         assert link.text.strip() == "Review", \
             f"Button must read 'Review', got '{link.text.strip()}'"
 
     def test_creditor_lands_on_confirm_page(self, driver, w, ctx):
-        from selenium.webdriver.common.by import By
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
         time.sleep(1)
         assert "did not receive" in driver.page_source.lower(), \
@@ -528,19 +520,15 @@ class TestGroupSettlementReviewFlow:
             "Confirm page must show a Cancel button"
 
     def test_cancel_returns_to_group_page(self, driver, w, ctx):
-        from selenium.webdriver.common.by import By
         driver.find_element(By.PARTIAL_LINK_TEXT, "Cancel").click()
         time.sleep(1)
         assert f"/buddies/groups/{ctx['group_id']}/" in driver.current_url, \
             "Cancel must return to the group detail page, not the buddy summary"
 
     def test_creditor_approves_via_review_flow(self, driver, w, ctx):
-        from selenium.webdriver.common.by import By
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
         time.sleep(1)
-        driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/approve-settlement/'] button[type=submit]"
-        ).click()
+        driver.find_element(By.ID, "btn-approve-settlement").click()
         time.sleep(1)
         assert "confirmed" in driver.page_source.lower(), \
             "Flash must confirm receipt after creditor approves"
@@ -598,22 +586,19 @@ class TestGroupSettlementRejectionFlow:
         driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
         time.sleep(1)
         driver.find_element(
-            "css selector", "form[action*='/settle-individual/'] button[type=submit]"
+            By.ID, "btn-settle-individual"
         ).click()
         _confirm(driver)
         time.sleep(1)
         assert "settlement record" in driver.page_source.lower()
 
     def test_creditor_rejects_via_review_page(self, driver, w, ctx):
-        from selenium.webdriver.common.by import By
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
         time.sleep(1)
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
         time.sleep(1)
-        driver.find_element(
-            By.CSS_SELECTOR, "#reject-settlement-form button[type=submit]"
-        ).click()
+        driver.find_element(By.ID, "btn-reject-settlement").click()
         time.sleep(0.5)
         _confirm(driver)
         time.sleep(1)

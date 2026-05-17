@@ -97,7 +97,7 @@ class TestBothDummiesSettlementAutoApprove:
             amt.send_keys("40.00")
 
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/settle-individual/'] button[type=submit]"
+            By.ID, "btn-settle-individual"
         ).click()
         time.sleep(0.5)
         # Dialog must say "approved automatically" when both are offline

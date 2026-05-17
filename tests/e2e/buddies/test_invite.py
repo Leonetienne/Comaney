@@ -36,8 +36,7 @@ class TestBuddyInviteAccept:
             "form[action*='invite-actual'] input[name='email']")
         inp.clear()
         inp.send_keys(ctx["b"]["email"])
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='invite-actual'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-invite-actual").click()
         time.sleep(1)
         assert "Buddy invitations you sent" in driver.page_source
         assert ctx["b"]["email"] in driver.page_source
@@ -58,8 +57,7 @@ class TestBuddyInviteAccept:
         driver.get(ctx["invite_link"])
         time.sleep(1)
         assert "invited you to be spending buddies" in driver.page_source
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='accept'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-accept-invite").click()
         time.sleep(1)
         assert "/buddies/" in driver.current_url
 
@@ -107,8 +105,7 @@ class TestBuddyInviteDecline:
         assert "Buddy invitations" in driver.page_source
 
     def test_b_declines_invite(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR,
-            ".invite-card form[action*='decline'] button[type=submit]").click()
+        driver.find_element(By.CSS_SELECTOR, "[id^='btn-decline-invite-']").click()
         time.sleep(1)
         assert "Buddy invitations" not in driver.page_source
         assert ctx["a"]["email"] not in driver.page_source
@@ -147,14 +144,12 @@ class TestBuddyInviteRevoke:
             "form[action*='invite-actual'] input[name='email']")
         inp.clear()
         inp.send_keys(ctx["b"]["email"])
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='invite-actual'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-invite-actual").click()
         time.sleep(1)
         assert ctx["b"]["email"] in driver.page_source
 
     def test_a_revokes_invite(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR,
-            ".invite-card-outgoing form[action*='revoke'] button[type=submit]").click()
+        driver.find_element(By.CSS_SELECTOR, "[id^='btn-revoke-invite-']").click()
         time.sleep(1)
         assert "Buddy invitations you sent" not in driver.page_source
         assert ctx["b"]["email"] not in driver.page_source

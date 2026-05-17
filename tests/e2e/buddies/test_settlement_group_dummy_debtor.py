@@ -82,7 +82,7 @@ class TestGroupSettlementDummyDebtor:
 
     def test_dialog_says_creditor_confirmation_needed(self, driver, w, ctx):
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/settle-individual/'] button[type=submit]"
+            By.ID, "btn-settle-individual"
         ).click()
         time.sleep(0.5)
         msg = driver.find_element(By.ID, "cdialog-msg").text
@@ -96,7 +96,7 @@ class TestGroupSettlementDummyDebtor:
         amt.clear()
         amt.send_keys("100.00")
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/settle-individual/'] button[type=submit]"
+            By.ID, "btn-settle-individual"
         ).click()
         time.sleep(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
@@ -131,7 +131,7 @@ class TestGroupSettlementDummyDebtor:
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
         time.sleep(1)
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/approve-settlement/'] button[type=submit]"
+            By.ID, "btn-approve-settlement"
         ).click()
         time.sleep(1)
         assert "confirmed" in driver.page_source.lower(), \

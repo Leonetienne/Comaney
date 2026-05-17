@@ -27,17 +27,13 @@ from bhelpers import _shell, _login_as, _create_buddy_link, _create_group, _add_
 
 
 def _delete_account_via_ui(driver, ctx_user: dict) -> None:
-    """Navigate to /account/delete/ and confirm with password.
-
-    Uses the .btn-danger selector to avoid accidentally clicking the sidebar
-    logout button, which also matches the generic 'button[type=submit]'.
-    """
+    """Navigate to /account/delete/ and confirm with password."""
     _login_as(driver, ctx_user)
     driver.get(_url("/account/delete/"))
     time.sleep(1)
     pw_el = driver.find_element(By.ID, "id_password")
     driver.execute_script("arguments[0].value = arguments[1];", pw_el, ctx_user["password"])
-    driver.find_element(By.CSS_SELECTOR, "button.btn-danger[type=submit]").click()
+    driver.find_element(By.ID, "btn-delete-account").click()
     time.sleep(2)
 
 

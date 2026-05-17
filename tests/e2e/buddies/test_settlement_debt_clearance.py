@@ -65,7 +65,7 @@ class TestDirectFullSettlementZeroBalance:
 
     def test_settle_exact_amount(self, driver, w, ctx):
         driver.find_element(
-            By.CSS_SELECTOR, ".direct-settle-form button[type=submit]"
+            By.CSS_SELECTOR, "[id^='btn-direct-settle-']"
         ).click()
         _confirm(driver)
         time.sleep(1)
@@ -77,7 +77,7 @@ class TestDirectFullSettlementZeroBalance:
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
         time.sleep(1)
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/approve-settlement/'] button[type=submit]"
+            By.ID, "btn-approve-settlement"
         ).click()
         time.sleep(1)
 
@@ -150,7 +150,7 @@ class TestDirectPartialThenFullSettlement:
         inp.clear()
         inp.send_keys("60.00")
         driver.find_element(
-            By.CSS_SELECTOR, ".direct-settle-form button[type=submit]"
+            By.CSS_SELECTOR, "[id^='btn-direct-settle-']"
         ).click()
         _confirm(driver)
         time.sleep(1)
@@ -162,7 +162,7 @@ class TestDirectPartialThenFullSettlement:
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
         time.sleep(1)
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/approve-settlement/'] button[type=submit]"
+            By.ID, "btn-approve-settlement"
         ).click()
         time.sleep(1)
 
@@ -189,7 +189,7 @@ class TestDirectPartialThenFullSettlement:
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
         driver.find_element(
-            By.CSS_SELECTOR, ".direct-settle-form button[type=submit]"
+            By.CSS_SELECTOR, "[id^='btn-direct-settle-']"
         ).click()
         _confirm(driver)
         time.sleep(1)
@@ -201,7 +201,7 @@ class TestDirectPartialThenFullSettlement:
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
         time.sleep(1)
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/approve-settlement/'] button[type=submit]"
+            By.ID, "btn-approve-settlement"
         ).click()
         time.sleep(1)
 
@@ -258,7 +258,7 @@ class TestGroupFullSettlementZeroBalance:
 
     def test_member_settles_exact_amount(self, driver, w, ctx):
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/settle-individual/'] button[type=submit]"
+            By.ID, "btn-settle-individual"
         ).click()
         _confirm(driver)
         time.sleep(1)
@@ -271,7 +271,7 @@ class TestGroupFullSettlementZeroBalance:
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
         time.sleep(1)
         driver.find_element(
-            By.CSS_SELECTOR, "form[action*='/approve-settlement/'] button[type=submit]"
+            By.ID, "btn-approve-settlement"
         ).click()
         time.sleep(1)
         assert "confirmed" in driver.page_source.lower()

@@ -97,8 +97,7 @@ class TestPersonalDummyMergeAccept:
         assert "Accept and merge" in driver.page_source
 
     def test_b_accepts_merge(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='accept'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-accept-merge").click()
         time.sleep(1)
         assert "/buddies/" in driver.current_url
 
@@ -170,8 +169,7 @@ class TestPersonalDummyMergeDecline:
         assert "Decline" in driver.page_source
 
     def test_b_declines_merge(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='decline'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-decline-merge").click()
         time.sleep(1)
         assert "/buddies/" in driver.current_url
 
@@ -265,8 +263,7 @@ class TestGroupDummyMergeAccept:
         assert "Accept and merge" in driver.page_source
 
     def test_c_accepts_group_merge(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='accept'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-accept-merge").click()
         time.sleep(1)
         assert "/buddies/" in driver.current_url
 

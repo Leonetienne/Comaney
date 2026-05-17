@@ -69,7 +69,7 @@ class TestAchimPersonalCreated:
         assert "Achim Archive" in driver.page_source
 
     def test_submit_redirects_to_buddies_page(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR, "button.btn-danger-subtle").click()
+        driver.find_element(By.ID, "btn-confirm-kick").click()
         time.sleep(1.5)
         assert "/buddies/" in driver.current_url
 
@@ -162,7 +162,7 @@ class TestAchimPersonalWipe:
                "Warning" in driver.page_source
 
     def test_submit_wipes_and_redirects(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR, "button.btn-danger-subtle").click()
+        driver.find_element(By.ID, "btn-confirm-wipe").click()
         time.sleep(1.5)
         assert "/buddies/" in driver.current_url
 

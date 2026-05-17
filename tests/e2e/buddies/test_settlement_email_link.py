@@ -81,9 +81,8 @@ class TestSettlementEmailLinkApproval:
             "Email link must lead to the settlement confirmation page"
 
     def test_creditor_approves_via_email_link(self, driver, w, ctx):
-        driver.find_element(
-            "css selector", "form[action*='/approve-settlement/'] button[type=submit]"
-        ).click()
+        from selenium.webdriver.common.by import By
+        driver.find_element(By.ID, "btn-approve-settlement").click()
         time.sleep(1)
         assert "confirmed" in driver.page_source.lower(), \
             "Approving via email link must show a confirmation flash"

@@ -40,8 +40,7 @@ class TestGroupCreate:
             "form[action*='create'] input[name='name']")
         inp.clear()
         inp.send_keys("Test Group Alpha")
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='create'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-create-group").click()
         time.sleep(1)
         assert "/buddies/groups/" in driver.current_url
 
@@ -83,8 +82,7 @@ class TestGroupInviteAccept:
             "form[action*='invite'] input[name='email']")
         inp.clear()
         inp.send_keys(ctx["c"]["email"])
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='invite'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-group-invite").click()
         time.sleep(1)
         assert "Group invitation sent" in driver.page_source or \
                ctx["c"]["email"] in driver.page_source
@@ -110,8 +108,7 @@ class TestGroupInviteAccept:
         time.sleep(1)
         assert "You're invited!" in driver.page_source
         assert "Invite Test Group" in driver.page_source
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='accept'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-accept-group-invite").click()
         time.sleep(1)
         assert f"/buddies/groups/{ctx['group_id']}/" in driver.current_url
 
@@ -167,8 +164,7 @@ class TestGroupInviteDecline:
         assert "Decline Test Group" in driver.page_source
 
     def test_c_declines_group_invite(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='decline'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-decline-group-invite").click()
         time.sleep(1)
         assert "/buddies/" in driver.current_url
 
@@ -211,8 +207,7 @@ class TestGroupInviteRevoke:
         assert ctx["c"]["email"] in driver.page_source
 
     def test_admin_revokes_invite(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='revoke'] button[type=submit]").click()
+        driver.find_element(By.CSS_SELECTOR, "[id^='btn-revoke-group-invite-']").click()
         time.sleep(1)
         assert ctx["c"]["email"] not in driver.page_source
 
@@ -241,8 +236,7 @@ class TestGroupInviteErrors:
             "form[action*='invite'] input[name='email']")
         inp.clear()
         inp.send_keys(ctx["a"]["email"])
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='invite'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-group-invite").click()
         time.sleep(1)
         assert "cannot invite yourself" in driver.page_source.lower()
 
@@ -253,8 +247,7 @@ class TestGroupInviteErrors:
             "form[action*='invite'] input[name='email']")
         inp.clear()
         inp.send_keys(ctx["c"]["email"])
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='invite'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-group-invite").click()
         time.sleep(1)
         assert "already a member" in driver.page_source.lower()
 
@@ -280,8 +273,7 @@ class TestGroupDummyManagement:
             "form[action*='add-dummy'] input[name='display_name']")
         inp.clear()
         inp.send_keys("Group Offline Member")
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='add-dummy'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-group-add-dummy").click()
         time.sleep(1)
         assert "Group Offline Member" in driver.page_source
 
@@ -290,7 +282,7 @@ class TestGroupDummyManagement:
         dummy_card.find_element(By.CSS_SELECTOR, "a[href*='remove']").click()
         time.sleep(1)
         assert "remove" in driver.current_url
-        driver.find_element(By.CSS_SELECTOR, "button.btn-danger-subtle").click()
+        driver.find_element(By.ID, "btn-confirm-kick").click()
         time.sleep(1)
         assert "Group Offline Member" not in driver.page_source
 
@@ -320,14 +312,13 @@ class TestGroupRemoveMember:
     def test_remove_c_shows_confirm(self, driver, w, ctx):
         # The remove form is inside the member card for C (feuser_members loop)
         member_card = driver.find_elements(By.CSS_SELECTOR, ".buddy-card:not(.buddy-card-dummy)")
-        remove_form = None
+        remove_btn = None
         for card in member_card:
             if ctx["c"]["email"] in card.text:
-                remove_form = card.find_element(By.CSS_SELECTOR,
-                    "form[action*='member'] button[type=submit]")
+                remove_btn = card.find_element(By.CSS_SELECTOR, "[id^='btn-remove-member-']")
                 break
-        assert remove_form is not None, "Remove button not found for member C"
-        remove_form.click()
+        assert remove_btn is not None, "Remove button not found for member C"
+        remove_btn.click()
         time.sleep(0.5)
         assert driver.find_element(By.ID, "cdialog-ok").is_displayed()
 
@@ -367,8 +358,7 @@ class TestGroupTransferAdmin:
         time.sleep(1)
         sel = Select(driver.find_element(By.CSS_SELECTOR, "select[name='new_admin_id']"))
         sel.select_by_value(str(ctx["c_pk"]))
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='transfer-admin'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-transfer-admin").click()
         _confirm(driver)
         assert "/buddies/groups/" in driver.current_url
 
@@ -409,8 +399,7 @@ class TestGroupLeave:
         assert "Leave group" in driver.page_source
 
     def test_c_leaves_group(self, driver, w, ctx):
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='leave'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-leave-group").click()
         _confirm(driver)
         assert "/buddies/" in driver.current_url
 
@@ -446,8 +435,7 @@ class TestGroupDissolve:
     def test_dissolve_group(self, driver, w, ctx):
         driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
         time.sleep(1)
-        driver.find_element(By.CSS_SELECTOR,
-            "form[action*='dissolve'] button[type=submit]").click()
+        driver.find_element(By.ID, "btn-dissolve-group").click()
         _confirm(driver)
         assert "/buddies/" in driver.current_url
 
@@ -567,8 +555,7 @@ class TestGroupExpenseCreateUI:
         time.sleep(0.3)
         driver.find_element(By.ID, "buddy-equal-btn").click()
         time.sleep(0.3)
-        driver.find_element(By.CSS_SELECTOR,
-            "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)").click()
+        driver.find_element(By.XPATH, "//button[contains(text(), 'Create expense')]").click()
         time.sleep(2)
         assert "/budget/expenses/" in driver.current_url, \
             "Group expense (I pay) must redirect to expense list"
