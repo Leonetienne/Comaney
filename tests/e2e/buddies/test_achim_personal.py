@@ -5,6 +5,8 @@ Achim Archive: personal (non-group) scenarios.
        and shows the "Achim appeared" modal.
 5.11c: Bulk-deleting Achim Archive's expenses via the wipe confirmation page
        removes the archive and restores the clean buddy list.
+5.11e: Popup does not appear again when Achim is re-created after the user
+       has already seen it (has_seen_achim_intro flag).
 """
 import time
 
@@ -184,3 +186,64 @@ class TestAchimPersonalWipe:
             f"print(DummyUser.objects.filter(owning_feuser=u, is_archive=True).count())"
         )
         assert count == "0", "Achim Archive DummyUser must be deleted after wipe"
+
+
+# ---------------------------------------------------------------------------
+# Popup must not reappear when Achim is re-created (has_seen_achim_intro flag)
+# ---------------------------------------------------------------------------
+
+class TestAchimPersonalNoRepeatPopup:
+    """Remove a dummy for a user who already has has_seen_achim_intro=True.
+    The modal must NOT appear even though a new Achim Archive is created."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        c = setup_user(driver, w, first_name="Rex", last_name="Repeat")
+        email = c["email"]
+        # Mark the user as having already seen the intro
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"u = FeUser.objects.get(email='{email}'); "
+            f"u.has_seen_achim_intro = True; "
+            f"u.save(update_fields=['has_seen_achim_intro'])"
+        )
+        dummy_id = _shell(
+            f"from buddies.models import DummyUser; "
+            f"from feusers.models import FeUser; "
+            f"u = FeUser.objects.get(email='{email}'); "
+            f"d = DummyUser.objects.create(owning_feuser=u, display_name='Repeat Randy'); "
+            f"print(d.pk)"
+        )
+        _shell(
+            f"from budget.expense_factory import create_expense; "
+            f"from feusers.models import FeUser; from budget.models import TransactionType; "
+            f"from decimal import Decimal; "
+            f"u = FeUser.objects.get(email='{email}'); "
+            f"create_expense(owning_feuser=u, title='Repeat Dinner', "
+            f"  type=TransactionType.EXPENSE, value=Decimal('50.00'), "
+            f"  date_due=None, settled=False, "
+            f"  buddy_spendings=[{{'type': 'dummy', 'id': {dummy_id}, 'share_percent': 50}}])"
+        )
+        c["dummy_id"] = int(dummy_id)
+        yield c
+        cleanup_user(c["email"])
+
+    def test_kick_confirm_page_loads(self, driver, w, ctx):
+        driver.get(_url("/buddies/"))
+        time.sleep(1)
+        driver.find_element(By.CSS_SELECTOR, "a[href*='kick']").click()
+        time.sleep(1)
+        assert "kick" in driver.current_url
+
+    def test_submit_redirects_to_buddies_page(self, driver, w, ctx):
+        driver.find_element(By.ID, "btn-confirm-kick").click()
+        time.sleep(1.5)
+        assert "/buddies/" in driver.current_url
+
+    def test_achim_modal_not_shown(self, driver, w, ctx):
+        assert "Say hello to Achim Archive" not in driver.page_source, \
+            "Achim popup must not appear for a user who has already seen it"
+
+    def test_achim_archive_still_created(self, driver, w, ctx):
+        assert "Achim Archive" in driver.page_source, \
+            "Achim Archive must still appear in the buddy list even without the popup"
