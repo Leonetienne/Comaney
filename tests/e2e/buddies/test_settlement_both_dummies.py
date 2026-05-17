@@ -92,9 +92,7 @@ class TestBothDummiesSettlementAutoApprove:
         time.sleep(0.3)
 
         amt = driver.find_element(By.ID, "settle-amount")
-        if not amt.get_attribute("value"):
-            amt.clear()
-            amt.send_keys("40.00")
+        driver.execute_script("arguments[0].value = '40.00';", amt)
 
         driver.find_element(
             By.ID, "btn-settle-individual"

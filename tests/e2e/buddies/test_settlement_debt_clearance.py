@@ -250,6 +250,8 @@ class TestGroupFullSettlementZeroBalance:
             "Creditor's name must appear in the balance section"
 
     def test_member_settles_exact_amount(self, driver, w, ctx):
+        amt = driver.find_element(By.ID, "settle-amount")
+        driver.execute_script("arguments[0].value = '80.00';", amt)
         driver.find_element(
             By.ID, "btn-settle-individual"
         ).click()

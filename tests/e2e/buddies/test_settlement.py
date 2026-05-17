@@ -412,6 +412,8 @@ class TestGroupSettlement:
             "Owed amount must be shown in the group settle-up section"
 
     def test_submit_creates_group_settlement_record(self, driver, w, ctx):
+        amt = driver.find_element(By.ID, "settle-amount")
+        driver.execute_script("arguments[0].value = '100.00';", amt)
         driver.find_element(
             By.ID, "btn-settle-individual"
         ).click()
@@ -477,6 +479,8 @@ class TestGroupSettlementReviewFlow:
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
         time.sleep(1)
+        amt = driver.find_element(By.ID, "settle-amount")
+        driver.execute_script("arguments[0].value = '50.00';", amt)
         driver.find_element(
             By.ID, "btn-settle-individual"
         ).click()
@@ -590,6 +594,8 @@ class TestGroupSettlementRejectionFlow:
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
         time.sleep(1)
+        amt = driver.find_element(By.ID, "settle-amount")
+        driver.execute_script("arguments[0].value = '40.00';", amt)
         driver.find_element(
             By.ID, "btn-settle-individual"
         ).click()
