@@ -10,7 +10,7 @@ import pytest
 
 from helpers import (
     api_get, api_post, api_patch, api_delete,
-    server_today, setup_user, cleanup_user,
+    server_today, setup_user, cleanup_user, run_cmd,
 )
 
 YEAR = 2025
@@ -300,6 +300,62 @@ class TestDeactivated:
         t = _api_titles(ctx, "deactivated=no")
         assert "QP Past" in t and "QP Mid" in t and "QP Future" in t
         assert "QP Deact" not in t
+
+
+class TestRecurring:
+
+    def test_setup(self, driver, w, ctx):
+        today = server_today()
+        ctx["qp_recurring_year"] = today[:4]
+
+        r = api_post("/api/v1/expenses/", ctx, json={
+            "title": "QP NotRecurring", "type": "expense", "value": "15.00",
+            "date_due": today,
+        })
+        assert r.status_code == 201
+        ctx["qp_not_recurring"] = r.json()["id"]
+
+        r = api_post("/api/v1/scheduled/", ctx, json={
+            "title": "QP Recurring", "type": "expense", "value": "25.00",
+            "repeat_base_date": today, "repeat_every_factor": 1, "repeat_every_unit": "months",
+        })
+        assert r.status_code == 201
+        ctx["qp_recurring_source_id"] = r.json()["id"]
+
+        run_cmd("generate_scheduled_expenses")
+
+    def _titles(self, ctx, q):
+        year = ctx["qp_recurring_year"]
+        resp = api_get("/api/v1/expenses/", ctx, params={"q": q, "view": "year", "year": year})
+        return [e["title"] for e in resp.json()["expenses"]]
+
+    def test_recurring_yes_includes_recurring(self, driver, w, ctx):
+        t = self._titles(ctx, "recurring=yes")
+        assert "QP Recurring" in t
+
+    def test_recurring_yes_excludes_non_recurring(self, driver, w, ctx):
+        t = self._titles(ctx, "recurring=yes")
+        assert "QP NotRecurring" not in t
+
+    def test_recurring_no_includes_non_recurring(self, driver, w, ctx):
+        t = self._titles(ctx, "recurring=no")
+        assert "QP NotRecurring" in t
+
+    def test_recurring_no_excludes_recurring(self, driver, w, ctx):
+        t = self._titles(ctx, "recurring=no")
+        assert "QP Recurring" not in t
+
+    def test_cleanup(self, driver, w, ctx):
+        year = ctx.get("qp_recurring_year")
+        if year:
+            resp = api_get("/api/v1/expenses/", ctx, params={"q": "QP Recurring", "view": "year", "year": year})
+            for e in resp.json()["expenses"]:
+                api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        if "qp_not_recurring" in ctx:
+            api_delete(f"/api/v1/expenses/{ctx.pop('qp_not_recurring')}/", ctx)
+        if "qp_recurring_source_id" in ctx:
+            api_delete(f"/api/v1/scheduled/{ctx.pop('qp_recurring_source_id')}/", ctx)
+        ctx.pop("qp_recurring_year", None)
 
 
 class TestWeekKeywords:
