@@ -46,6 +46,30 @@ recurring=no
 
 The **Hide recurring** checkbox on the expense list is a shortcut for this filter.
 
+## Filter by buddy group or participant
+
+```
+buddy=yes
+buddy=no
+```
+
+`buddy=yes` shows only expenses that have at least one buddy participant. `buddy=no` shows only expenses with no buddy participants.
+
+```
+buddy=Rainer
+buddy="holiday trip"
+```
+
+When given a name or phrase, `buddy=` matches against:
+
+- The buddy group name
+- The name of any participant in the expense
+- The name of any member of the group (including those who are not a participant in that specific expense)
+
+Matching is partial and case-insensitive, so `buddy=rai` would find "Rainer".
+
+Free-text search (typing without a filter prefix) also looks through group names and participant names automatically.
+
 ## Filter by category
 
 ```
