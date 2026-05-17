@@ -385,3 +385,127 @@ class TestExpressBuddyCardUI:
         options = sel.find_elements(By.TAG_NAME, "option")
         assert len(options) >= 2, \
             "Payer dropdown must have at least 'Me' and one buddy option"
+
+
+# ---------------------------------------------------------------------------
+# UI: currency amounts shown next to share percentages (uneven split)
+# ---------------------------------------------------------------------------
+
+class TestExpressBuddySliderAmounts:
+    """Currency amount spans next to share % are correct for an uneven buddy split."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        c = setup_user(driver, w, first_name="SliderAmt", last_name="Express")
+        _create_dummy(c["email"], "SliderAmt Dummy (offline member)")
+        yield c
+        cleanup_user(c["email"])
+
+    def _check_ai(self, driver):
+        driver.get(_url("/budget/ai/express-creation/"))
+        time.sleep(1)
+        if "/profile" in driver.current_url:
+            pytest.skip("No API key configured")
+        src = driver.page_source
+        if "temporarily unavailable" in src or "Monthly AI limit reached" in src:
+            pytest.skip("AI trial not available")
+
+    def _parse_and_wait(self, driver):
+        ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
+        driver.execute_script("arguments[0].value = arguments[1];", ta, "Rainers favourite Ofenkäse, 6 EUR")
+        driver.find_element(By.ID, "parse-btn").click()
+        deadline = time.time() + AI_TIMEOUT
+        while time.time() < deadline:
+            if driver.find_elements(By.CSS_SELECTOR, ".preview-card"):
+                break
+            time.sleep(3)
+        else:
+            pytest.skip("AI timed out")
+
+    def test_ai_available_and_cards_rendered(self, driver, w, ctx):
+        self._check_ai(driver)
+        self._parse_and_wait(driver)
+        assert driver.find_elements(By.CSS_SELECTOR, ".preview-card"), "Need preview cards"
+        ctx["ai_ok"] = True
+
+    def test_slider_amounts_uneven_split(self, driver, w, ctx):
+        """30/70 split: each slider row must show the correct currency amount."""
+        if not ctx.get("ai_ok"):
+            pytest.skip("AI not available")
+
+        card = driver.find_elements(By.CSS_SELECTOR, ".preview-card")[0]
+
+        # Read the actual parsed expense value so the expected amounts are always correct.
+        val_input = card.find_element(By.CSS_SELECTOR, ".edit-value")
+        expense_val = float(val_input.get_attribute("value").replace(",", "."))
+
+        # Enable buddy payment.
+        cb = card.find_element(By.CSS_SELECTOR, ".buddy-payment-cb")
+        cb.click()
+        time.sleep(0.5)
+
+        # Single mode is the default; select the dummy from the participant dropdown.
+        part_sel = card.find_element(By.CSS_SELECTOR, ".buddy-participant-select")
+        opts = part_sel.find_elements(By.TAG_NAME, "option")
+        target = next((o for o in opts if o.get_attribute("value")), None)
+        assert target, "No buddy option available in participant dropdown"
+        driver.execute_script("arguments[0].value = arguments[1];", part_sel, target.get_attribute("value"))
+        driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", part_sel)
+        time.sleep(0.5)
+
+        # Set the participant slider to 30% and trigger the input event.
+        participant_slider = card.find_element(
+            By.CSS_SELECTOR, ".buddy-slider-row:not(.buddy-payer-row) input[type=range]"
+        )
+        driver.execute_script(
+            "arguments[0].value = 30; arguments[0].dispatchEvent(new Event('input'));",
+            participant_slider,
+        )
+        time.sleep(0.3)
+
+        # Participant row: must show 30 % of expense_val.
+        part_amt_el = card.find_element(
+            By.CSS_SELECTOR, ".buddy-slider-row:not(.buddy-payer-row) .buddy-slider-amt"
+        )
+        part_amt_text = part_amt_el.text.strip()
+        expected_part = round(0.30 * expense_val, 2)
+        assert f"{expected_part:.2f}" in part_amt_text, (
+            f"Participant (30 %) must show {expected_part:.2f} but got: {part_amt_text!r}"
+        )
+
+        # Payer row: must show the remaining 70 % of expense_val.
+        payer_amt_el = card.find_element(By.CSS_SELECTOR, ".buddy-payer-row .buddy-slider-amt")
+        payer_amt_text = payer_amt_el.text.strip()
+        expected_payer = round(0.70 * expense_val, 2)
+        assert f"{expected_payer:.2f}" in payer_amt_text, (
+            f"Payer (70 %) must show {expected_payer:.2f} but got: {payer_amt_text!r}"
+        )
+
+    def test_slider_amounts_update_on_value_change(self, driver, w, ctx):
+        """Changing the expense value must immediately update all currency amount spans."""
+        if not ctx.get("ai_ok"):
+            pytest.skip("AI not available")
+
+        card = driver.find_elements(By.CSS_SELECTOR, ".preview-card")[0]
+
+        # Set the expense value to exactly 100 so the expected amounts are trivial to check.
+        val_input = card.find_element(By.CSS_SELECTOR, ".edit-value")
+        driver.execute_script("arguments[0].value = '100';", val_input)
+        driver.execute_script("arguments[0].dispatchEvent(new Event('input'));", val_input)
+        time.sleep(0.3)
+
+        # Participant is still at 30%: must now show 30.00.
+        part_amt_text = card.find_element(
+            By.CSS_SELECTOR, ".buddy-slider-row:not(.buddy-payer-row) .buddy-slider-amt"
+        ).text.strip()
+        assert "30.00" in part_amt_text, (
+            f"After value -> 100, participant (30 %) must show 30.00, got: {part_amt_text!r}"
+        )
+
+        # Payer is still at 70%: must now show 70.00.
+        payer_amt_text = card.find_element(
+            By.CSS_SELECTOR, ".buddy-payer-row .buddy-slider-amt"
+        ).text.strip()
+        assert "70.00" in payer_amt_text, (
+            f"After value -> 100, payer (70 %) must show 70.00, got: {payer_amt_text!r}"
+        )

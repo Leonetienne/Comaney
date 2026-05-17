@@ -467,3 +467,82 @@ class TestGroupModeParticipantCheckboxWithNonMePayer:
         total = sum(float(el.text.rstrip("%")) for el in pct_els)
         assert abs(total - 100.0) < 0.2, \
             f"All slider shares must sum to 100%, got: {[el.text for el in pct_els]}"
+
+
+# ---------------------------------------------------------------------------
+# Currency amounts shown next to share percentages (uneven split)
+# ---------------------------------------------------------------------------
+
+class TestBuddySliderCurrencyAmounts:
+    """buddy-slider-amt spans show the correct currency value for each share row.
+
+    Uses the new expense form with a fixed value so expected amounts are trivial
+    to compute. Tests an uneven 30/70 split and verifies that changing the
+    expense value immediately updates all amount spans.
+    """
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        c = setup_user(driver, w, first_name="Amt", last_name="Checker")
+        email = c["email"]
+        _shell(
+            f"from buddies.models import DummyUser; "
+            f"from feusers.models import FeUser; "
+            f"u = FeUser.objects.get(email='{email}'); "
+            f"DummyUser.objects.create(owning_feuser=u, display_name='Amt Dummy (offline member)')"
+        )
+        yield c
+        cleanup_user(c["email"])
+
+    def test_open_form_and_set_value(self, driver, w, ctx):
+        driver.get(_url("/budget/expenses/new/"))
+        time.sleep(1)
+        driver.execute_script("document.getElementById('id_value').value = '120';")
+        driver.execute_script(
+            "document.getElementById('id_value').dispatchEvent(new Event('input'));"
+        )
+
+    def test_enable_buddy_and_select_participant(self, driver, w, ctx):
+        driver.find_element(By.ID, "buddy-payment-cb").click()
+        time.sleep(0.5)
+        _select_first_participant(driver)
+        time.sleep(0.3)
+
+    def test_amt_spans_present(self, driver, w, ctx):
+        amt_els = driver.find_elements(By.CSS_SELECTOR, "#buddy-sliders .buddy-slider-amt")
+        assert len(amt_els) >= 2, \
+            "Expected a buddy-slider-amt span for both the payer row and the participant row"
+
+    def test_amt_uneven_split_participant(self, driver, w, ctx):
+        """Move participant slider to 30%; participant share must show 36.00."""
+        driver.execute_script(
+            "var s = document.getElementById('bs-slider-0');"
+            "s.value = 30;"
+            "s.dispatchEvent(new Event('input', {bubbles: true}));",
+        )
+        time.sleep(0.3)
+        amt_text = driver.find_element(By.ID, "bs-amt-0").text.strip()
+        assert "36.00" in amt_text, \
+            f"30% of 120 must show 36.00 in the participant amount span, got: {amt_text!r}"
+
+    def test_amt_uneven_split_payer(self, driver, w, ctx):
+        """Payer's implicit share is 70%; payer amount must show 84.00."""
+        amt_text = driver.find_element(By.ID, "buddy-payer-amt").text.strip()
+        assert "84.00" in amt_text, \
+            f"70% of 120 must show 84.00 in the payer amount span, got: {amt_text!r}"
+
+    def test_amt_updates_when_value_changes(self, driver, w, ctx):
+        """Changing the expense value to 200 must update all amount spans immediately."""
+        driver.execute_script("document.getElementById('id_value').value = '200';")
+        driver.execute_script(
+            "document.getElementById('id_value').dispatchEvent(new Event('input'));"
+        )
+        time.sleep(0.3)
+        # Participant still at 30%: 60.00
+        part_text = driver.find_element(By.ID, "bs-amt-0").text.strip()
+        assert "60.00" in part_text, \
+            f"After value -> 200, 30% participant must show 60.00, got: {part_text!r}"
+        # Payer still at 70%: 140.00
+        payer_text = driver.find_element(By.ID, "buddy-payer-amt").text.strip()
+        assert "140.00" in payer_text, \
+            f"After value -> 200, 70% payer must show 140.00, got: {payer_text!r}"
