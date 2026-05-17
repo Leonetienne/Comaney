@@ -59,14 +59,12 @@ class TestDirectFullSettlementZeroBalance:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        inp = driver.find_element(By.CSS_SELECTOR, ".settle-amount-input")
+        inp = driver.find_element("id", "direct-settle-amount")
         assert inp.get_attribute("value") == "50.00", \
             "Pre-filled amount must equal the exact debt of 50.00"
 
     def test_settle_exact_amount(self, driver, w, ctx):
-        driver.find_element(
-            By.CSS_SELECTOR, "[id^='btn-direct-settle-']"
-        ).click()
+        driver.find_element("id", "btn-direct-settle").click()
         _confirm(driver)
         time.sleep(1)
 
@@ -93,11 +91,12 @@ class TestDirectFullSettlementZeroBalance:
         assert "You owe them" not in src, \
             "Must not show 'You owe them' once balance = 0"
 
-    def test_no_settle_up_section_on_summary(self, driver, w, ctx):
+    def test_amount_empty_when_debt_is_zero(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Pay someone back" not in driver.page_source, \
-            "Settle Up section must be absent when remaining debt = 0"
+        inp = driver.find_element("id", "direct-settle-amount")
+        assert inp.get_attribute("value") in ("", None), \
+            "Amount input must be empty when remaining debt = 0"
 
     def test_net_debt_zero_via_shell(self, driver, w, ctx):
         net = _shell(
@@ -141,17 +140,14 @@ class TestDirectPartialThenFullSettlement:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        inp = driver.find_element(By.CSS_SELECTOR, ".settle-amount-input")
+        inp = driver.find_element("id", "direct-settle-amount")
         assert inp.get_attribute("value") == "100.00", \
             "Pre-filled amount must be 100.00 (full debt)"
 
     def test_submit_partial_settlement_of_60(self, driver, w, ctx):
-        inp = driver.find_element(By.CSS_SELECTOR, ".settle-amount-input")
-        inp.clear()
-        inp.send_keys("60.00")
-        driver.find_element(
-            By.CSS_SELECTOR, "[id^='btn-direct-settle-']"
-        ).click()
+        inp = driver.find_element("id", "direct-settle-amount")
+        driver.execute_script("arguments[0].value = '60.00';", inp)
+        driver.find_element("id", "btn-direct-settle").click()
         _confirm(driver)
         time.sleep(1)
 
@@ -170,9 +166,7 @@ class TestDirectPartialThenFullSettlement:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Pay someone back" in driver.page_source, \
-            "Settle Up section must still appear: 40.00 remains unpaid"
-        inp = driver.find_element(By.CSS_SELECTOR, ".settle-amount-input")
+        inp = driver.find_element("id", "direct-settle-amount")
         assert inp.get_attribute("value") == "40.00", \
             "Remaining debt must be 40.00 after the 60.00 partial settlement"
 
@@ -188,9 +182,7 @@ class TestDirectPartialThenFullSettlement:
     def test_settle_remaining_40(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        driver.find_element(
-            By.CSS_SELECTOR, "[id^='btn-direct-settle-']"
-        ).click()
+        driver.find_element("id", "btn-direct-settle").click()
         _confirm(driver)
         time.sleep(1)
 
@@ -205,12 +197,13 @@ class TestDirectPartialThenFullSettlement:
         ).click()
         time.sleep(1)
 
-    def test_debt_fully_cleared_no_settle_up(self, driver, w, ctx):
+    def test_amount_empty_after_full_clearance(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Pay someone back" not in driver.page_source, \
-            "Settle Up section must be absent once the remaining 40.00 is also confirmed"
+        inp = driver.find_element("id", "direct-settle-amount")
+        assert inp.get_attribute("value") in ("", None), \
+            "Amount input must be empty once both partial settlements are confirmed"
 
     def test_balance_settled_on_buddies_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))

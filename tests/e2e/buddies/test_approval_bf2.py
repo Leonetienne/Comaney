@@ -42,9 +42,7 @@ class TestApproveOwnSettlementBlocked:
         time.sleep(1)
         assert "Pay someone back" in driver.page_source, \
             "Settle Up section must be visible before test can run"
-        driver.find_element(
-            "css selector", ".direct-settle-form button[type=submit]"
-        ).click()
+        driver.find_element("id", "btn-direct-settle").click()
         time.sleep(0.5)
         driver.find_element("id", "cdialog-ok").click()
         time.sleep(1)

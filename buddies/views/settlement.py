@@ -42,6 +42,39 @@ def settle_direct_individual(request, buddy_key):
 
 @feuser_required
 @require_POST
+def settle_direct_freeform(request):
+    """Single-form personal settlement: debtor_key and creditor_key come from POST body."""
+    feuser = request.feuser
+    feuser_key = f"f{feuser.pk}"
+    debtor_key = request.POST.get("debtor_key", feuser_key).strip() or feuser_key
+    creditor_key = request.POST.get("creditor_key", "").strip()
+    try:
+        amount = Decimal(request.POST.get("amount", "0").replace(",", "."))
+    except Exception:
+        django_messages.error(request, "Invalid amount.")
+        return redirect("buddies:buddy_summary")
+
+    if amount < Decimal("0.01"):
+        django_messages.error(request, "Amount must be at least 0.01.")
+        return redirect("buddies:buddy_summary")
+
+    if debtor_key == feuser_key:
+        ok = BuddySettlementService.create_direct_individual_settlement(feuser, creditor_key, amount)
+        if ok:
+            django_messages.success(request, "Settlement recorded. You still need to send the money yourself.")
+        else:
+            django_messages.error(request, "Settlement could not be created.")
+    else:
+        ok = BuddySettlementService.create_direct_dummy_settlement(feuser, debtor_key, amount)
+        if ok:
+            django_messages.success(request, "Settlement recorded.")
+        else:
+            django_messages.error(request, "Settlement could not be created.")
+    return redirect("buddies:buddy_summary")
+
+
+@feuser_required
+@require_POST
 def group_settle_individual(request, group_id):
     from ..models import BuddyGroup
     feuser = request.feuser

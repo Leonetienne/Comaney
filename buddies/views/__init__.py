@@ -1,6 +1,6 @@
 from .main import buddies_page, my_buddies_page, buddy_summary_page
 from .settlement import (
-    settle_direct, settle_direct_individual,
+    settle_direct, settle_direct_individual, settle_direct_freeform,
     group_settle_individual, group_settle_all,
 )
 from .buddies import (

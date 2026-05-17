@@ -51,16 +51,24 @@ def buddy_summary_page(request):
     direct_expenses = all_shared.filter(buddy_group__isnull=True)
     my_groups_summary = BuddyQueryService.get_group_summaries_for_feuser(feuser)
 
-    settle_candidates = [
-        {
-            "key": f"f{info['feuser'].pk}" if info["type"] == "feuser" else f"d{info['dummy'].pk}",
-            "name": info["display_name"],
-            "amount": -info["net"],
-            "is_real_user": info["type"] == "feuser",
-        }
-        for info in unified_debts
-        if info["net"] < Decimal("-0.005")
-    ]
+    feuser_key = f"f{feuser.pk}"
+    direct_settle_members = []
+    settle_debts: dict = {}  # {debtor_key: {creditor_key: amount}}
+    for _info in unified_debts:
+        _key = f"f{_info['feuser'].pk}" if _info["type"] == "feuser" else f"d{_info['dummy'].pk}"
+        _is_dummy = _info["type"] == "dummy"
+        _net = _info["net"]
+        if _net < Decimal("-0.005"):
+            # feuser owes this buddy
+            settle_debts.setdefault(feuser_key, {})[_key] = float(-_net)
+        elif _net > Decimal("0.005"):
+            # this buddy owes feuser
+            settle_debts.setdefault(_key, {})[feuser_key] = float(_net)
+        direct_settle_members.append({
+            "key": _key,
+            "name": _info["display_name"],
+            "is_dummy": _is_dummy,
+        })
 
     # Expenses where feuser must confirm they paid (owning_feuser, buddy_approved=False).
     # Settlement expenses (settled=True) are excluded: the debtor must never see Approve/Reject
@@ -125,7 +133,9 @@ def buddy_summary_page(request):
         "direct_expenses": direct_expenses,
         "my_groups_summary": my_groups_summary,
         "debts_json": _debts_to_json(unified_debts),
-        "settle_candidates": settle_candidates,
+        "feuser_key": feuser_key,
+        "direct_settle_members_json": json.dumps(direct_settle_members),
+        "settle_debts_json": json.dumps(settle_debts),
         "pending_as_expense_owner": pending_as_expense_owner,
         "pending_as_creditor": pending_as_creditor,
         "pending_dummy_expense_owners": pending_dummy_expense_owners,

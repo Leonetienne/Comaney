@@ -145,6 +145,47 @@ class BuddySettlementService:
 
     @staticmethod
     @transaction.atomic
+    def create_direct_dummy_settlement(feuser, dummy_key: str, amount: "Decimal") -> bool:
+        """
+        Record a settlement from a personal offline buddy (dummy) to the feuser.
+        The dummy is the payer; feuser is the recipient. Auto-approved.
+        Returns True on success.
+        """
+        from budget.expense_factory import create_expense
+        from budget.models import TransactionType
+        from datetime import date as _date
+
+        amount = Decimal(str(amount))
+        if amount < Decimal("0.01"):
+            return False
+
+        if not dummy_key.startswith("d"):
+            return False
+
+        try:
+            dummy = DummyUser.objects.get(pk=int(dummy_key[1:]), owning_feuser=feuser)
+        except (ValueError, DummyUser.DoesNotExist):
+            return False
+
+        title = f"Settlement from {dummy.display_name} (offline member)"
+        create_expense(
+            owning_feuser=feuser,
+            title=title,
+            type=TransactionType.EXPENSE,
+            value=amount,
+            date_due=_date.today(),
+            settled=True,
+            notify=False,
+            is_buddies_settlement=True,
+            buddy_approved=True,
+            is_dummy=True,
+            upfront_payee_dummy=dummy,
+            buddy_spendings=[],
+        )
+        return True
+
+    @staticmethod
+    @transaction.atomic
     def create_individual_group_settlement(
         acting_feuser, group, debtor_key: str, creditor_key: str, amount: "Decimal"
     ) -> bool:

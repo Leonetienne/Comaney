@@ -44,9 +44,7 @@ class TestSettlementEmailLinkApproval:
         time.sleep(1)
         assert "Pay someone back" in driver.page_source, \
             "Settle Up section must appear before test can run"
-        driver.find_element(
-            "css selector", ".direct-settle-form button[type=submit]"
-        ).click()
+        driver.find_element("id", "btn-direct-settle").click()
         time.sleep(0.5)
         driver.find_element("id", "cdialog-ok").click()
         time.sleep(1)
@@ -91,8 +89,9 @@ class TestSettlementEmailLinkApproval:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Pay someone back" not in driver.page_source, \
-            "Settle Up section must disappear once the creditor has confirmed via email link"
+        inp = driver.find_element("id", "direct-settle-amount")
+        assert inp.get_attribute("value") in ("", None), \
+            "Amount input must be empty (debt cleared) once the creditor has confirmed via email link"
 
     def test_income_expense_created_for_creditor(self, driver, w, ctx):
         import requests

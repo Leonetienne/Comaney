@@ -64,5 +64,6 @@ urlpatterns = [
 
     # Direct settlements
     path("settle/", views.settle_direct, name="settle_direct"),
+    path("settle/freeform/", views.settle_direct_freeform, name="settle_direct_freeform"),
     path("settle/<str:buddy_key>/", views.settle_direct_individual, name="settle_direct_individual"),
 ]

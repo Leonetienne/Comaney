@@ -67,18 +67,17 @@ class TestDirectSettlement:
             "Creditor name must be visible in the settle-up section"
 
     def test_settle_section_shows_amount_owed(self, driver, w, ctx):
-        assert "50.00" in driver.page_source, \
-            "Amount owed must be shown in the settle-up section"
+        inp = driver.find_element("id", "direct-settle-amount")
+        assert "50" in (inp.get_attribute("value") or ""), \
+            "Amount owed must be pre-filled in the amount input"
 
     def test_amount_input_prefilled(self, driver, w, ctx):
-        inp = driver.find_element("css selector", ".settle-amount-input")
+        inp = driver.find_element("id", "direct-settle-amount")
         assert inp.get_attribute("value") == "50.00", \
             "Amount input must be pre-filled with 50.00 (what is owed)"
 
     def test_confirm_dialog_appears_on_submit(self, driver, w, ctx):
-        driver.find_element(
-            "css selector", ".direct-settle-form button[type=submit]"
-        ).click()
+        driver.find_element("id", "btn-direct-settle").click()
         time.sleep(0.5)
         dialog_msg = driver.find_element("id", "cdialog-msg").text
         assert "Beth" in dialog_msg, \
@@ -94,9 +93,7 @@ class TestDirectSettlement:
         time.sleep(0.5)
 
     def test_submit_creates_settlement_record(self, driver, w, ctx):
-        driver.find_element(
-            "css selector", ".direct-settle-form button[type=submit]"
-        ).click()
+        driver.find_element("id", "btn-direct-settle").click()
         _confirm(driver)
         time.sleep(1)
         assert "settlement record" in driver.page_source.lower(), \
@@ -211,8 +208,9 @@ class TestDirectSettlement:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Pay someone back" not in driver.page_source, \
-            "Settle Up section must disappear once the creditor has confirmed"
+        inp = driver.find_element("id", "direct-settle-amount")
+        assert inp.get_attribute("value") in ("", None), \
+            "Amount input must be empty once the creditor has confirmed"
 
 
 class TestDirectSettlementNoDebt:
@@ -238,13 +236,20 @@ class TestDirectSettlementNoDebt:
         cleanup_user(a["email"])
         cleanup_user(b["email"])
 
-    def test_settle_section_absent_for_creditor(self, driver, w, ctx):
-        # A is the creditor; A owes nobody so no settle section
+    def test_settle_section_visible_for_creditor(self, driver, w, ctx):
+        # A is the creditor but still has a direct buddy; the form must appear
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "Pay someone back" not in driver.page_source, \
-            "Settle Up section must not appear when user has no outstanding debt"
+        assert "Pay someone back" in driver.page_source, \
+            "Pay someone back section must appear whenever the user has a direct buddy"
+
+    def test_amount_not_prefilled_when_no_debt(self, driver, w, ctx):
+        # A owes nobody so the amount input must be empty (no pre-fill)
+        inp = driver.find_element("id", "direct-settle-amount")
+        val = inp.get_attribute("value")
+        assert val in ("", None), \
+            f"Amount must not be pre-filled when user has no debt, got '{val}'"
 
 
 # ---------------------------------------------------------------------------
@@ -299,7 +304,7 @@ class TestDirectSettlementRejection:
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        driver.find_element("css selector", ".direct-settle-form button[type=submit]").click()
+        driver.find_element("id", "btn-direct-settle").click()
         _confirm(driver)
         time.sleep(1)
         assert "settlement record" in driver.page_source.lower(), \
