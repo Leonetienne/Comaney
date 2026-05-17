@@ -3,7 +3,7 @@
         {% if current_feuser %}<button class="hamburger" id="hamburger" aria-label="Menu">
             <span></span><span></span><span></span>
         </button>{% endif %}
-        {% load static %}
+        {% load static feuser_tags %}
         <a class="brand" href="{% url 'landing_page' %}">
             <img src="{% static 'favicon.svg' %}" alt="" class="brand-logo">Comaney
         </a>
@@ -11,6 +11,11 @@
     <nav>
         {% if current_feuser %}
             <span class="header-user-actions">
+                {% if current_feuser.profile_picture %}
+                    <img src="{{ current_feuser.ppic_url }}" class="user-avatar" alt="">
+                {% else %}
+                    <span class="user-avatar user-avatar--initials" style="background: {{ current_feuser.initials|avatar_color }};">{{ current_feuser.initials }}</span>
+                {% endif %}
                 <span class="user-name">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</span>
                 <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}

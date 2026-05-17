@@ -43,6 +43,7 @@ class FeUser(models.Model):
     )
     allowance_transition_month = models.CharField(max_length=10, blank=True)
     has_seen_achim_intro = models.BooleanField(default=False)
+    profile_picture = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(null=True, blank=True)
     last_seen = models.DateTimeField(null=True, blank=True)
@@ -91,3 +92,13 @@ class FeUser(models.Model):
 
     def revoke_api_key(self) -> None:
         self.api_key = None
+
+    @property
+    def initials(self) -> str:
+        parts = [self.first_name[:1].upper(), self.last_name[:1].upper()]
+        result = "".join(p for p in parts if p)
+        return result or self.email[:2].upper()
+
+    @property
+    def ppic_url(self) -> str:
+        return f"/media/ppics/{self.pk}.jpg"

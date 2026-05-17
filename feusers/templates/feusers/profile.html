@@ -4,9 +4,43 @@
 
 
 {% block content %}
+{% load feuser_tags %}
 <div class="settings-wrap">
 
     <h1>Settings</h1>
+
+    <div class="settings-card" id="section-picture">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Profile picture</h2>
+        </div>
+        <p id="ppic-success" class="success-msg" {% if success != "picture" and success != "picture_deleted" %}style="display:none;"{% endif %}>
+            {% if success == "picture" %}Profile picture updated.{% elif success == "picture_deleted" %}Profile picture removed.{% endif %}
+        </p>
+        <p id="ppic-error" class="error-msg" {% if not picture_error %}style="display:none;"{% endif %}>{{ picture_error }}</p>
+        <div class="ppic-settings-row">
+            <div id="ppic-preview-wrap">
+                {% if current_feuser.profile_picture %}
+                    <img id="ppic-preview-img" src="{{ current_feuser.ppic_url }}" class="user-avatar user-avatar--lg" alt="">
+                {% else %}
+                    <span id="ppic-preview-initials" class="user-avatar user-avatar--lg user-avatar--initials" style="background: {{ current_feuser.initials|avatar_color }};">{{ current_feuser.initials }}</span>
+                {% endif %}
+            </div>
+            <div class="ppic-settings-actions">
+                <label for="id_profile_picture" class="btn btn-secondary btn-sm" style="cursor:pointer;">Choose image</label>
+                <input type="file" id="id_profile_picture" accept="image/*" style="display:none;">
+                {% if current_feuser.profile_picture %}
+                <form method="post" novalidate id="ppic-delete-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="picture_delete">
+                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        <p class="in-page-tip" style="margin-top:12px;margin-bottom:0;">JPEG, PNG, GIF or WebP. Max 5 MB.</p>
+    </div>
+
+    {% include "partials/_image_cropper.html" %}
 
     <div class="settings-card" id="section-profile">
         <div class="settings-card-head">
@@ -183,6 +217,77 @@
 
 </div>
 
+<script>
+(function () {
+    var fileInput = document.getElementById('id_profile_picture');
+    if (!fileInput) return;
+
+    var successEl  = document.getElementById('ppic-success');
+    var errorEl    = document.getElementById('ppic-error');
+    var previewWrap = document.getElementById('ppic-preview-wrap');
+
+    function getCsrf() {
+        var m = document.cookie.match(/csrftoken=([^;]+)/);
+        return m ? m[1] : '';
+    }
+
+    function setStatus(type, msg) {
+        successEl.style.display = 'none';
+        errorEl.style.display   = 'none';
+        if (type === 'success') { successEl.textContent = msg; successEl.style.display = ''; }
+        if (type === 'error')   { errorEl.textContent   = msg; errorEl.style.display   = ''; }
+    }
+
+    fileInput.addEventListener('change', function () {
+        var file = fileInput.files[0];
+        if (!file) return;
+        fileInput.value = ''; // allow re-selecting the same file later
+
+        window.ImageCropper.open(file, function (blob) {
+            setStatus('', '');
+            var form = new FormData();
+            form.append('csrfmiddlewaretoken', getCsrf());
+            form.append('action', 'picture');
+            form.append('profile_picture', blob, 'profile.jpg');
+
+            fetch(window.location.pathname, { method: 'POST', body: form })
+                .then(function (resp) {
+                    if (resp.ok) {
+                        // Refresh the preview from the server's freshly written file.
+                        var imgEl = previewWrap.querySelector('img.user-avatar--lg');
+                        var blobUrl = URL.createObjectURL(blob);
+                        if (imgEl) {
+                            imgEl.src = blobUrl;
+                        } else {
+                            // Replace the initials span with an img
+                            var newImg = document.createElement('img');
+                            newImg.className = 'user-avatar user-avatar--lg';
+                            newImg.alt = '';
+                            newImg.src = blobUrl;
+                            previewWrap.innerHTML = '';
+                            previewWrap.appendChild(newImg);
+                        }
+                        // Also update the header avatar immediately
+                        var headerAvatar = document.querySelector('header .user-avatar');
+                        if (headerAvatar) {
+                            var newHeader = document.createElement('img');
+                            newHeader.className = 'user-avatar';
+                            newHeader.alt = '';
+                            newHeader.src = blobUrl;
+                            headerAvatar.replaceWith(newHeader);
+                        }
+                        setStatus('success', 'Profile picture updated.');
+                    } else {
+                        setStatus('error', 'Upload failed. Please try again.');
+                    }
+                })
+                .catch(function () {
+                    setStatus('error', 'Upload failed. Please try again.');
+                });
+        });
+    });
+}());
+</script>
 <script>
 document.querySelectorAll('.pw-eye').forEach(btn => {
     const input = btn.closest('.pw-wrap').querySelector('input');

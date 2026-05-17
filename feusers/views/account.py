@@ -25,11 +25,45 @@ def profile(request):
     password_form = ChangePasswordForm(feuser=feuser)
     success       = request.GET.get("success")
     email_error   = None
+    picture_error = None
 
     if request.method == "POST":
         action = request.POST.get("action")
 
-        if action == "profile":
+        if action == "picture":
+            upload = request.FILES.get("profile_picture")
+            if not upload:
+                picture_error = "No file selected."
+            elif upload.size > 5 * 1024 * 1024:
+                picture_error = "File too large. Maximum size is 5 MB."
+            else:
+                try:
+                    from PIL import Image, ImageOps
+                    img = Image.open(upload)
+                    img.verify()
+                    upload.seek(0)
+                    img = Image.open(upload)
+                    img = ImageOps.fit(img, (256, 256), Image.LANCZOS)
+                    if img.mode in ("RGBA", "P", "LA"):
+                        img = img.convert("RGB")
+                    ppics_dir = settings.MEDIA_ROOT / "ppics"
+                    ppics_dir.mkdir(exist_ok=True)
+                    img.save(ppics_dir / f"{feuser.pk}.jpg", "JPEG", quality=85)
+                    feuser.profile_picture = True
+                    feuser.save(update_fields=["profile_picture"])
+                    return redirect(f"{request.path}?success=picture")
+                except Exception:
+                    picture_error = "Could not process the image. Please upload a valid image file."
+
+        elif action == "picture_delete":
+            ppic_path = settings.MEDIA_ROOT / "ppics" / f"{feuser.pk}.jpg"
+            if ppic_path.exists():
+                ppic_path.unlink()
+            feuser.profile_picture = False
+            feuser.save(update_fields=["profile_picture"])
+            return redirect(f"{request.path}?success=picture_deleted")
+
+        elif action == "profile":
             profile_form = ProfileForm(request.POST, instance=feuser)
             if profile_form.is_valid():
                 profile_form.save()
@@ -88,6 +122,7 @@ def profile(request):
         "password_form": password_form,
         "success": success,
         "email_error": email_error,
+        "picture_error": picture_error,
     })
 
 
@@ -223,3 +258,5 @@ def api_key_revoke(request):
     user.revoke_api_key()
     user.save(update_fields=["api_key"])
     return redirect("profile")
+
+

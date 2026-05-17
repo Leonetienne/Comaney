@@ -34,6 +34,7 @@ services:
     volumes:
       - .:/app
       - pip_packages:/usr/local/lib/python3.12/site-packages
+      - comaney_data:/app/data
     working_dir: /app
     ports:
       - "8080:8000"
@@ -59,3 +60,4 @@ services:
 volumes:
   db_data:
   pip_packages:
+  comaney_data:

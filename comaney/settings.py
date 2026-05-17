@@ -94,13 +94,26 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SYSTEM_MISCONFIGURED = False
 SYSTEM_MISCONFIGURED_MSG = ""
 
+DATA_DIR = BASE_DIR / "data"
+MEDIA_ROOT = DATA_DIR / "media"
+
+if not DATA_DIR.is_dir():
+    SYSTEM_MISCONFIGURED = True
+    SYSTEM_MISCONFIGURED_MSG = (
+        "The /data directory is not mounted. "
+        "Mount a persistent volume at /app/data (e.g. comaney_data:/app/data in docker-compose.yml)."
+    )
+else:
+    MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+
 DISABLE_EMAILING = os.environ.get("DISABLE_EMAILING", "").upper() in ("1", "TRUE", "YES")
 
 if DISABLE_EMAILING:
     EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
 elif not os.environ.get("EMAIL_HOST") or not os.environ.get("EMAIL_PORT"):
-    SYSTEM_MISCONFIGURED = True
-    SYSTEM_MISCONFIGURED_MSG = "Email is not configured. Set EMAIL_HOST and EMAIL_PORT, or set DISABLE_EMAILING=true to run without email."
+    if not SYSTEM_MISCONFIGURED:
+        SYSTEM_MISCONFIGURED = True
+        SYSTEM_MISCONFIGURED_MSG = "Email is not configured. Set EMAIL_HOST and EMAIL_PORT, or set DISABLE_EMAILING=true to run without email."
     EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
 else:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

@@ -22,3 +22,8 @@ services:
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@comaney.local}
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+    volumes:
+      - comaney_data:/app/data
+
+volumes:
+  comaney_data:

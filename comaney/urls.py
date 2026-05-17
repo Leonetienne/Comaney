@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.urls import path, re_path, include
 from django.views.static import serve
 
+from .media_serve import media_serve
 from .public_pages import make_view
 from budget.admin_views import ai_trial_admin_view
 
@@ -22,6 +23,7 @@ urlpatterns = [
     path("api/v1/", include("api.urls")),
     path("budget/", include("budget.urls")),
     path("buddies/", include("buddies.urls")),
+    path("media/<path:path>", media_serve, name="media_serve"),
     re_path(r"^docs/(?P<path>.*)$", _serve_docs, name="docs"),
     path("", include("feusers.urls")),
 ]

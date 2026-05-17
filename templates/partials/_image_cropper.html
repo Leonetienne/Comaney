@@ -1,0 +1,232 @@
+<div id="img-cropper-modal" style="display:none;">
+    <div class="img-cropper-dialog">
+        <p class="img-cropper-hint">Drag to reposition &middot; Scroll or pinch to zoom</p>
+        <canvas id="img-cropper-canvas" width="300" height="300"></canvas>
+        <div class="img-cropper-actions">
+            <button type="button" id="img-cropper-cancel" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="img-cropper-done" class="btn">Done</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    var CANVAS_SIZE = 300;
+    var CIRCLE_R    = 120;
+    var CX          = CANVAS_SIZE / 2;
+    var CY          = CANVAS_SIZE / 2;
+
+    var modal     = document.getElementById('img-cropper-modal');
+    var canvas    = document.getElementById('img-cropper-canvas');
+    var ctx       = canvas.getContext('2d');
+    var cancelBtn = document.getElementById('img-cropper-cancel');
+    var doneBtn   = document.getElementById('img-cropper-done');
+
+    var img       = null;
+    var scale     = 1;
+    var offsetX   = CX;
+    var offsetY   = CY;
+    var dragging  = false;
+    var lastX     = 0;
+    var lastY     = 0;
+    var doneCallback = null;
+
+    /* ── helpers ────────────────────────────────────────────────── */
+
+    function minScale() {
+        return Math.max((CIRCLE_R * 2) / img.naturalWidth,
+                        (CIRCLE_R * 2) / img.naturalHeight);
+    }
+
+    function clamp() {
+        var hw = img.naturalWidth  * scale / 2;
+        var hh = img.naturalHeight * scale / 2;
+        offsetX = Math.max(CX + CIRCLE_R - hw, Math.min(CX - CIRCLE_R + hw, offsetX));
+        offsetY = Math.max(CY + CIRCLE_R - hh, Math.min(CY - CIRCLE_R + hh, offsetY));
+    }
+
+    function draw() {
+        var w = img.naturalWidth  * scale;
+        var h = img.naturalHeight * scale;
+
+        ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+        /* image */
+        ctx.drawImage(img, offsetX - w / 2, offsetY - h / 2, w, h);
+
+        /* dark scrim outside the circle, clear inside */
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.beginPath();
+        ctx.rect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        ctx.arc(CX, CY, CIRCLE_R, 0, Math.PI * 2);
+        ctx.fill('evenodd');
+        ctx.restore();
+
+        /* circle border */
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(CX, CY, CIRCLE_R, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function initImage(imageEl) {
+        img    = imageEl;
+        scale  = minScale();
+        offsetX = CX;
+        offsetY = CY;
+        clamp();
+        draw();
+    }
+
+    /* ── mouse drag ─────────────────────────────────────────────── */
+
+    canvas.addEventListener('mousedown', function (e) {
+        dragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        canvas.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mousemove', function (e) {
+        if (!dragging) return;
+        offsetX += e.clientX - lastX;
+        offsetY += e.clientY - lastY;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        clamp();
+        draw();
+    });
+
+    window.addEventListener('mouseup', function () {
+        dragging = false;
+        canvas.style.cursor = 'grab';
+    });
+
+    /* ── touch drag + pinch zoom ────────────────────────────────── */
+
+    var lastTouchX = 0;
+    var lastTouchY = 0;
+    var lastPinchDist = 0;
+
+    canvas.addEventListener('touchstart', function (e) {
+        e.preventDefault();
+        if (e.touches.length === 2) {
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            lastPinchDist = Math.hypot(dx, dy);
+        } else {
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', function (e) {
+        e.preventDefault();
+        if (e.touches.length === 2) {
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            var dist = Math.hypot(dx, dy);
+            if (lastPinchDist > 0) {
+                scale = Math.max(minScale(), Math.min(6, scale * (dist / lastPinchDist)));
+                clamp();
+                draw();
+            }
+            lastPinchDist = dist;
+        } else {
+            offsetX += e.touches[0].clientX - lastTouchX;
+            offsetY += e.touches[0].clientY - lastTouchY;
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+            clamp();
+            draw();
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', function () { lastPinchDist = 0; });
+
+    /* ── scroll zoom ────────────────────────────────────────────── */
+
+    canvas.addEventListener('wheel', function (e) {
+        e.preventDefault();
+        var factor = e.deltaY < 0 ? 1.08 : 0.93;
+        scale = Math.max(minScale(), Math.min(6, scale * factor));
+        clamp();
+        draw();
+    }, { passive: false });
+
+    /* ── keyboard ────────────────────────────────────────────────── */
+
+    window.addEventListener('keydown', function (e) {
+        if (modal.style.display !== 'none' && e.key === 'Escape') {
+            close();
+        }
+    });
+
+    /* ── buttons ─────────────────────────────────────────────────── */
+
+    function close() {
+        modal.style.display = 'none';
+        doneBtn.disabled = false;
+        doneBtn.textContent = 'Done';
+    }
+
+    cancelBtn.addEventListener('click', close);
+
+    doneBtn.addEventListener('click', function () {
+        /* render the crop region to an output canvas */
+        var out    = document.createElement('canvas');
+        var outSize = CIRCLE_R * 2;
+        out.width  = outSize;
+        out.height = outSize;
+        var outCtx = out.getContext('2d');
+
+        var w      = img.naturalWidth  * scale;
+        var h      = img.naturalHeight * scale;
+        var imgLeft = offsetX - w / 2;
+        var imgTop  = offsetY - h / 2;
+        var srcX   = (CX - CIRCLE_R - imgLeft) / scale;
+        var srcY   = (CY - CIRCLE_R - imgTop)  / scale;
+        var srcW   = (CIRCLE_R * 2) / scale;
+        var srcH   = (CIRCLE_R * 2) / scale;
+
+        outCtx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outSize, outSize);
+
+        out.toBlob(function (blob) {
+            if (doneCallback) doneCallback(blob);
+            close();
+        }, 'image/jpeg', 0.88);
+
+        doneBtn.disabled = true;
+        doneBtn.textContent = 'Processing…';
+    });
+
+    /* ── public API ──────────────────────────────────────────────── */
+
+    window.ImageCropper = {
+        /**
+         * Open the cropper for the given File object.
+         * callback(blob) is called when the user clicks Done.
+         */
+        open: function (file, callback) {
+            doneCallback = callback;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var imageEl = new Image();
+                imageEl.onload = function () {
+                    initImage(imageEl);
+                    modal.style.display = 'flex';
+                    canvas.style.cursor = 'grab';
+                };
+                imageEl.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+}());
+</script>
