@@ -33,6 +33,19 @@ settled=no
 
 `true`/`false` and `1`/`0` also work as alternatives to `yes`/`no`.
 
+## Filter by whether it is a recurring instance
+
+```
+recurring=yes
+recurring=no
+```
+
+`scheduled=yes` shows only expenses that were generated from a recurring expense (a scheduled expense). `scheduled=no` shows only expenses that were entered manually.
+
+`true`/`false` and `1`/`0` also work as alternatives to `yes`/`no`.
+
+The **Hide recurring** checkbox on the expense list is a shortcut for this filter.
+
 ## Filter by category
 
 ```
