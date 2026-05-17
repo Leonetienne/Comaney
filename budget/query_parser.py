@@ -15,6 +15,8 @@ Filters:
     settled=yes|no|true|false|1|0
     deactivated=yes|no|true|false|1|0
     recurring=yes|no|true|false|1|0  (yes/true/1 = only recurring instances; no/false/0 = only non-recurring)
+    buddy=yes|no|true|false|1|0  (yes/true/1 = only buddy expenses; no/false/0 = only non-buddy)
+    buddy=<substring>  (match participant name, group name, or group member name)
     value<N, value<=N, value>N, value>=N, value=N, value==N
     date<dd.mm.yyyy   date>=mm/dd/yyyy  date==yyyy-mm-dd  date>today
         dot delimiter → dd.mm.yyyy  |  slash delimiter → mm/dd/yyyy  |  hyphen → yyyy-mm-dd
@@ -22,7 +24,7 @@ Filters:
     cat=<substring>   cat=none  (expenses with no category)
     tag=<substring>   tag=none  (expenses with no tag)
     payee=<substring>
-    <bare word or "quoted phrase">  →  free-text (title / payee / note)
+    <bare word or "quoted phrase">  →  free-text (title / payee / note / buddy names / group names)
     !<atom>           →  NOT  (negates the next atom or parenthesised group)
 """
 
@@ -135,8 +137,39 @@ def _date_q(op: str, raw: str) -> Q:
     return Q(**{f'date_due__{lookup}': d})
 
 
-def _term_q(val: str) -> Q:
-    return Q(title__icontains=val) | Q(payee__icontains=val) | Q(note__icontains=val)
+def _buddy_name_q(val: str) -> Q:
+    """Q covering all buddy-related name fields (participants, group, group members)."""
+    return (
+        Q(buddy_spendings__participant_feuser__first_name__icontains=val)
+        | Q(buddy_spendings__participant_feuser__last_name__icontains=val)
+        | Q(buddy_spendings__participant_feuser__email__icontains=val)
+        | Q(buddy_spendings__participant_dummy__display_name__icontains=val)
+        | Q(buddy_group__name__icontains=val)
+        | Q(buddy_group__members__feuser__first_name__icontains=val)
+        | Q(buddy_group__members__feuser__last_name__icontains=val)
+        | Q(buddy_group__members__feuser__email__icontains=val)
+        | Q(buddy_group__members__dummy__display_name__icontains=val)
+    )
+
+
+def _buddy_q(val: str, model=None) -> Q:
+    if val in ('true', 'yes', '1'):
+        if model is not None:
+            return Q(pk__in=model.objects.filter(buddy_spendings__isnull=False).values('pk'))
+        return Q(buddy_spendings__isnull=False)
+    if val in ('false', 'no', '0'):
+        return Q(buddy_spendings__isnull=True)
+    # Name/group search via pk__in to avoid JOIN fanout.
+    if model is not None:
+        return Q(pk__in=model.objects.filter(_buddy_name_q(val)).values('pk'))
+    return _buddy_name_q(val)
+
+
+def _term_q(val: str, model=None) -> Q:
+    q = Q(title__icontains=val) | Q(payee__icontains=val) | Q(note__icontains=val)
+    if model is not None:
+        q |= Q(pk__in=model.objects.filter(_buddy_name_q(val)).values('pk'))
+    return q
 
 
 # ---------------------------------------------------------------------------
@@ -236,13 +269,15 @@ def _compile(tokens: list[dict], model=None) -> Q:
                 return Q(pk__in=model.objects.filter(
                     tags__title__icontains=tok['val']
                 ).values('pk'))
+            if tok['key'] == 'buddy':
+                return _buddy_q(tok['val'], model)
             h = _EQUALS.get(tok['key'])
             if h:
                 return h(tok['val'])
             # Unrecognised key → free-text
             return _term_q(tok['key'] + '=' + tok['val'])
-        # str token → free-text search
-        return _term_q(tok.get('val', ''))
+        # str token → free-text search (includes buddy/group name matching)
+        return _term_q(tok.get('val', ''), model)
 
     return parse_expr()
 
