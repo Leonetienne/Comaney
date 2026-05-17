@@ -12,6 +12,7 @@ window.BUDDY_EXPENSE_CONFIG = {
     groupsData:      {{ groups_data_json|safe }},
     singleBuddies:   {{ single_buddies_json|safe }},
     urlBuddySummary: "{% url 'buddies:buddy_summary' %}",
+    currencySymbol:  "{{ current_feuser.currency|escapejs }}",
 };
 </script>
 {% endif %}
@@ -370,7 +371,22 @@ function initCardBuddy(cardEl) {
     var singles     = cfg.singleBuddies || [];
     var summaryUrl  = cfg.urlBuddySummary || '';
     var mode = 'single', groupId = null, parts = [];
+    var valueInput = cardEl.querySelector('.edit-value');
     function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    // Parallel copy of getExpenseValue/formatAmount lives in build/js/buddy_expense.js.
+    function getExpenseValue() {
+        if (!valueInput) return 0;
+        var v = parseFloat(String(valueInput.value).replace(',', '.'));
+        return isNaN(v) || v <= 0 ? 0 : v;
+    }
+    function formatAmount(pct) {
+        var val = getExpenseValue();
+        if (val <= 0) return '';
+        return (pct / 100 * val).toFixed(2) + ' ' + (cfg.currencySymbol || '');
+    }
+    if (valueInput) {
+        valueInput.addEventListener('input', function() { refreshSliders(); });
+    }
     if (modeSngl) modeSngl.addEventListener('change', function() { if (this.checked) switchMode('single'); });
     if (modeGrp)  modeGrp.addEventListener('change',  function() { if (this.checked) switchMode('group'); });
     if (grpSel)   grpSel.addEventListener('change', function() {
@@ -512,6 +528,7 @@ function initCardBuddy(cardEl) {
             var s = implicitShare();
             var sl = pr.querySelector('input'); if (sl) sl.value = s;
             var pc = pr.querySelector('.buddy-slider-pct'); if (pc) pc.textContent = s.toFixed(1)+'%';
+            var am = pr.querySelector('.buddy-slider-amt'); if (am) am.textContent = formatAmount(s);
             var lbl = pr.querySelector('.buddy-slider-name');
             if (lbl) lbl.textContent = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
         }
@@ -519,6 +536,7 @@ function initCardBuddy(cardEl) {
             var row = slidersEl.querySelector('[data-sidx="'+idx+'"]'); if (!row) return;
             var sl = row.querySelector('input'); if (sl) sl.value = p.share;
             var pc = row.querySelector('.buddy-slider-pct'); if (pc) pc.textContent = p.share.toFixed(1)+'%';
+            var am = row.querySelector('.buddy-slider-amt'); if (am) am.textContent = formatAmount(p.share);
         });
     }
     function rebuildSliders() {
@@ -529,7 +547,8 @@ function initCardBuddy(cardEl) {
         var pr = document.createElement('div'); pr.className = 'buddy-slider-row buddy-payer-row';
         pr.innerHTML = '<span class="buddy-slider-name">'+esc(payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim())+'</span>'
             +'<input type="range" min="0" max="100" step="0.1" value="'+ps+'">'
-            +'<span class="buddy-slider-pct">'+ps.toFixed(1)+'%</span>';
+            +'<span class="buddy-slider-pct">'+ps.toFixed(1)+'%</span>'
+            +'<span class="buddy-slider-amt secondary">'+formatAmount(ps)+'</span>';
         slidersEl.appendChild(pr);
         pr.querySelector('input').addEventListener('input', function() {
             var ns=+parseFloat(this.value).toFixed(3), d=ns-implicitShare();
@@ -539,12 +558,14 @@ function initCardBuddy(cardEl) {
             else { var pp=-d/parts.length; parts.forEach(function(p){p.share=Math.max(0,+(p.share+pp).toFixed(3));}); }
             clamp(); refreshSliders(); this.value=implicitShare();
             var pc=pr.querySelector('.buddy-slider-pct'); if(pc) pc.textContent=implicitShare().toFixed(1)+'%';
+            var am=pr.querySelector('.buddy-slider-amt'); if(am) am.textContent=formatAmount(implicitShare());
         });
         parts.forEach(function(p,idx) {
             var row=document.createElement('div'); row.className='buddy-slider-row'; row.dataset.sidx=idx;
             row.innerHTML='<span class="buddy-slider-name">'+esc(p.name)+'</span>'
                 +'<input type="range" min="0" max="100" step="0.1" value="'+p.share+'">'
-                +'<span class="buddy-slider-pct">'+p.share.toFixed(1)+'%</span>';
+                +'<span class="buddy-slider-pct">'+p.share.toFixed(1)+'%</span>'
+                +'<span class="buddy-slider-amt secondary">'+formatAmount(p.share)+'</span>';
             slidersEl.appendChild(row);
             row.querySelector('input').addEventListener('input', function() {
                 var val=+parseFloat(this.value).toFixed(3), d=val-parts[idx].share;

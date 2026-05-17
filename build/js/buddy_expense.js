@@ -473,6 +473,7 @@
     }
 
     // ── Currency amount helpers ────────────────────────────────────────────
+    // Parallel copy lives in initCardBuddy() in budget/templates/budget/express_creation.html.
 
     function getExpenseValue() {
         if (!valueInput) return 0;
