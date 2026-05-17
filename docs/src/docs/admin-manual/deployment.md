@@ -31,6 +31,8 @@ services:
       # Note: disabling email also disables email verification on registration.
       DISABLE_EMAILING: "TRUE"
       GUNICORN_WORKERS: 1
+    volumes:
+      - comaney_data:/app/data   # persistent user data (profile pictures, etc.)
 
   mariadb:
     image: mariadb:lts
@@ -45,6 +47,7 @@ services:
 
 volumes:
   mariadb_data:
+  comaney_data:
 ```
 
 ## Production docker-compose.yml (with SMTP and HTTPS)
@@ -78,7 +81,7 @@ services:
       ADMIN_NOTIFICATION_EMAIL: "admin@example.com"
       GUNICORN_WORKERS: 2
     volumes:
-      - comaney_data:/app/data   # persists the AI trial flag file
+      - comaney_data:/app/data   # persistent user data (profile pictures, AI trial flag, etc.)
 
   mariadb:
     image: mariadb:lts
@@ -95,6 +98,19 @@ volumes:
   mariadb_data:
   comaney_data:
 ```
+
+## The /data volume
+
+Comaney stores user-generated files under `/app/data` inside the container. **This directory must be a persistent mounted volume** — if it is missing, the application will refuse to start and display a configuration error page instead.
+
+What is stored there:
+
+| Path | Contents |
+|------|----------|
+| `/app/data/media/ppics/` | User profile pictures (resized JPEG, one per user) |
+| `/app/data/ai_trial_disabled.flag` | AI trial deactivation flag (written by the admin panel) |
+
+Always mount a named volume (or a host path) to `/app/data`. Do not use a `tmpfs` mount, as data would be lost on container restart.
 
 ## First run
 
