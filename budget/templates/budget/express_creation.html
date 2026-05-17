@@ -61,7 +61,7 @@ window.BUDDY_EXPENSE_CONFIG = {
         <textarea
             name="description"
             class="smart-input"
-            placeholder="Type something like 'I bought groceries for 20€, toothpaste for 5€ and new wine glasses for 16€' or add any additional instructions."
+            placeholder="Type something like 'I bought groceries for 20{{ current_feuser.currency }}, toothpaste for 5{{ current_feuser.currency }} and new wine glasses for 16{{ current_feuser.currency }}' or add any additional instructions."
         >{{ description }}</textarea>
 
         <!-- Image zone -->
