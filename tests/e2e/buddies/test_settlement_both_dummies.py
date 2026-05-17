@@ -80,7 +80,7 @@ class TestBothDummiesSettlementAutoApprove:
         opt_texts = [o.text for o in debtor_sel.options]
         assert any("Dummy Ower" in t for t in opt_texts), \
             "Debtor dropdown must include 'Dummy Ower'"
-        debtor_sel.select_by_visible_text("Dummy Ower (offline)")
+        debtor_sel.select_by_visible_text("Dummy Ower (offline member)")
         time.sleep(0.5)
 
         # Creditor should auto-fill or select Dummy Payer
@@ -88,7 +88,7 @@ class TestBothDummiesSettlementAutoApprove:
         opt_texts = [o.text for o in cred_sel.options]
         assert any("Dummy Payer" in t for t in opt_texts), \
             "Creditor dropdown must include 'Dummy Payer'"
-        cred_sel.select_by_visible_text("Dummy Payer")
+        cred_sel.select_by_visible_text("Dummy Payer (offline member)")
         time.sleep(0.3)
 
         amt = driver.find_element(By.ID, "settle-amount")

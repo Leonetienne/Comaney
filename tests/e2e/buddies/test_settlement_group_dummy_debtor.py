@@ -71,7 +71,7 @@ class TestGroupSettlementDummyDebtor:
         option_texts = [o.text for o in debtor_sel.options]
         assert any("Sir Owes-A-Lot" in t for t in option_texts), \
             "Admin's debtor dropdown must include the group dummy"
-        debtor_sel.select_by_visible_text("Sir Owes-A-Lot (offline)")
+        debtor_sel.select_by_visible_text("Sir Owes-A-Lot (offline member)")
         time.sleep(0.5)
 
     def test_amount_input_available(self, driver, w, ctx):

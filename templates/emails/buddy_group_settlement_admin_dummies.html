@@ -17,7 +17,7 @@
     <tbody>
         {% for item in items %}
         <tr>
-            <td style="color:#e0e0e0;padding:8px 0;font-size:0.9rem;border-bottom:1px solid #222;font-weight:600;">{{ item.dummy.display_name }}</td>
+            <td style="color:#e0e0e0;padding:8px 0;font-size:0.9rem;border-bottom:1px solid #222;font-weight:600;">{{ item.dummy.display_name }} (offline member)</td>
             <td style="color:#e0e0e0;padding:8px 0;font-size:0.9rem;border-bottom:1px solid #222;">{{ item.debtor_name }}</td>
             <td style="color:#e0e0e0;padding:8px 0;font-size:0.9rem;text-align:right;font-weight:600;border-bottom:1px solid #222;">{{ item.amount|floatformat:2 }}</td>
         </tr>

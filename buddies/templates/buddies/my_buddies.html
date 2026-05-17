@@ -38,8 +38,9 @@
                 {% if info.type == 'feuser' and info.feuser %}
                 <span class="buddy-email">{{ info.feuser.email }}</span>
                 {% endif %}
-                {% if info.type == 'dummy' and info.dummy and info.dummy.is_archive or info.sources %}
+                {% if info.type == 'dummy' and info.dummy or info.sources %}
                 <div class="bbl-tags">
+                    {% if info.type == 'dummy' and info.dummy and not info.dummy.is_archive %}<span class="pill">Offline member</span>{% endif %}
                     {% if info.type == 'dummy' and info.dummy and info.dummy.is_archive %}<span class="pill" style="opacity:0.7;">Archive</span>{% endif %}
                     {% for src in info.sources %}<span class="pill">{{ src }}</span>{% endfor %}
                 </div>
@@ -94,7 +95,7 @@
             <div class="buddy-card-identity">
                 <span class="buddy-name">{{ group.name }}</span>
                 <span class="buddy-email">
-                    {% for m in group.members.all %}{% if m.feuser %}{{ m.feuser.first_name|default:m.feuser.email }}{% else %}{{ m.dummy.display_name }}{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    {% for m in group.members.all %}{% if m.feuser %}{{ m.feuser.first_name|default:m.feuser.email }}{% else %}{{ m.dummy.display_name }} (offline member){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
                 </span>
                 {% if group.admin_feuser_id == request.feuser.pk %}
                 <span class="pill">Admin</span>

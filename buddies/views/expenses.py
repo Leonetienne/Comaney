@@ -48,7 +48,7 @@ def approve_settlement_as_creditor(request, expense_id):
         income_amount = expense.value * (bs_row.share_percent / 100) if bs_row else expense.value
 
         if expense.is_dummy and expense.upfront_payee_dummy_id:
-            debtor_label = expense.upfront_payee_dummy.display_name
+            debtor_label = expense.upfront_payee_dummy.display_name + " (offline member)"
         else:
             debtor_label = f"{expense.owning_feuser.first_name} {expense.owning_feuser.last_name}".strip() or expense.owning_feuser.email
 

@@ -77,7 +77,7 @@ class BuddyEmailService:
             ctx={
                 "invite": invite,
                 "inviter_name": _display_name(invite.inviting_feuser),
-                "dummy_name": invite.dummy.display_name if invite.dummy_id else None,
+                "dummy_name": (invite.dummy.display_name + " (offline member)") if invite.dummy_id else None,
                 "is_merge": bool(invite.dummy_id),
                 "is_group": True,
                 "group_name": invite.group.name if invite.group_id else None,
@@ -137,7 +137,7 @@ class BuddyEmailService:
             ctx={
                 "invite": invite,
                 "inviting_name": _display_name(invite.inviting_feuser),
-                "dummy_name": invite.dummy.display_name,
+                "dummy_name": invite.dummy.display_name + " (offline member)",
                 "merge_url": merge_url,
                 "feuser_recipient": invite.invited_feuser,
                 "is_group_merge": is_group_merge,
@@ -162,7 +162,7 @@ class BuddyEmailService:
             ctx={
                 "invite": invite,
                 "inviter_name": _display_name(invite.inviting_feuser),
-                "dummy_name": invite.dummy.display_name if is_merge else None,
+                "dummy_name": (invite.dummy.display_name + " (offline member)") if is_merge else None,
                 "is_merge": is_merge,
                 "is_group": False,
                 "group_name": None,

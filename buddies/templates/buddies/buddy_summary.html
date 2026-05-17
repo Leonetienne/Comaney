@@ -90,7 +90,7 @@
                     <span class="bexp-title">{{ exp.title }}</span>
                     <span class="bexp-breakdown-meta">
                         Amount: <strong>{{ exp.owning_feuser.currency }}{{ exp.value|floatformat:2 }}</strong> &middot;
-                        From: <strong>{% if exp.is_dummy and exp.upfront_payee_dummy %}{{ exp.upfront_payee_dummy.display_name }}{% else %}{{ exp.owning_feuser.first_name }} {{ exp.owning_feuser.last_name }}{% endif %}</strong>
+                        From: <strong>{% if exp.is_dummy and exp.upfront_payee_dummy %}{{ exp.upfront_payee_dummy.display_name }} (offline member){% else %}{{ exp.owning_feuser.first_name }} {{ exp.owning_feuser.last_name }}{% endif %}</strong>
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
@@ -115,7 +115,7 @@
                     <span class="bexp-title">{{ exp.title }}</span>
                     <span class="bexp-breakdown-meta">
                         Amount: <strong>{{ request.feuser.currency }}{{ exp.value|floatformat:2 }}</strong>
-                        {% if exp.upfront_payee_dummy %} &middot; Offline payer: <strong>{{ exp.upfront_payee_dummy.display_name }}</strong>{% endif %}
+                        {% if exp.upfront_payee_dummy %} &middot; Offline payer: <strong>{{ exp.upfront_payee_dummy.display_name }} (offline member)</strong>{% endif %}
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
@@ -143,7 +143,7 @@
                     <span class="bexp-title">{{ item.expense.title }}</span>
                     <span class="bexp-breakdown-meta">
                         Amount: <strong>{{ request.feuser.currency }}{{ item.expense.value|floatformat:2 }}</strong> &middot;
-                        Paid to: <strong>{{ item.dummy.display_name }}</strong>
+                        Paid to: <strong>{{ item.dummy.display_name }} (offline member)</strong>
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">

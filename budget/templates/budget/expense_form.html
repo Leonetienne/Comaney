@@ -30,7 +30,7 @@ window.BUDDY_EXPENSE_CONFIG = {
 
 {% if expense and expense.is_dummy %}
 <div class="info-box" style="margin-bottom:1.25rem;">
-    <p>This expense is managed on your account, but <strong>{{ expense.upfront_payee_dummy.display_name }}</strong> paid upfront. It won't appear in your regular expense list; you can always find it under <a href="{% url 'buddies:buddy_summary' %}">Buddy Expenses</a>.</p>
+    <p>This expense is managed on your account, but <strong>{{ expense.upfront_payee_dummy.display_name }} (offline member)</strong> paid upfront. It won't appear in your regular expense list; you can always find it under <a href="{% url 'buddies:buddy_summary' %}">Buddy Expenses</a>.</p>
 </div>
 {% endif %}
 

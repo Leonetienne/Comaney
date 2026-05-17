@@ -235,7 +235,7 @@
             <select id="settle-debtor" name="debtor_key" class="input-inline settle-form-select">
                 <option value="{{ feuser_key }}">You</option>
                 {% for m in dummy_members %}
-                <option value="d{{ m.dummy.pk }}">{{ m.dummy.display_name }} (offline)</option>
+                <option value="d{{ m.dummy.pk }}">{{ m.dummy.display_name }} (offline member)</option>
                 {% endfor %}
             </select>
         </div>
@@ -323,14 +323,14 @@
             var msg;
             if (debtorIsDummy && creditorIsDummy) {
                 msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' from ' +
-                      debtorName + ' (offline member) to ' + creditorName +
-                      ' (offline member)? This will be approved automatically.';
+                      debtorName + ' to ' + creditorName +
+                      '? This will be approved automatically.';
             } else if (creditorIsDummy && IS_ADMIN) {
                 msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' to ' + creditorName +
-                      ' (offline member)? This will be approved automatically.';
+                      '? This will be approved automatically.';
             } else if (creditorIsDummy) {
                 msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' to ' + creditorName +
-                      ' (offline member)? The group admin will be asked to confirm receipt.';
+                      '? The group admin will be asked to confirm receipt.';
             } else {
                 msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' to ' + creditorName +
                       '? A settlement expense will be created and ' + creditorName + ' will be asked to confirm receipt.';
@@ -519,7 +519,7 @@
         <div class="buddy-card buddy-card-dummy">
             <div class="buddy-card-identity">
                 <span class="buddy-name">{{ m.dummy.display_name }}</span>
-                <span class="pill">Offline</span>
+                <span class="pill">Offline member</span>
             </div>
             <div></div>
             <div class="buddy-card-actions">

@@ -151,7 +151,7 @@ def group_detail(request, group_id):
             for m in feuser_members
         ],
         *[
-            {"key": f"d{m.dummy.pk}", "name": m.dummy.display_name, "is_me": False, "is_dummy": True}
+            {"key": f"d{m.dummy.pk}", "name": m.dummy.display_name + " (offline member)", "is_me": False, "is_dummy": True}
             for m in dummy_members
         ],
     ])

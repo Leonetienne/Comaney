@@ -67,7 +67,7 @@ class TestGroupSettlementNonAdminPaysDummy:
         opt_texts = [o.text for o in cred_sel.options]
         assert any("Cash Dummy" in t for t in opt_texts), \
             "Creditor dropdown must include the group dummy"
-        cred_sel.select_by_visible_text("Cash Dummy")
+        cred_sel.select_by_visible_text("Cash Dummy (offline member)")
         time.sleep(0.3)
 
         amt = driver.find_element(By.ID, "settle-amount")
@@ -159,7 +159,7 @@ class TestGroupSettlementAdminPaysDummyAutoApprove:
         opt_texts = [o.text for o in cred_sel.options]
         assert any("Instant Dummy" in t for t in opt_texts), \
             "Creditor dropdown must include the group dummy"
-        cred_sel.select_by_visible_text("Instant Dummy")
+        cred_sel.select_by_visible_text("Instant Dummy (offline member)")
         time.sleep(0.3)
 
         amt = driver.find_element(By.ID, "settle-amount")

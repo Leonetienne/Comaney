@@ -58,7 +58,7 @@ class BuddySettlementService:
                 if net >= Decimal("-0.005"):
                     continue
                 amount = -net
-                title = f"Settlement to {dummy.display_name} of {feuser.currency}{amount:.2f}"
+                title = f"Settlement to {dummy.display_name} (offline member) of {feuser.currency}{amount:.2f}"
                 create_expense(
                     owning_feuser=feuser,
                     title=title,
@@ -126,7 +126,7 @@ class BuddySettlementService:
             except (ValueError, DummyUser.DoesNotExist):
                 return False
 
-            title = f"Settlement to {dummy.display_name}"
+            title = f"Settlement to {dummy.display_name} (offline member)"
             create_expense(
                 owning_feuser=feuser,
                 title=title,
@@ -180,7 +180,7 @@ class BuddySettlementService:
             debtor_feuser = None
             is_dummy_expense = True
             expense_owner = acting_feuser
-            debtor_name = debtor_dummy.display_name
+            debtor_name = debtor_dummy.display_name + " (offline member)"
 
         if creditor_key.startswith("f"):
             try:
@@ -196,7 +196,7 @@ class BuddySettlementService:
             except (ValueError, DummyUser.DoesNotExist):
                 return False
             creditor_feuser = None
-            creditor_name = creditor_dummy.display_name
+            creditor_name = creditor_dummy.display_name + " (offline member)"
             bs = [{"type": "dummy", "id": creditor_dummy.pk, "share_percent": Decimal("100")}]
 
         both_dummies = (debtor_dummy is not None) and (creditor_dummy is not None)
@@ -269,7 +269,7 @@ class BuddySettlementService:
                         continue
                     debtor_feuser = None
                     expense_owner = admin_feuser
-                    debtor_name = debtor_dummy.display_name
+                    debtor_name = debtor_dummy.display_name + " (offline member)"
                     is_dummy_exp = True
 
                 if ck.startswith("f"):
@@ -286,7 +286,7 @@ class BuddySettlementService:
                     except (ValueError, DummyUser.DoesNotExist):
                         continue
                     creditor_feuser = None
-                    creditor_name = creditor_dummy.display_name
+                    creditor_name = creditor_dummy.display_name + " (offline member)"
                     bs = [{"type": "dummy", "id": creditor_dummy.pk, "share_percent": Decimal("100")}]
 
                 both_dummies = (debtor_dummy is not None) and (creditor_dummy is not None)

@@ -8,24 +8,24 @@
 </div>
 <div class="form-wrap">
     {% if group %}
-    <p><strong>{{ inviting_name }}</strong> has tracked you as an offline member of the group "<strong>{{ group.name }}</strong>" under the name "<strong>{{ invite.dummy.display_name }}</strong>" and would like to link that record to your account.</p>
+    <p><strong>{{ inviting_name }}</strong> has tracked you as an offline member of the group "<strong>{{ group.name }}</strong>" under the name "<strong>{{ invite.dummy.display_name }} (offline member)</strong>" and would like to link that record to your account.</p>
 
     <div class="info-box" style="margin: 16px 0;">
         <p><strong>What happens when you accept:</strong></p>
         <ul>
             <li>You are added to the group "<strong>{{ group.name }}</strong>" as a full member.</li>
-            <li>All shared group expenses tracked under "{{ invite.dummy.display_name }}" are transferred to your account.</li>
+            <li>All shared group expenses tracked under "{{ invite.dummy.display_name }} (offline member)" are transferred to your account.</li>
             <li>Categories and tags are matched by name; unmatched ones are dropped.</li>
             <li>You and {{ inviting_name }} become actual spending buddies going forward.</li>
         </ul>
     </div>
     {% else %}
-    <p><strong>{{ inviting_name }}</strong> has tracked you as an offline buddy under the name "<strong>{{ invite.dummy.display_name }}</strong>" and would like to link that record to your account.</p>
+    <p><strong>{{ inviting_name }}</strong> has tracked you as an offline buddy under the name "<strong>{{ invite.dummy.display_name }} (offline member)</strong>" and would like to link that record to your account.</p>
 
     <div class="info-box" style="margin: 16px 0;">
         <p><strong>What happens when you accept:</strong></p>
         <ul>
-            <li>All shared expenses tracked under "{{ invite.dummy.display_name }}" are transferred to your account.</li>
+            <li>All shared expenses tracked under "{{ invite.dummy.display_name }} (offline member)" are transferred to your account.</li>
             <li>Categories and tags are matched by name; unmatched ones are dropped.</li>
             <li>You and {{ inviting_name }} become actual spending buddies going forward.</li>
         </ul>

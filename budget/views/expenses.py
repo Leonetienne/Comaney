@@ -26,7 +26,7 @@ def _buddy_context(feuser) -> dict:
     dummy = list(BuddyQueryService.get_dummy_buddies(feuser))
     single_buddies = [
         *[{"type": "feuser", "id": b.pk, "name": f"{b.first_name} {b.last_name}".strip() or b.email, "email": b.email} for b in actual],
-        *[{"type": "dummy", "id": d.uid, "name": d.display_name} for d in dummy],
+        *[{"type": "dummy", "id": d.uid, "name": d.display_name + " (offline member)"} for d in dummy],
     ]
     return {
         "buddy_actual": actual,
@@ -219,7 +219,7 @@ def expense_create(request):
             set_initial_notification_class(expense)
             if buddy and buddy["upfront_type"] == "dummy" and buddy.get("upfront_dummy"):
                 from django.urls import reverse
-                dummy_name = buddy["upfront_dummy"].display_name
+                dummy_name = buddy["upfront_dummy"].display_name + " (offline member)"
                 summary_url = reverse("buddies:buddy_summary")
                 messages.info(
                     request,

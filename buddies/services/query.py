@@ -98,7 +98,7 @@ class BuddyQueryService:
                         name = f"{m.feuser.first_name} {m.feuser.last_name}".strip() or m.feuser.email
                         member_names.append((name, False))
                 else:
-                    member_names.append((m.dummy.display_name, False))
+                    member_names.append((m.dummy.display_name + " (offline member)", False))
             member_names.sort(key=lambda x: (0 if x[1] else 1, x[0]))
             all_names = [n for n, _ in member_names]
             members_display = all_names[:MAX_SHOWN]
@@ -148,7 +148,7 @@ class BuddyQueryService:
                     members.append({
                         "type": "dummy",
                         "id": m.dummy_id,
-                        "name": m.dummy.display_name,
+                        "name": m.dummy.display_name + " (offline member)",
                         "is_me": False,
                     })
             result.append({
@@ -313,7 +313,7 @@ class BuddyQueryService:
             else:
                 key = f"d{m.dummy_id}"
                 member_map[key] = {
-                    "name": m.dummy.display_name,
+                    "name": m.dummy.display_name + " (offline member)",
                     "is_me": False,
                 }
 
