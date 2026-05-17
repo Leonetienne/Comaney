@@ -14,7 +14,7 @@
 <h1>Get in touch.</h1>
 
 {% if sent %}
-<div class="success-banner" style="margin-bottom: 20px;">
+<div class="success-banner">
     Your message has been sent. We'll get back to you shortly.
 </div>
 {% endif %}
@@ -38,7 +38,7 @@
     {% if errors.subject %}<p class="error-msg">{{ errors.subject }}</p>{% endif %}
 
     <label for="id_message">Message</label>
-    <textarea id="id_message" name="message" rows="5" required style="width:100%;resize:vertical;">{{ message }}</textarea>
+    <textarea id="id_message" name="message" rows="5" required>{{ message }}</textarea>
     {% if errors.message %}<p class="error-msg">{{ errors.message }}</p>{% endif %}
 
     {% if pow_error %}<p class="error-msg">{{ pow_error }}</p>{% endif %}

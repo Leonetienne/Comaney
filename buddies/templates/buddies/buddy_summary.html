@@ -50,7 +50,7 @@
 {% if pending_as_expense_owner %}
 <section class="buddies-section">
     <h2>Did you pay for this?</h2>
-    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">A group member logged an expense on your behalf. Confirm if it's correct.</p>
+    <p class="page-subtitle">A group member logged an expense on your behalf. Confirm if it's correct.</p>
     <div class="bexp-breakdown-list">
         {% for exp in pending_as_expense_owner %}
         <div class="bexp-breakdown-card bexp-card-i-paid">
@@ -61,10 +61,10 @@
                         Amount: <strong>{{ request.feuser.currency }}{{ exp.value|floatformat:2 }}</strong>
                     </span>
                 </div>
-                <div class="bexp-breakdown-header-right" style="display:flex;gap:0.4rem;">
+                <div class="bexp-breakdown-header-right">
                     <form method="post" action="{% url 'buddies:approve_expense' exp.uid %}">
                         {% csrf_token %}
-                        <button type="submit" id="btn-approve-pending-{{ exp.uid }}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Approve</button>
+                        <button type="submit" id="btn-approve-pending-{{ exp.uid }}" class="btn btn-sm btn-success">Approve</button>
                     </form>
                     <form method="post" action="{% url 'buddies:reject_expense' exp.uid %}">
                         {% csrf_token %}
@@ -81,7 +81,7 @@
 {% if pending_as_creditor %}
 <section class="buddies-section">
     <h2>Pending settlement receipts</h2>
-    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">Someone recorded a payment to you. Open each one to confirm you received it or report that you did not.</p>
+    <p class="page-subtitle">Someone recorded a payment to you. Open each one to confirm you received it or report that you did not.</p>
     <div class="bexp-breakdown-list">
         {% for exp in pending_as_creditor %}
         <div class="bexp-breakdown-card bexp-card-other-paid">
@@ -94,7 +94,7 @@
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
-                    <a href="{% url 'buddies:approve_settlement_as_creditor' exp.uid %}" id="btn-review-settlement-{{ exp.uid }}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
+                    <a href="{% url 'buddies:approve_settlement_as_creditor' exp.uid %}" id="btn-review-settlement-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>
                 </div>
             </div>
         </div>
@@ -106,7 +106,7 @@
 {% if pending_dummy_expense_owners %}
 <section class="buddies-section">
     <h2>Confirm expenses for offline members</h2>
-    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">An expense was logged for an offline group member. Confirm if they actually paid for it.</p>
+    <p class="page-subtitle">An expense was logged for an offline group member. Confirm if they actually paid for it.</p>
     <div class="bexp-breakdown-list">
         {% for exp in pending_dummy_expense_owners %}
         <div class="bexp-breakdown-card bexp-card-neutral">
@@ -121,7 +121,7 @@
                 <div class="bexp-breakdown-header-right">
                     <form method="post" action="{% url 'buddies:admin_approve_dummy_settlement' exp.buddy_group_id exp.uid %}">
                         {% csrf_token %}
-                        <button type="submit" id="btn-admin-approve-{{ exp.uid }}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Approve</button>
+                        <button type="submit" id="btn-admin-approve-{{ exp.uid }}" class="btn btn-sm btn-success">Approve</button>
                     </form>
                 </div>
             </div>
@@ -134,7 +134,7 @@
 {% if pending_dummy_creditor_settlements %}
 <section class="buddies-section">
     <h2>Confirm paybacks to offline members</h2>
-    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">A payment to an offline group member is waiting for your confirmation.</p>
+    <p class="page-subtitle">A payment to an offline group member is waiting for your confirmation.</p>
     <div class="bexp-breakdown-list">
         {% for item in pending_dummy_creditor_settlements %}
         <div class="bexp-breakdown-card bexp-card-other-paid">
@@ -147,7 +147,7 @@
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
-                    <a href="{% url 'buddies:admin_approve_dummy_settlement' item.expense.buddy_group_id item.expense.uid %}" id="btn-review-dummy-{{ item.expense.uid }}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
+                    <a href="{% url 'buddies:admin_approve_dummy_settlement' item.expense.buddy_group_id item.expense.uid %}" id="btn-review-dummy-{{ item.expense.uid }}" class="btn btn-sm btn-success">Review</a>
                 </div>
             </div>
         </div>
@@ -309,7 +309,7 @@
 {% if direct_settle_members_json != "[]" %}
 <section class="buddies-section">
     <h2>Pay someone back</h2>
-    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">
+    <p class="page-subtitle">
         Pay back a buddy. The amount is pre-filled based on what you owe them, but you can enter any amount. You still need to actually send the money yourself.
     </p>
     <form method="post" action="{% url 'buddies:settle_direct_freeform' %}" id="direct-settle-form">
@@ -327,9 +327,9 @@
         <div class="settle-form-row">
             <label for="direct-settle-amount" class="settle-form-label">Amount ({{ request.feuser.currency }})</label>
             <input type="number" id="direct-settle-amount" name="amount" min="0.01" step="0.01"
-                   class="input-inline" style="max-width:140px;" placeholder="0.00" required>
+                   class="input-inline input-inline--narrow" placeholder="0.00" required>
         </div>
-        <button type="submit" id="btn-direct-settle" class="btn" style="margin-top:0.5rem;">Record payment</button>
+        <button type="submit" id="btn-direct-settle" class="btn mt-sm">Record payment</button>
     </form>
     <script>
     (function () {

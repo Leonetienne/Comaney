@@ -12,7 +12,7 @@
         {% if current_feuser %}
             <span class="header-user-actions">
                 <span class="user-name">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</span>
-                <form method="post" action="{% url 'logout' %}" style="margin:0">
+                <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
                     <button type="submit" id="logout-button">Logout</button>
                 </form>

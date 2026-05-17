@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 style="margin:0">Scheduled Expenses</h1>
+    <h1>Scheduled Expenses</h1>
     <a href="{% url 'budget:scheduled_create' %}" class="btn">+ New scheduled expense</a>
 </div>
 <p class="page-tip">Register recurring expenses here. Define standard expense data and an interval. At the begin of every financial month, they will create actual, unsettled expenses.</p>
@@ -18,7 +18,7 @@
         {% if s.repeat_base_date or s.end_on %}
         <div class="exp-date-label">
             {% if s.repeat_base_date %}Starting {{ s.repeat_base_date|date:"Y-m-d" }}{% endif %}
-            {% if s.end_on %}<span style="margin-left:{% if s.repeat_base_date %}12px{% else %}0{% endif %}">End on {{ s.end_on|date:"Y-m-d" }}</span>{% endif %}
+            {% if s.end_on %}<span {% if s.repeat_base_date %}class="ml-sm"{% endif %}>End on {{ s.end_on|date:"Y-m-d" }}</span>{% endif %}
         </div>
         {% endif %}
 

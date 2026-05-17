@@ -28,10 +28,29 @@
   line-height: 1.5;
   color: var(--text);
   white-space: pre-wrap;
+  max-width: 440px;
 }
 
 .cdialog-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+}
+
+.cdialog-title {
+  margin: 0 0 0.6rem;
+  font-weight: 600;
+}
+
+.cdialog-body {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.cdialog-footer-note {
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
 }

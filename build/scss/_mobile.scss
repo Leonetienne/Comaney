@@ -1,4 +1,7 @@
-.sidebar-user-actions { display: none; }
+.sidebar-user-actions {
+  display: none;
+  form { margin: 0; }
+}
 
 @media (max-width: 768px) {
   header { padding: 0 16px; }

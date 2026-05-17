@@ -173,6 +173,7 @@
 // ── Empty state ────────────────────────────────────────────────────────────
 
 .dash-empty {
+  grid-column: 1 / -1;
   text-align: center;
   padding: 60px 20px;
   color: var(--text-muted);

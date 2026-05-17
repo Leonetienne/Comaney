@@ -8,20 +8,20 @@
     {% if group %}<p class="page-subtitle">Group: <strong>{{ group.name }}</strong></p>{% endif %}
 </div>
 
-<div class="buddies-section" style="max-width:560px;">
+<div class="buddies-section buddies-section--narrow">
 
-    <div style="border:2px solid var(--error);border-radius:8px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;background:color-mix(in srgb,var(--error) 8%,transparent);">
-        <p style="font-weight:700;font-size:1.05rem;margin:0 0 0.6rem;color:var(--error);">Warning: this permanently changes financial history</p>
+    <div class="danger-box">
+        <p class="danger-box-title">Warning: this permanently changes financial history</p>
 
         {% if payer_count > 0 %}
-        <p style="margin:0 0 0.5rem;">
+        <p>
             <strong>{{ payer_count }} expense{{ payer_count|pluralize }}</strong> paid by removed members
             will be permanently deleted from history.
         </p>
         {% endif %}
 
         {% if participant_count > 0 %}
-        <p style="margin:0 0 0.5rem;">
+        <p>
             Removed members participated in
             <strong>{{ participant_count }} expense{{ participant_count|pluralize }}</strong>
             you own. Those expenses stay in your budget unchanged; only the split record is removed.
@@ -29,7 +29,7 @@
         {% endif %}
 
         {% if user_impact_abs > 0.005 %}
-        <p style="margin:0;font-size:0.95rem;">
+        <p>
             {% if user_impact > 0 %}
                 Achim Archive owed you <strong>{{ currency }}{{ user_impact_abs|floatformat:2 }}</strong> in buddy tracking. That balance will be cleared{% if participant_count > 0 and payer_count == 0 %}, but your expense amounts are not affected{% endif %}.
             {% else %}
@@ -37,7 +37,7 @@
             {% endif %}
         </p>
         {% else %}
-        <p style="margin:0;font-size:0.95rem;">Your buddy balance with Achim Archive is zero.</p>
+        <p>Your buddy balance with Achim Archive is zero.</p>
         {% endif %}
     </div>
 
@@ -48,7 +48,7 @@
     <form method="post" action="">
         {% csrf_token %}
         <input type="hidden" name="confirmed" value="yes">
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <div class="action-row">
             <button type="submit" id="btn-confirm-wipe" class="btn btn-danger-subtle">Delete all {{ expense_count }} record{{ expense_count|pluralize }}</button>
             <a href="{{ cancel_url }}" class="btn btn-secondary">Cancel</a>
         </div>

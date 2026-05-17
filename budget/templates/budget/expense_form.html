@@ -29,7 +29,7 @@ window.BUDDY_EXPENSE_CONFIG = {
 <h1>{% if expense %}Edit expense{% else %}New expense{% endif %}</h1>
 
 {% if expense and expense.is_dummy %}
-<div class="info-box" style="margin-bottom:1.25rem;">
+<div class="info-box mb-md">
     <p>This expense is managed on your account, but <strong>{{ expense.upfront_payee_dummy.display_name }} (offline member)</strong> paid upfront. It won't appear in your regular expense list; you can always find it under <a href="{% url 'buddies:buddy_summary' %}">Buddy Expenses</a>.</p>
 </div>
 {% endif %}
@@ -76,13 +76,13 @@ window.BUDDY_EXPENSE_CONFIG = {
         {{ form.note }}
         {% for e in form.note.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
 
-        <div id="due-date-wrap" style="margin-top:16px;">
+        <div id="due-date-wrap">
             <label for="{{ form.date_due.id_for_label }}">{{ form.date_due.label }}</label>
             {{ form.date_due }}
             {% for e in form.date_due.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+        <div class="flex-col-gap-sm mt-3">
             <label class="checkbox-inline">{{ form.settled }} {{ form.settled.label }}</label>
             <label class="checkbox-inline" id="auto-settle-wrap">{{ form.auto_settle_on_due_date }} {{ form.auto_settle_on_due_date.label }}</label>
             <label class="checkbox-inline">{{ form.deactivated }} {{ form.deactivated.label }}</label>
@@ -90,13 +90,13 @@ window.BUDDY_EXPENSE_CONFIG = {
         </div>
 
         {% if buddy_actual or buddy_dummy or buddy_groups %}
-        <div style="margin-top:20px;">
+        <div class="mt-md">
             <label class="checkbox-inline">
                 <input type="checkbox" id="buddy-payment-cb" name="buddy_payment" value="1"
                        {% if is_buddy_expense %}checked{% endif %}>
                 This is a buddy payment
             </label>
-            <span style="font-size:0.82rem;color:var(--text-muted);margin-left:6px;display:block;margin-top:8px;">Whoever pays upfront logs the expense; the others' shares are tracked as debt.</span>
+            <span class="form-hint-sm">Whoever pays upfront logs the expense; the others' shares are tracked as debt.</span>
         </div>
 
         <div id="buddy-payment-section" class="buddy-payment-section" style="display:none;">
@@ -106,7 +106,7 @@ window.BUDDY_EXPENSE_CONFIG = {
             <div class="buddy-mode-row">
                 <label class="radio-inline"><input type="radio" name="buddy_mode_ui" id="buddy-mode-single" value="single"> Single buddy</label>
                 <label class="radio-inline"><input type="radio" name="buddy_mode_ui" id="buddy-mode-group" value="group"> Group</label>
-                <div id="buddy-group-select-row" style="display:none;margin-top:0.5rem;">
+                <div id="buddy-group-select-row" style="display:none;">
                     <select id="buddy-group-select">
                         {% for g in buddy_groups %}
                         <option value="{{ g.uid }}">{{ g.name }}</option>
@@ -120,7 +120,7 @@ window.BUDDY_EXPENSE_CONFIG = {
                 <label for="buddy-upfront-select">Upfront payer</label>
                 <select id="buddy-upfront-select"></select>
             </div>
-            <div id="buddy-payer-notice" style="display:none;margin-top:0.75rem;"></div>
+            <div id="buddy-payer-notice" style="display:none;"></div>
 
             <div class="buddy-participants-row">
                 <label>Participants (sharing the cost)</label>

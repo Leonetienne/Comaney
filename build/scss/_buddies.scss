@@ -3,6 +3,9 @@
 .buddies-section {
   margin-bottom: 2.5rem;
 
+  &--narrow { max-width: 560px; }
+  &--sm     { max-width: 480px; }
+
   h2 {
     font-size: 1.1rem;
     font-weight: 600;
@@ -41,6 +44,8 @@
 
   &.buddy-card-dummy {
     border-left: 3px solid var(--text-muted);
+    opacity: 0.75;
+    border-style: dashed;
   }
 }
 
@@ -536,7 +541,8 @@
   line-height: 1.5;
 
   &.buddy-flash-info    { background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border)); }
-  &.buddy-flash-success { background: color-mix(in srgb, #2da44e 10%, var(--bg-surface)); border: 1px solid color-mix(in srgb, #2da44e 40%, var(--border)); }
+  &.buddy-flash-success { background: color-mix(in srgb, var(--success) 10%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--success) 40%, var(--border)); }
+  &.buddy-flash-warning { background: color-mix(in srgb, #e3a008 10%, var(--bg-surface)); border: 1px solid color-mix(in srgb, #e3a008 40%, var(--border)); }
   &.buddy-flash-error   { background: color-mix(in srgb, var(--error) 10%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--error) 40%, var(--border)); }
 }
 
@@ -709,9 +715,22 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.85rem 1rem 0.6rem;
+  min-width: 0;
+  overflow: hidden;
 
-  h3 {
-    margin: 0 0 0.15rem;
+  h3 { margin: 0 0 0.15rem; }
+
+  p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0 0 0.5rem;
+  }
+
+  p.graph-total {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0.5rem 0 0;
   }
 }
 
@@ -850,6 +869,10 @@
 
 .bexp-breakdown-header-right {
   flex-shrink: 0;
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .bexp-breakdown-meta {
@@ -945,3 +968,65 @@
     th, td { padding: 0.4rem 0.5rem; }
   }
 }
+
+// ── Pill modifiers ────────────────────────────────────────────────────────────
+
+.pill--faded { opacity: 0.7; }
+.pill--ml    { margin-left: 0.4rem; }
+
+// ── Settlement confirmation table ─────────────────────────────────────────────
+
+.settle-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+
+  td {
+    padding: 6px 0;
+    font-size: 0.9rem;
+
+    &:first-child { color: var(--text-muted); }
+    &:last-child  { color: var(--text); text-align: right; }
+  }
+
+  .settle-table-value { font-weight: 600; }
+}
+
+// ── Danger warning box ────────────────────────────────────────────────────────
+
+.danger-box {
+  border: 2px solid var(--error);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  background: color-mix(in srgb, var(--error) 8%, transparent);
+
+  p { margin: 0 0 0.5rem; }
+  p:last-child { margin-bottom: 0; }
+}
+
+.danger-box-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin: 0 0 0.6rem;
+  color: var(--error);
+}
+
+// ── Info-box spacing modifier ─────────────────────────────────────────────────
+
+.info-box--spaced { margin: 1rem 0; }
+
+// ── Settled-up message ────────────────────────────────────────────────────────
+
+.settled-up-msg {
+  color: var(--success);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0;
+}
+
+// ── Expense form: buddy section inputs ────────────────────────────────────────
+
+#due-date-wrap    { margin-top: 16px; }
+#buddy-group-select-row { margin-top: 0.5rem; }
+#buddy-payer-notice     { margin-top: 0.75rem; }

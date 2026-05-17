@@ -7,10 +7,10 @@
     <h1>Remove {{ dummy.display_name }} (offline member)</h1>
 </div>
 
-<div class="buddies-section" style="max-width:560px;">
+<div class="buddies-section buddies-section--narrow">
 
     {% if has_balance %}
-    <div class="buddy-flash buddy-flash-warning" style="margin-bottom:1.25rem;">
+    <div class="buddy-flash buddy-flash-warning mb-md">
         <strong>Outstanding balance:</strong>
         {% if net > 0 %}
             {{ dummy.display_name }} (offline member) owes you <strong>{{ currency }}{{ net_abs|floatformat:2 }}</strong>.
@@ -22,9 +22,9 @@
     {% endif %}
 
     {% if expense_count > 0 %}
-    <div class="invite-card" style="margin-bottom:1.25rem;">
+    <div class="invite-card mb-md">
         <p><strong>{{ expense_count }} shared expense{{ expense_count|pluralize }}</strong> will be moved to <strong>Achim Archive</strong> instead of being deleted.</p>
-        <p style="margin:0;font-size:0.9rem;color:var(--text-muted);">
+        <p class="text-muted font-sm m-0">
             Achim Archive is a special offline buddy that holds the history of removed members.
             {% if archive_exists %}
             Your existing Achim Archive will absorb {{ dummy.display_name }} (offline member)'s share.
@@ -36,13 +36,13 @@
         </p>
     </div>
     {% else %}
-    <p style="margin-bottom:1.25rem;">{{ dummy.display_name }} (offline member) has no shared expenses, so removing them is clean.</p>
+    <p class="mb-md">{{ dummy.display_name }} (offline member) has no shared expenses, so removing them is clean.</p>
     {% endif %}
 
     <form method="post" action="">
         {% csrf_token %}
         <input type="hidden" name="debt_warning_accepted" value="yes">
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <div class="action-row">
             <button type="submit" id="btn-confirm-kick" class="btn btn-danger-subtle">Remove {{ dummy.display_name }} (offline member)</button>
             <a href="{% url 'buddies:my_buddies' %}" class="btn btn-secondary">Cancel</a>
         </div>

@@ -8,3 +8,123 @@
   color:var(--text-subtle);
   margin: 0 0 24px;
 }
+
+// ── Utility classes ──────────────────────────────────────────────────────────
+
+// Spacing
+.m-0     { margin: 0; }
+.mb-0    { margin-bottom: 0; }
+.mt-xs   { margin-top: 0.25rem; }
+.mt-sm   { margin-top: 0.5rem; }
+.mt-3    { margin-top: 0.75rem; }
+.mt-1    { margin-top: 1rem; }
+.mt-md   { margin-top: 1.25rem; }
+.mb-sm   { margin-bottom: 0.5rem; }
+.mb-1    { margin-bottom: 1rem; }
+.mb-md   { margin-bottom: 1.25rem; }
+.mb-lg   { margin-bottom: 1.5rem; }
+.mt-lg   { margin-top: 1.5rem; }
+.ml-sm   { margin-left: 0.75rem; }
+.ml-auto { margin-left: auto; }
+
+// Display
+.d-flex     { display: flex; }
+.d-block    { display: block; }
+.d-contents { display: contents; }
+
+// Flex helpers
+.flex-wrap    { flex-wrap: wrap; }
+.flex-col     { flex-direction: column; }
+.align-center { align-items: center; }
+.flex-1       { flex: 1; }
+.gap-xs       { gap: 0.4rem; }
+.gap-sm       { gap: 0.75rem; }
+
+// Text
+.text-right   { text-align: right; }
+.text-muted   { color: var(--text-muted); }
+.text-subtle  { color: var(--text-subtle); }
+.text-error   { color: var(--error); }
+.text-success { color: var(--success); }
+.font-sm      { font-size: 0.9rem; }
+.font-xs      { font-size: 0.8rem; }
+
+// ── Common component patterns ────────────────────────────────────────────────
+
+// Flex row of action buttons
+.action-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+// Flex column stack (checkboxes, stacked form fields)
+.flex-col-gap-sm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// Flex row with center alignment and small gap
+.flex-row-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Hint text on auth/info pages
+.auth-hint {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: -8px 0 20px;
+}
+
+// Larger form description hint
+.form-hint {
+  color: var(--text-subtle);
+  margin: -8px 0 24px;
+  line-height: 1.6;
+  font-size: 0.97rem;
+}
+
+// Small helper note inside form sections
+.form-hint-sm {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  margin-left: 6px;
+}
+
+// Small hint link below search bars
+.search-hint-link {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  font-style: italic;
+  text-decoration: underline;
+  color: var(--text-muted);
+}
+
+// Mono input for codes (e.g. TOTP)
+.input-mono {
+  font-family: monospace;
+  letter-spacing: 0.05em;
+}
+
+// Narrow inline input for currency/amount fields
+.input-inline--narrow { max-width: 140px; }
+
+// Nowrap muted label (e.g. repeat interval "Every")
+.label-nowrap {
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+// Fixed-width small input wrapper (repeat factor)
+.input-fixed-sm {
+  width: 72px;
+  flex-shrink: 0;
+}

@@ -25,7 +25,7 @@ window.EXPENSE_CONFIG = {
 
 {% block content %}
 <div class="page-header">
-    <h1 style="margin:0">Expenses</h1>
+    <h1>Expenses</h1>
     <a href="{% url 'budget:expense_create' %}" class="btn">+ New expense</a>
 </div>
 <p class="page-tip">Expenses are items that describe transactions. A transaction is you getting paid, receiving money, paying money, depositing savings or withdrawing from savings.</p>
@@ -44,7 +44,7 @@ window.EXPENSE_CONFIG = {
             <button type="button" id="exp-select-all" class="btn btn-sm btn-secondary"
                     @click="toggleSelectAll()"
                     x-text="allSelected ? 'Deselect all' : 'Select all'"></button>
-            <div style="display:contents">
+            <div class="d-contents">
                 <select id="exp-bulk-action" x-model="bulkAction" class="expense-toolbar-dropdown">
                     <option value="">— Bulk action —</option>
                     <option value="settle">Settle</option>
@@ -71,7 +71,7 @@ window.EXPENSE_CONFIG = {
     <div class="exp-toolbar-meta">
         Visible total: <span id="exp-sum-value" x-text="visibleSum"></span> {{ current_feuser.currency }}
     </div>
-    <a href="https://github.com/Leonetienne/Comaney#advanced-search-filters" target="_blank" rel="noopener" style="display:block;margin-top:6px;font-size:0.75rem;font-style:italic;text-decoration:underline;color:var(--text-muted);">Advanced search filters</a>
+    <a href="https://github.com/Leonetienne/Comaney#advanced-search-filters" target="_blank" rel="noopener" class="search-hint-link">Advanced search filters</a>
 
     <style>
     #exp-list[data-search-loading] { opacity: 0.5; pointer-events: none; transition: opacity 0.1s; }
@@ -92,9 +92,9 @@ window.EXPENSE_CONFIG = {
                  :data-cat="catStr(exp)"
                  :data-tags="tagStr(exp)">
 
-                <div x-show="exp.date_due" class="exp-date-label" style="grid-column:1;grid-row:1;" x-text="exp.date_due"></div>
+                <div x-show="exp.date_due" class="exp-date-label" x-text="exp.date_due"></div>
 
-                <div class="exp-row1" style="grid-row:2;">
+                <div class="exp-row1">
                     <span class="exp-title" x-text="exp.title"></span>
                     <span x-show="exp.payee" class="exp-payee" x-text="exp.payee"></span>
                     <span class="exp-amount" :class="'type-' + exp.type" x-text="exp.value + ' ' + currency"></span>
@@ -102,7 +102,7 @@ window.EXPENSE_CONFIG = {
 
                 <div class="exp-actions">
                     <template x-if="exp.type !== 'carry_over'">
-                        <div style="display:contents">
+                        <div class="d-contents">
                             <a :href="editUrl(exp.id) + '?back=' + encodedBackUrl()" class="btn btn-sm btn-secondary">Edit</a>
                             <form method="post" :action="cloneUrl(exp.id)">
                                 <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
@@ -122,7 +122,7 @@ window.EXPENSE_CONFIG = {
                     <span x-show="exp.settled" class="exp-settled yes">&#10003; settled</span>
                     <span x-show="!exp.settled" class="exp-settled">unsettled</span>
                     <template x-if="exp.category">
-                        <span style="display:contents">
+                        <span class="d-contents">
                             <span class="sep">·</span>
                             <span class="exp-category" x-text="exp.category.title"></span>
                         </span>

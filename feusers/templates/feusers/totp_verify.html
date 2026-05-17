@@ -13,14 +13,14 @@
 {% block auth_content %}
 {% if disable_mode and recovery_mode %}
 <h1>Recovery code</h1>
-<p style="font-size:0.9rem;color:var(--text-muted);margin:-8px 0 20px;">Enter your recovery code to disable 2FA.</p>
+<p class="auth-hint">Enter your recovery code to disable 2FA.</p>
 {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
 <form method="post" novalidate autocomplete="off">
     {% csrf_token %}
     <input type="hidden" name="recovery_mode" value="1">
     <label for="id_recovery">Recovery code</label>
     <input id="id_recovery" name="recovery" type="text" placeholder="XXXXX-XXXXX"
-           maxlength="11" autofocus autocomplete="off" style="font-family:monospace;letter-spacing:0.05em;"
+           maxlength="11" autofocus autocomplete="off" class="input-mono"
            oninput="
              let v = this.value.toUpperCase().replace(/[^0-9A-F]/g,'');
              this.value = v.length > 5 ? v.slice(0,5) + '-' + v.slice(5,10) : v;
@@ -35,7 +35,7 @@
 </p>
 {% elif disable_mode %}
 <h1>Disable 2FA</h1>
-<p style="font-size:0.9rem;color:var(--text-muted);margin:-8px 0 20px;">Enter your current authenticator code to confirm.</p>
+<p class="auth-hint">Enter your current authenticator code to confirm.</p>
 {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
 <form method="post" novalidate autocomplete="off">
     {% csrf_token %}
@@ -52,14 +52,14 @@
 </p>
 {% elif recovery_mode %}
 <h1>Recovery code</h1>
-<p style="font-size:0.9rem;color:var(--text-muted);margin:-8px 0 20px;">Enter your recovery code to disable 2FA and log in.</p>
+<p class="auth-hint">Enter your recovery code to disable 2FA and log in.</p>
 {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
 <form method="post" novalidate autocomplete="off">
     {% csrf_token %}
     <input type="hidden" name="recovery_mode" value="1">
     <label for="id_recovery">Recovery code</label>
     <input id="id_recovery" name="recovery" type="text" placeholder="XXXXX-XXXXX"
-           maxlength="11" autofocus autocomplete="off" style="font-family:monospace;letter-spacing:0.05em;"
+           maxlength="11" autofocus autocomplete="off" class="input-mono"
            oninput="
              let v = this.value.toUpperCase().replace(/[^0-9A-F]/g,'');
              this.value = v.length > 5 ? v.slice(0,5) + '-' + v.slice(5,10) : v;
@@ -74,7 +74,7 @@
 </p>
 {% else %}
 <h1>Two-factor authentication</h1>
-<p style="font-size:0.9rem;color:var(--text-muted);margin:-8px 0 20px;">Enter the 6-digit code from your authenticator app.</p>
+<p class="auth-hint">Enter the 6-digit code from your authenticator app.</p>
 {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
 <form method="post" novalidate autocomplete="off">
     {% csrf_token %}

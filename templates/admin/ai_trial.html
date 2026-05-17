@@ -1,4 +1,17 @@
 {% extends "admin/base_site.html" %}
+{% block extrastyle %}
+<style>
+:root {
+  --trial-success: #28a745;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --trial-success: #4caf6e; }
+}
+.trial-status-p { color: var(--body-fg, #333); }
+.trial-status-enabled { color: var(--trial-success); }
+.trial-mt { margin-top: 24px; }
+</style>
+{% endblock %}
 {% block content %}
 <h1>Express Creation — Trial API Status</h1>
 
@@ -16,8 +29,8 @@
     <button type="submit" class="button">Re-enable trial API</button>
 </form>
 {% else %}
-<p style="color: var(--body-fg, #333)">
-    The shared trial API is currently <strong style="color: #28a745;">ENABLED</strong>.
+<p class="trial-status-p">
+    The shared trial API is currently <strong class="trial-status-enabled">ENABLED</strong>.
 </p>
 <form method="post">
     {% csrf_token %}
@@ -26,7 +39,7 @@
 </form>
 {% endif %}
 
-<p style="margin-top: 24px;">
+<p class="trial-mt">
     <a href="{% url 'admin:index' %}">&larr; Back to admin</a>
 </p>
 {% endblock %}

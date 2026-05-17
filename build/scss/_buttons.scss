@@ -29,6 +29,18 @@
     &:hover { background: var(--bg-elevated); opacity: 1; }
   }
 
+  &-success {
+    background: var(--success);
+    color: #fff;
+    border-color: transparent;
+    &:hover { opacity: 0.88; }
+  }
+
+  &-xs {
+    padding: 4px 10px;
+    font-size: 0.78rem;
+  }
+
   &-full {
     width: 100%;
     text-align: center;

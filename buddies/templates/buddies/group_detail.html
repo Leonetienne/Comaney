@@ -19,11 +19,11 @@
 {% endif %}
 
 {% if request.GET.achim == "new" %}
-<div id="achim-modal" class="cdialog-backdrop" style="display:flex;">
+<div id="achim-modal" class="cdialog-backdrop cdialog-visible">
     <div class="cdialog">
-        <p style="margin:0 0 0.6rem;font-weight:600;">Say hello to Achim Archive</p>
-        <p style="margin:0 0 0.75rem;font-size:0.95rem;line-height:1.5;">The member you removed had shared expenses, so rather than wiping them from the books, they've been handed off to <strong>Achim Archive</strong>, a special group member who quietly holds onto historical records.</p>
-        <p style="margin:0 0 1.25rem;font-size:0.875rem;color:var(--text-muted);line-height:1.5;">Group balances and the debt graph stay accurate. The admin can delete Achim's expenses at any time from the Members section, though that will permanently change the group's financial history.</p>
+        <p class="cdialog-title">Say hello to Achim Archive</p>
+        <p class="cdialog-body">The member you removed had shared expenses, so rather than wiping them from the books, they've been handed off to <strong>Achim Archive</strong>, a special group member who quietly holds onto historical records.</p>
+        <p class="cdialog-footer-note">Group balances and the debt graph stay accurate. The admin can delete Achim's expenses at any time from the Members section, though that will permanently change the group's financial history.</p>
         <div class="cdialog-actions">
             <button type="button" class="btn" onclick="document.getElementById('achim-modal').style.display='none';history.replaceState(null,'',location.pathname);">Got it</button>
         </div>
@@ -36,39 +36,38 @@
     <h2>Your balances</h2>
 
     {% if my_balances %}
-    <div class="group-settle-list" style="margin-bottom:1.25rem;">
+    <div class="group-settle-list mb-md">
         {% for b in my_balances %}
         <div class="group-settle-row">
             {% if b.you_owe %}
             <span>You owe <strong>{{ b.name }}</strong></span>
-            <strong style="color:var(--error)">{{ currency }}{{ b.amount|floatformat:2 }}</strong>
+            <strong class="text-error">{{ currency }}{{ b.amount|floatformat:2 }}</strong>
             {% else %}
             <span><strong>{{ b.name }}</strong> owes you</span>
-            <strong style="color:#2da44e">{{ currency }}{{ b.amount|floatformat:2 }}</strong>
+            <strong class="text-success">{{ currency }}{{ b.amount|floatformat:2 }}</strong>
             {% endif %}
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <p class="page-subtitle" style="margin-bottom:1.25rem;">You are all settled up.</p>
+    <p class="page-subtitle mb-md">You are all settled up.</p>
     {% endif %}
 
     {% if breakdown.simplified or raw_graph_json != '{"nodes": [], "links": []}' %}
-    <style>@media(max-width:600px){.group-debt-graphs{flex-direction:column!important;}}</style>
-    <div class="group-debt-graphs" style="display:flex;gap:1rem;margin-bottom:1.25rem;">
+    <div class="group-debt-graphs">
 
-        <div class="group-debt-graph-panel" style="flex:1;min-width:0;overflow:hidden;">
+        <div class="group-debt-graph-panel">
             <h3>Expense flows</h3>
-            <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 0.5rem;">Every shared expense shown as arrows between people. These can cancel out.</p>
+            <p>Every shared expense shown as arrows between people. These can cancel out.</p>
             <div id="raw-debt-graph" class="buddy-debt-graph"></div>
-            <p id="raw-debt-graph-total" style="font-size:0.8rem;font-weight:600;margin:0.5rem 0 0;"></p>
+            <p id="raw-debt-graph-total" class="graph-total"></p>
         </div>
 
-        <div class="group-debt-graph-panel" style="flex:1;min-width:0;overflow:hidden;">
+        <div class="group-debt-graph-panel">
             <h3>Quickest way to settle</h3>
-            <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 0.5rem;">The fewest payments needed to bring everyone to zero.</p>
+            <p>The fewest payments needed to bring everyone to zero.</p>
             <div id="simplified-debt-graph" class="buddy-debt-graph"></div>
-            <p id="simplified-debt-graph-total" style="font-size:0.8rem;font-weight:600;margin:0.5rem 0 0;"></p>
+            <p id="simplified-debt-graph-total" class="graph-total"></p>
         </div>
 
     </div>
@@ -182,8 +181,8 @@
 
     <h2>Clear everything at once</h2>
     {% if breakdown.simplified %}
-    {% if not is_admin %}<p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 0.5rem;">Your group admin can kick off a group-wide settlement.</p>{% endif %}
-    <div class="group-settle-list" style="margin-top:1rem;margin-bottom:{% if is_admin %}1rem{% else %}0{% endif %};">
+    {% if not is_admin %}<p class="font-xs text-muted mb-sm">Your group admin can kick off a group-wide settlement.</p>{% endif %}
+    <div class="group-settle-list mt-1 {% if is_admin %}mb-1{% else %}mb-0{% endif %}">
         {% for t in breakdown.simplified %}
         <div class="group-settle-row {% if t.from_is_me %}settle-row-me-owes{% elif t.to_is_me %}settle-row-me-receives{% endif %}">
             <strong>{{ t.from_name }}</strong>
@@ -214,16 +213,16 @@
     </script>
     {% endif %}
     {% elif not breakdown.expenses %}
-    <p style="color:var(--text-muted);font-size:0.9rem;">No expenses recorded yet.</p>
+    <p class="text-muted font-sm">No expenses recorded yet.</p>
     {% else %}
-    <p style="color:#2da44e;font-size:0.95rem;font-weight:600;margin:0.5rem 0 0;">Everyone is settled up. No transfers needed.</p>
+    <p class="settled-up-msg">Everyone is settled up. No transfers needed.</p>
     {% endif %}
 </section>
 
 {# ── Settle with Group Buddy (Part A) ─────────────────────────────────────── #}
 <section class="buddies-section">
     <h2>Pay someone back</h2>
-    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">
+    <p class="page-subtitle">
         Pay back a specific group member. The amount is pre-filled based on what you owe them directly, but you can enter any amount. They'll get a notification to confirm they received it.
     </p>
     <form method="post" action="{% url 'buddies:group_settle_individual' group.uid %}" id="settle-individual-form">
@@ -251,10 +250,10 @@
         <div class="settle-form-row">
             <label for="settle-amount" class="settle-form-label">Amount ({{ currency }})</label>
             <input type="number" id="settle-amount" name="amount" min="0.01" step="0.01"
-                   class="input-inline" style="max-width:140px;" placeholder="0.00" required>
+                   class="input-inline input-inline--narrow" placeholder="0.00" required>
         </div>
 
-        <button type="submit" id="btn-settle-individual" class="btn" style="margin-top:0.5rem;">Record payment</button>
+        <button type="submit" id="btn-settle-individual" class="btn mt-sm">Record payment</button>
     </form>
 
     <script>
@@ -348,7 +347,7 @@
 {% if pending_expenses %}
 <section class="buddies-section">
     <h2>Waiting for approval</h2>
-    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">These expenses are not yet confirmed and do not count toward the current balances.</p>
+    <p class="page-subtitle">These expenses are not yet confirmed and do not count toward the current balances.</p>
     <div class="bexp-breakdown-list">
         {% for e in pending_expenses %}
         <div id="pending-{{ e.expense.uid }}" class="bexp-breakdown-card {% if e.payer_is_me %}bexp-card-i-paid{% elif e.i_am_participant %}bexp-card-other-paid{% else %}bexp-card-neutral{% endif %} bexp-card-pending{% if e.creditor_approval_needed or e.admin_approval_needed %} bexp-card-approvable{% endif %}">
@@ -356,7 +355,7 @@
                 <div class="bexp-breakdown-header-left">
                     <span class="bexp-title">
                         {{ e.expense.title }}
-                        <span class="pill pill--warn" style="margin-left:0.4rem;">Pending</span>
+                        <span class="pill pill--warn pill--ml">Pending</span>
                     </span>
                     <span class="bexp-breakdown-meta">
                         {% if e.expense.date_due %}{{ e.expense.date_due|date:"N j, Y" }} &middot; {% endif %}
@@ -364,16 +363,16 @@
                         Paid by: <strong>{{ e.payer_name }}</strong>
                     </span>
                 </div>
-                <div class="bexp-breakdown-header-right" style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+                <div class="bexp-breakdown-header-right">
                     {% if e.expense.owning_feuser == request.feuser and not e.expense.is_dummy or is_admin and e.expense.is_dummy %}
                     <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23pending-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Edit</a>
                     {% endif %}
 
                     {% if e.creditor_approval_needed %}
-                    <a href="{% url 'buddies:approve_settlement_as_creditor' e.expense.uid %}" id="btn-review-settlement-{{ e.expense.uid }}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
+                    <a href="{% url 'buddies:approve_settlement_as_creditor' e.expense.uid %}" id="btn-review-settlement-{{ e.expense.uid }}" class="btn btn-sm btn-success">Review</a>
                     {% endif %}
                     {% if e.admin_approval_needed %}
-                    <a href="{% url 'buddies:admin_approve_dummy_settlement' group.uid e.expense.uid %}" id="btn-review-dummy-{{ e.expense.uid }}" class="btn btn-sm" style="background:#2da44e;color:#fff;">Review</a>
+                    <a href="{% url 'buddies:admin_approve_dummy_settlement' group.uid e.expense.uid %}" id="btn-review-dummy-{{ e.expense.uid }}" class="btn btn-sm btn-success">Review</a>
                     {% endif %}
 
                     {% if e.can_delete %}
@@ -392,20 +391,20 @@
             </div>
             <table class="bexp-breakdown-table">
                 <thead>
-                    <tr><th>Person</th><th style="text-align:right">Share</th><th style="text-align:right">Amount</th><th>Role</th></tr>
+                    <tr><th>Person</th><th class="text-right">Share</th><th class="text-right">Amount</th><th>Role</th></tr>
                 </thead>
                 <tbody>
                     <tr class="{% if e.payer_is_me %}bexp-row-me{% endif %}">
                         <td>{{ e.payer_name }}</td>
-                        <td style="text-align:right">{{ e.payer_percent|floatformat:1 }}%</td>
-                        <td style="text-align:right">{{ currency }}{{ e.payer_amount|floatformat:2 }}</td>
+                        <td class="text-right">{{ e.payer_percent|floatformat:1 }}%</td>
+                        <td class="text-right">{{ currency }}{{ e.payer_amount|floatformat:2 }}</td>
                         <td><span class="pill">Paid</span></td>
                     </tr>
                     {% for s in e.participant_shares %}
                     <tr class="{% if s.is_me %}bexp-row-me{% endif %}">
                         <td>{{ s.name }}</td>
-                        <td style="text-align:right">{{ s.percent|floatformat:1 }}%</td>
-                        <td style="text-align:right">{{ currency }}{{ s.amount|floatformat:2 }}</td>
+                        <td class="text-right">{{ s.percent|floatformat:1 }}%</td>
+                        <td class="text-right">{{ currency }}{{ s.amount|floatformat:2 }}</td>
                         <td><span class="pill">Owes</span></td>
                     </tr>
                     {% endfor %}
@@ -421,7 +420,7 @@
 {% if approved_expenses %}
 <section class="buddies-section">
     <h2>Expense Breakdown</h2>
-    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">Each expense and how the shares were calculated.</p>
+    <p class="page-subtitle">Each expense and how the shares were calculated.</p>
 
     <div class="bexp-breakdown-list">
         {% for e in approved_expenses %}
@@ -435,7 +434,7 @@
                         Paid by: <strong>{{ e.payer_name }}</strong>
                     </span>
                 </div>
-                <div class="bexp-breakdown-header-right" style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+                <div class="bexp-breakdown-header-right">
                     {% if e.expense.owning_feuser == request.feuser and not e.expense.is_dummy or is_admin and e.expense.is_dummy %}
                     <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Edit</a>
                     {% endif %}
@@ -456,20 +455,20 @@
             </div>
             <table class="bexp-breakdown-table">
                 <thead>
-                    <tr><th>Person</th><th style="text-align:right">Share</th><th style="text-align:right">Amount</th><th>Role</th></tr>
+                    <tr><th>Person</th><th class="text-right">Share</th><th class="text-right">Amount</th><th>Role</th></tr>
                 </thead>
                 <tbody>
                     <tr class="{% if e.payer_is_me %}bexp-row-me{% endif %}">
                         <td>{{ e.payer_name }}</td>
-                        <td style="text-align:right">{{ e.payer_percent|floatformat:1 }}%</td>
-                        <td style="text-align:right">{{ currency }}{{ e.payer_amount|floatformat:2 }}</td>
+                        <td class="text-right">{{ e.payer_percent|floatformat:1 }}%</td>
+                        <td class="text-right">{{ currency }}{{ e.payer_amount|floatformat:2 }}</td>
                         <td><span class="pill">Paid</span></td>
                     </tr>
                     {% for s in e.participant_shares %}
                     <tr class="{% if s.is_me %}bexp-row-me{% endif %}">
                         <td>{{ s.name }}</td>
-                        <td style="text-align:right">{{ s.percent|floatformat:1 }}%</td>
-                        <td style="text-align:right">{{ currency }}{{ s.amount|floatformat:2 }}</td>
+                        <td class="text-right">{{ s.percent|floatformat:1 }}%</td>
+                        <td class="text-right">{{ currency }}{{ s.amount|floatformat:2 }}</td>
                         <td><span class="pill">Owes</span></td>
                     </tr>
                     {% endfor %}
@@ -547,7 +546,7 @@
 
         {# ── Achim Archive (shown last, styled distinctly) ──────────────────── #}
         {% for m in dummy_members %}{% if m.dummy.is_archive %}
-        <div class="buddy-card buddy-card-dummy" style="opacity:0.75;border-style:dashed;">
+        <div class="buddy-card buddy-card-dummy">
             <div class="buddy-card-identity">
                 <span class="buddy-name">{{ m.dummy.display_name }}</span>
                 <span class="pill">Archive</span>
@@ -613,9 +612,9 @@
         <div class="add-buddy-panel">
             <h3>Transfer admin rights</h3>
             <p class="text-muted">Transfer your admin role to another member. You will remain a regular member.</p>
-            <form method="post" action="{% url 'buddies:group_transfer_admin' group.uid %}" class="inline-form confirm-form" style="flex-wrap:wrap;" data-confirm="Transfer admin rights? You will become a regular member." data-ok="Transfer">
+            <form method="post" action="{% url 'buddies:group_transfer_admin' group.uid %}" class="inline-form confirm-form" data-confirm="Transfer admin rights? You will become a regular member." data-ok="Transfer">
                 {% csrf_token %}
-                <select name="new_admin_id" class="input-inline" style="flex:1;min-width:140px;">
+                <select name="new_admin_id" class="input-inline">
                     {% for m in feuser_members %}
                     <option value="{{ m.feuser.pk }}">{{ m.feuser.first_name }} {{ m.feuser.last_name }}</option>
                     {% endfor %}
@@ -650,7 +649,7 @@
 </section>
 {% endif %}
 
-<div style="margin-top:1rem;">
+<div class="mt-1">
     <a href="{% url 'buddies:my_buddies' %}" class="btn btn-secondary btn-sm">&larr; Back to My Buddies</a>
 </div>
 

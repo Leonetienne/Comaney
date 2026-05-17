@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<h1 style="margin-bottom:16px;">Dashboard</h1>
+<h1 class="mb-1">Dashboard</h1>
 {% include "partials/_month_nav.html" %}
 
 <script>
@@ -174,7 +174,7 @@ window.DASHBOARD_CONFIG = {
 
         {# Empty state (no cards) #}
         <template x-if="!loading && cards.length === 0">
-            <div class="dash-empty" style="grid-column: 1 / -1;">
+            <div class="dash-empty">
                 <p>Your dashboard is empty.</p>
                 <p>Add a card to get started.</p>
                 <button class="btn btn-primary" @click="openAdd()">+ New dashboard card</button>
@@ -205,8 +205,7 @@ window.DASHBOARD_CONFIG = {
                     <span x-text="editSaving ? 'Saving…' : 'Save'"></span>
                 </button>
                 <button class="btn btn-secondary" @click="closeEdit()">Cancel</button>
-                <button class="btn btn-danger"
-                        style="margin-left:auto"
+                <button class="btn btn-danger ml-auto"
                         @click="deleteCard(editCard && editCard.id)">Delete</button>
             </div>
         </div>
@@ -228,8 +227,7 @@ window.DASHBOARD_CONFIG = {
             {# Preset buttons #}
             <div x-show="presets.length > 0" class="dash-presets">
                 <template x-for="p in presets" :key="p.name">
-                    <button class="btn btn-secondary"
-                            style="font-size:.78rem;padding:4px 10px"
+                    <button class="btn btn-secondary btn-xs"
                             @click="loadPreset(p.yaml)"
                             x-text="p.name"></button>
                 </template>

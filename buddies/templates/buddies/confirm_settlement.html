@@ -7,32 +7,32 @@
     <h1>Confirm {% if creditor_name %}{{ creditor_name }}{% else %}you{% endif %} received the money</h1>
 </div>
 
-<div class="buddies-section" style="max-width:480px;">
-    <p style="color:var(--text-muted);margin-bottom:1.5rem;">
+<div class="buddies-section buddies-section--sm">
+    <p class="text-muted mb-lg">
         {% if confirm_question %}{{ confirm_question }}{% else %}Did you actually receive this payment?{% endif %} Confirming marks the debt as cleared.
     </p>
 
-    <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;">
+    <table class="settle-table">
         <tr>
-            <td style="color:var(--text-muted);padding:6px 0;font-size:0.9rem;">Description</td>
-            <td style="color:var(--text);padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.title }}</td>
+            <td>Description</td>
+            <td>{{ expense.title }}</td>
         </tr>
         <tr>
-            <td style="color:var(--text-muted);padding:6px 0;font-size:0.9rem;">Amount</td>
-            <td style="color:var(--text);padding:6px 0;font-size:0.9rem;text-align:right;font-weight:600;">{{ expense.owning_feuser.currency }}{{ expense.value|floatformat:2 }}</td>
+            <td>Amount</td>
+            <td class="settle-table-value">{{ expense.owning_feuser.currency }}{{ expense.value|floatformat:2 }}</td>
         </tr>
         {% if expense.buddy_group %}
         <tr>
-            <td style="color:var(--text-muted);padding:6px 0;font-size:0.9rem;">Group</td>
-            <td style="color:var(--text);padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.buddy_group.name }}</td>
+            <td>Group</td>
+            <td>{{ expense.buddy_group.name }}</td>
         </tr>
         {% endif %}
     </table>
 
-    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+    <div class="action-row">
         <form method="post" action="{% if approve_url %}{{ approve_url }}{% else %}{% url 'buddies:approve_settlement_as_creditor' expense.uid %}{% endif %}">
             {% csrf_token %}
-            <button type="submit" id="btn-approve-settlement" class="btn" style="background:#2da44e;color:#fff;">Yes, I got the money</button>
+            <button type="submit" id="btn-approve-settlement" class="btn btn-success">Yes, I got the money</button>
         </form>
 
         <form method="post" action="{% if reject_url %}{{ reject_url }}{% else %}{% url 'buddies:reject_settlement_as_creditor' expense.uid %}{% endif %}" id="reject-settlement-form">

@@ -15,11 +15,11 @@
 {% endif %}
 
 {% if request.GET.achim == "new" %}
-<div id="achim-modal" class="cdialog-backdrop" style="display:flex;">
+<div id="achim-modal" class="cdialog-backdrop cdialog-visible">
     <div class="cdialog">
-        <p style="margin:0 0 0.6rem;font-weight:600;">Say hello to Achim Archive</p>
-        <p style="margin:0 0 0.75rem;font-size:0.95rem;line-height:1.5;">The offline buddy you removed had shared expenses, so rather than deleting them, they've been passed on to <strong>Achim Archive</strong>, a special buddy that holds the history of removed offline buddies.</p>
-        <p style="margin:0 0 1.25rem;font-size:0.875rem;color:var(--text-muted);line-height:1.5;">Your balances stay accurate. You can delete Achim's expenses at any time, but that will permanently change your financial history, so there's a warning before you do so.</p>
+        <p class="cdialog-title">Say hello to Achim Archive</p>
+        <p class="cdialog-body">The offline buddy you removed had shared expenses, so rather than deleting them, they've been passed on to <strong>Achim Archive</strong>, a special buddy that holds the history of removed offline buddies.</p>
+        <p class="cdialog-footer-note">Your balances stay accurate. You can delete Achim's expenses at any time, but that will permanently change your financial history, so there's a warning before you do so.</p>
         <div class="cdialog-actions">
             <button type="button" class="btn" onclick="document.getElementById('achim-modal').style.display='none';history.replaceState(null,'',location.pathname);">Got it</button>
         </div>
@@ -41,7 +41,7 @@
                 {% if info.type == 'dummy' and info.dummy or info.sources %}
                 <div class="bbl-tags">
                     {% if info.type == 'dummy' and info.dummy and not info.dummy.is_archive %}<span class="pill">Offline member</span>{% endif %}
-                    {% if info.type == 'dummy' and info.dummy and info.dummy.is_archive %}<span class="pill" style="opacity:0.7;">Archive</span>{% endif %}
+                    {% if info.type == 'dummy' and info.dummy and info.dummy.is_archive %}<span class="pill pill--faded">Archive</span>{% endif %}
                     {% for src in info.sources %}<span class="pill">{{ src }}</span>{% endfor %}
                 </div>
                 {% endif %}
