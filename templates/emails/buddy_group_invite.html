@@ -1,19 +1,18 @@
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family:sans-serif;color:#222;max-width:480px;margin:0 auto;padding:2rem 1rem;">
-<h2 style="margin-bottom:0.5rem;">You've been invited to a group</h2>
-<p><strong>{{ inviter_name }}</strong> has invited you to join the group <strong>{{ group_name }}</strong> on Comaney.</p>
-<p>Accepting also connects you as spending buddies with {{ inviter_name }}.</p>
-<p style="margin-top:1.5rem;">
-    <a href="{{ invite_url }}" style="background:#2da44e;color:#fff;padding:0.6rem 1.2rem;border-radius:6px;text-decoration:none;font-weight:600;">
-        View invitation
-    </a>
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">You've been invited to a group</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ inviter_name }}</strong> has invited you to join the group <strong style="color:#e0e0e0;">{{ group_name }}</strong> on Comaney.
 </p>
-<hr style="margin:2rem 0;border:none;border-top:1px solid #ddd;">
-<p style="font-size:0.82rem;color:#666;">
-    If you weren't expecting this email you can ignore it. The invitation expires in 7 days.<br>
-    Direct link: <a href="{{ invite_url }}">{{ invite_url }}</a>
+<p style="color:#aaa;line-height:1.6;font-size:0.9rem;">
+    Accepting also connects you as spending buddies with {{ inviter_name }}.
 </p>
-</body>
-</html>
+<div style="margin:28px 0;text-align:center;">
+    <a href="{{ invite_url }}" style="display:inline-block;background:#e0e0e0;color:#141414;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;">View invitation</a>
+</div>
+<p style="color:#666;font-size:0.82rem;line-height:1.5;">
+    This invitation expires in 7 days. If you did not expect this email, you can safely ignore it.<br>
+    Direct link: <a href="{{ invite_url }}" style="color:#666;">{{ invite_url }}</a>
+</p>
+{% endblock %}
