@@ -70,7 +70,7 @@ Only use category_uid and tag_uids values that appear in the lists below.
 If the user describes a lump sum for categorically different things, split by category/tag group.
 Default type to "expense" unless the description clearly indicates income or savings movement.
 
-{{catalog}}"""
+{catalog}"""
 
 _ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 _IMAGE_MAX_PX = 1600

@@ -20,7 +20,7 @@ from helpers import (
 
 DOCKER_WEB = "comaney-web-1"
 AI_TIMEOUT = 120
-ASSETS = Path(__file__).parent.parent / "tests" / "assets"
+ASSETS = Path(__file__).parent.parent / "tests" / "e2e" / "assets"
 
 _CATEGORIES = [
     "Consumer Electronics",
