@@ -14,6 +14,7 @@ Filters:
     type=income / type=expense / type="savings deposit" / …
     settled=yes|no|true|false|1|0
     deactivated=yes|no|true|false|1|0
+    recurring=yes|no|true|false|1|0  (yes/true/1 = only recurring instances; no/false/0 = only non-recurring)
     value<N, value<=N, value>N, value>=N, value=N, value==N
     date<dd.mm.yyyy   date>=mm/dd/yyyy  date==yyyy-mm-dd  date>today
         dot delimiter → dd.mm.yyyy  |  slash delimiter → mm/dd/yyyy  |  hyphen → yyyy-mm-dd
@@ -146,6 +147,7 @@ _EQUALS: dict = {
     'type':        lambda v: _type_q(v),
     'settled':     lambda v: _bool_q('settled', v),
     'deactivated': lambda v: _bool_q('deactivated', v),
+    'recurring':   lambda v: Q(source_scheduled__isnull=False) if v in ('true', 'yes', '1') else Q(source_scheduled__isnull=True),
     'value':       lambda v: _value_q('=', float(v)),
     'date':        lambda v: _date_q('=', v),
     'tag':         lambda v: Q(tags__isnull=True) if v == 'none' else Q(tags__title__icontains=v),
