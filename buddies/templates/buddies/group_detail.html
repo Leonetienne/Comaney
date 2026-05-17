@@ -258,15 +258,8 @@
 
     <script>
     (function () {
-        var SIMPLIFIED = {{ raw_debts_json|safe }};
         var MEMBERS = {{ all_members_json|safe }};
         var IS_ADMIN = {{ is_admin|lower }};
-
-        var debtLookup = {};
-        SIMPLIFIED.forEach(function (d) {
-            if (!debtLookup[d.from]) debtLookup[d.from] = {};
-            debtLookup[d.from][d.to] = d.amount;
-        });
 
         var debtorEl  = document.getElementById('settle-debtor');
         var creditorEl = document.getElementById('settle-creditor');
@@ -288,22 +281,9 @@
                 if (m.key === prev) opt.selected = true;
                 creditorEl.appendChild(opt);
             });
-            updateAmount();
-        }
-
-        function updateAmount() {
-            var dk = getDebtorKey();
-            var ck = creditorEl.value;
-            var amt = (debtLookup[dk] || {})[ck];
-            if (amt && amt > 0.005) {
-                amountEl.value = amt.toFixed(2);
-            } else {
-                amountEl.value = '';
-            }
         }
 
         if (debtorEl) debtorEl.addEventListener('change', rebuildCreditorOptions);
-        creditorEl.addEventListener('change', updateAmount);
         rebuildCreditorOptions();
 
         var memberMap = {};
