@@ -1,16 +1,15 @@
 # Settling Up
 
-Sometimes you need to lend someone money or settle up with someone to clear your dept.
-To record this in Comaney, either go to **Buddy Expenses** or the group page, scroll down to *Pay someone back*,
-either use the pre-filled value of what you owe or type in something completely different.
+Use the **Pay someone back** form on the Buddy Expenses page or a group page to record any payment between you and a buddy. The amount is pre-filled with what you owe, but you can always enter a different value: partial payments and voluntary payments both work fine.
 
 ## Settling a one-on-one debt
 
 1. Go to **Buddy Expenses**.
-2. Find the **Pay someone back** section. It lists everyone you currently owe money to.
-3. Check the pre-filled amount. You can change it if you are only paying part of the debt or are overpaying.
-4. Click **Settle**.
-5. A confirmation box appears. It reminds you to actually send the money and tells you what happens next. Confirm to continue.
+2. Find the **Pay someone back** section.
+3. Select who you want to pay from the **Pay to** dropdown.
+4. The amount is pre-filled with what you owe them, if anything. You can change it freely.
+5. Click **Record payment**.
+6. A confirmation box appears. It reminds you to actually send the money and tells you what happens next. Confirm to continue.
 
 After you confirm:
 
@@ -42,7 +41,7 @@ You can settle individual debts or have the admin settle the whole group at once
 
 The creditor receives an email and sees a "Review" button on the group page. The confirmation flow is the same as for one-on-one settlements.
 
-If you are the group admin, you can also create settlements on behalf of offline members: select the offline member as the person paying from the dropdown.
+If you are the group admin, you can also create settlements on behalf of offline members: select the offline member as the person paying from the **Who's paying** dropdown. The same dropdown is available on the **Buddy Expenses** page for your personal offline buddies.
 
 ### Settling the whole group at once (admin only)
 
