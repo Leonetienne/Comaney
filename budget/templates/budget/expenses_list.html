@@ -53,6 +53,11 @@ window.EXPENSE_CONFIG = {
                 </select>
                 <button type="button" id="exp-bulk-go" class="btn btn-sm btn-secondary" @click="submitBulk()">Go</button>
             </div>
+            <label class="exp-filter-checkbox">
+                <input type="checkbox" id="exp-hide-recurring"
+                       x-model="hideRecurring" @change="onHideRecurringChange()">
+                Hide recurring
+            </label>
         </div>
         <div class="exp-toolbar-right">
             <label class="exp-sort-label">Sort by</label>

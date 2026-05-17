@@ -55,6 +55,22 @@
   white-space: nowrap;
 }
 
+.exp-filter-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+
+  input[type=checkbox] {
+    accent-color: var(--link);
+    cursor: pointer;
+  }
+}
+
 .exp-sort-label {
   font-size: 0.88rem;
   color: var(--text-muted);

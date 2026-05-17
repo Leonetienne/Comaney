@@ -4,6 +4,7 @@ function expenseList() {
     return {
         expenses: [],
         query: '',
+        hideRecurring: false,
         sortBy: 'date',
         sortDir: 'desc',
         pending: false,
@@ -61,10 +62,37 @@ function expenseList() {
                     sessionStorage.removeItem('expSearch');
                 }
             }
+            this._syncHideRecurring();
             this.fetchExpenses();
         },
 
         onInput() {
+            sessionStorage.setItem('expSearch', this.query);
+            this._syncHideRecurring();
+            this.pending = true;
+            clearTimeout(this._debounceTimer);
+            this._debounceTimer = setTimeout(() => {
+                this.pending = false;
+                this.fetchExpenses();
+            }, 200);
+        },
+
+        _syncHideRecurring() {
+            const m = this.query.toLowerCase().match(/\brecurring=(yes|true|1|no|false|0)\b/);
+            if (m) {
+                const v = m[1];
+                this.hideRecurring = v === 'no' || v === 'false' || v === '0';
+            } else {
+                this.hideRecurring = false;
+            }
+        },
+
+        onHideRecurringChange() {
+            let q = this.query.replace(/\brecurring=\S+/gi, '').replace(/\s{2,}/g, ' ').trim();
+            if (this.hideRecurring) {
+                q = q ? q + ' recurring=no' : 'recurring=no';
+            }
+            this.query = q;
             sessionStorage.setItem('expSearch', this.query);
             this.pending = true;
             clearTimeout(this._debounceTimer);
