@@ -10,7 +10,15 @@ from ..services import BuddyQueryService
 def _debts_to_json(unified_debts) -> str:
     rows = []
     for info in unified_debts:
-        rows.append({"name": info["display_name"], "net": float(info["net"])})
+        obj = info["feuser"] or info["dummy"]
+        has_pic = bool(obj and obj.profile_picture)
+        rows.append({
+            "name": info["display_name"],
+            "net": float(info["net"]),
+            "has_pic": has_pic,
+            "avatar_url": obj.ppic_url if has_pic else None,
+            "initials": obj.initials if obj else "?",
+        })
     return json.dumps(rows)
 
 
@@ -135,11 +143,18 @@ def buddy_summary_page(request):
                     seen_dummy_cred.add(exp.pk)
                     break
 
+    me_avatar_json = json.dumps({
+        "has_pic": feuser.profile_picture,
+        "avatar_url": feuser.ppic_url if feuser.profile_picture else None,
+        "initials": feuser.initials,
+    })
+
     return render(request, "buddies/buddy_summary.html", {
         "active_nav": "buddy_summary",
         "direct_expenses": direct_expenses,
         "my_groups_summary": my_groups_summary,
         "debts_json": _debts_to_json(unified_debts),
+        "me_avatar_json": me_avatar_json,
         "feuser_key": feuser_key,
         "direct_settle_members_json": json.dumps(direct_settle_members),
         "settle_debts_json": json.dumps(settle_debts),

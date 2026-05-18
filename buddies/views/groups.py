@@ -146,10 +146,18 @@ def group_detail(request, group_id):
             netted_flows[(frm, to)] = amount
     raw_flows = netted_flows
 
-    graph_nodes = [
-        {"key": k, "name": v["name"], "is_me": v["is_me"]}
-        for k, v in breakdown["member_map"].items()
-    ]
+    graph_nodes = []
+    for k, v in breakdown["member_map"].items():
+        obj = v.get("user_obj")
+        has_pic = bool(obj and obj.profile_picture)
+        graph_nodes.append({
+            "key": k,
+            "name": v["name"],
+            "is_me": v["is_me"],
+            "has_pic": has_pic,
+            "avatar_url": obj.ppic_url if has_pic else None,
+            "initials": obj.initials if obj else "?",
+        })
 
     raw_graph_json = json.dumps({
         "nodes": graph_nodes,

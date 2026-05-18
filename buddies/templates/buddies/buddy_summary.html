@@ -147,6 +147,16 @@
         var DEBTS = {{ debts_json|safe }};
         var CURRENCY = "{{ request.feuser.currency|escapejs }}";
 
+        var ME_AVATAR = {{ me_avatar_json|safe }};
+
+        var AVATAR_COLORS = ["#c2478a","#5b6af0","#2ea8a8","#e05c2a","#6a9e2e","#a855b5","#d4902a","#3a8ed4","#e05878","#2e8a5f","#7c6af0","#c47a2a"];
+        function avatarColor(initials) {
+            if (!initials) return AVATAR_COLORS[0];
+            var h = 0;
+            for (var i = 0; i < initials.length; i++) h += initials.charCodeAt(i);
+            return AVATAR_COLORS[h % AVATAR_COLORS.length];
+        }
+
         function renderBuddyDebtGraph(debts, currency) {
             if (!debts || !debts.length) return;
             var container = document.getElementById('buddy-debt-graph');
@@ -190,9 +200,13 @@
 
             var nodes = debts.map(function (d, i) {
                 var angle = (2 * Math.PI * i / n) - Math.PI / 2;
-                return { name: d.name, net: d.net,
-                         x: CX + ORBIT * Math.cos(angle),
-                         y: CY + ORBIT * Math.sin(angle) };
+                return {
+                    name: d.name, net: d.net,
+                    has_pic: d.has_pic, avatar_url: d.avatar_url, initials: d.initials,
+                    x: CX + ORBIT * Math.cos(angle),
+                    y: CY + ORBIT * Math.sin(angle),
+                    idx: i,
+                };
             });
 
             nodes.forEach(function (node) {
@@ -245,41 +259,61 @@
                         .text(currency + Math.abs(node.net).toFixed(2));
                 }
 
-                svg.append('circle')
-                    .attr('cx', node.x).attr('cy', node.y).attr('r', R_BUDDY)
-                    .style('fill', '#23272e')
-                    .attr('stroke', color)
-                    .attr('stroke-width', 2.5);
+                var clipId = 'clip-buddy-' + node.idx;
+                defs.append('clipPath').attr('id', clipId)
+                    .append('circle').attr('cx', node.x).attr('cy', node.y).attr('r', R_BUDDY);
 
-                var nameParts = node.name.split(' ');
-                if (nameParts.length > 1) {
-                    svg.append('text')
-                        .attr('x', node.x).attr('y', node.y - 7)
-                        .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-                        .attr('font-size', '10').attr('fill', '#fff')
-                        .text(nameParts[0]);
-                    svg.append('text')
-                        .attr('x', node.x).attr('y', node.y + 7)
-                        .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-                        .attr('font-size', '10').attr('fill', '#fff')
-                        .text(nameParts.slice(1).join(' '));
+                if (node.has_pic) {
+                    svg.append('image')
+                        .attr('href', node.avatar_url)
+                        .attr('x', node.x - R_BUDDY).attr('y', node.y - R_BUDDY)
+                        .attr('width', R_BUDDY * 2).attr('height', R_BUDDY * 2)
+                        .attr('clip-path', 'url(#' + clipId + ')')
+                        .attr('preserveAspectRatio', 'xMidYMid slice')
+                      .append('title').text(node.name);
+                    svg.append('circle')
+                        .attr('cx', node.x).attr('cy', node.y).attr('r', R_BUDDY)
+                        .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2.5)
+                      .append('title').text(node.name);
                 } else {
+                    svg.append('circle')
+                        .attr('cx', node.x).attr('cy', node.y).attr('r', R_BUDDY)
+                        .attr('fill', avatarColor(node.initials))
+                        .attr('stroke', color).attr('stroke-width', 2.5)
+                      .append('title').text(node.name);
                     svg.append('text')
                         .attr('x', node.x).attr('y', node.y)
                         .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-                        .attr('font-size', '10').attr('fill', '#fff')
-                        .text(node.name);
+                        .attr('font-size', '11').attr('font-weight', '600').attr('fill', '#fff')
+                        .text(node.initials)
+                      .append('title').text(node.name);
                 }
             });
 
-            svg.append('circle')
-                .attr('cx', CX).attr('cy', CY).attr('r', R_ME)
-                .attr('fill', '#2da44e');
-            svg.append('text')
-                .attr('x', CX).attr('y', CY)
-                .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-                .attr('font-size', '14').attr('font-weight', '700').attr('fill', '#fff')
-                .text('Me');
+            var meClipId = 'clip-buddy-me';
+            defs.append('clipPath').attr('id', meClipId)
+                .append('circle').attr('cx', CX).attr('cy', CY).attr('r', R_ME);
+
+            if (ME_AVATAR.has_pic) {
+                svg.append('image')
+                    .attr('href', ME_AVATAR.avatar_url)
+                    .attr('x', CX - R_ME).attr('y', CY - R_ME)
+                    .attr('width', R_ME * 2).attr('height', R_ME * 2)
+                    .attr('clip-path', 'url(#' + meClipId + ')')
+                    .attr('preserveAspectRatio', 'xMidYMid slice');
+                svg.append('circle')
+                    .attr('cx', CX).attr('cy', CY).attr('r', R_ME)
+                    .attr('fill', 'none').attr('stroke', '#2da44e').attr('stroke-width', 2.5);
+            } else {
+                svg.append('circle')
+                    .attr('cx', CX).attr('cy', CY).attr('r', R_ME)
+                    .attr('fill', '#2da44e');
+                svg.append('text')
+                    .attr('x', CX).attr('y', CY)
+                    .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                    .attr('font-size', '14').attr('font-weight', '700').attr('fill', '#fff')
+                    .text(ME_AVATAR.initials || 'Me');
+            }
         }
 
         renderBuddyDebtGraph(DEBTS, CURRENCY);

@@ -82,6 +82,14 @@
         var SIMPLIFIED = {{ simplified_graph_json|safe }};
         var CURRENCY = "{{ currency|escapejs }}";
 
+        var AVATAR_COLORS = ["#c2478a","#5b6af0","#2ea8a8","#e05c2a","#6a9e2e","#a855b5","#d4902a","#3a8ed4","#e05878","#2e8a5f","#7c6af0","#c47a2a"];
+        function avatarColor(initials) {
+            if (!initials) return AVATAR_COLORS[0];
+            var h = 0;
+            for (var i = 0; i < initials.length; i++) h += initials.charCodeAt(i);
+            return AVATAR_COLORS[h % AVATAR_COLORS.length];
+        }
+
         function renderGroupGraph(data, containerId) {
             var nodes = data.nodes, links = data.links;
             if (!nodes.length) return;
@@ -107,7 +115,13 @@
             var pos = {};
             nodes.forEach(function (nd, i) {
                 var angle = (2 * Math.PI * i / n) - Math.PI / 2;
-                pos[nd.key] = { x: CX + ORBIT * Math.cos(angle), y: CY + ORBIT * Math.sin(angle), name: nd.name, is_me: nd.is_me };
+                pos[nd.key] = {
+                    x: CX + ORBIT * Math.cos(angle),
+                    y: CY + ORBIT * Math.sin(angle),
+                    name: nd.name, is_me: nd.is_me,
+                    has_pic: nd.has_pic, avatar_url: nd.avatar_url, initials: nd.initials,
+                    key: nd.key,
+                };
             });
 
             links.forEach(function (lk) {
@@ -127,21 +141,31 @@
             });
 
             Object.values(pos).forEach(function (nd) {
-                svg.append('circle').attr('cx',nd.x).attr('cy',nd.y).attr('r',R)
-                    .attr('fill', nd.is_me ? '#2da44e' : '#23272e')
-                    .attr('stroke', nd.is_me ? '#1a7f36' : '#444c56').attr('stroke-width', 2);
-                var parts = nd.name.split(' ');
-                if (parts.length > 1) {
-                    svg.append('text').attr('x',nd.x).attr('y',nd.y-7)
-                        .attr('text-anchor','middle').attr('dominant-baseline','middle')
-                        .attr('font-size','10').attr('fill','#fff').text(parts[0]);
-                    svg.append('text').attr('x',nd.x).attr('y',nd.y+7)
-                        .attr('text-anchor','middle').attr('dominant-baseline','middle')
-                        .attr('font-size','10').attr('fill','#fff').text(parts.slice(1).join(' '));
+                var clipId = 'clip-' + containerId + '-' + nd.key;
+                var fill = nd.is_me ? '#2da44e' : avatarColor(nd.initials);
+                var stroke = nd.is_me ? '#1a7f36' : '#444c56';
+                defs.append('clipPath').attr('id', clipId)
+                    .append('circle').attr('cx', nd.x).attr('cy', nd.y).attr('r', R);
+                if (nd.has_pic) {
+                    svg.append('image')
+                        .attr('href', nd.avatar_url)
+                        .attr('x', nd.x - R).attr('y', nd.y - R)
+                        .attr('width', R * 2).attr('height', R * 2)
+                        .attr('clip-path', 'url(#' + clipId + ')')
+                        .attr('preserveAspectRatio', 'xMidYMid slice')
+                      .append('title').text(nd.name);
+                    svg.append('circle').attr('cx', nd.x).attr('cy', nd.y).attr('r', R)
+                        .attr('fill', 'none').attr('stroke', stroke).attr('stroke-width', 2)
+                      .append('title').text(nd.name);
                 } else {
-                    svg.append('text').attr('x',nd.x).attr('y',nd.y)
-                        .attr('text-anchor','middle').attr('dominant-baseline','middle')
-                        .attr('font-size','10').attr('fill','#fff').text(nd.name);
+                    svg.append('circle').attr('cx', nd.x).attr('cy', nd.y).attr('r', R)
+                        .attr('fill', fill).attr('stroke', stroke).attr('stroke-width', 2)
+                      .append('title').text(nd.name);
+                    svg.append('text').attr('x', nd.x).attr('y', nd.y)
+                        .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                        .attr('font-size', '11').attr('font-weight', '600').attr('fill', '#fff')
+                        .text(nd.initials)
+                      .append('title').text(nd.name);
                 }
             });
         }
