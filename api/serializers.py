@@ -64,20 +64,7 @@ def _buddy_participants(exp) -> list:
 
 
 def _settlement_can_delete(exp) -> bool:
-    """
-    Settlement expenses are only deletable when:
-    - unapproved (creditor hasn't confirmed yet), OR
-    - the creditor is an offline member (dummy) — they can never confirm themselves
-    """
-    if not exp.is_buddies_settlement:
-        return True
-    if not exp.buddy_approved:
-        return True
-    # Personal offline member: auto-approved, self-managed — owner can delete
-    # Group offline member: admin explicitly confirmed — locked for everyone
-    if exp.buddy_group_id:
-        return False
-    return any(bs.participant_dummy_id for bs in exp.buddy_spendings.all())
+    return exp.settlement_can_delete
 
 
 def _expense_json(exp):
@@ -100,6 +87,7 @@ def _expense_json(exp):
         "buddy_participants":           _buddy_participants(exp),
         "is_buddies_settlement":        exp.is_buddies_settlement,
         "can_delete":                   _settlement_can_delete(exp),
+        "can_edit":                     exp.settlement_can_edit,
     }
 
 

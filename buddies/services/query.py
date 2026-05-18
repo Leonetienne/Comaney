@@ -224,9 +224,16 @@ class BuddyQueryService:
                 buddy_approved=True,
             ).prefetch_related("buddy_spendings")
             for exp in dummy_expenses:
-                participant_sum = sum(bs.share_percent for bs in exp.buddy_spendings.all())
-                my_implicit_share = Decimal("100") - participant_sum
-                i_owe += exp.value * my_implicit_share / 100
+                spendings = list(exp.buddy_spendings.all())
+                feuser_bs = next(
+                    (bs for bs in spendings if bs.participant_feuser_id == feuser.pk), None
+                )
+                if feuser_bs is not None:
+                    i_owe += exp.value * feuser_bs.share_percent / 100
+                else:
+                    participant_sum = sum(bs.share_percent for bs in spendings)
+                    my_implicit_share = Decimal("100") - participant_sum
+                    i_owe += exp.value * my_implicit_share / 100
 
         return Decimal(owed_to_me) - Decimal(i_owe)
 

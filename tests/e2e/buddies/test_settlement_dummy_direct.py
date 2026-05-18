@@ -74,7 +74,7 @@ class TestDirectSettlementToPersonalDummy:
         driver.find_element("id", "cdialog-ok").click()
         time.sleep(1)
         assert "settlement record" in driver.page_source.lower(), \
-            "Flash must confirm that a settlement record was created"
+            "Flash message must confirm that a settlement record was created"
 
     def test_settlement_is_immediately_approved(self, driver, w, ctx):
         approved = _shell(
@@ -191,6 +191,19 @@ class TestDirectSettlementFromDummy:
         )
         assert approved == "True", \
             "Dummy-pays-feuser settlement must be buddy_approved=True immediately"
+
+    def test_settlement_has_feuser_as_participant(self, driver, w, ctx):
+        result = _shell(
+            f"from budget.models import Expense; "
+            f"from feusers.models import FeUser; "
+            f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
+            f"e = Expense.objects.filter(owning_feuser=a, is_buddies_settlement=True, "
+            f"  is_dummy=True).first(); "
+            f"bs = e.buddy_spendings.filter(participant_feuser=a).first() if e else None; "
+            f"print(bs.share_percent if bs else 'none')"
+        )
+        assert float(result) == 100.0, \
+            f"Settlement must record feuser as 100% participant; got '{result}'"
 
     def test_debt_cleared_after_settlement(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))

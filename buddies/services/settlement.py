@@ -180,7 +180,7 @@ class BuddySettlementService:
             buddy_approved=True,
             is_dummy=True,
             upfront_payee_dummy=dummy,
-            buddy_spendings=[],
+            buddy_spendings=[{"type": "feuser", "id": feuser.pk, "share_percent": Decimal("100")}],
         )
         return True
 
