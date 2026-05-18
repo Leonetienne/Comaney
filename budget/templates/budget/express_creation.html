@@ -563,8 +563,8 @@ function initCardBuddy(cardEl) {
             var sl = pr.querySelector('input'); if (sl) sl.value = s;
             var pc = pr.querySelector('.buddy-slider-pct'); if (pc) pc.textContent = s.toFixed(1)+'%';
             var am = pr.querySelector('.buddy-slider-amt'); if (am) am.textContent = formatAmount(s);
-            var lbl = pr.querySelector('.buddy-slider-name');
-            if (lbl) lbl.textContent = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
+            var nameText = pr.querySelector('.buddy-slider-name-text');
+            if (nameText) nameText.textContent = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
         }
         parts.forEach(function(p,idx) {
             var row = slidersEl.querySelector('[data-sidx="'+idx+'"]'); if (!row) return;
@@ -604,10 +604,11 @@ function initCardBuddy(cardEl) {
                 +'<span class="buddy-slider-amt secondary">'+formatAmount(p.share)+'</span>';
             slidersEl.appendChild(row);
             row.querySelector('input').addEventListener('input', function() {
-                var val=+parseFloat(this.value).toFixed(3), d=val-parts[idx].share;
+                var val=+parseFloat(this.value).toFixed(3), oldVal=parts[idx].share, d=val-oldVal;
                 parts[idx].share=val;
                 var others=parts.filter(function(_,i){return i!==idx;});
-                if (others.length){var po=d/others.length;others.forEach(function(o){o.share=Math.max(0,Math.min(100,+(o.share-po).toFixed(3)));});}
+                var totalAvail=100-oldVal;
+                if (others.length&&Math.abs(d)>0.001&&totalAvail>0.001){others.forEach(function(o){o.share=Math.max(0,Math.min(100,+(o.share-d*(o.share/totalAvail)).toFixed(3)));});}
                 clamp(); refreshSliders();
             });
         });
