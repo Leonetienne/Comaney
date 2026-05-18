@@ -4,6 +4,10 @@ from django.conf import settings
 from django.http import FileResponse, Http404
 from django.shortcuts import redirect
 
+# Ensure modern image types are recognised on all platforms.
+mimetypes.add_type("image/webp", ".webp")
+mimetypes.add_type("image/avif", ".avif")
+
 
 def media_serve(request, path):
     from feusers.utils import _get_session_feuser
