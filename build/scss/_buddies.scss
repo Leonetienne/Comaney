@@ -209,14 +209,16 @@
 
 .invite-card {
   padding: 0.85rem 1rem;
-  background: var(--bg-surface);
+  background: color-mix(in srgb, #2da44e 4%, var(--bg-surface));
   border: 1px solid var(--border);
+  border-left: 3px solid #2da44e;
   border-radius: 8px;
   margin-bottom: 0.5rem;
 
   p { margin: 0 0 0.6rem; }
 
   &.invite-card-outgoing {
+    background: var(--bg-surface);
     border-left: 3px solid var(--text-muted);
   }
 }
