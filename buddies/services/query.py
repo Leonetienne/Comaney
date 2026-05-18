@@ -4,6 +4,8 @@ from decimal import Decimal
 
 from django.db.models import Q
 
+from feusers.templatetags.feuser_tags import avatar_color as _avatar_color
+
 from ..debt_utils import simplify_balances
 from ..models import (
     BuddyGroup,
@@ -143,6 +145,9 @@ class BuddyQueryService:
                         "id": fu.pk,
                         "name": name,
                         "is_me": fu.pk == feuser.pk,
+                        "ppicUrl": fu.ppic_url if fu.profile_picture else "",
+                        "initials": fu.initials,
+                        "avatarColor": _avatar_color(fu.initials),
                     })
                 else:
                     members.append({
@@ -150,6 +155,9 @@ class BuddyQueryService:
                         "id": m.dummy_id,
                         "name": m.dummy.display_name + " (offline member)",
                         "is_me": False,
+                        "ppicUrl": m.dummy.ppic_url if m.dummy.profile_picture else "",
+                        "initials": m.dummy.initials,
+                        "avatarColor": _avatar_color(m.dummy.initials),
                     })
             result.append({
                 "id": group.uid,

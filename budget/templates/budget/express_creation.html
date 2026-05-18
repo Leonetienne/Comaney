@@ -1,4 +1,5 @@
 {% extends "budget_base.html" %}
+{% load feuser_tags %}
 
 {% block title %}Comaney – Express Creation{% endblock %}
 
@@ -9,6 +10,9 @@ window.BUDDY_EXPENSE_CONFIG = {
     mePk:            {{ current_feuser.pk }},
     meFirstName:     "{{ current_feuser.first_name|escapejs }}",
     meLastName:      "{{ current_feuser.last_name|escapejs }}",
+    mePpicUrl:       "{% if current_feuser.profile_picture %}{{ current_feuser.ppic_url|escapejs }}{% endif %}",
+    meInitials:      "{{ current_feuser.initials|escapejs }}",
+    meAvatarColor:   "{{ current_feuser.initials|avatar_color|escapejs }}",
     groupsData:      {{ groups_data_json|safe }},
     singleBuddies:   {{ single_buddies_json|safe }},
     urlBuddySummary: "{% url 'buddies:buddy_summary' %}",
@@ -365,14 +369,29 @@ function initCardBuddy(cardEl) {
     var modeGrp     = q('.buddy-mode-group');
     var grpSelRow   = q('.buddy-group-select-row');
     var grpSel      = q('.buddy-group-select');
-    var ME_PK       = cfg.mePk;
-    var ME_NAME     = (cfg.meFirstName + ' ' + cfg.meLastName).trim() || 'Me';
+    var ME_PK           = cfg.mePk;
+    var ME_NAME         = (cfg.meFirstName + ' ' + cfg.meLastName).trim() || 'Me';
+    var ME_PPIC_URL     = cfg.mePpicUrl || '';
+    var ME_INITIALS     = cfg.meInitials || '';
+    var ME_AVATAR_COLOR = cfg.meAvatarColor || '';
     var groups      = cfg.groupsData    || [];
     var singles     = cfg.singleBuddies || [];
     var summaryUrl  = cfg.urlBuddySummary || '';
     var mode = 'single', groupId = null, parts = [];
     var valueInput = cardEl.querySelector('.edit-value');
     function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function avatarHtml(ppicUrl, initials, avatarColor) {
+        if (ppicUrl) return '<img src="'+esc(ppicUrl)+'" class="user-avatar user-avatar--sm" alt="">';
+        return '<span class="user-avatar user-avatar--initials user-avatar--sm" style="background:'+esc(avatarColor)+';">'+esc(initials)+'</span>';
+    }
+    function getPersonAvatar(type, id) {
+        if (type === 'me' || (type === 'feuser' && id === ME_PK)) return {ppicUrl:ME_PPIC_URL, initials:ME_INITIALS, avatarColor:ME_AVATAR_COLOR};
+        var f = singles.find(function(b){return b.type===type&&b.id===id;});
+        if (f) return {ppicUrl:f.ppicUrl||'',initials:f.initials||'',avatarColor:f.avatarColor||''};
+        for (var gi=0;gi<groups.length;gi++){var ms=groups[gi].members;for(var mi=0;mi<ms.length;mi++){var m=ms[mi];
+            if(!m.is_me&&m.type===type&&m.id===id)return{ppicUrl:m.ppicUrl||'',initials:m.initials||'',avatarColor:m.avatarColor||''};}}
+        return {ppicUrl:'',initials:'',avatarColor:''};
+    }
     // Parallel copy of getExpenseValue/formatAmount lives in build/js/buddy_expense.js.
     function getExpenseValue() {
         if (!valueInput) return 0;
@@ -443,24 +462,38 @@ function initCardBuddy(cardEl) {
     function buildParts(preCheck) {
         partEl.innerHTML = '';
         if (mode === 'single') {
+            var wrap = document.createElement('div'); wrap.className = 'buddy-single-select-wrap';
+            var aw = document.createElement('span'); aw.className = 'buddy-single-avatar-wrap'; aw.style.display = 'none';
+            wrap.appendChild(aw);
             var sel = document.createElement('select'); sel.className = 'buddy-participant-select';
             var emp = document.createElement('option'); emp.value = ''; emp.textContent = '-- Select buddy --';
             sel.appendChild(emp);
             singles.forEach(function(b) {
                 var o = document.createElement('option');
-                o.value = b.type+':'+b.id; o.dataset.type = b.type; o.dataset.id = String(b.id); o.dataset.name = b.name; o.textContent = b.name;
+                o.value = b.type+':'+b.id; o.dataset.type = b.type; o.dataset.id = String(b.id); o.dataset.name = b.name;
+                o.dataset.ppicUrl = b.ppicUrl||''; o.dataset.initials = b.initials||''; o.dataset.avatarColor = b.avatarColor||'';
+                o.textContent = b.name;
                 sel.appendChild(o);
             });
-            sel.addEventListener('change', function() { syncParts(); rebuildSliders(); });
-            partEl.appendChild(sel);
+            sel.addEventListener('change', function() {
+                if (sel.value) { var o=sel.options[sel.selectedIndex]; aw.innerHTML=avatarHtml(o.dataset.ppicUrl||'',o.dataset.initials||'',o.dataset.avatarColor||''); aw.style.display=''; }
+                else { aw.innerHTML=''; aw.style.display='none'; }
+                syncParts(); rebuildSliders();
+            });
+            wrap.appendChild(sel);
+            partEl.appendChild(wrap);
         } else {
             var grp = groups.find(function(g) { return g.id === groupId; });
             (grp ? grp.members.filter(function(m) { return !m.is_me; }) : []).forEach(function(item) {
                 var lbl = document.createElement('label'); lbl.className = 'checkbox-inline buddy-participant-cb';
                 lbl.dataset.type = item.type; lbl.dataset.id = String(item.id); lbl.dataset.name = item.name;
+                lbl.dataset.ppicUrl = item.ppicUrl||''; lbl.dataset.initials = item.initials||''; lbl.dataset.avatarColor = item.avatarColor||'';
                 var inp = document.createElement('input'); inp.type = 'checkbox'; if (preCheck) inp.checked = true;
                 inp.addEventListener('change', function() { syncParts(); rebuildSliders(); });
-                lbl.appendChild(inp); lbl.appendChild(document.createTextNode(' '+item.name));
+                lbl.appendChild(inp);
+                var tmp = document.createElement('span'); tmp.innerHTML = avatarHtml(item.ppicUrl||'',item.initials||'',item.avatarColor||'');
+                if (tmp.firstChild) lbl.appendChild(tmp.firstChild);
+                lbl.appendChild(document.createTextNode(' '+item.name));
                 partEl.appendChild(lbl);
             });
         }
@@ -470,12 +503,13 @@ function initCardBuddy(cardEl) {
         if (mode === 'single') {
             var show = pt === 'me';
             if (partRow) partRow.style.display = show ? '' : 'none';
-            var sel = partEl.querySelector('.buddy-participant-select'); if (!show && sel) sel.value = '';
+            var sel = partEl.querySelector('.buddy-participant-select');
+            if (!show && sel) { sel.value = ''; var aw=partEl.querySelector('.buddy-single-avatar-wrap'); if(aw){aw.innerHTML='';aw.style.display='none';} }
         } else {
             if (partRow) partRow.style.display = '';
             partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
                 var hide = lbl.dataset.type === pt && lbl.dataset.id === pid;
-                lbl.style.display = hide ? 'none' : 'block'; if (hide) lbl.querySelector('input').checked = false;
+                lbl.style.display = hide ? 'none' : ''; if (hide) lbl.querySelector('input').checked = false;
             });
         }
         parts = []; syncParts();
@@ -484,12 +518,12 @@ function initCardBuddy(cardEl) {
         var pt = payerSel.value.split(':')[0], checked = [];
         if (pt !== 'me') {
             var em = parts.find(function(p) { return p.type === 'feuser' && p.id === ME_PK; });
-            checked.push({type:'feuser', id:ME_PK, name:ME_NAME, share:em?em.share:0});
+            checked.push({type:'feuser', id:ME_PK, name:ME_NAME, share:em?em.share:0, ppicUrl:ME_PPIC_URL, initials:ME_INITIALS, avatarColor:ME_AVATAR_COLOR});
             if (mode !== 'single') partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
                 if (lbl.style.display === 'none') return;
                 if (lbl.querySelector('input').checked) {
                     var ex = parts.find(function(p) { return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id; });
-                    checked.push({type:lbl.dataset.type, id:parseInt(lbl.dataset.id), name:lbl.dataset.name, share:ex?ex.share:0});
+                    checked.push({type:lbl.dataset.type, id:parseInt(lbl.dataset.id), name:lbl.dataset.name, share:ex?ex.share:0, ppicUrl:lbl.dataset.ppicUrl||'', initials:lbl.dataset.initials||'', avatarColor:lbl.dataset.avatarColor||''});
                 }
             });
         } else if (mode === 'single') {
@@ -497,14 +531,14 @@ function initCardBuddy(cardEl) {
             if (sel && sel.value) {
                 var sp = sel.value.split(':'), so = sel.options[sel.selectedIndex];
                 var ex = parts.find(function(p) { return p.type === sp[0] && p.id === parseInt(sp[1]); });
-                checked.push({type:sp[0], id:parseInt(sp[1]), name:so.dataset.name, share:ex?ex.share:0});
+                checked.push({type:sp[0], id:parseInt(sp[1]), name:so.dataset.name, share:ex?ex.share:0, ppicUrl:so.dataset.ppicUrl||'', initials:so.dataset.initials||'', avatarColor:so.dataset.avatarColor||''});
             }
         } else {
             partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
                 if (lbl.style.display === 'none') return;
                 if (lbl.querySelector('input').checked) {
                     var ex = parts.find(function(p) { return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id; });
-                    checked.push({type:lbl.dataset.type, id:parseInt(lbl.dataset.id), name:lbl.dataset.name, share:ex?ex.share:0});
+                    checked.push({type:lbl.dataset.type, id:parseInt(lbl.dataset.id), name:lbl.dataset.name, share:ex?ex.share:0, ppicUrl:lbl.dataset.ppicUrl||'', initials:lbl.dataset.initials||'', avatarColor:lbl.dataset.avatarColor||''});
                 }
             });
         }
@@ -544,8 +578,10 @@ function initCardBuddy(cardEl) {
         if (!parts.length) { slidersEl.style.display = 'none'; return; }
         slidersEl.style.display = 'block';
         var ps = implicitShare();
+        var _pp = payerSel.value.split(':');
+        var _pav = getPersonAvatar(_pp[0], parseInt(_pp[1]));
         var pr = document.createElement('div'); pr.className = 'buddy-slider-row buddy-payer-row';
-        pr.innerHTML = '<span class="buddy-slider-name">'+esc(payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim())+'</span>'
+        pr.innerHTML = '<span class="buddy-slider-name">'+avatarHtml(_pav.ppicUrl,_pav.initials,_pav.avatarColor)+'<span class="buddy-slider-name-text">'+esc(payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim())+'</span></span>'
             +'<input type="range" min="0" max="100" step="0.1" value="'+ps+'">'
             +'<span class="buddy-slider-pct">'+ps.toFixed(1)+'%</span>'
             +'<span class="buddy-slider-amt secondary">'+formatAmount(ps)+'</span>';
@@ -562,7 +598,7 @@ function initCardBuddy(cardEl) {
         });
         parts.forEach(function(p,idx) {
             var row=document.createElement('div'); row.className='buddy-slider-row'; row.dataset.sidx=idx;
-            row.innerHTML='<span class="buddy-slider-name">'+esc(p.name)+'</span>'
+            row.innerHTML='<span class="buddy-slider-name">'+avatarHtml(p.ppicUrl||'',p.initials||'',p.avatarColor||'')+'<span class="buddy-slider-name-text">'+esc(p.name)+'</span></span>'
                 +'<input type="range" min="0" max="100" step="0.1" value="'+p.share+'">'
                 +'<span class="buddy-slider-pct">'+p.share.toFixed(1)+'%</span>'
                 +'<span class="buddy-slider-amt secondary">'+formatAmount(p.share)+'</span>';

@@ -8,6 +8,8 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from feusers.templatetags.feuser_tags import avatar_color as _avatar_color
+
 from ..date_utils import financial_month_range, financial_year_range
 from ..decorators import feuser_required
 from ..forms import ExpenseForm
@@ -25,8 +27,10 @@ def _buddy_context(feuser) -> dict:
     actual = list(BuddyQueryService.get_actual_buddies(feuser))
     dummy = list(BuddyQueryService.get_dummy_buddies(feuser))
     single_buddies = [
-        *[{"type": "feuser", "id": b.pk, "name": f"{b.first_name} {b.last_name}".strip() or b.email, "email": b.email} for b in actual],
-        *[{"type": "dummy", "id": d.uid, "name": d.display_name + " (offline member)"} for d in dummy],
+        *[{"type": "feuser", "id": b.pk, "name": f"{b.first_name} {b.last_name}".strip() or b.email, "email": b.email,
+           "ppicUrl": b.ppic_url if b.profile_picture else "", "initials": b.initials, "avatarColor": _avatar_color(b.initials)} for b in actual],
+        *[{"type": "dummy", "id": d.uid, "name": d.display_name + " (offline member)",
+           "ppicUrl": d.ppic_url if d.profile_picture else "", "initials": d.initials, "avatarColor": _avatar_color(d.initials)} for d in dummy],
     ]
     return {
         "buddy_actual": actual,

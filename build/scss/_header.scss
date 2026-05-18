@@ -85,6 +85,15 @@ header {
     text-transform: uppercase;
   }
 
+  &--sm {
+    width: 20px;
+    height: 20px;
+
+    &.user-avatar--initials {
+      font-size: 0.5rem;
+    }
+  }
+
   &--lg {
     width: 72px;
     height: 72px;

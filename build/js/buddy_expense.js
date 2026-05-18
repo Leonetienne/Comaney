@@ -33,10 +33,13 @@
     var groupSelectRow  = document.getElementById('buddy-group-select-row');
     var groupSelectEl   = document.getElementById('buddy-group-select');
 
-    var ME_PK         = cfg.mePk;
-    var ME_NAME       = (cfg.meFirstName + ' ' + cfg.meLastName).trim() || 'Me';
-    var groupsData    = cfg.groupsData;
-    var singleBuddies = cfg.singleBuddies;
+    var ME_PK           = cfg.mePk;
+    var ME_NAME         = (cfg.meFirstName + ' ' + cfg.meLastName).trim() || 'Me';
+    var ME_PPIC_URL     = cfg.mePpicUrl || '';
+    var ME_INITIALS     = cfg.meInitials || '';
+    var ME_AVATAR_COLOR = cfg.meAvatarColor || '';
+    var groupsData      = cfg.groupsData;
+    var singleBuddies   = cfg.singleBuddies;
 
     var existingUpfrontType = cfg.upfrontType;
     var existingUpfrontId   = cfg.upfrontId || ME_PK;
@@ -143,6 +146,12 @@
     function buildParticipantCheckboxes(preCheckAll) {
         participantsEl.innerHTML = '';
         if (currentMode === 'single') {
+            var wrap = document.createElement('div');
+            wrap.className = 'buddy-single-select-wrap';
+            var avatarWrap = document.createElement('span');
+            avatarWrap.className = 'buddy-single-avatar-wrap';
+            avatarWrap.style.display = 'none';
+            wrap.appendChild(avatarWrap);
             var sel = document.createElement('select');
             sel.id = 'buddy-participant-select';
             var emptyOpt = document.createElement('option');
@@ -152,26 +161,41 @@
             singleBuddies.forEach(function (item) {
                 var opt = document.createElement('option');
                 opt.value = item.type + ':' + item.id;
-                opt.dataset.type = item.type;
-                opt.dataset.id   = String(item.id);
-                opt.dataset.name = item.name;
-                opt.textContent  = item.name;
+                opt.dataset.type        = item.type;
+                opt.dataset.id          = String(item.id);
+                opt.dataset.name        = item.name;
+                opt.dataset.ppicUrl     = item.ppicUrl || '';
+                opt.dataset.initials    = item.initials || '';
+                opt.dataset.avatarColor = item.avatarColor || '';
+                opt.textContent = item.name;
                 sel.appendChild(opt);
             });
             sel.addEventListener('change', function () {
+                if (sel.value) {
+                    var opt = sel.options[sel.selectedIndex];
+                    avatarWrap.innerHTML = avatarHtml(opt.dataset.ppicUrl || '', opt.dataset.initials || '', opt.dataset.avatarColor || '');
+                    avatarWrap.style.display = '';
+                } else {
+                    avatarWrap.innerHTML = '';
+                    avatarWrap.style.display = 'none';
+                }
                 syncParticipantsFromCheckboxes();
                 rebuildSliders();
             });
-            participantsEl.appendChild(sel);
+            wrap.appendChild(sel);
+            participantsEl.appendChild(wrap);
         } else {
             var grp = groupsData.find(function (g) { return g.id === currentGroupId; });
             var items = grp ? grp.members : [];
             items.forEach(function (item) {
                 var lbl = document.createElement('label');
                 lbl.className = 'checkbox-inline buddy-participant-cb';
-                lbl.dataset.type = item.is_me ? 'feuser' : item.type;
-                lbl.dataset.id   = item.is_me ? String(ME_PK) : String(item.id);
-                lbl.dataset.name = item.is_me ? ME_NAME : item.name;
+                lbl.dataset.type        = item.is_me ? 'feuser' : item.type;
+                lbl.dataset.id          = item.is_me ? String(ME_PK) : String(item.id);
+                lbl.dataset.name        = item.is_me ? ME_NAME : item.name;
+                lbl.dataset.ppicUrl     = item.is_me ? ME_PPIC_URL : (item.ppicUrl || '');
+                lbl.dataset.initials    = item.is_me ? ME_INITIALS : (item.initials || '');
+                lbl.dataset.avatarColor = item.is_me ? ME_AVATAR_COLOR : (item.avatarColor || '');
                 if (item.is_me) lbl.dataset.isMe = '1';
                 var inp = document.createElement('input');
                 inp.type = 'checkbox';
@@ -181,6 +205,9 @@
                     rebuildSliders();
                 });
                 lbl.appendChild(inp);
+                var tmp = document.createElement('span');
+                tmp.innerHTML = avatarHtml(lbl.dataset.ppicUrl, lbl.dataset.initials, lbl.dataset.avatarColor);
+                if (tmp.firstChild) lbl.appendChild(tmp.firstChild);
                 lbl.appendChild(document.createTextNode(' ' + (item.is_me ? 'Me (' + ME_NAME + ')' : item.name)));
                 participantsEl.appendChild(lbl);
             });
@@ -271,7 +298,11 @@
             var show = (payerType === 'me');
             if (participantsRow) participantsRow.style.display = show ? '' : 'none';
             var sel = document.getElementById('buddy-participant-select');
-            if (!show && sel) sel.value = '';
+            if (!show && sel) {
+                sel.value = '';
+                var aw = participantsEl.querySelector('.buddy-single-avatar-wrap');
+                if (aw) { aw.innerHTML = ''; aw.style.display = 'none'; }
+            }
         } else {
             if (participantsRow) participantsRow.style.display = '';
             participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
@@ -279,7 +310,7 @@
                     ? (payerType === 'me')
                     : (lbl.dataset.type === payerType && lbl.dataset.id === payerId);
                 var wasHidden = lbl.style.display === 'none';
-                lbl.style.display = hide ? 'none' : 'block';
+                lbl.style.display = hide ? 'none' : '';
                 if (hide) {
                     lbl.querySelector('input').checked = false;
                 } else if (wasHidden) {
@@ -299,7 +330,8 @@
             if (payerType !== 'me') {
                 // Single mode: buddy/dummy paid upfront, Me is always the sole participant.
                 var existingMe = participants.find(function (p) { return p.type === 'feuser' && p.id === ME_PK; });
-                checked.push({type: 'feuser', id: ME_PK, name: ME_NAME, share: existingMe ? existingMe.share : 0});
+                checked.push({type: 'feuser', id: ME_PK, name: ME_NAME, share: existingMe ? existingMe.share : 0,
+                    ppicUrl: ME_PPIC_URL, initials: ME_INITIALS, avatarColor: ME_AVATAR_COLOR});
             } else {
                 var sel = document.getElementById('buddy-participant-select');
                 if (sel && sel.value) {
@@ -309,10 +341,13 @@
                     var selOpt   = sel.options[sel.selectedIndex];
                     var existing = participants.find(function (p) { return p.type === selType && p.id === selId; });
                     checked.push({
-                        type:  selType,
-                        id:    selId,
-                        name:  selOpt.dataset.name,
-                        share: existing ? existing.share : 0,
+                        type:        selType,
+                        id:          selId,
+                        name:        selOpt.dataset.name,
+                        share:       existing ? existing.share : 0,
+                        ppicUrl:     selOpt.dataset.ppicUrl || '',
+                        initials:    selOpt.dataset.initials || '',
+                        avatarColor: selOpt.dataset.avatarColor || '',
                     });
                 }
             }
@@ -326,10 +361,13 @@
                         return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id;
                     });
                     checked.push({
-                        type:  lbl.dataset.type,
-                        id:    parseInt(lbl.dataset.id),
-                        name:  lbl.dataset.name,
-                        share: existing ? existing.share : 0,
+                        type:        lbl.dataset.type,
+                        id:          parseInt(lbl.dataset.id),
+                        name:        lbl.dataset.name,
+                        share:       existing ? existing.share : 0,
+                        ppicUrl:     lbl.dataset.ppicUrl || '',
+                        initials:    lbl.dataset.initials || '',
+                        avatarColor: lbl.dataset.avatarColor || '',
                     });
                 }
             });
@@ -350,8 +388,13 @@
 
         var payerRow = document.createElement('div');
         payerRow.className = 'buddy-slider-row';
+        var _pp = payerSel.value.split(':');
+        var _pav = getPersonAvatar(_pp[0], parseInt(_pp[1]));
         payerRow.innerHTML =
-            '<span class="buddy-slider-name" id="buddy-payer-label"></span>' +
+            '<span class="buddy-slider-name" id="buddy-payer-label">' +
+                avatarHtml(_pav.ppicUrl, _pav.initials, _pav.avatarColor) +
+                '<span class="buddy-slider-name-text" id="buddy-payer-name-text"></span>' +
+            '</span>' +
             '<input type="range" id="buddy-payer-slider" min="0" max="100" step="0.1" value="0">' +
             '<span class="buddy-slider-pct" id="buddy-payer-pct"></span>' +
             '<span class="buddy-slider-amt secondary" id="buddy-payer-amt"></span>';
@@ -385,20 +428,27 @@
             var row = document.createElement('div');
             row.className = 'buddy-slider-row';
             row.innerHTML =
-                '<span class="buddy-slider-name">' + esc(p.name) + '</span>' +
+                '<span class="buddy-slider-name">' +
+                    avatarHtml(p.ppicUrl || '', p.initials || '', p.avatarColor || '') +
+                    '<span class="buddy-slider-name-text">' + esc(p.name) + '</span>' +
+                '</span>' +
                 '<input type="range" id="bs-slider-' + idx + '" min="0" max="100" step="0.1" value="' + p.share + '">' +
                 '<span class="buddy-slider-pct" id="bs-pct-' + idx + '">' + p.share.toFixed(1) + '%</span>' +
                 '<span class="buddy-slider-amt secondary" id="bs-amt-' + idx + '">' + formatAmount(p.share) + '</span>';
             slidersEl.appendChild(row);
             row.querySelector('input').addEventListener('input', function () {
-                var val   = +parseFloat(this.value).toFixed(3);
-                var delta = val - participants[idx].share;
+                var val        = +parseFloat(this.value).toFixed(3);
+                var oldVal     = participants[idx].share;
+                var delta      = val - oldVal;
                 participants[idx].share = val;
-                var others = participants.filter(function (_, i) { return i !== idx; });
-                if (others.length > 0) {
-                    var perOther = delta / others.length;
+                var others     = participants.filter(function (_, i) { return i !== idx; });
+                // totalAvail is the combined share of all other participants plus the payer.
+                // Distributing proportionally against this base means the payer absorbs its
+                // fair share of the change alongside the other participants.
+                var totalAvail = 100 - oldVal;
+                if (others.length > 0 && Math.abs(delta) > 0.001 && totalAvail > 0.001) {
                     others.forEach(function (o) {
-                        o.share = Math.max(0, Math.min(100, +(o.share - perOther).toFixed(3)));
+                        o.share = Math.max(0, Math.min(100, +(o.share - delta * (o.share / totalAvail)).toFixed(3)));
                     });
                 }
                 clampSum();
@@ -422,15 +472,15 @@
     }
 
     function updatePayerRow() {
-        var share = implicitPayerShare();
-        var lbl   = document.getElementById('buddy-payer-label');
-        var pct   = document.getElementById('buddy-payer-pct');
-        var amt   = document.getElementById('buddy-payer-amt');
-        var slide = document.getElementById('buddy-payer-slider');
-        if (lbl)   lbl.textContent = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
-        if (pct)   pct.textContent = share.toFixed(1) + '%';
-        if (amt)   amt.textContent = formatAmount(share);
-        if (slide) slide.value = share;
+        var share    = implicitPayerShare();
+        var nameText = document.getElementById('buddy-payer-name-text');
+        var pct      = document.getElementById('buddy-payer-pct');
+        var amt      = document.getElementById('buddy-payer-amt');
+        var slide    = document.getElementById('buddy-payer-slider');
+        if (nameText) nameText.textContent = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
+        if (pct)      pct.textContent = share.toFixed(1) + '%';
+        if (amt)      amt.textContent = formatAmount(share);
+        if (slide)    slide.value = share;
     }
 
     function implicitPayerShare() {
@@ -490,6 +540,36 @@
         return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    // ── Avatar helpers ─────────────────────────────────────────────────────
+
+    function avatarHtml(ppicUrl, initials, avatarColor) {
+        if (ppicUrl) {
+            return '<img src="' + esc(ppicUrl) + '" class="user-avatar user-avatar--sm" alt="">';
+        }
+        return '<span class="user-avatar user-avatar--initials user-avatar--sm" style="background:' + esc(avatarColor) + ';">' + esc(initials) + '</span>';
+    }
+
+    function getPersonAvatar(type, id) {
+        if (type === 'me' || (type === 'feuser' && id === ME_PK)) {
+            return {ppicUrl: ME_PPIC_URL, initials: ME_INITIALS, avatarColor: ME_AVATAR_COLOR};
+        }
+        var found = singleBuddies.find(function (b) { return b.type === type && b.id === id; });
+        if (found) return {ppicUrl: found.ppicUrl || '', initials: found.initials || '', avatarColor: found.avatarColor || ''};
+        for (var _gi = 0; _gi < groupsData.length; _gi++) {
+            var _mems = groupsData[_gi].members;
+            for (var _mi = 0; _mi < _mems.length; _mi++) {
+                var _m = _mems[_mi];
+                if (_m.is_me && type === 'feuser' && id === ME_PK) {
+                    return {ppicUrl: ME_PPIC_URL, initials: ME_INITIALS, avatarColor: ME_AVATAR_COLOR};
+                }
+                if (!_m.is_me && _m.type === type && _m.id === id) {
+                    return {ppicUrl: _m.ppicUrl || '', initials: _m.initials || '', avatarColor: _m.avatarColor || ''};
+                }
+            }
+        }
+        return {ppicUrl: '', initials: '', avatarColor: ''};
+    }
+
     // ── Initialise from existing edit data ────────────────────────────────
 
     function initFromExisting() {
@@ -533,6 +613,14 @@
                     var candidate = sel.querySelector('option[data-type="' + sp.type + '"][data-id="' + sp.id + '"]');
                     if (candidate) sel.value = candidate.value;
                 });
+                if (sel.value) {
+                    var aw = participantsEl.querySelector('.buddy-single-avatar-wrap');
+                    var opt = sel.options[sel.selectedIndex];
+                    if (aw && opt) {
+                        aw.innerHTML = avatarHtml(opt.dataset.ppicUrl || '', opt.dataset.initials || '', opt.dataset.avatarColor || '');
+                        aw.style.display = '';
+                    }
+                }
             }
         } else {
             existingSpendings.forEach(function (sp) {
