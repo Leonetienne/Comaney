@@ -100,12 +100,17 @@ class Expense(OwnedModel):
     def _settlement_locked(self) -> bool:
         """
         True when this approved settlement is locked (no further editing/deletion).
-        A settlement is locked when approved AND a real user confirmed it
-        (i.e. at least one feuser appears as creditor in buddy_spendings).
+        A settlement is locked when approved AND a real user OTHER THAN the owner
+        confirmed it as creditor in buddy_spendings. The owner feuser appearing in
+        their own buddy_spendings (settlement-from-dummy pattern) does not lock it.
         Settlements with only offline-member creditors, or with no spendings at all
         (personal dummy-debtor settlements), are never locked.
         """
-        return self.buddy_spendings.filter(participant_feuser__isnull=False).exists()
+        return self.buddy_spendings.filter(
+            participant_feuser__isnull=False
+        ).exclude(
+            participant_feuser_id=self.owning_feuser_id
+        ).exists()
 
     @property
     def settlement_can_delete(self) -> bool:

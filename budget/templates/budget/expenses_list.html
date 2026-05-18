@@ -108,7 +108,7 @@ window.EXPENSE_CONFIG = {
                 <div class="exp-actions">
                     <template x-if="exp.type !== 'carry_over'">
                         <div class="d-contents">
-                            <template x-if="!exp.is_buddies_settlement">
+                            <template x-if="!exp.is_buddies_settlement || exp.can_edit">
                                 <a :href="editUrl(exp.id) + '?back=' + encodedBackUrl()" class="btn btn-sm btn-secondary">Edit</a>
                             </template>
                             <template x-if="!exp.is_buddies_settlement">

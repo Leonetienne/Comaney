@@ -302,8 +302,8 @@ def expense_edit(request, uid):
                     (new_type == "dummy" and new_dummy and new_dummy != expense.upfront_payee_dummy) or
                     (new_type == "me" and expense.is_dummy)
                 )
+                from buddies.services import BuddyExpenseService, BuddyEmailService
                 if payer_changed:
-                    from buddies.services import BuddyExpenseService, BuddyEmailService
                     expense = BuddyExpenseService.change_upfront_payer(
                         expense,
                         new_payer_feuser=(new_feuser if new_type == "feuser" else None),
@@ -317,9 +317,9 @@ def expense_edit(request, uid):
                         )
                         # Expense now belongs to other user; redirect without further editing
                         return redirect("budget:expenses_list")
-                # Update BuddySpending rows
-                from buddies.services import BuddyExpenseService, BuddyEmailService
-                BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
+                # Skip for settlements: creditor share must not change
+                if not expense.is_buddies_settlement:
+                    BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
                 BuddyEmailService.notify_expense_updated(
                     expense, feuser, _old_title, _old_value, _old_participants,
                     extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
