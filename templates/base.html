@@ -1,4 +1,4 @@
-{% load static %}
+{% load static feuser_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,6 +26,7 @@
     <link rel="manifest" href="{% static 'site.webmanifest' %}" />
     <link rel="stylesheet" href="{% static 'dist/main.css' %}">
     {% block extra_head %}{% endblock %}
+    <script>var AVATAR_COLORS = {% avatar_colors_json %};</script>
 </head>
 <body>
     {% include "partials/_header.html" %}

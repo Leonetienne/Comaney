@@ -1,8 +1,11 @@
+import json
+
 from django import template
+from django.utils.safestring import mark_safe
 
 register = template.Library()
 
-_AVATAR_COLORS = [
+AVATAR_COLORS = [
     "#c2478a",
     "#5b6af0",
     "#2ea8a8",
@@ -21,5 +24,10 @@ _AVATAR_COLORS = [
 @register.filter
 def avatar_color(initials: str) -> str:
     if not initials:
-        return _AVATAR_COLORS[0]
-    return _AVATAR_COLORS[hash(initials) % len(_AVATAR_COLORS)]
+        return AVATAR_COLORS[0]
+    return AVATAR_COLORS[hash(initials) % len(AVATAR_COLORS)]
+
+
+@register.simple_tag
+def avatar_colors_json() -> str:
+    return mark_safe(json.dumps(AVATAR_COLORS))
