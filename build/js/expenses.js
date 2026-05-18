@@ -224,6 +224,17 @@ function expenseList() {
                 })
                 .catch(() => {});
         },
+
+        avatarStack(participants) {
+            return (participants || []).map(function(p) {
+                const name = String(p.name || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                const initials = String(p.initials || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                if (p.ppic_url) {
+                    return `<img src="${p.ppic_url}" class="user-avatar" title="${name}" alt="">`;
+                }
+                return `<span class="user-avatar user-avatar--initials" style="background:${p.color}" title="${name}">${initials}</span>`;
+            }).join('');
+        },
     };
 }
 

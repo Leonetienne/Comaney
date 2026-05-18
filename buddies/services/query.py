@@ -309,12 +309,14 @@ class BuddyQueryService:
                 member_map[key] = {
                     "name": _display_name(m.feuser),
                     "is_me": m.feuser_id == feuser.pk,
+                    "user_obj": m.feuser,
                 }
             else:
                 key = f"d{m.dummy_id}"
                 member_map[key] = {
                     "name": m.dummy.display_name + " (offline member)",
                     "is_me": False,
+                    "user_obj": m.dummy,
                 }
 
         balances: dict[str, Decimal] = {k: Decimal("0") for k in member_map}
@@ -346,11 +348,12 @@ class BuddyQueryService:
                 pk = f"f{bs.participant_feuser_id}" if bs.participant_feuser_id else f"d{bs.participant_dummy_id}"
                 amount = exp.value * bs.share_percent / 100
                 total_pct += bs.share_percent
-                p_info = member_map.get(pk, {"name": "Unknown", "is_me": False})
+                p_info = member_map.get(pk, {"name": "Unknown", "is_me": False, "user_obj": None})
                 participant_shares.append({
                     "key": pk,
                     "name": p_info["name"],
                     "is_me": p_info["is_me"],
+                    "user_obj": p_info.get("user_obj"),
                     "amount": amount,
                     "percent": bs.share_percent,
                 })
@@ -367,6 +370,7 @@ class BuddyQueryService:
                 "expense": exp,
                 "payer_key": payer_key,
                 "payer_name": payer_info["name"],
+                "payer_obj": payer_info.get("user_obj"),
                 "payer_is_me": payer_info["is_me"],
                 "i_am_participant": i_am_participant,
                 "total": exp.value,

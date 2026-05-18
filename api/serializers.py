@@ -5,15 +5,62 @@ from budget.models import Category, Tag
 from .utils import _err
 
 
-def _buddy_participant_names(exp) -> list:
-    names = []
+_AVATAR_COLORS = [
+    "#c2478a", "#5b6af0", "#2ea8a8", "#e05c2a", "#6a9e2e", "#a855b5",
+    "#d4902a", "#3a8ed4", "#e05878", "#2e8a5f", "#7c6af0", "#c47a2a",
+]
+
+
+def _avatar_color(initials: str) -> str:
+    if not initials:
+        return _AVATAR_COLORS[0]
+    return _AVATAR_COLORS[hash(initials) % len(_AVATAR_COLORS)]
+
+
+def _buddy_participants(exp) -> list:
+    participants = []
     for bs in exp.buddy_spendings.all():
         if bs.participant_feuser_id:
             fu = bs.participant_feuser
-            names.append(f"{fu.first_name} {fu.last_name}".strip() or fu.email)
+            name = f"{fu.first_name} {fu.last_name}".strip() or fu.email
+            initials = fu.initials
+            participants.append({
+                "name": name,
+                "initials": initials,
+                "ppic_url": fu.ppic_url if fu.profile_picture else None,
+                "color": _avatar_color(initials),
+            })
         elif bs.participant_dummy_id:
-            names.append(bs.participant_dummy.display_name)
-    return names
+            du = bs.participant_dummy
+            initials = du.initials
+            participants.append({
+                "name": du.display_name,
+                "initials": initials,
+                "ppic_url": du.ppic_url if du.profile_picture else None,
+                "color": _avatar_color(initials),
+            })
+    if not participants:
+        return []
+    if exp.is_dummy and exp.upfront_payee_dummy_id:
+        du = exp.upfront_payee_dummy
+        initials = du.initials
+        payer = {
+            "name": du.display_name,
+            "initials": initials,
+            "ppic_url": du.ppic_url if du.profile_picture else None,
+            "color": _avatar_color(initials),
+        }
+    else:
+        fu = exp.owning_feuser
+        name = f"{fu.first_name} {fu.last_name}".strip() or fu.email
+        initials = fu.initials
+        payer = {
+            "name": name,
+            "initials": initials,
+            "ppic_url": fu.ppic_url if fu.profile_picture else None,
+            "color": _avatar_color(initials),
+        }
+    return [payer] + participants
 
 
 def _settlement_can_delete(exp) -> bool:
@@ -50,7 +97,7 @@ def _expense_json(exp):
         "notify":                       exp.notify,
         "last_notification_class_sent": exp.last_notification_class_sent,
         "date_created":                 exp.date_created.isoformat(),
-        "buddy_participants":           _buddy_participant_names(exp),
+        "buddy_participants":           _buddy_participants(exp),
         "is_buddies_settlement":        exp.is_buddies_settlement,
         "can_delete":                   _settlement_can_delete(exp),
     }

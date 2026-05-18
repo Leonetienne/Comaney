@@ -370,6 +370,7 @@
                     {% endif %}
                 </div>
             </div>
+            {% include 'partials/_expense_avatars.html' with exp=e.expense payer_obj=e.payer_obj payer_name=e.payer_name %}
             <table class="bexp-breakdown-table">
                 <thead>
                     <tr><th>Person</th><th class="text-right">Share</th><th class="text-right">Amount</th><th>Role</th></tr>
@@ -434,6 +435,7 @@
                     {% endif %}
                 </div>
             </div>
+            {% include 'partials/_expense_avatars.html' with exp=e.expense payer_obj=e.payer_obj payer_name=e.payer_name %}
             <table class="bexp-breakdown-table">
                 <thead>
                     <tr><th>Person</th><th class="text-right">Share</th><th class="text-right">Amount</th><th>Role</th></tr>

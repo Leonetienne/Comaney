@@ -12,15 +12,7 @@
         </span>
         {% if exp.date_due %}<span class="bexp-date">{{ exp.date_due|date:"N j, Y" }}</span>{% endif %}
     </div>
-    <div class="bexp-participants">
-        {% for bs in exp.buddy_spendings.all %}
-        <span class="pill">
-            {% if bs.participant_feuser %}{{ bs.participant_feuser.first_name }} {{ bs.participant_feuser.last_name }}
-            {% else %}{{ bs.participant_dummy.display_name }} (offline member){% endif %}:
-            {{ bs.share_percent|floatformat:1 }}%
-        </span>
-        {% endfor %}
-    </div>
+    {% include 'partials/_expense_avatars.html' %}
     <div class="bexp-actions">
         {% if not exp.buddy_approved and exp.owning_feuser == request.feuser and not exp.is_buddies_settlement %}
         <form method="post" action="{% url 'buddies:approve_expense' exp.uid %}">

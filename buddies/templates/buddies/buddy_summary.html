@@ -74,6 +74,7 @@
                     </form>
                 </div>
             </div>
+            {% include 'partials/_expense_avatars.html' with exp=exp %}
         </div>
         {% elif item.kind == "feuser_creditor" %}
         <div class="bexp-breakdown-card bexp-card-other-paid">
@@ -89,6 +90,7 @@
                     <a href="{% url 'buddies:approve_settlement_as_creditor' exp.uid %}" id="btn-review-settlement-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>
                 </div>
             </div>
+            {% include 'partials/_expense_avatars.html' with exp=exp %}
         </div>
         {% elif item.kind == "dummy_payer" %}
         <div class="bexp-breakdown-card bexp-card-neutral">
@@ -107,6 +109,7 @@
                     </form>
                 </div>
             </div>
+            {% include 'partials/_expense_avatars.html' with exp=exp %}
         </div>
         {% elif item.kind == "dummy_creditor" %}
         <div class="bexp-breakdown-card bexp-card-other-paid">
@@ -122,6 +125,7 @@
                     <a href="{% url 'buddies:admin_approve_dummy_settlement' exp.buddy_group_id exp.uid %}" id="btn-review-dummy-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>
                 </div>
             </div>
+            {% include 'partials/_expense_avatars.html' with exp=exp %}
         </div>
         {% endif %}
         {% endwith %}

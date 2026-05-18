@@ -357,11 +357,16 @@
 
 .bexp-participants {
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  font-size: 0.8rem;
-  color: var(--text-muted);
+  align-items: center;
   grid-column: 1 / -1;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+
+  .bexp-breakdown-card & {
+    padding: 0.5rem 1rem;
+    border-top: none;
+    border-bottom: 1px solid var(--border);
+  }
 }
 
 

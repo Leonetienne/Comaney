@@ -1,0 +1,23 @@
+{% load feuser_tags %}
+<div class="bexp-participants">
+    <div class="avatar-stack">
+        {% if payer_obj %}
+            {% include 'partials/_avatar.html' with user_obj=payer_obj avatar_title=payer_name %}
+        {% elif exp.is_dummy and exp.upfront_payee_dummy %}
+            {% include 'partials/_avatar.html' with user_obj=exp.upfront_payee_dummy avatar_title=exp.upfront_payee_dummy.display_name %}
+        {% else %}
+            {% include 'partials/_avatar.html' with user_obj=exp.owning_feuser avatar_title=exp.owning_feuser.first_name|add:" "|add:exp.owning_feuser.last_name %}
+        {% endif %}
+        {% for bs in exp.buddy_spendings.all %}
+            {% if bs.participant_feuser %}
+                {% include 'partials/_avatar.html' with user_obj=bs.participant_feuser avatar_title=bs.participant_feuser.first_name|add:" "|add:bs.participant_feuser.last_name %}
+            {% elif bs.participant_dummy %}
+                {% include 'partials/_avatar.html' with user_obj=bs.participant_dummy avatar_data_id=bs.participant_dummy.uid avatar_title=bs.participant_dummy.display_name %}
+            {% endif %}
+        {% empty %}
+            {% if exp.is_dummy %}
+                {% include 'partials/_avatar.html' with user_obj=exp.owning_feuser avatar_title=exp.owning_feuser.first_name|add:" "|add:exp.owning_feuser.last_name %}
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>

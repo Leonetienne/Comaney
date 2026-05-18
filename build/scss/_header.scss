@@ -95,6 +95,20 @@ header {
   }
 }
 
+.avatar-stack {
+  display: flex;
+  align-items: center;
+
+  .user-avatar {
+    border: 2px solid var(--bg-surface);
+    box-sizing: content-box;
+
+    & + .user-avatar {
+      margin-left: -8px;
+    }
+  }
+}
+
 .ppic-settings-row {
   display: flex;
   align-items: center;

@@ -104,8 +104,11 @@
 }
 
 .exp-buddy-shared {
-  grid-column: 1;
+  grid-column: 1 / -1;
   grid-row: 5;
-  font-size: 0.78rem;
-  color: var(--text-muted);
+
+  .bexp-participants {
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
 }
