@@ -515,6 +515,25 @@ def decline_group_invite(request, token):
 
 
 @feuser_required
+@require_POST
+def group_rename(request, group_id):
+    feuser = request.feuser
+    group = get_object_or_404(BuddyGroup, uid=group_id, admin_feuser=feuser)
+    name = request.POST.get("name", "").strip()
+    if not name:
+        django_messages.error(request, "Group name cannot be empty.")
+        return redirect("buddies:group_detail", group_id=group_id)
+    if len(name) > 128:
+        django_messages.error(request, "Group name must be 128 characters or fewer.")
+        return redirect("buddies:group_detail", group_id=group_id)
+    description = request.POST.get("description", "").strip()
+    group.name = name
+    group.description = description
+    group.save(update_fields=["name", "description"])
+    return redirect("buddies:group_detail", group_id=group_id)
+
+
+@feuser_required
 def group_picture(request, group_id):
     from PIL import Image
     import io

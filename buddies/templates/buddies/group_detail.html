@@ -13,6 +13,7 @@
         <h1>{{ group.name }}</h1>
         {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
     </div>
+    {% if group.description %}<p class="group-description">{{ group.description }}</p>{% endif %}
 </div>
 
 {% if messages %}
@@ -620,6 +621,19 @@
 <section class="buddies-section">
     <h2>Admin actions</h2>
     <div class="add-buddy-forms">
+
+        <div class="add-buddy-panel">
+            <h3>Rename group</h3>
+            <p class="text-muted">Update the group name and optional description shown at the top of this page.</p>
+            <form method="post" action="{% url 'buddies:group_rename' group.uid %}" class="stacked-form">
+                {% csrf_token %}
+                <label for="group-rename-name">Group name</label>
+                <input type="text" id="group-rename-name" name="name" value="{{ group.name }}" maxlength="128" required class="input-block">
+                <label for="group-rename-desc">Description <span class="text-muted">(optional)</span></label>
+                <textarea id="group-rename-desc" name="description" maxlength="500" rows="3" class="input-block">{{ group.description }}</textarea>
+                <button type="submit" id="btn-rename-group" class="btn">Save</button>
+            </form>
+        </div>
 
         {% if feuser_members %}
         <div class="add-buddy-panel">

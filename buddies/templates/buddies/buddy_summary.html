@@ -33,6 +33,9 @@
                 {% elif gs.net_state == "negative" %}-{{ request.feuser.currency }}{{ gs.net_abs|floatformat:2 }}
                 {% else %}<span class="bgs-balance-settled-label">All settled</span>{% endif %}
             </div>
+            {% if gs.group.description %}
+            <p class="bgs-description">{{ gs.group.description_inline }}</p>
+            {% else %}
             <div class="bgs-members">
                 {% for name in gs.members_display %}
                 <span class="pill pill--rounded">{{ name }}</span>
@@ -41,6 +44,7 @@
                 <span class="pill pill--rounded pill--muted">+{{ gs.extra_members }} more</span>
                 {% endif %}
             </div>
+            {% endif %}
         </a>
         {% endfor %}
     </div>

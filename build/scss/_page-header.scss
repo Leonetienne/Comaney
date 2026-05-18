@@ -7,6 +7,12 @@
   h1 { margin: 0; }
 }
 
+.group-description {
+  font-size: 0.9rem;
+  color: var(--text-subtle);
+  margin: 0.25rem 0 0;
+}
+
 .group-hero {
   margin-bottom: 16px;
 
@@ -41,6 +47,12 @@
       .pill { background: rgba(0, 0, 0, 0.10); color: #111; border-color: transparent; }
     }
 
+    .group-description {
+      position: relative;
+      z-index: 1;
+      color: #222;
+    }
+
     @media (prefers-color-scheme: dark) {
       &::before {
         background: linear-gradient(
@@ -53,6 +65,7 @@
         h1 { color: #fff; }
         .pill { background: rgba(255, 255, 255, 0.18); color: #fff; border-color: transparent; }
       }
+      .group-description { color: rgba(255, 255, 255, 0.82); }
     }
   }
 }

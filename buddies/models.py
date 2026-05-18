@@ -10,6 +10,7 @@ INVITE_EXPIRY_DAYS = 7
 class BuddyGroup(models.Model):
     uid = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=128)
+    description = models.TextField(blank=True, default="")
     admin_feuser = models.ForeignKey(
         "feusers.FeUser", on_delete=models.CASCADE, related_name="administered_groups"
     )
@@ -21,6 +22,11 @@ class BuddyGroup(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def description_inline(self) -> str:
+        import re
+        return re.sub(r'\s+', ' ', self.description).strip()
 
 
 class DummyUser(models.Model):

@@ -42,6 +42,7 @@ urlpatterns = [
     path("groups/<int:group_id>/dummy/<int:dummy_id>/rename/", views.group_rename_dummy, name="group_rename_dummy"),
     path("groups/<int:group_id>/dummy/<int:dummy_id>/send-merge/", views.group_send_merge, name="group_send_merge"),
     path("groups/<int:group_id>/dummy/<int:dummy_id>/archive-wipe/", views.group_archive_wipe, name="group_archive_wipe"),
+    path("groups/<int:group_id>/rename/", views.group_rename, name="group_rename"),
     path("groups/<int:group_id>/leave/", views.group_leave, name="group_leave"),
     path("groups/<int:group_id>/transfer-admin/", views.group_transfer_admin, name="group_transfer_admin"),
     path("groups/<int:group_id>/dissolve/", views.group_dissolve, name="group_dissolve"),
