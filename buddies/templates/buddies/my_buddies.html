@@ -118,12 +118,12 @@
         <div class="buddy-card">
             <div class="buddy-card-identity">
                 <span class="buddy-name">{{ group.name }}</span>
-                <span class="buddy-email">
-                    {% for m in group.members.all %}{% if m.feuser %}{{ m.feuser.first_name|default:m.feuser.email }}{% else %}{{ m.dummy.display_name }} (offline member){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
-                </span>
                 {% if group.admin_feuser_id == request.feuser.pk %}
                 <span class="pill">Admin</span>
                 {% endif %}
+                <span class="buddy-email group-member-list">
+                    {% for m in group.members.all|slice:":3" %}{% if m.feuser %}{{ m.feuser.first_name|default:m.feuser.email }}{% else %}{{ m.dummy.display_name }} (offline member){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}{% if group.members.all|length > 3 %} +{{ group.members.all|length|add:"-3" }} more{% endif %}
+                </span>
             </div>
             <div></div>
             <div class="buddy-card-actions">
