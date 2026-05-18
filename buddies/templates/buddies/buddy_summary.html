@@ -28,10 +28,23 @@
                 <span class="bgs-name">{{ gs.group.name }}</span>
                 {% if gs.is_admin %}<span class="pill pill--accent">Admin</span>{% endif %}
             </div>
-            <div class="bgs-balance bgs-balance-{{ gs.net_state }}">
-                {% if gs.net_state == "positive" %}+{{ request.feuser.currency }}{{ gs.net|floatformat:2 }}
-                {% elif gs.net_state == "negative" %}-{{ request.feuser.currency }}{{ gs.net_abs|floatformat:2 }}
-                {% else %}<span class="bgs-balance-settled-label">All settled</span>{% endif %}
+            <div class="bgs-card-stats">
+                {% if gs.has_multiple_members %}
+                <div class="bgs-stat bgs-stat--{{ gs.net_state }}">
+                    <span class="bgs-stat-label">Your balance</span>
+                    <span class="bgs-stat-value">
+                        {% if gs.net_state == "positive" %}+{{ request.feuser.currency }}{{ gs.net|floatformat:2 }}
+                        {% elif gs.net_state == "negative" %}-{{ request.feuser.currency }}{{ gs.net_abs|floatformat:2 }}
+                        {% else %}All settled{% endif %}
+                    </span>
+                </div>
+                {% endif %}
+                {% if gs.group_total_spending %}
+                <div class="bgs-stat">
+                    <span class="bgs-stat-label">Ausgaben</span>
+                    <span class="bgs-stat-value">{{ request.feuser.currency }}{{ gs.group_total_spending|floatformat:2 }}</span>
+                </div>
+                {% endif %}
             </div>
             {% if gs.group.description %}
             <p class="bgs-description">{{ gs.group.description_inline }}</p>

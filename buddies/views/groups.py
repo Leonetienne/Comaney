@@ -222,6 +222,32 @@ def group_detail(request, group_id):
     pending_expenses = [e for e in breakdown["expenses"] if not e["expense"].buddy_approved]
     approved_expenses = [e for e in breakdown["expenses"] if e["expense"].buddy_approved]
 
+    # Per-member spending totals for pie chart (approved, non-settlement expenses)
+    member_spending: dict[str, Decimal] = {}
+    group_total_spending = Decimal("0")
+    for exp_data in approved_expenses:
+        if exp_data["expense"].is_buddies_settlement:
+            continue
+        group_total_spending += exp_data["total"]
+        pk = exp_data["payer_key"]
+        member_spending[pk] = member_spending.get(pk, Decimal("0")) + exp_data["payer_amount"]
+        for share in exp_data["participant_shares"]:
+            key = share["key"]
+            member_spending[key] = member_spending.get(key, Decimal("0")) + share["amount"]
+
+    spending_pie_json = json.dumps([
+        {
+            "key": node["key"],
+            "name": node["name"],
+            "is_me": node["is_me"],
+            "spent": float(member_spending.get(node["key"], Decimal("0"))),
+            "has_pic": node["has_pic"],
+            "avatar_url": node["avatar_url"],
+            "initials": node["initials"],
+        }
+        for node in graph_nodes
+    ])
+
     return render(request, "buddies/group_detail.html", {
         "active_nav": "my_buddies",
         "group": group,
@@ -239,6 +265,9 @@ def group_detail(request, group_id):
         "raw_debts_json": raw_debts_json,
         "all_members_json": all_members_json,
         "settle_all_pairs_json": settle_all_pairs_json,
+        "spending_pie_json": spending_pie_json,
+        "group_total_spending": group_total_spending,
+        "has_multiple_members": len(breakdown["member_map"]) > 1,
         "currency": feuser.currency,
     })
 

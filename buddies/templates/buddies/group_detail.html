@@ -206,6 +206,151 @@
     </script>
     {% endif %}
 
+    {# ── Spending Breakdown Pie Chart ─────────────────────────────────────────── #}
+    {% if group_total_spending %}
+    <h2>Spending breakdown</h2>
+    <p class="page-subtitle">Total group spending: <strong>{{ currency }}{{ group_total_spending|floatformat:2 }}</strong></p>
+    <p class="font-sm text-muted mb-md">Each slice shows how much of the total each person paid upfront. This is not the same as debt: it does not account for who owes whom or who has already settled.</p>
+    <div class="group-spending-wrap">
+        <div id="group-spending-pie" class="group-spending-chart"></div>
+        <div id="group-spending-legend" class="group-spending-legend"></div>
+    </div>
+    <div id="group-pie-tooltip" class="group-pie-tooltip" style="display:none;pointer-events:none;"></div>
+    <script>
+    (function() {
+        var PIE_DATA = {{ spending_pie_json|safe }};
+        var CURRENCY = "{{ currency|escapejs }}";
+        var data = PIE_DATA.filter(function(d) { return d.spent > 0.005; });
+        if (!data.length) return;
+
+        var container = document.getElementById('group-spending-pie');
+        if (!container) return;
+
+        var SIZE = 240;
+        var R = SIZE / 2 - 6;
+        var CX = SIZE / 2, CY = SIZE / 2;
+
+        var svg = d3.select(container).append('svg').attr('width', SIZE).attr('height', SIZE);
+        var defs = svg.append('defs');
+        var g = svg.append('g').attr('transform', 'translate(' + CX + ',' + CY + ')');
+
+        var pie = d3.pie().sort(null).value(function(d) { return d.spent; });
+        var arc = d3.arc().innerRadius(0).outerRadius(R);
+        var arcHover = d3.arc().innerRadius(0).outerRadius(R + 7);
+
+        var arcs = pie(data);
+        var totalSpent = arcs.reduce(function(s, a) { return s + a.data.spent; }, 0);
+
+        var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var borderColor = isDark ? '#2a2a2a' : '#ffffff';
+
+        function avatarColor(initials) {
+            if (!initials || !window.AVATAR_COLORS) return '#888';
+            var h = 0;
+            for (var i = 0; i < initials.length; i++) h += initials.charCodeAt(i);
+            return window.AVATAR_COLORS[h % window.AVATAR_COLORS.length];
+        }
+
+        var tooltip = document.getElementById('group-pie-tooltip');
+
+        arcs.forEach(function(d, i) {
+            var member = d.data;
+            var pct = totalSpent > 0 ? (member.spent / totalSpent * 100).toFixed(1) : '0.0';
+            var clipId = 'gspie-{{ group.pk }}-' + i;
+
+            var clipPath = defs.append('clipPath').attr('id', clipId);
+            var clipPathShape = clipPath.append('path').attr('d', arc(d));
+
+            var fillPath = null;
+            if (member.has_pic) {
+                g.append('image')
+                    .attr('href', member.avatar_url)
+                    .attr('x', -R).attr('y', -R)
+                    .attr('width', R * 2).attr('height', R * 2)
+                    .attr('clip-path', 'url(#' + clipId + ')')
+                    .attr('preserveAspectRatio', 'xMidYMid slice')
+                    .attr('pointer-events', 'none');
+            } else {
+                fillPath = g.append('path').attr('d', arc(d)).attr('fill', avatarColor(member.initials));
+                if (d.endAngle - d.startAngle > 0.4) {
+                    var c = arc.centroid(d);
+                    g.append('text')
+                        .attr('x', c[0]).attr('y', c[1])
+                        .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                        .attr('fill', '#fff').attr('font-size', '11').attr('font-weight', '600')
+                        .attr('pointer-events', 'none')
+                        .text(member.initials);
+                }
+            }
+
+            var borderPath = g.append('path').attr('d', arc(d))
+                .attr('fill', 'none').attr('stroke', borderColor).attr('stroke-width', 2)
+                .attr('pointer-events', 'none');
+
+            (function(hitMember, hitD, hitPct, fp, bp, cps) {
+                var hitPath = g.append('path').attr('d', arc(hitD)).attr('fill', 'transparent').attr('cursor', 'pointer');
+                var hovered = false;
+                hitPath
+                    .on('mouseenter', function(event) {
+                        if (hovered) return;
+                        hovered = true;
+                        var dur = 160;
+                        if (fp) fp.transition().duration(dur).attr('d', arcHover(hitD));
+                        bp.transition().duration(dur).attr('d', arcHover(hitD));
+                        cps.transition().duration(dur).attr('d', arcHover(hitD));
+                        hitPath.attr('d', arcHover(hitD));
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = (event.clientX + 14) + 'px';
+                        tooltip.style.top = (event.clientY - 42) + 'px';
+                        tooltip.innerHTML = '<strong>' + hitMember.name + '</strong><br>' +
+                            CURRENCY + hitMember.spent.toFixed(2) + ' (' + hitPct + '%)';
+                    })
+                    .on('mousemove', function(event) {
+                        tooltip.style.left = (event.clientX + 14) + 'px';
+                        tooltip.style.top = (event.clientY - 42) + 'px';
+                    })
+                    .on('mouseleave', function() {
+                        hovered = false;
+                        var dur = 160;
+                        if (fp) fp.transition().duration(dur).attr('d', arc(hitD));
+                        bp.transition().duration(dur).attr('d', arc(hitD));
+                        cps.transition().duration(dur).attr('d', arc(hitD));
+                        hitPath.attr('d', arc(hitD));
+                        tooltip.style.display = 'none';
+                    });
+            })(member, d, pct, fillPath, borderPath, clipPathShape);
+        });
+
+        var legend = document.getElementById('group-spending-legend');
+        data.forEach(function(member) {
+            var pct = totalSpent > 0 ? (member.spent / totalSpent * 100).toFixed(1) : '0.0';
+            var row = document.createElement('div');
+            row.className = 'pie-legend-row' + (member.is_me ? ' pie-legend-row--me' : '');
+
+            var dot = document.createElement('span');
+            dot.className = 'pie-legend-dot';
+            if (member.has_pic) {
+                dot.style.backgroundImage = 'url(' + member.avatar_url + ')';
+                dot.style.backgroundSize = 'cover';
+                dot.style.backgroundPosition = 'center';
+            } else {
+                dot.style.background = avatarColor(member.initials);
+                dot.textContent = member.initials;
+                dot.classList.add('pie-legend-dot--initials');
+            }
+
+            var text = document.createElement('span');
+            text.className = 'pie-legend-label';
+            text.textContent = member.name + ': ' + CURRENCY + member.spent.toFixed(2) + ' (' + pct + '%)';
+
+            row.appendChild(dot);
+            row.appendChild(text);
+            legend.appendChild(row);
+        });
+    })();
+    </script>
+    {% endif %}
+
     <h2>Clear everything at once</h2>
     {% if breakdown.simplified %}
     {% if not is_admin %}<p class="font-xs text-muted mb-sm">Your group admin can kick off a group-wide settlement.</p>{% endif %}

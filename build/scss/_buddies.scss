@@ -14,6 +14,10 @@
     border-bottom: 1px solid var(--border);
   }
 
+  h2 ~ h2 {
+    margin-top: 2.25rem;
+  }
+
   h3 {
     font-size: 0.9rem;
     font-weight: 600;
@@ -645,13 +649,14 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 0.6rem;
   text-decoration: none;
   color: var(--text);
-  padding: 1.25rem 1.4rem 1.1rem;
+  padding: 1.1rem 1.4rem 1rem;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  aspect-ratio: 4 / 2;
+  min-height: 130px;
   position: relative;
   overflow: hidden;
   transition: box-shadow 0.22s ease, transform 0.22s ease,
@@ -699,7 +704,7 @@
     }
 
     .bgs-card-top,
-    .bgs-balance,
+    .bgs-card-stats,
     .bgs-members,
     .bgs-description {
       position: relative;
@@ -707,7 +712,11 @@
     }
 
     .bgs-name { color: #111; }
-    .bgs-balance-settled-label { color: rgba(0, 0, 0, 0.6); }
+    .bgs-stat-label { color: rgba(0, 0, 0, 0.55); }
+    .bgs-stat-value { color: #111; }
+    .bgs-stat--positive .bgs-stat-value { color: #1a7f36; }
+    .bgs-stat--negative .bgs-stat-value { color: #a8001a; }
+    .bgs-stat--settled  .bgs-stat-value { color: rgba(0, 0, 0, 0.5); }
     .bgs-description { color: rgba(0, 0, 0, 0.65); }
     .pill { background: rgba(0, 0, 0, 0.10); color: #111; border-color: transparent; }
 
@@ -720,7 +729,11 @@
         );
       }
       .bgs-name { color: #fff; }
-      .bgs-balance-settled-label { color: rgba(255, 255, 255, 0.5); }
+      .bgs-stat-label { color: rgba(255, 255, 255, 0.55); }
+      .bgs-stat-value { color: #fff; }
+      .bgs-stat--positive .bgs-stat-value { color: #4cd870; }
+      .bgs-stat--negative .bgs-stat-value { color: #ff6b6b; }
+      .bgs-stat--settled  .bgs-stat-value { color: rgba(255, 255, 255, 0.45); }
       .bgs-description { color: rgba(255, 255, 255, 0.65); }
       .pill { background: rgba(255, 255, 255, 0.18); color: #fff; border-color: transparent; }
     }
@@ -734,6 +747,14 @@
   gap: 0.5rem;
 }
 
+.bgs-card-top-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
 .bgs-name {
   font-size: 1rem;
   font-weight: 700;
@@ -745,22 +766,36 @@
   -webkit-box-orient: vertical;
 }
 
-
-.bgs-balance {
-  font-size: 1.65rem;
-  font-weight: 800;
-  line-height: 1.1;
-  text-align: left;
-
-  &.bgs-balance-positive { color: #2da44e; }
-  &.bgs-balance-negative { color: #cf222e; }
+.bgs-card-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
 }
 
-.bgs-balance-settled-label {
-  font-size: 0.9rem;
+.bgs-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  line-height: 1.2;
+}
+
+.bgs-stat-label {
+  font-size: 0.72rem;
   font-weight: 500;
   color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
+
+.bgs-stat-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.bgs-stat--positive .bgs-stat-value { color: #2da44e; }
+.bgs-stat--negative .bgs-stat-value { color: #cf222e; }
+.bgs-stat--settled  .bgs-stat-value { color: var(--text-muted); font-size: 0.88rem; }
 
 .bgs-members {
   display: flex;
@@ -857,6 +892,80 @@
     color: var(--text);
     margin: 0.5rem 0 0;
   }
+}
+
+// ── Group detail: spending breakdown pie chart ───────────────────────────────
+
+.group-spending-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 2rem;
+  flex-wrap: wrap;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.group-spending-chart {
+  flex-shrink: 0;
+
+  svg { display: block; }
+}
+
+.group-spending-legend {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.25rem;
+}
+
+.pie-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.85rem;
+  line-height: 1.3;
+
+  &.pie-legend-row--me .pie-legend-label { font-weight: 600; }
+}
+
+.pie-legend-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--bg-muted);
+}
+
+.pie-legend-dot--initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.pie-legend-label {
+  color: var(--text);
+  word-break: break-word;
+}
+
+.group-pie-tooltip {
+  position: fixed;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  z-index: 1200;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  white-space: nowrap;
 }
 
 // ── Group detail: individual settle form ─────────────────────────────────────

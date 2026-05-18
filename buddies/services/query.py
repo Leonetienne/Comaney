@@ -68,12 +68,15 @@ class BuddyQueryService:
 
         for group in groups:
             net = Decimal("0")
+            group_total_spending = Decimal("0")
             expenses = (
                 Expense.objects
                 .filter(buddy_group=group, buddy_approved=True)
                 .prefetch_related("buddy_spendings")
             )
             for exp in expenses:
+                if not exp.is_buddies_settlement:
+                    group_total_spending += exp.value
                 payer_key = (
                     f"d{exp.upfront_payee_dummy_id}"
                     if (exp.is_dummy and exp.upfront_payee_dummy_id)
@@ -122,6 +125,8 @@ class BuddyQueryService:
                 "net": net,
                 "net_abs": net_abs,
                 "net_state": net_state,
+                "group_total_spending": group_total_spending,
+                "has_multiple_members": len(all_names) > 1,
             })
 
         return result
