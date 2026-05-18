@@ -41,7 +41,13 @@
                 {% include 'partials/_avatar.html' with user_obj=info.dummy avatar_data_id=info.dummy.uid %}
                 {% endif %}
                 <div class="bbl-name-text">
+                {% if info.type == 'dummy' and info.dummy and not info.dummy.is_archive %}
+                <span class="buddy-name buddy-name--editable"
+                      data-rename-url="{% url 'buddies:rename_dummy' info.dummy.uid %}"
+                      title="Click to rename">{{ info.display_name }}</span>
+                {% else %}
                 <span class="buddy-name">{{ info.display_name }}</span>
+                {% endif %}
                 {% if info.type == 'feuser' and info.feuser %}
                 <span class="buddy-email">{{ info.feuser.email }}</span>
                 {% endif %}
@@ -243,5 +249,70 @@
 {% endif %}
 
 {% include 'partials/_dummy_pic_modal.html' %}
+
+<script>
+(function () {
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+    function startRename(span) {
+        if (span.querySelector('input')) return;
+        const url = span.dataset.renameUrl;
+        const original = span.textContent.trim();
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'ct-name-input';
+        input.value = original;
+        input.maxLength = 128;
+        span.textContent = '';
+        span.appendChild(input);
+        input.focus();
+        input.select();
+
+        let committed = false;
+
+        async function commit() {
+            if (committed) return;
+            committed = true;
+            const newName = input.value.trim();
+            if (!newName || newName === original) {
+                span.textContent = original;
+                return;
+            }
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body: JSON.stringify({ display_name: newName }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                span.textContent = data.display_name;
+                const picBtn = span.closest('.bbl-name-block')
+                    ?.closest('.buddy-balance-row')
+                    ?.querySelector('[data-dummy-name]');
+                if (picBtn) picBtn.dataset.dummyName = data.display_name;
+            } else {
+                span.textContent = original;
+            }
+        }
+
+        function cancel() {
+            committed = true;
+            span.textContent = original;
+        }
+
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') { cancel(); }
+        });
+        input.addEventListener('blur', commit);
+    }
+
+    document.addEventListener('click', e => {
+        const span = e.target.closest('.buddy-name--editable');
+        if (span) startRename(span);
+    });
+})();
+</script>
 
 {% endblock %}

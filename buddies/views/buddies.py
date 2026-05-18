@@ -1,3 +1,5 @@
+import json
+
 from django.conf import settings
 from django.contrib import messages as django_messages
 from django.http import Http404, HttpResponseNotAllowed, JsonResponse
@@ -8,6 +10,26 @@ from django.views.decorators.http import require_POST
 from budget.decorators import feuser_required
 from ..models import BuddyInvite, BuddyLink, BuddySpending, DummyMergeInvite, DummyUser
 from ..services import BuddyArchiveService, BuddyLifecycleService, BuddyQueryService, _display_name
+
+
+@feuser_required
+@require_POST
+def rename_dummy(request, dummy_id):
+    dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_feuser=request.feuser)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"error": "Invalid JSON."}, status=400)
+    name = data.get("display_name", "").strip()
+    if not name:
+        return JsonResponse({"error": "Name required."}, status=400)
+    if len(name) > 128:
+        return JsonResponse({"error": "Name must be 128 characters or fewer."}, status=400)
+    if dummy.is_archive:
+        return JsonResponse({"error": "Cannot rename the archive."}, status=400)
+    dummy.display_name = name
+    dummy.save(update_fields=["display_name"])
+    return JsonResponse({"display_name": dummy.display_name})
 
 
 @feuser_required

@@ -12,6 +12,7 @@ urlpatterns = [
     # Personal dummy management
     path("add-dummy/", views.add_dummy, name="add_dummy"),
     path("dummy/<int:dummy_id>/kick/", views.kick_dummy, name="kick_dummy"),
+    path("dummy/<int:dummy_id>/rename/", views.rename_dummy, name="rename_dummy"),
     path("dummy/<int:dummy_id>/send-merge/", views.send_merge_invite, name="send_merge_invite"),
     path("dummy/<int:dummy_id>/archive-wipe/", views.personal_archive_wipe, name="personal_archive_wipe"),
     path("dummy/<int:dummy_id>/picture/", views.dummy_picture, name="dummy_picture"),
@@ -38,6 +39,7 @@ urlpatterns = [
     path("groups/<int:group_id>/invite/<str:token>/revoke/", views.group_revoke_invite, name="group_revoke_invite"),
     path("groups/<int:group_id>/member/<int:member_id>/remove/", views.group_remove_member, name="group_remove_member"),
     path("groups/<int:group_id>/add-dummy/", views.group_add_dummy, name="group_add_dummy"),
+    path("groups/<int:group_id>/dummy/<int:dummy_id>/rename/", views.group_rename_dummy, name="group_rename_dummy"),
     path("groups/<int:group_id>/dummy/<int:dummy_id>/send-merge/", views.group_send_merge, name="group_send_merge"),
     path("groups/<int:group_id>/dummy/<int:dummy_id>/archive-wipe/", views.group_archive_wipe, name="group_archive_wipe"),
     path("groups/<int:group_id>/leave/", views.group_leave, name="group_leave"),

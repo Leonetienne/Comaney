@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib import messages as django_messages
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -360,6 +361,28 @@ def group_archive_wipe(request, group_id, dummy_id):
         "payer_count": payer_count,
         "currency": feuser.currency,
     })
+
+
+@feuser_required
+@require_POST
+def group_rename_dummy(request, group_id, dummy_id):
+    feuser = request.feuser
+    group = get_object_or_404(BuddyGroup, uid=group_id, admin_feuser=feuser)
+    dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_group=group)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"error": "Invalid JSON."}, status=400)
+    name = data.get("display_name", "").strip()
+    if not name:
+        return JsonResponse({"error": "Name required."}, status=400)
+    if len(name) > 128:
+        return JsonResponse({"error": "Name must be 128 characters or fewer."}, status=400)
+    if dummy.is_archive:
+        return JsonResponse({"error": "Cannot rename the archive."}, status=400)
+    dummy.display_name = name
+    dummy.save(update_fields=["display_name"])
+    return JsonResponse({"display_name": dummy.display_name})
 
 
 @feuser_required

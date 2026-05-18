@@ -510,7 +510,13 @@
             <div class="buddy-card-identity">
                 {% include 'partials/_avatar.html' with user_obj=m.dummy avatar_data_id=m.dummy.uid %}
                 <div class="buddy-card-identity-text">
+                    {% if is_admin %}
+                    <span class="buddy-name buddy-name--editable"
+                          data-rename-url="{% url 'buddies:group_rename_dummy' group.uid m.dummy.uid %}"
+                          title="Click to rename">{{ m.dummy.display_name }}</span>
+                    {% else %}
                     <span class="buddy-name">{{ m.dummy.display_name }}</span>
+                    {% endif %}
                     <span class="pill">Offline member</span>
                 </div>
             </div>
@@ -678,5 +684,72 @@
 </div>
 
 {% include 'partials/_dummy_pic_modal.html' %}
+
+{% if is_admin %}
+<script>
+(function () {
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+    function startRename(span) {
+        if (span.querySelector('input')) return;
+        const url = span.dataset.renameUrl;
+        const original = span.textContent.trim();
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'ct-name-input';
+        input.value = original;
+        input.maxLength = 128;
+        span.textContent = '';
+        span.appendChild(input);
+        input.focus();
+        input.select();
+
+        let committed = false;
+
+        async function commit() {
+            if (committed) return;
+            committed = true;
+            const newName = input.value.trim();
+            if (!newName || newName === original) {
+                span.textContent = original;
+                return;
+            }
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body: JSON.stringify({ display_name: newName }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                span.textContent = data.display_name;
+                const picBtn = span.closest('.buddy-card-identity-text')
+                    ?.closest('.buddy-card')
+                    ?.querySelector('[data-dummy-name]');
+                if (picBtn) picBtn.dataset.dummyName = data.display_name;
+            } else {
+                span.textContent = original;
+            }
+        }
+
+        function cancel() {
+            committed = true;
+            span.textContent = original;
+        }
+
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') { cancel(); }
+        });
+        input.addEventListener('blur', commit);
+    }
+
+    document.addEventListener('click', e => {
+        const span = e.target.closest('.buddy-name--editable');
+        if (span) startRename(span);
+    });
+})();
+</script>
+{% endif %}
 
 {% endblock %}

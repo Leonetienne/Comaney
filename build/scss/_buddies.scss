@@ -64,6 +64,11 @@
 .buddy-name {
   font-weight: 600;
   color: var(--text);
+
+  &--editable {
+    cursor: text;
+    &:hover { text-decoration: underline dotted var(--text-muted); }
+  }
 }
 
 .buddy-email {
