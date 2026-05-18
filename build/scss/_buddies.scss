@@ -680,6 +680,7 @@
     transform: translateY(-5px) scale(1.015);
     background: var(--bg-elevated);
     border-color: var(--accent);
+    text-decoration: none;
     z-index: 1;
   }
 
@@ -788,14 +789,14 @@
 }
 
 .bgs-stat-value {
-  font-size: 1.05rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text);
 }
 
 .bgs-stat--positive .bgs-stat-value { color: #2da44e; }
 .bgs-stat--negative .bgs-stat-value { color: #cf222e; }
-.bgs-stat--settled  .bgs-stat-value { color: var(--text-muted); font-size: 0.88rem; }
+.bgs-stat--settled  .bgs-stat-value { color: var(--text-muted); }
 
 .bgs-members {
   display: flex;
