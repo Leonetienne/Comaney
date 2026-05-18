@@ -649,6 +649,48 @@
 
   &.bgs-card-positive:hover { border-color: #2da44e; }
   &.bgs-card-negative:hover { border-color: #cf222e; }
+
+  &.bgs-card--has-bg {
+    background-size: cover;
+    background-position: center;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.72) 0%,
+        rgba(255, 255, 255, 0.5) 100%
+      );
+      border-radius: 12px;
+      z-index: 0;
+    }
+
+    .bgs-card-top,
+    .bgs-balance,
+    .bgs-members {
+      position: relative;
+      z-index: 1;
+    }
+
+    .bgs-name { color: #111; }
+    .bgs-balance-settled-label { color: rgba(0, 0, 0, 0.6); }
+    .pill { background: rgba(0, 0, 0, 0.10); color: #111; border-color: transparent; }
+
+    @media (prefers-color-scheme: dark) {
+      &::after {
+        background: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0.55) 0%,
+          rgba(0, 0, 0, 0.75) 100%
+        );
+      }
+      .bgs-name { color: #fff; }
+      .bgs-balance-settled-label { color: rgba(255, 255, 255, 0.5); }
+      .pill { background: rgba(255, 255, 255, 0.18); color: #fff; border-color: transparent; }
+    }
+  }
 }
 
 .bgs-card-top {

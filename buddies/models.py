@@ -13,6 +13,7 @@ class BuddyGroup(models.Model):
     admin_feuser = models.ForeignKey(
         "feusers.FeUser", on_delete=models.CASCADE, related_name="administered_groups"
     )
+    group_picture = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

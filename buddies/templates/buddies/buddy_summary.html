@@ -23,7 +23,7 @@
     <h2>Groups</h2>
     <div class="bgs-cards">
         {% for gs in my_groups_summary %}
-        <a href="{% url 'buddies:group_detail' gs.group.uid %}" class="bgs-card bgs-card-{{ gs.net_state }}">
+        <a href="{% url 'buddies:group_detail' gs.group.uid %}" class="bgs-card bgs-card-{{ gs.net_state }}{% if gs.group.group_picture %} bgs-card--has-bg{% endif %}"{% if gs.group.group_picture %} style="background-image: url('/media/bgpics/{{ gs.group.uid }}.webp')"{% endif %}>
             <div class="bgs-card-top">
                 <span class="bgs-name">{{ gs.group.name }}</span>
                 {% if gs.is_admin %}<span class="pill pill--accent">Admin</span>{% endif %}

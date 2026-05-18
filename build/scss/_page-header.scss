@@ -7,6 +7,56 @@
   h1 { margin: 0; }
 }
 
+.group-hero {
+  margin-bottom: 16px;
+
+  .page-header {
+    margin-bottom: 0;
+  }
+
+  &--has-bg {
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px;
+    padding: 1.4rem 1.6rem;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.72) 0%,
+        rgba(255, 255, 255, 0.5) 100%
+      );
+      border-radius: 10px;
+    }
+
+    .page-header {
+      position: relative;
+      z-index: 1;
+      h1 { color: #111; }
+      .pill { background: rgba(0, 0, 0, 0.10); color: #111; border-color: transparent; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      &::before {
+        background: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0.48) 0%,
+          rgba(0, 0, 0, 0.68) 100%
+        );
+      }
+      .page-header {
+        h1 { color: #fff; }
+        .pill { background: rgba(255, 255, 255, 0.18); color: #fff; border-color: transparent; }
+      }
+    }
+  }
+}
+
 .page-subtitle {
   font-size: 0.95rem;
   color: var(--text-subtle);

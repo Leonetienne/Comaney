@@ -1,6 +1,7 @@
 import json
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib import messages as django_messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -488,3 +489,37 @@ def accept_group_invite(request, token):
 def decline_group_invite(request, token):
     BuddyGroupService.decline_group_invite(token, request.feuser)
     return redirect("buddies:my_buddies")
+
+
+@feuser_required
+def group_picture(request, group_id):
+    from PIL import Image
+    import io
+
+    group = get_object_or_404(BuddyGroup, uid=group_id, admin_feuser=request.feuser)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "delete":
+            pic_path = settings.MEDIA_ROOT / "bgpics" / f"{group.pk}.webp"
+            pic_path.unlink(missing_ok=True)
+            group.group_picture = False
+            group.save(update_fields=["group_picture"])
+        else:
+            upload = request.FILES.get("group_picture")
+            if upload:
+                try:
+                    img = Image.open(upload)
+                    img = img.convert("RGB")
+                    img.thumbnail((1200, 600), Image.LANCZOS)
+                    bgpics_dir = settings.MEDIA_ROOT / "bgpics"
+                    bgpics_dir.mkdir(exist_ok=True)
+                    buf = io.BytesIO()
+                    img.save(buf, "WEBP", quality=82)
+                    (bgpics_dir / f"{group.pk}.webp").write_bytes(buf.getvalue())
+                    group.group_picture = True
+                    group.save(update_fields=["group_picture"])
+                except Exception:
+                    django_messages.error(request, "Could not process the image.")
+
+    return redirect("buddies:group_detail", group_id=group.uid)

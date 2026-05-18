@@ -8,9 +8,11 @@
 
 {% block content %}
 {% load feuser_tags %}
-<div class="page-header">
-    <h1>{{ group.name }}</h1>
-    {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
+<div class="group-hero{% if group.group_picture %} group-hero--has-bg{% endif %}"{% if group.group_picture %} style="background-image: url('/media/bgpics/{{ group.uid }}.webp')"{% endif %}>
+    <div class="page-header">
+        <h1>{{ group.name }}</h1>
+        {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
+    </div>
 </div>
 
 {% if messages %}
@@ -628,6 +630,23 @@
             </form>
         </div>
         {% endif %}
+
+        <div class="add-buddy-panel">
+            <h3>Group picture</h3>
+            <p class="text-muted">Shown as a background on the group card. Recommended: landscape, at least 800 px wide.</p>
+            <form method="post" action="{% url 'buddies:group_picture' group.uid %}" enctype="multipart/form-data" class="inline-form">
+                {% csrf_token %}
+                <input type="file" name="group_picture" accept="image/*" class="input-inline" id="group-pic-input">
+                <button type="submit" id="btn-upload-group-pic" class="btn">Upload</button>
+            </form>
+            {% if group.group_picture %}
+            <form method="post" action="{% url 'buddies:group_picture' group.uid %}" class="mt-sm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <button type="submit" id="btn-delete-group-pic" class="btn btn-danger-subtle btn-sm">Remove picture</button>
+            </form>
+            {% endif %}
+        </div>
 
         <div class="add-buddy-panel">
             <h3>Dissolve group</h3>

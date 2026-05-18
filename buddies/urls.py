@@ -43,6 +43,7 @@ urlpatterns = [
     path("groups/<int:group_id>/leave/", views.group_leave, name="group_leave"),
     path("groups/<int:group_id>/transfer-admin/", views.group_transfer_admin, name="group_transfer_admin"),
     path("groups/<int:group_id>/dissolve/", views.group_dissolve, name="group_dissolve"),
+    path("groups/<int:group_id>/picture/", views.group_picture, name="group_picture"),
 
     # Group invite accept/decline
     path("group-invite/<str:token>/", views.view_group_invite, name="view_group_invite"),
