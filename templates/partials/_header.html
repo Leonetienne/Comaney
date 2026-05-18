@@ -16,7 +16,7 @@
                 {% else %}
                     <span class="user-avatar user-avatar--initials" style="background: {{ current_feuser.initials|avatar_color }};">{{ current_feuser.initials }}</span>
                 {% endif %}
-                <span class="user-name">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</span>
+                <a class="user-name" href="{% url 'profile' %}">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</a>
                 <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
                     <button type="submit" id="logout-button">Logout</button>

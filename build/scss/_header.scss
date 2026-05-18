@@ -37,6 +37,8 @@ header {
       font-size: 0.95rem;
       font-weight: 600;
       color: var(--text-subtle);
+      text-decoration: none;
+      &:hover { text-decoration: underline; }
     }
 
     button {
