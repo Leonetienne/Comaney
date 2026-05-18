@@ -29,5 +29,7 @@ class Command(BaseCommand):
                 self.stdout.write("Aborted.")
                 return
 
+        from buddies.services import BuddyLifecycleService
+        BuddyLifecycleService.handle_account_deletion(user)
         user.delete()
         self.stdout.write(self.style.SUCCESS(f"User '{email}' deleted."))

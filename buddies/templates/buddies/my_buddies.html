@@ -174,7 +174,7 @@
     <h3>Offline record link requests</h3>
     {% for invite in merge_invites_in %}
     <div class="invite-card">
-        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> has you listed as an offline member under the name "<strong>{{ invite.dummy.display_name }}</strong>". If you accept, all expense history under that entry will be linked to your real account.</p>
+        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> has you listed as an offline member{% if invite.dummy.owning_group %} of the group "<strong>{{ invite.dummy.owning_group.name }}</strong>"{% endif %} under the name "<strong>{{ invite.dummy.display_name }}</strong>". If you accept, all expense history under that entry will be linked to your real account{% if invite.dummy.owning_group %} and you will join the group{% endif %}.</p>
         <div class="invite-actions">
             <form method="post" action="{% url 'buddies:accept_merge' invite.token %}">
                 {% csrf_token %}

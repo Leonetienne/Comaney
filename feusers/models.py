@@ -1,8 +1,11 @@
 import secrets
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import models
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 from django.utils import timezone
 
 PASSWORD_RESET_TOKEN_EXPIRY_HOURS = 1
@@ -102,3 +105,13 @@ class FeUser(models.Model):
     @property
     def ppic_url(self) -> str:
         return f"/media/ppics/{self.pk}.jpg"
+
+
+# ---------------------------------------------------------------------------
+# Media file cleanup signal
+# ---------------------------------------------------------------------------
+
+@receiver(pre_delete, sender=FeUser)
+def _cleanup_user_picture(sender, instance, **kwargs):
+    if instance.profile_picture:
+        (settings.MEDIA_ROOT / "ppics" / f"{instance.pk}.jpg").unlink(missing_ok=True)

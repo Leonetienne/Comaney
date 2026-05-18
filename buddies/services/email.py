@@ -322,6 +322,32 @@ class BuddyEmailService:
             )
 
     @staticmethod
+    def send_group_invite_accepted(invite: "BuddyGroupInvite", acceptee_name: str):
+        BuddyEmailService._send(
+            subject=f"{acceptee_name} joined your group \"{invite.group.name}\"",
+            template="emails/buddy_group_invite_accepted.html",
+            ctx={
+                "acceptee_name": acceptee_name,
+                "group_name": invite.group.name,
+                "feuser_recipient": invite.inviting_feuser,
+            },
+            recipient_email=invite.inviting_feuser.email,
+        )
+
+    @staticmethod
+    def send_group_invite_declined(invite: "BuddyGroupInvite", decliner_name: str):
+        BuddyEmailService._send(
+            subject=f"{decliner_name} declined your invitation to \"{invite.group.name}\"",
+            template="emails/buddy_group_invite_declined.html",
+            ctx={
+                "decliner_name": decliner_name,
+                "group_name": invite.group.name,
+                "feuser_recipient": invite.inviting_feuser,
+            },
+            recipient_email=invite.inviting_feuser.email,
+        )
+
+    @staticmethod
     def send_expense_unlinked_notification(expense, admin_feuser, group, notify_feuser, is_owner: bool):
         site_url = getattr(settings, "SITE_URL", "")
         BuddyEmailService._send(

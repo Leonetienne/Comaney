@@ -1,7 +1,10 @@
 import secrets
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import models
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 from django.utils import timezone
 
 INVITE_EXPIRY_DAYS = 7
@@ -58,13 +61,6 @@ class DummyUser(models.Model):
     @property
     def ppic_url(self) -> str:
         return f"/media/offline-buddy-ppic/{self.pk}.jpg"
-
-    def delete(self, *args, **kwargs):
-        if self.profile_picture:
-            from django.conf import settings
-            ppic_path = settings.MEDIA_ROOT / "offline-buddy-ppic" / f"{self.pk}.jpg"
-            ppic_path.unlink(missing_ok=True)
-        super().delete(*args, **kwargs)
 
 
 class BuddyGroupMember(models.Model):
@@ -278,3 +274,19 @@ class BuddySpending(models.Model):
     def __str__(self):
         p = self.participant_feuser or self.participant_dummy
         return f"{p}: {self.share_percent}%"
+
+
+# ---------------------------------------------------------------------------
+# Media file cleanup signals
+# ---------------------------------------------------------------------------
+
+@receiver(pre_delete, sender=DummyUser)
+def _cleanup_dummy_picture(sender, instance, **kwargs):
+    if instance.profile_picture:
+        (settings.MEDIA_ROOT / "offline-buddy-ppic" / f"{instance.pk}.jpg").unlink(missing_ok=True)
+
+
+@receiver(pre_delete, sender=BuddyGroup)
+def _cleanup_group_picture(sender, instance, **kwargs):
+    if instance.group_picture:
+        (settings.MEDIA_ROOT / "bgpics" / f"{instance.pk}.webp").unlink(missing_ok=True)

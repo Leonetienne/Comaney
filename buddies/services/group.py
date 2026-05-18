@@ -119,17 +119,19 @@ class BuddyGroupService:
 
         BuddyGroupMember.objects.get_or_create(group=group, feuser=accepting_feuser)
 
+        BuddyEmailService.send_group_invite_accepted(invite, _display_name(accepting_feuser))
         invite.delete()
         return group
 
     @staticmethod
     def decline_group_invite(token: str, declining_feuser) -> bool:
         try:
-            invite = BuddyGroupInvite.objects.get(
-                token=token, invitee_email=declining_feuser.email
-            )
+            invite = BuddyGroupInvite.objects.select_related(
+                "inviting_feuser", "group"
+            ).get(token=token, invitee_email=declining_feuser.email)
         except BuddyGroupInvite.DoesNotExist:
             return False
+        BuddyEmailService.send_group_invite_declined(invite, _display_name(declining_feuser))
         invite.delete()
         return True
 
@@ -248,7 +250,7 @@ class BuddyGroupService:
                 invitee_email=target_email,
             )
             ob.save()
-            BuddyEmailService.send_onboarding_invite(ob)
+            BuddyEmailService.send_group_onboarding_invite(ob)
             return ("onboarding", ob)
 
         invite = DummyMergeInvite(

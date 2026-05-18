@@ -1,0 +1,11 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Invitation declined</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ decliner_name }}</strong> has declined your invitation to join the group <strong style="color:#e0e0e0;">{{ group_name }}</strong>.
+</p>
+<p style="color:#666;font-size:0.82rem;line-height:1.5;">
+    You are receiving this because you are the group admin.
+</p>
+{% endblock %}

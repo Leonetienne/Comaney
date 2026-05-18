@@ -1,7 +1,15 @@
 {% extends "emails/base_email.html" %}
 
 {% block content %}
-{% if is_merge %}
+{% if is_merge and is_group %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Group invitation and account merge</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ inviter_name }}</strong> has tracked you as an offline member of the group <strong style="color:#e0e0e0;">{{ group_name }}</strong> under the name <strong style="color:#e0e0e0;">{{ dummy_name }}</strong> and would like to link that record with your account.
+</p>
+<p style="color:#aaa;line-height:1.6;font-size:0.9rem;">
+    Create a free account using this email address. Once you confirm your email, you will be added to the group <strong style="color:#ccc;">{{ group_name }}</strong> as a full member and all shared expense history under "{{ dummy_name }}" will be transferred to your account.
+</p>
+{% elif is_merge %}
 <h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">You have been invited to Comaney</h2>
 <p style="color:#ccc;line-height:1.6;">
     <strong style="color:#e0e0e0;">{{ inviter_name }}</strong> uses Comaney to track shared expenses and has an offline record named <strong style="color:#e0e0e0;">{{ dummy_name }}</strong> that they want to link with your account.

@@ -564,7 +564,7 @@ class BuddyQueryService:
         return DummyMergeInvite.objects.filter(
             invited_feuser=feuser,
             expires_at__gt=timezone.now(),
-        ).select_related("inviting_feuser", "dummy")
+        ).select_related("inviting_feuser", "dummy__owning_group")
 
     @staticmethod
     def pending_group_invites_incoming(feuser):
