@@ -22,6 +22,22 @@ from ._period import _get_month, _get_period_mode, _get_year, _month_nav_context
 # Buddy payment helpers
 # ---------------------------------------------------------------------------
 
+def _apply_solo_spendings(expense, buddy, creator_feuser):
+    """For solo projects, if buddy spendings are empty, auto-create a 100% row for the creator."""
+    if buddy and buddy["mode"] == "group" and not buddy["spendings"] and buddy.get("group"):
+        project = buddy["group"]
+        feuser_count = project.members.filter(feuser__isnull=False).count()
+        dummy_count = project.members.filter(dummy__isnull=False).count()
+        if feuser_count == 1 and dummy_count == 0:
+            from buddies.models import BuddySpending
+            BuddySpending.objects.filter(expense=expense).delete()
+            BuddySpending.objects.create(
+                expense=expense,
+                participant_feuser=creator_feuser,
+                share_percent=100,
+            )
+
+
 def _buddy_context(feuser) -> dict:
     from buddies.services import BuddyQueryService
     actual = list(BuddyQueryService.get_actual_buddies(feuser))
@@ -32,12 +48,14 @@ def _buddy_context(feuser) -> dict:
         *[{"type": "dummy", "id": d.uid, "name": d.display_name + " (offline member)",
            "ppicUrl": d.ppic_url if d.profile_picture else "", "initials": d.initials, "avatarColor": _avatar_color(d.initials)} for d in dummy],
     ]
+    # Only active (non-archived) projects appear in the expense form dropdown
+    projects = BuddyQueryService.get_active_projects_for_feuser(feuser)
     return {
         "buddy_actual": actual,
         "buddy_dummy": dummy,
-        "buddy_groups": BuddyQueryService.get_groups_for_feuser(feuser),
-        "groups_data_json": json.dumps(
-            BuddyQueryService.groups_data_for_expense_form(feuser)
+        "buddy_groups": projects,
+        "projects_data_json": json.dumps(
+            BuddyQueryService.projects_data_for_expense_form(feuser)
         ),
         "single_buddies_json": json.dumps(single_buddies),
     }
@@ -54,7 +72,7 @@ def _parse_buddy_post(post, feuser):
     if not post.get("buddy_payment"):
         return None
 
-    from buddies.models import BuddyGroup, BuddyGroupMember, DummyUser
+    from buddies.models import Project, DummyUser
     from feusers.models import FeUser as FU
 
     mode = post.get("buddy_mode", "single")
@@ -83,12 +101,13 @@ def _parse_buddy_post(post, feuser):
 
     if mode == "group":
         try:
-            group_id = int(post.get("buddy_group_id", 0))
-            result["group"] = BuddyGroup.objects.get(
+            group_id = int(post.get("project_id", 0))
+            result["group"] = Project.objects.get(
                 uid=group_id,
                 members__feuser=feuser,
+                archived=False,
             )
-        except (ValueError, BuddyGroup.DoesNotExist):
+        except (ValueError, Project.DoesNotExist):
             result["valid"] = False
 
     try:
@@ -96,7 +115,11 @@ def _parse_buddy_post(post, feuser):
     except (json.JSONDecodeError, ValueError):
         result["spendings"] = []
 
-    if not result["spendings"]:
+    # Solo project: allow empty spendings (will be auto-filled with 100% for creator)
+    is_solo_project = (mode == "group" and result["group"] and
+                       result["group"].members.filter(feuser__isnull=False).count() == 1 and
+                       not result["group"].members.filter(dummy__isnull=False).exists())
+    if not result["spendings"] and not is_solo_project:
         result["valid"] = False
 
     # Single-buddy mode: enforce max 1 participant
@@ -203,25 +226,31 @@ def expense_create(request):
                 other = buddy["upfront_feuser"]
                 expense.owning_feuser = other
                 expense.buddy_approved = False
-                expense.buddy_group = buddy.get("group")
+                expense.project = buddy.get("group")
                 expense.save()
                 form.save_m2m()
                 from buddies.services import BuddyEmailService, BuddyExpenseService
+                _apply_solo_spendings(expense, buddy, feuser)
                 BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
                 BuddyEmailService.send_expense_approval_request(expense, feuser)
                 BuddyEmailService.notify_expense_created(expense, feuser)
+                if expense.project:
+                    expense.project.update_lastmod()
             else:
                 expense.owning_feuser = feuser
                 if buddy:
                     expense.is_dummy = (buddy["upfront_type"] == "dummy")
                     expense.upfront_payee_dummy = buddy.get("upfront_dummy")
-                    expense.buddy_group = buddy.get("group")
+                    expense.project = buddy.get("group")
                 expense.save()
                 form.save_m2m()
                 if buddy:
                     from buddies.services import BuddyExpenseService, BuddyEmailService
+                    _apply_solo_spendings(expense, buddy, feuser)
                     BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
                     BuddyEmailService.notify_expense_created(expense, feuser)
+                    if expense.project:
+                        expense.project.update_lastmod()
             set_initial_notification_class(expense)
             if buddy and buddy["upfront_type"] == "dummy" and buddy.get("upfront_dummy"):
                 from django.urls import reverse
@@ -255,7 +284,7 @@ def expense_edit(request, uid):
             Expense,
             uid=uid,
             is_dummy=True,
-            buddy_group__admin_feuser=feuser,
+            project__admin_feuser=feuser,
         )
         is_admin_edit = True
     form_feuser = expense.owning_feuser if is_admin_edit else feuser
@@ -269,9 +298,9 @@ def expense_edit(request, uid):
     if (not is_admin_edit
             and expense.is_buddies_settlement
             and expense.buddy_approved
-            and expense.buddy_group_id):
-        from buddies.models import BuddyGroup
-        admin_pk = BuddyGroup.objects.filter(uid=expense.buddy_group_id) \
+            and expense.project_id):
+        from buddies.models import Project
+        admin_pk = Project.objects.filter(uid=expense.project_id) \
             .values_list("admin_feuser_id", flat=True).first()
         if admin_pk != feuser.pk:
             return redirect("budget:expenses_list")
@@ -294,8 +323,8 @@ def expense_edit(request, uid):
                 new_type = buddy["upfront_type"]
                 new_feuser = buddy.get("upfront_feuser")
                 new_dummy = buddy.get("upfront_dummy")
-                expense.buddy_group = buddy.get("group")
-                expense.save(update_fields=["buddy_group"])
+                expense.project = buddy.get("group")
+                expense.save(update_fields=["project"])
                 # Detect payer change and apply service logic
                 payer_changed = (
                     (new_type == "feuser" and new_feuser and new_feuser.pk != feuser.pk) or
@@ -319,19 +348,22 @@ def expense_edit(request, uid):
                         return redirect("budget:expenses_list")
                 # Skip for settlements: creditor share must not change
                 if not expense.is_buddies_settlement:
+                    _apply_solo_spendings(expense, buddy, feuser)
                     BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
                 BuddyEmailService.notify_expense_updated(
                     expense, feuser, _old_title, _old_value, _old_participants,
                     extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
                 )
+                if expense.project:
+                    expense.project.update_lastmod()
             else:
                 # Buddy payment removed: clear all buddy data
                 expense.buddy_spendings.all().delete()
                 expense.is_dummy = False
                 expense.buddy_approved = True
                 expense.upfront_payee_dummy = None
-                expense.buddy_group = None
-                expense.save(update_fields=["is_dummy", "buddy_approved", "upfront_payee_dummy", "buddy_group"])
+                expense.project = None
+                expense.save(update_fields=["is_dummy", "buddy_approved", "upfront_payee_dummy", "project"])
                 if _old_participants:
                     from buddies.services import BuddyEmailService
                     BuddyEmailService.notify_expense_updated(
@@ -385,8 +417,8 @@ def expense_edit(request, uid):
         "existing_upfront_type": existing_upfront_type,
         "existing_upfront_id": existing_upfront_id,
         "existing_spendings_json": _existing_buddy_json(expense),
-        "existing_mode": "group" if expense.buddy_group_id else "single",
-        "existing_group_id": expense.buddy_group_id or "",
+        "existing_mode": "group" if expense.project_id else "single",
+        "existing_group_id": expense.project_id or "",
         **_buddy_context(feuser),
     })
 
@@ -402,9 +434,9 @@ def expense_delete(request, uid):
             return redirect("budget:expenses_list")
         # Non-admin group members cannot delete an approved group settlement via
         # this endpoint; the group-specific delete view handles permissions there.
-        if expense.buddy_approved and expense.buddy_group_id:
-            from buddies.models import BuddyGroup
-            admin_pk = BuddyGroup.objects.filter(uid=expense.buddy_group_id) \
+        if expense.buddy_approved and expense.project_id:
+            from buddies.models import Project
+            admin_pk = Project.objects.filter(uid=expense.project_id) \
                 .values_list("admin_feuser_id", flat=True).first()
             if admin_pk != request.feuser.pk:
                 return redirect("budget:expenses_list")

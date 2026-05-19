@@ -1,0 +1,57 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - Remove {{ dummy.display_name }} (offline member){% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Remove {{ dummy.display_name }} (offline member)</h1>
+    <p class="page-subtitle">From project: <strong>{{ project.name }}</strong></p>
+</div>
+
+<div class="buddies-section buddies-section--narrow">
+
+    {% if has_balance %}
+    <div class="buddy-flash buddy-flash-warning mb-md">
+        <strong>Outstanding balance:</strong>
+        {% if net > 0 %}
+            {{ dummy.display_name }} (offline member) is owed <strong>{{ currency }}{{ net_abs|floatformat:2 }}</strong> by the project.
+        {% else %}
+            {{ dummy.display_name }} (offline member) owes the project <strong>{{ currency }}{{ net_abs|floatformat:2 }}</strong>.
+        {% endif %}
+        This balance will be carried into Achim Archive and remain part of the project totals.
+    </div>
+    {% endif %}
+
+    {% if expense_count > 0 %}
+    <div class="invite-card mb-md">
+        <p>
+            <strong>{{ expense_count }} shared expense{{ expense_count|pluralize }}</strong>
+            will be moved to <strong>Achim Archive</strong> instead of being deleted.
+        </p>
+        <p class="text-muted font-sm m-0">
+            Achim Archive is a special project member that keeps the financial history
+            of removed offline members intact. Project balances and the debt graph stay
+            correct.
+            {% if archive_exists %}
+            The existing Achim Archive in this project will absorb {{ dummy.display_name }} (offline member)'s shares.
+            {% else %}
+            Achim Archive will appear as a new member of this project.
+            {% endif %}
+            The admin can later delete all archived expenses, but that permanently
+            changes the project's financial history.
+        </p>
+    </div>
+    {% else %}
+    <p class="mb-md">{{ dummy.display_name }} (offline member) has no shared expenses, so removing them is clean.</p>
+    {% endif %}
+
+    <form method="post" action="">
+        {% csrf_token %}
+        <input type="hidden" name="confirmed" value="yes">
+        <div class="action-row">
+            <button type="submit" id="btn-confirm-kick" class="btn btn-danger-subtle">Remove {{ dummy.display_name }} (offline member)</button>
+            <a href="{% url 'projects:project_detail' project_id=project.uid %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,987 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - {{ project.name }}{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+{% endblock %}
+
+{% block content %}
+{% load feuser_tags %}
+<div class="group-hero{% if project.group_picture %} group-hero--has-bg{% endif %}"{% if project.group_picture %} style="background-image: url('/media/bgpics/{{ project.uid }}.webp')"{% endif %}>
+    <div class="page-header">
+        <h1>{{ project.name }}</h1>
+        {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
+        {% if project.archived %}<span class="pill pill--faded">Archived</span>{% endif %}
+    </div>
+    {% if project.description %}<p class="group-description">{{ project.description }}</p>{% endif %}
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+
+{% if project.archived %}
+<div class="info-box mb-md" style="border-left:4px solid var(--text-muted);background:var(--bg-surface);opacity:0.85;">
+    <p><strong>This project is archived.</strong> Expenses and member data are read-only. To make changes, unarchive the project from the Admin actions section below.</p>
+</div>
+{% endif %}
+
+{% if request.GET.achim == "new" %}
+<div id="achim-modal" class="cdialog-backdrop cdialog-visible">
+    <div class="cdialog">
+        <p class="cdialog-title">Say hello to Achim Archive</p>
+        <p class="cdialog-body">The member you removed had shared expenses, so rather than wiping them from the books, they've been handed off to <strong>Achim Archive</strong>, a special group member who quietly holds onto historical records.</p>
+        <p class="cdialog-footer-note">Group balances and the debt graph stay accurate. The admin can delete Achim's expenses at any time from the Members section, though that will permanently change the group's financial history.</p>
+        <div class="cdialog-actions">
+            <button type="button" class="btn" onclick="document.getElementById('achim-modal').style.display='none';history.replaceState(null,'',location.pathname);">Got it</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── Balances (hidden for solo projects) ────────────────────────────────── #}
+{% if not is_solo %}
+<section class="buddies-section">
+    <h2>Your balances</h2>
+
+    {% if my_balances %}
+    <div class="group-settle-list mb-md">
+        {% for b in my_balances %}
+        <div class="group-settle-row">
+            {% if b.you_owe %}
+            <span>You owe <strong>{{ b.name }}</strong></span>
+            <strong class="text-error">{{ currency }}{{ b.amount|floatformat:2 }}</strong>
+            {% else %}
+            <span><strong>{{ b.name }}</strong> owes you</span>
+            <strong class="text-success">{{ currency }}{{ b.amount|floatformat:2 }}</strong>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="page-subtitle mb-md">You are all settled up.</p>
+    {% endif %}
+
+    {% if breakdown.simplified or raw_graph_json != '{"nodes": [], "links": []}' %}
+    <div class="group-debt-graphs">
+
+        <div class="group-debt-graph-panel">
+            <h3>Expense flows</h3>
+            <p>Every shared expense shown as arrows between people. These can cancel out.</p>
+            <div id="raw-debt-graph" class="buddy-debt-graph"></div>
+            <p id="raw-debt-graph-total" class="graph-total"></p>
+        </div>
+
+        <div class="group-debt-graph-panel">
+            <h3>Quickest way to settle</h3>
+            <p>The fewest payments needed to bring everyone to zero.</p>
+            <div id="simplified-debt-graph" class="buddy-debt-graph"></div>
+            <p id="simplified-debt-graph-total" class="graph-total"></p>
+        </div>
+
+    </div>
+
+    <script>
+    (function () {
+        var RAW = {{ raw_graph_json|safe }};
+        var SIMPLIFIED = {{ simplified_graph_json|safe }};
+        var CURRENCY = "{{ currency|escapejs }}";
+
+        function avatarColor(initials) {
+            if (!initials) return AVATAR_COLORS[0];
+            var h = 0;
+            for (var i = 0; i < initials.length; i++) h += initials.charCodeAt(i);
+            return AVATAR_COLORS[h % AVATAR_COLORS.length];
+        }
+
+        function renderGroupGraph(data, containerId) {
+            var nodes = data.nodes, links = data.links;
+            if (!nodes.length) return;
+            var container = document.getElementById(containerId);
+            if (!container) return;
+
+            var n = nodes.length;
+            var W = container.clientWidth || 500;
+            var R = 34;
+            var ORBIT = Math.max(80, Math.min(W / 2 - R - 28, 160));
+            var H = ORBIT * 2 + (R + 28) * 2;
+            var CX = W / 2, CY = H / 2;
+            var COL_DEBT = '#cf222e';
+
+            var svg = d3.select('#' + containerId).append('svg')
+                .attr('width', W).attr('height', H);
+
+            var defs = svg.append('defs');
+            defs.append('marker').attr('id', 'arr-' + containerId).attr('viewBox', '0 -5 10 10')
+                .attr('refX', 9).attr('refY', 0).attr('markerWidth', 7).attr('markerHeight', 7)
+                .attr('orient', 'auto').append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', COL_DEBT);
+
+            var pos = {};
+            nodes.forEach(function (nd, i) {
+                var angle = (2 * Math.PI * i / n) - Math.PI / 2;
+                pos[nd.key] = {
+                    x: CX + ORBIT * Math.cos(angle),
+                    y: CY + ORBIT * Math.sin(angle),
+                    name: nd.name, is_me: nd.is_me,
+                    has_pic: nd.has_pic, avatar_url: nd.avatar_url, initials: nd.initials,
+                    key: nd.key,
+                };
+            });
+
+            links.forEach(function (lk) {
+                var f = pos[lk.from], t = pos[lk.to];
+                if (!f || !t) return;
+                var dx = t.x - f.x, dy = t.y - f.y, len = Math.sqrt(dx*dx + dy*dy);
+                var x1 = f.x + dx/len*R, y1 = f.y + dy/len*R;
+                var x2 = t.x - dx/len*(R+14), y2 = t.y - dy/len*(R+14);
+                svg.append('line').attr('x1',x1).attr('y1',y1).attr('x2',x2).attr('y2',y2)
+                    .attr('stroke', COL_DEBT).attr('stroke-width', 2).attr('marker-end','url(#arr-' + containerId + ')');
+                var lx=(x1+x2)/2, ly=(y1+y2)/2, pl=14;
+                var px=-dy/len*pl, py=dx/len*pl;
+                svg.append('text').attr('x',lx+px).attr('y',ly+py)
+                    .attr('text-anchor','middle').attr('dominant-baseline','middle')
+                    .attr('font-size','11').attr('font-weight','600').attr('fill',COL_DEBT)
+                    .text(CURRENCY + lk.amount.toFixed(2));
+            });
+
+            Object.values(pos).forEach(function (nd) {
+                var clipId = 'clip-' + containerId + '-' + nd.key;
+                var fill = nd.is_me ? '#2da44e' : avatarColor(nd.initials);
+                var stroke = nd.is_me ? '#1a7f36' : '#444c56';
+                defs.append('clipPath').attr('id', clipId)
+                    .append('circle').attr('cx', nd.x).attr('cy', nd.y).attr('r', R);
+                if (nd.has_pic) {
+                    svg.append('image')
+                        .attr('href', nd.avatar_url)
+                        .attr('x', nd.x - R).attr('y', nd.y - R)
+                        .attr('width', R * 2).attr('height', R * 2)
+                        .attr('clip-path', 'url(#' + clipId + ')')
+                        .attr('preserveAspectRatio', 'xMidYMid slice')
+                      .append('title').text(nd.name);
+                    svg.append('circle').attr('cx', nd.x).attr('cy', nd.y).attr('r', R)
+                        .attr('fill', 'none').attr('stroke', stroke).attr('stroke-width', 2)
+                      .append('title').text(nd.name);
+                } else {
+                    svg.append('circle').attr('cx', nd.x).attr('cy', nd.y).attr('r', R)
+                        .attr('fill', fill).attr('stroke', stroke).attr('stroke-width', 2)
+                      .append('title').text(nd.name);
+                    svg.append('text').attr('x', nd.x).attr('y', nd.y)
+                        .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                        .attr('font-size', '11').attr('font-weight', '600').attr('fill', '#fff')
+                        .text(nd.initials)
+                      .append('title').text(nd.name);
+                }
+            });
+        }
+
+        function showTotal(containerId, simplifiedTotal, rawHasLinks) {
+            var el = document.getElementById(containerId + '-total');
+            if (!el) return;
+            if (simplifiedTotal < 0.005) {
+                if (containerId === 'raw-debt-graph' && rawHasLinks) {
+                    el.innerHTML =
+                        '<div style="display:flex;align-items:flex-start;gap:0.6rem;background:rgba(210,153,34,0.1);border:1px solid #d2991f;border-radius:7px;padding:0.6rem 0.8rem;margin:0;">' +
+                            '<span style="font-size:1rem;line-height:1.4;flex-shrink:0;">⚠</span>' +
+                            '<div style="line-height:1.5;">' +
+                                '<strong style="color:#e0b840;display:block;margin-bottom:0.15rem;">These arrows cancel out — no debt remains.</strong>' +
+                                '<span style="color:var(--text-muted);font-size:0.8rem;">This graph shows the raw expense flows between members. ' +
+                                'Even when the arrows look busy, they can still net to zero: ' +
+                                'if you owe someone &euro;10 and they owe you &euro;10, you\'re perfectly even.</span>' +
+                            '</div>' +
+                        '</div>';
+                    el.style.cssText = 'margin:0 0 0.5rem;font-weight:normal;';
+                } else {
+                    el.textContent = 'No debt';
+                    el.style.color = '#2da44e';
+                }
+            } else {
+                el.textContent = 'Total group debt: ' + CURRENCY + simplifiedTotal.toFixed(2);
+                el.style.color = '#cf222e';
+            }
+        }
+
+        requestAnimationFrame(function () {
+            renderGroupGraph(RAW, 'raw-debt-graph');
+            renderGroupGraph(SIMPLIFIED, 'simplified-debt-graph');
+            var simplifiedTotal = SIMPLIFIED.links.reduce(function (s, l) { return s + l.amount; }, 0);
+            showTotal('raw-debt-graph', simplifiedTotal, RAW.links.length > 0);
+            showTotal('simplified-debt-graph', simplifiedTotal, false);
+        });
+    })();
+    </script>
+    {% endif %}
+
+    {# ── Spending Breakdown Pie Chart ─────────────────────────────────────────── #}
+    {% if group_total_spending %}
+    <h2>Spending breakdown</h2>
+    <p class="page-subtitle">Total group spending: <strong>{{ currency }}{{ group_total_spending|floatformat:2 }}</strong></p>
+    <p class="font-sm text-muted mb-md">Each slice shows how much of the total each person paid upfront. This is not the same as debt: it does not account for who owes whom or who has already settled.</p>
+    <div class="group-spending-wrap">
+        <div id="group-spending-pie" class="group-spending-chart"></div>
+        <div id="group-spending-legend" class="group-spending-legend"></div>
+    </div>
+    <div id="group-pie-tooltip" class="group-pie-tooltip" style="display:none;pointer-events:none;"></div>
+    <script>
+    (function() {
+        var PIE_DATA = {{ spending_pie_json|safe }};
+        var CURRENCY = "{{ currency|escapejs }}";
+        var data = PIE_DATA.filter(function(d) { return d.spent > 0.005; });
+        if (!data.length) return;
+
+        var container = document.getElementById('group-spending-pie');
+        if (!container) return;
+
+        var SIZE = 240;
+        var R = SIZE / 2 - 6;
+        var CX = SIZE / 2, CY = SIZE / 2;
+
+        var svg = d3.select(container).append('svg').attr('width', SIZE).attr('height', SIZE);
+        var defs = svg.append('defs');
+        var g = svg.append('g').attr('transform', 'translate(' + CX + ',' + CY + ')');
+
+        var pie = d3.pie().sort(null).value(function(d) { return d.spent; });
+        var arc = d3.arc().innerRadius(0).outerRadius(R);
+        var arcHover = d3.arc().innerRadius(0).outerRadius(R + 7);
+
+        var arcs = pie(data);
+        var totalSpent = arcs.reduce(function(s, a) { return s + a.data.spent; }, 0);
+
+        var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var borderColor = isDark ? '#2a2a2a' : '#ffffff';
+
+        function avatarColor(initials) {
+            if (!initials || !window.AVATAR_COLORS) return '#888';
+            var h = 0;
+            for (var i = 0; i < initials.length; i++) h += initials.charCodeAt(i);
+            return window.AVATAR_COLORS[h % window.AVATAR_COLORS.length];
+        }
+
+        var tooltip = document.getElementById('group-pie-tooltip');
+
+        arcs.forEach(function(d, i) {
+            var member = d.data;
+            var pct = totalSpent > 0 ? (member.spent / totalSpent * 100).toFixed(1) : '0.0';
+            var clipId = 'gspie-{{ group.pk }}-' + i;
+
+            var clipPath = defs.append('clipPath').attr('id', clipId);
+            var clipPathShape = clipPath.append('path').attr('d', arc(d));
+
+            var fillPath = null;
+            if (member.has_pic) {
+                g.append('image')
+                    .attr('href', member.avatar_url)
+                    .attr('x', -R).attr('y', -R)
+                    .attr('width', R * 2).attr('height', R * 2)
+                    .attr('clip-path', 'url(#' + clipId + ')')
+                    .attr('preserveAspectRatio', 'xMidYMid slice')
+                    .attr('pointer-events', 'none');
+            } else {
+                fillPath = g.append('path').attr('d', arc(d)).attr('fill', avatarColor(member.initials));
+                if (d.endAngle - d.startAngle > 0.4) {
+                    var c = arc.centroid(d);
+                    g.append('text')
+                        .attr('x', c[0]).attr('y', c[1])
+                        .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                        .attr('fill', '#fff').attr('font-size', '11').attr('font-weight', '600')
+                        .attr('pointer-events', 'none')
+                        .text(member.initials);
+                }
+            }
+
+            var borderPath = g.append('path').attr('d', arc(d))
+                .attr('fill', 'none').attr('stroke', borderColor).attr('stroke-width', 2)
+                .attr('pointer-events', 'none');
+
+            (function(hitMember, hitD, hitPct, fp, bp, cps) {
+                var hitPath = g.append('path').attr('d', arc(hitD)).attr('fill', 'transparent').attr('cursor', 'pointer');
+                var hovered = false;
+                hitPath
+                    .on('mouseenter', function(event) {
+                        if (hovered) return;
+                        hovered = true;
+                        var dur = 160;
+                        if (fp) fp.transition().duration(dur).attr('d', arcHover(hitD));
+                        bp.transition().duration(dur).attr('d', arcHover(hitD));
+                        cps.transition().duration(dur).attr('d', arcHover(hitD));
+                        hitPath.attr('d', arcHover(hitD));
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = (event.clientX + 14) + 'px';
+                        tooltip.style.top = (event.clientY - 42) + 'px';
+                        tooltip.innerHTML = '<strong>' + hitMember.name + '</strong><br>' +
+                            CURRENCY + hitMember.spent.toFixed(2) + ' (' + hitPct + '%)';
+                    })
+                    .on('mousemove', function(event) {
+                        tooltip.style.left = (event.clientX + 14) + 'px';
+                        tooltip.style.top = (event.clientY - 42) + 'px';
+                    })
+                    .on('mouseleave', function() {
+                        hovered = false;
+                        var dur = 160;
+                        if (fp) fp.transition().duration(dur).attr('d', arc(hitD));
+                        bp.transition().duration(dur).attr('d', arc(hitD));
+                        cps.transition().duration(dur).attr('d', arc(hitD));
+                        hitPath.attr('d', arc(hitD));
+                        tooltip.style.display = 'none';
+                    });
+            })(member, d, pct, fillPath, borderPath, clipPathShape);
+        });
+
+        var legend = document.getElementById('group-spending-legend');
+        data.forEach(function(member) {
+            var pct = totalSpent > 0 ? (member.spent / totalSpent * 100).toFixed(1) : '0.0';
+            var row = document.createElement('div');
+            row.className = 'pie-legend-row' + (member.is_me ? ' pie-legend-row--me' : '');
+
+            var dot = document.createElement('span');
+            dot.className = 'pie-legend-dot';
+            if (member.has_pic) {
+                dot.style.backgroundImage = 'url(' + member.avatar_url + ')';
+                dot.style.backgroundSize = 'cover';
+                dot.style.backgroundPosition = 'center';
+            } else {
+                dot.style.background = avatarColor(member.initials);
+                dot.textContent = member.initials;
+                dot.classList.add('pie-legend-dot--initials');
+            }
+
+            var text = document.createElement('span');
+            text.className = 'pie-legend-label';
+            text.textContent = member.name + ': ' + CURRENCY + member.spent.toFixed(2) + ' (' + pct + '%)';
+
+            row.appendChild(dot);
+            row.appendChild(text);
+            legend.appendChild(row);
+        });
+    })();
+    </script>
+    {% endif %}
+
+    <h2>Clear everything at once</h2>
+    {% if breakdown.simplified %}
+    {% if not is_admin %}<p class="font-xs text-muted mb-sm">Your group admin can kick off a group-wide settlement.</p>{% endif %}
+    <div class="group-settle-list mt-1 {% if is_admin %}mb-1{% else %}mb-0{% endif %}">
+        {% for t in breakdown.simplified %}
+        <div class="group-settle-row {% if t.from_is_me %}settle-row-me-owes{% elif t.to_is_me %}settle-row-me-receives{% endif %}">
+            <strong>{{ t.from_name }}</strong>
+            <span class="settle-arrow">pays</span>
+            <strong>{{ t.to_name }}</strong>
+            <span class="settle-amount">{{ currency }}{{ t.amount|floatformat:2 }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% if is_admin and not project.archived %}
+    <form method="post" action="{% url 'projects:group_settle_all' group_id=group.uid %}" id="settle-all-form">
+        {% csrf_token %}
+        <button type="submit" id="btn-settle-all" class="btn btn-danger-subtle">Settle entire group</button>
+    </form>
+    <script>
+    (function () {
+        var PAIRS = {{ settle_all_pairs_json|safe }};
+        document.getElementById('settle-all-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            var lines = PAIRS.map(function (p) { return '• ' + p.from + ' pays ' + p.to + ': {{ currency }}' + p.amount.toFixed(2); });
+            window.confirmDialog(
+                'Create payment records for all outstanding debts?\n\n' + lines.join('\n') +
+                '\n\nEveryone involved will get an email. Each person receiving money will need to confirm they got it.',
+                'Settle group'
+            ).then(function () { e.target.submit(); }).catch(function () {});
+        });
+    })();
+    </script>
+    {% endif %}
+    {% elif not breakdown.expenses %}
+    <p class="text-muted font-sm">No expenses recorded yet.</p>
+    {% else %}
+    <p class="settled-up-msg">Everyone is settled up. No transfers needed.</p>
+    {% endif %}
+</section>
+{% endif %}{# end not is_solo #}
+
+{# ── Settle with Group Buddy (Part A, hidden for solo and archived) ───────── #}
+{% if not is_solo and not project.archived %}
+<section class="buddies-section">
+    <h2>Pay someone back</h2>
+    <p class="page-subtitle">
+        Pay back a specific group member. The amount is pre-filled based on what you owe them directly, but you can enter any amount. They'll get a notification to confirm they received it.
+    </p>
+    <form method="post" action="{% url 'projects:group_settle_individual' group_id=group.uid %}" id="settle-individual-form">
+        {% csrf_token %}
+
+        {% if is_admin and dummy_members %}
+        <div class="settle-form-row">
+            <label for="settle-debtor" class="settle-form-label">Who's paying</label>
+            <select id="settle-debtor" name="debtor_key" class="input-inline settle-form-select">
+                <option value="{{ feuser_key }}">You</option>
+                {% for m in dummy_members %}
+                <option value="d{{ m.dummy.pk }}">{{ m.dummy.display_name }} (offline member)</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% else %}
+        <input type="hidden" name="debtor_key" value="{{ feuser_key }}">
+        {% endif %}
+
+        <div class="settle-form-row">
+            <label for="settle-creditor" class="settle-form-label">Pay to</label>
+            <select id="settle-creditor" name="creditor_key" class="input-inline settle-form-select"></select>
+        </div>
+
+        <div class="settle-form-row">
+            <label for="settle-amount" class="settle-form-label">Amount ({{ currency }})</label>
+            <input type="number" id="settle-amount" name="amount" min="0.01" step="0.01"
+                   class="input-inline input-inline--narrow" placeholder="0.00" required>
+        </div>
+
+        <button type="submit" id="btn-settle-individual" class="btn mt-sm">Record payment</button>
+    </form>
+
+    <script>
+    (function () {
+        var MEMBERS = {{ all_members_json|safe }};
+        var IS_ADMIN = {{ is_admin|lower }};
+
+        var debtorEl  = document.getElementById('settle-debtor');
+        var creditorEl = document.getElementById('settle-creditor');
+        var amountEl  = document.getElementById('settle-amount');
+
+        function getDebtorKey() {
+            return debtorEl ? debtorEl.value : '{{ feuser_key }}';
+        }
+
+        function rebuildCreditorOptions() {
+            var dk = getDebtorKey();
+            var prev = creditorEl.value;
+            creditorEl.innerHTML = '';
+            MEMBERS.forEach(function (m) {
+                if (m.key === dk) return;
+                var opt = document.createElement('option');
+                opt.value = m.key;
+                opt.textContent = m.name;
+                if (m.key === prev) opt.selected = true;
+                creditorEl.appendChild(opt);
+            });
+        }
+
+        if (debtorEl) debtorEl.addEventListener('change', rebuildCreditorOptions);
+        rebuildCreditorOptions();
+
+        var memberMap = {};
+        MEMBERS.forEach(function (m) { memberMap[m.key] = m; });
+
+        document.getElementById('settle-individual-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            var dk = getDebtorKey();
+            var ck = creditorEl.value;
+            var creditorName = creditorEl.options[creditorEl.selectedIndex].textContent;
+            var amount = amountEl.value;
+            var debtorIsDummy  = !!(memberMap[dk] && memberMap[dk].is_dummy);
+            var creditorIsDummy = !!(memberMap[ck] && memberMap[ck].is_dummy);
+
+            var debtorName = memberMap[dk] ? memberMap[dk].name : dk;
+            var msg;
+            if (debtorIsDummy && creditorIsDummy) {
+                msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' from ' +
+                      debtorName + ' to ' + creditorName +
+                      '? This will be approved automatically.';
+            } else if (creditorIsDummy && IS_ADMIN) {
+                msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' to ' + creditorName +
+                      '? This will be approved automatically.';
+            } else if (creditorIsDummy) {
+                msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' to ' + creditorName +
+                      '? The group admin will be asked to confirm receipt.';
+            } else {
+                msg = 'Record a payment of {{ currency }}' + parseFloat(amount).toFixed(2) + ' to ' + creditorName +
+                      '? A settlement expense will be created and ' + creditorName + ' will be asked to confirm receipt.';
+            }
+
+            window.confirmDialog(msg, 'Create record')
+                .then(function () { e.target.submit(); }).catch(function () {});
+        });
+    })();
+    </script>
+</section>
+{% endif %}{# end not is_solo #}
+
+
+{# ── Waiting for Approval ─────────────────────────────────────────────────── #}
+{% if pending_expenses %}
+<section class="buddies-section">
+    <h2>Waiting for approval</h2>
+    <p class="page-subtitle">These expenses are not yet confirmed and do not count toward the current balances.</p>
+    <div class="bexp-breakdown-list">
+        {% for e in pending_expenses %}
+        <div id="pending-{{ e.expense.uid }}" class="bexp-breakdown-card {% if e.payer_is_me %}bexp-card-i-paid{% elif e.i_am_participant %}bexp-card-other-paid{% else %}bexp-card-neutral{% endif %} bexp-card-pending{% if e.creditor_approval_needed or e.admin_approval_needed %} bexp-card-approvable{% endif %}">
+            <div class="bexp-breakdown-header">
+                <div class="bexp-breakdown-header-left">
+                    <span class="bexp-title">
+                        {{ e.expense.title }}
+                        <span class="pill pill--warn pill--ml">Pending</span>
+                    </span>
+                    <span class="bexp-breakdown-meta">
+                        {% if e.expense.date_due %}{{ e.expense.date_due|date:"N j, Y" }} &middot; {% endif %}
+                        Total: <strong>{{ currency }}{{ e.total|floatformat:2 }}</strong> &middot;
+                        Paid by: <strong>{{ e.payer_name }}</strong>
+                    </span>
+                </div>
+                <div class="bexp-breakdown-header-right">
+                    {% if e.can_edit %}
+                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23pending-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Edit</a>
+                    {% endif %}
+
+                    {% if e.creditor_approval_needed %}
+                    <a href="{% url 'buddies:approve_settlement_as_creditor' expense_id=e.expense.uid %}" id="btn-review-settlement-{{ e.expense.uid }}" class="btn btn-sm btn-success">Review</a>
+                    {% endif %}
+                    {% if e.admin_approval_needed %}
+                    <a href="{% url 'projects:admin_approve_dummy_settlement' group_id=group.uid expense_id=e.expense.uid %}" id="btn-review-dummy-{{ e.expense.uid }}" class="btn btn-sm btn-success">Review</a>
+                    {% endif %}
+
+                    {% if e.can_delete %}
+                    <form method="post" action="{% url 'projects:group_expense_delete' group_id=group.uid expense_id=e.expense.uid %}" class="confirm-form" data-confirm="Delete this expense permanently? This affects all group members." data-ok="Delete">
+                        {% csrf_token %}
+                        <button type="submit" id="btn-delete-{{ e.expense.uid }}" class="btn btn-sm btn-danger-subtle">Delete</button>
+                    </form>
+                    {% endif %}
+                    {% if e.can_unlink %}
+                    <form method="post" action="{% url 'projects:group_expense_unlink' group_id=group.uid expense_id=e.expense.uid %}" class="confirm-form" data-confirm="Unlink this expense from the group? It will be removed from the group breakdown but remain in the owner's expense list." data-ok="Unlink">
+                        {% csrf_token %}
+                        <button type="submit" id="btn-unlink-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Unlink</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% include 'partials/_expense_avatars.html' with exp=e.expense payer_obj=e.payer_obj payer_name=e.payer_name %}
+            <table class="bexp-breakdown-table">
+                <thead>
+                    <tr><th>Person</th><th class="text-right">Share</th><th class="text-right">Amount</th><th>Role</th></tr>
+                </thead>
+                <tbody>
+                    <tr class="{% if e.payer_is_me %}bexp-row-me{% endif %}">
+                        <td>{{ e.payer_name }}</td>
+                        <td class="text-right">{{ e.payer_percent|floatformat:1 }}%</td>
+                        <td class="text-right">{{ currency }}{{ e.payer_amount|floatformat:2 }}</td>
+                        <td><span class="pill">Paid</span></td>
+                    </tr>
+                    {% for s in e.participant_shares %}
+                    <tr class="{% if s.is_me %}bexp-row-me{% endif %}">
+                        <td>{{ s.name }}</td>
+                        <td class="text-right">{{ s.percent|floatformat:1 }}%</td>
+                        <td class="text-right">{{ currency }}{{ s.amount|floatformat:2 }}</td>
+                        <td><span class="pill">Owes</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ── Expense Breakdown ────────────────────────────────────────────────────── #}
+{% if approved_expenses %}
+<section class="buddies-section">
+    <h2>Expense Breakdown</h2>
+    <p class="page-subtitle">Each expense and how the shares were calculated.</p>
+
+    <div class="bexp-breakdown-list">
+        {% for e in approved_expenses %}
+        <div id="expense-{{ e.expense.uid }}" class="bexp-breakdown-card {% if e.payer_is_me %}bexp-card-i-paid{% elif e.i_am_participant %}bexp-card-other-paid{% else %}bexp-card-neutral{% endif %}">
+            <div class="bexp-breakdown-header">
+                <div class="bexp-breakdown-header-left">
+                    <span class="bexp-title">{{ e.expense.title }}</span>
+                    <span class="bexp-breakdown-meta">
+                        {% if e.expense.date_due %}{{ e.expense.date_due|date:"N j, Y" }} &middot; {% endif %}
+                        Total: <strong>{{ currency }}{{ e.total|floatformat:2 }}</strong> &middot;
+                        Paid by: <strong>{{ e.payer_name }}</strong>
+                    </span>
+                </div>
+                <div class="bexp-breakdown-header-right">
+                    {% if e.can_edit %}
+                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Edit</a>
+                    {% endif %}
+
+                    {% if e.can_delete %}
+                    <form method="post" action="{% url 'projects:group_expense_delete' group_id=group.uid expense_id=e.expense.uid %}" class="confirm-form" data-confirm="Delete this expense permanently? This affects all group members." data-ok="Delete">
+                        {% csrf_token %}
+                        <button type="submit" id="btn-delete-{{ e.expense.uid }}" class="btn btn-sm btn-danger-subtle">Delete</button>
+                    </form>
+                    {% endif %}
+                    {% if e.can_unlink %}
+                    <form method="post" action="{% url 'projects:group_expense_unlink' group_id=group.uid expense_id=e.expense.uid %}" class="confirm-form" data-confirm="Unlink this expense from the group? It will be removed from the group breakdown but remain in the owner's expense list." data-ok="Unlink">
+                        {% csrf_token %}
+                        <button type="submit" id="btn-unlink-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Unlink</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% include 'partials/_expense_avatars.html' with exp=e.expense payer_obj=e.payer_obj payer_name=e.payer_name %}
+            <table class="bexp-breakdown-table">
+                <thead>
+                    <tr><th>Person</th><th class="text-right">Share</th><th class="text-right">Amount</th><th>Role</th></tr>
+                </thead>
+                <tbody>
+                    <tr class="{% if e.payer_is_me %}bexp-row-me{% endif %}">
+                        <td>{{ e.payer_name }}</td>
+                        <td class="text-right">{{ e.payer_percent|floatformat:1 }}%</td>
+                        <td class="text-right">{{ currency }}{{ e.payer_amount|floatformat:2 }}</td>
+                        <td><span class="pill">Paid</span></td>
+                    </tr>
+                    {% for s in e.participant_shares %}
+                    <tr class="{% if s.is_me %}bexp-row-me{% endif %}">
+                        <td>{{ s.name }}</td>
+                        <td class="text-right">{{ s.percent|floatformat:1 }}%</td>
+                        <td class="text-right">{{ currency }}{{ s.amount|floatformat:2 }}</td>
+                        <td><span class="pill">Owes</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ── Members ──────────────────────────────────────────────────────────────── #}
+<section class="buddies-section">
+    <h2>Members</h2>
+    <div class="buddy-list">
+
+        <div class="buddy-card">
+            <div class="buddy-card-identity">
+                {% include 'partials/_avatar.html' with user_obj=request.feuser %}
+                <div class="buddy-card-identity-text">
+                    <span class="buddy-name">{{ request.feuser.first_name }} {{ request.feuser.last_name }}</span>
+                    <span class="buddy-email">{{ request.feuser.email }}</span>
+                    <span class="pill">You{% if group.admin_feuser_id == request.feuser.pk %} &middot; Admin{% endif %}</span>
+                </div>
+            </div>
+            <div></div>
+            <div></div>
+        </div>
+
+        {% for m in feuser_members %}
+        <div class="buddy-card">
+            <div class="buddy-card-identity">
+                {% include 'partials/_avatar.html' with user_obj=m.feuser %}
+                <div class="buddy-card-identity-text">
+                    <span class="buddy-name">{{ m.feuser.first_name }} {{ m.feuser.last_name }}</span>
+                    <span class="buddy-email">{{ m.feuser.email }}</span>
+                    {% if m.feuser.pk == group.admin_feuser_id %}<span class="pill">Admin</span>{% endif %}
+                </div>
+            </div>
+            <div></div>
+            <div class="buddy-card-actions">
+                {% if is_admin %}
+                <form method="post" action="{% url 'projects:project_remove_member' project_id=group.uid member_id=m.uid %}" class="confirm-form" data-confirm="Remove {{ m.feuser.first_name|default:m.feuser.email }} from the group? Their past expenses will stay in the group history under an offline entry." data-ok="Remove">
+                    {% csrf_token %}
+                    <button type="submit" id="btn-remove-member-{{ m.uid }}" class="btn btn-sm btn-danger-subtle">Remove</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        {% for m in dummy_members %}{% if not m.dummy.is_archive %}
+        <div class="buddy-card buddy-card-dummy">
+            <div class="buddy-card-identity">
+                {% include 'partials/_avatar.html' with user_obj=m.dummy avatar_data_id=m.dummy.uid %}
+                <div class="buddy-card-identity-text">
+                    {% if is_admin %}
+                    <span class="buddy-name buddy-name--editable"
+                          data-rename-url="{% url 'projects:project_rename_dummy' project_id=group.uid dummy_id=m.dummy.uid %}"
+                          title="Click to rename">{{ m.dummy.display_name }}</span>
+                    {% else %}
+                    <span class="buddy-name">{{ m.dummy.display_name }}</span>
+                    {% endif %}
+                    <span class="pill">Offline member</span>
+                </div>
+            </div>
+            <div></div>
+            <div class="buddy-card-actions">
+                {% if is_admin %}
+                <button class="btn btn-sm btn-secondary"
+                        data-dummy-id="{{ m.dummy.uid }}"
+                        data-dummy-name="{{ m.dummy.display_name|escapejs }}"
+                        data-has-pic="{% if m.dummy.profile_picture %}1{% else %}0{% endif %}"
+                        data-ppic-url="{{ m.dummy.ppic_url }}"
+                        data-initials="{{ m.dummy.initials }}"
+                        data-avatar-color="{{ m.dummy.initials|avatar_color }}"
+                        onclick="openDummyPicModal(this)">
+                    Upload picture
+                </button>
+                <button class="btn btn-sm btn-secondary" id="merge-btn-{{ m.dummy.uid }}"
+                        onclick="this.style.display='none';document.getElementById('merge-form-{{ m.dummy.uid }}').style.display='flex'">
+                    Invite as user
+                </button>
+                <form id="merge-form-{{ m.dummy.uid }}" method="post"
+                      action="{% url 'projects:project_send_merge' project_id=group.uid dummy_id=m.dummy.uid %}"
+                      style="display:none;gap:6px;flex-wrap:wrap;align-items:center;">
+                    {% csrf_token %}
+                    <input type="email" name="email" placeholder="Their email" class="input-inline" required>
+                    <button type="submit" class="btn btn-sm">Send</button>
+                    <button type="button" class="btn btn-sm btn-secondary"
+                            onclick="this.closest('form').style.display='none';document.getElementById('merge-btn-{{ m.dummy.uid }}').style.display=''">
+                        Cancel
+                    </button>
+                </form>
+                <a href="{% url 'projects:project_remove_member' project_id=group.uid member_id=m.uid %}" class="btn btn-sm btn-danger-subtle">Remove</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}{% endfor %}
+
+        {# ── Achim Archive (shown last, styled distinctly) ──────────────────── #}
+        {% for m in dummy_members %}{% if m.dummy.is_archive %}
+        <div class="buddy-card buddy-card-dummy">
+            <div class="buddy-card-identity">
+                {% include 'partials/_avatar.html' with user_obj=m.dummy %}
+                <div class="buddy-card-identity-text">
+                    <span class="buddy-name">{{ m.dummy.display_name }}</span>
+                    <span class="pill">Archive</span>
+                </div>
+            </div>
+            <div></div>
+            <div class="buddy-card-actions">
+                {% if is_admin %}
+                <a href="{% url 'projects:project_archive_wipe' project_id=group.uid dummy_id=m.dummy.uid %}" class="btn btn-sm btn-danger-subtle">Delete expenses</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}{% endfor %}
+
+    </div>
+</section>
+
+{% if is_admin and not project.archived %}
+<section class="buddies-section">
+    <h2>Invite members</h2>
+    <div class="add-buddy-forms">
+
+        <div class="add-buddy-panel">
+            <h3>Invite by email</h3>
+            <p class="text-muted">Sends a group invitation. If the person is not yet your buddy, a buddy connection is established at the same time.</p>
+            <form method="post" action="{% url 'projects:project_invite_member' project_id=group.uid %}" class="inline-form">
+                {% csrf_token %}
+                <input type="email" name="email" placeholder="Email address" required class="input-inline">
+                <button type="submit" id="btn-group-invite" class="btn">Send invite</button>
+            </form>
+        </div>
+
+        <div class="add-buddy-panel">
+            <h3>Add offline member</h3>
+            <p class="text-muted">For people who don't use Comaney. You can invite them to the group later.</p>
+            <form method="post" action="{% url 'projects:project_add_dummy' project_id=group.uid %}" class="inline-form">
+                {% csrf_token %}
+                <input type="text" name="display_name" placeholder="Display name" maxlength="128" required class="input-inline">
+                <button type="submit" id="btn-group-add-dummy" class="btn">Add</button>
+            </form>
+        </div>
+
+    </div>
+
+    {% if pending_invites %}
+    <h3>Pending invitations</h3>
+    {% for invite in pending_invites %}
+    <div class="invite-card invite-card-outgoing">
+        <p>Sent to <strong>{{ invite.invitee_email }}</strong>. Expires {{ invite.expires_at|date:"N j, Y" }}.</p>
+        <form method="post" action="{% url 'projects:project_revoke_invite' project_id=group.uid token=invite.token %}">
+            {% csrf_token %}
+            <button type="submit" id="btn-revoke-group-invite-{{ invite.token }}" class="btn btn-sm btn-secondary">Revoke</button>
+        </form>
+    </div>
+    {% endfor %}
+    {% endif %}
+</section>
+{% endif %}{# end is_admin and not archived #}
+
+{% if is_admin %}
+<section class="buddies-section">
+    <h2>Admin actions</h2>
+    <div class="add-buddy-forms">
+
+        <div class="add-buddy-panel">
+            <h3>Rename project</h3>
+            <p class="text-muted">Update the project name and optional description.</p>
+            <form method="post" action="{% url 'projects:project_rename' project_id=project.uid %}" class="stacked-form">
+                {% csrf_token %}
+                <label for="project-rename-name">Project name</label>
+                <input type="text" id="project-rename-name" name="name" value="{{ project.name }}" maxlength="128" required class="input-block">
+                <label for="project-rename-desc">Description <span class="text-muted">(optional)</span></label>
+                <textarea id="project-rename-desc" name="description" maxlength="500" rows="3" class="input-block">{{ project.description }}</textarea>
+                <button type="submit" id="btn-rename-project" class="btn">Save</button>
+            </form>
+        </div>
+
+        {% if feuser_members %}
+        <div class="add-buddy-panel">
+            <h3>Transfer admin rights</h3>
+            <p class="text-muted">Transfer your admin role to another member. You will remain a regular member.</p>
+            <form method="post" action="{% url 'projects:project_transfer_admin' project_id=group.uid %}" class="inline-form confirm-form" data-confirm="Transfer admin rights? You will become a regular member." data-ok="Transfer">
+                {% csrf_token %}
+                <select name="new_admin_id" class="input-inline">
+                    {% for m in feuser_members %}
+                    <option value="{{ m.feuser.pk }}">{{ m.feuser.first_name }} {{ m.feuser.last_name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" id="btn-transfer-admin" class="btn btn-secondary">Transfer</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="add-buddy-panel">
+            <h3>Project picture</h3>
+            <p class="text-muted">Shown as a background on the project card. Recommended: landscape, at least 800 px wide.</p>
+            <form method="post" action="{% url 'projects:project_picture' project_id=project.uid %}" enctype="multipart/form-data" class="inline-form">
+                {% csrf_token %}
+                <input type="file" name="group_picture" accept="image/*" class="input-inline" id="project-pic-input">
+                <button type="submit" id="btn-upload-project-pic" class="btn">Upload</button>
+            </form>
+            {% if project.group_picture %}
+            <form method="post" action="{% url 'projects:project_picture' project_id=project.uid %}" class="mt-sm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <button type="submit" id="btn-delete-project-pic" class="btn btn-danger-subtle btn-sm">Remove picture</button>
+            </form>
+            {% endif %}
+        </div>
+
+        {% if not project.archived %}
+        <div class="add-buddy-panel">
+            <h3>Archive project</h3>
+            <p class="text-muted">Freezes the project: no new expenses or settlements can be added. Existing data is preserved. You can unarchive at any time.</p>
+            <form method="post" action="{% url 'projects:project_archive' project_id=project.uid %}">
+                {% csrf_token %}
+                <button type="submit" id="btn-archive-project" class="btn btn-secondary">Archive project</button>
+            </form>
+        </div>
+        {% else %}
+        <div class="add-buddy-panel">
+            <h3>Unarchive project</h3>
+            <p class="text-muted">Reactivates the project so new expenses and settlements can be added.</p>
+            <form method="post" action="{% url 'projects:project_unarchive' project_id=project.uid %}">
+                {% csrf_token %}
+                <button type="submit" id="btn-unarchive-project" class="btn btn-secondary">Unarchive project</button>
+            </form>
+        </div>
+        {% endif %}
+
+        {% if not feuser_members %}
+        <div class="add-buddy-panel">
+            <h3>Delete project</h3>
+            <p class="text-muted">Permanently deletes this project and all associated data. This cannot be undone. Enter the project name to confirm.</p>
+            <div id="delete-project-panel">
+                <input type="text" id="delete-confirm-name" class="input-block mb-sm" placeholder="Type project name to confirm">
+                <form method="post" action="{% url 'projects:project_delete' project_id=project.uid %}" id="delete-project-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="confirm_name" id="delete-confirm-name-input">
+                    <button type="submit" id="btn-delete-project" class="btn btn-danger-subtle" disabled>Delete project</button>
+                </form>
+            </div>
+            <script>
+            (function() {
+                var inp = document.getElementById('delete-confirm-name');
+                var btn = document.getElementById('btn-delete-project');
+                var hidden = document.getElementById('delete-confirm-name-input');
+                var expected = "{{ project.name|escapejs }}";
+                inp.addEventListener('input', function() {
+                    btn.disabled = inp.value !== expected;
+                    hidden.value = inp.value;
+                });
+            })();
+            </script>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endif %}
+
+{% if not is_admin %}
+<section class="buddies-section">
+    <h2>Leave project</h2>
+    <p class="text-muted">You'll be removed from this project. Your past expenses will remain visible to other members, listed under an offline entry with your name.</p>
+    <form method="post" action="{% url 'projects:project_leave' project_id=project.uid %}" class="confirm-form" data-confirm='Leave "{{ project.name }}"? Your past expenses will stay in the project history under an offline entry.' data-ok="Leave">
+        {% csrf_token %}
+        <button type="submit" id="btn-leave-project" class="btn btn-danger-subtle">Leave project</button>
+    </form>
+</section>
+{% endif %}
+
+<div class="mt-1">
+    <a href="{% url 'projects:projects_list' %}" class="btn btn-secondary btn-sm">&larr; Back to Projects</a>
+</div>
+
+{% include 'partials/_dummy_pic_modal.html' %}
+
+{% if is_admin %}
+<script>
+(function () {
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+    function startRename(span) {
+        if (span.querySelector('input')) return;
+        const url = span.dataset.renameUrl;
+        const original = span.textContent.trim();
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'ct-name-input';
+        input.value = original;
+        input.maxLength = 128;
+        span.textContent = '';
+        span.appendChild(input);
+        input.focus();
+        input.select();
+
+        let committed = false;
+
+        async function commit() {
+            if (committed) return;
+            committed = true;
+            const newName = input.value.trim();
+            if (!newName || newName === original) {
+                span.textContent = original;
+                return;
+            }
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body: JSON.stringify({ display_name: newName }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                span.textContent = data.display_name;
+                const picBtn = span.closest('.buddy-card-identity-text')
+                    ?.closest('.buddy-card')
+                    ?.querySelector('[data-dummy-name]');
+                if (picBtn) picBtn.dataset.dummyName = data.display_name;
+            } else {
+                span.textContent = original;
+            }
+        }
+
+        function cancel() {
+            committed = true;
+            span.textContent = original;
+        }
+
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') { cancel(); }
+        });
+        input.addEventListener('blur', commit);
+    }
+
+    document.addEventListener('click', e => {
+        const span = e.target.closest('.buddy-name--editable');
+        if (span) startRename(span);
+    });
+})();
+</script>
+{% endif %}
+
+{% endblock %}

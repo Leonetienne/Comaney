@@ -8,7 +8,7 @@ from ._helpers import _display_name
 from .archive import BuddyArchiveService
 from .email import BuddyEmailService
 from .expense import BuddyExpenseService
-from .group import BuddyGroupService
+from .group import BuddyGroupService, ProjectService
 from .lifecycle import BuddyLifecycleService
 from .query import BuddyQueryService
 from .settlement import BuddySettlementService
@@ -18,6 +18,7 @@ __all__ = [
     "BuddyEmailService",
     "BuddyExpenseService",
     "BuddyGroupService",
+    "ProjectService",
     "BuddyLifecycleService",
     "BuddyQueryService",
     "BuddySettlementService",

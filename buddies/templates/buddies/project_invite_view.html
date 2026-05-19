@@ -1,0 +1,22 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - Project invitation{% endblock %}
+
+{% block content %}
+<div class="form-wrap form-wrap--centered">
+    <h1>You're invited!</h1>
+    <p><strong>{{ inviter_name }}</strong> has invited you to join the project <strong>{{ invite.group.name }}</strong> on Comaney.</p>
+    <p class="text-subtle font-sm">Accepting also connects you as spending buddies with {{ inviter_name }} if you aren't already.</p>
+
+    <div class="invite-actions mt-lg">
+        <form method="post" action="{% url 'projects:accept_project_invite' invite.token %}">
+            {% csrf_token %}
+            <button type="submit" id="btn-accept-project-invite" class="btn">Join project</button>
+        </form>
+        <form method="post" action="{% url 'projects:decline_project_invite' invite.token %}">
+            {% csrf_token %}
+            <button type="submit" id="btn-decline-project-invite" class="btn btn-secondary">Decline</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

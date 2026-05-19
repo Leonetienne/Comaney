@@ -18,51 +18,6 @@
 {% endfor %}
 {% endif %}
 
-{% if my_groups_summary %}
-<section class="buddies-section bgs-grid-section">
-    <h2>Groups</h2>
-    <div class="bgs-cards">
-        {% for gs in my_groups_summary %}
-        <a href="{% url 'buddies:group_detail' gs.group.uid %}" class="bgs-card bgs-card-{{ gs.net_state }}{% if gs.group.group_picture %} bgs-card--has-bg{% endif %}"{% if gs.group.group_picture %} style="background-image: url('/media/bgpics/{{ gs.group.uid }}.webp')"{% endif %}>
-            <div class="bgs-card-top">
-                <span class="bgs-name">{{ gs.group.name }}</span>
-                {% if gs.is_admin %}<span class="pill pill--accent">Admin</span>{% endif %}
-            </div>
-            <div class="bgs-card-stats">
-                {% if gs.has_multiple_members %}
-                <div class="bgs-stat bgs-stat--{{ gs.net_state }}">
-                    <span class="bgs-stat-label">Your balance</span>
-                    <span class="bgs-stat-value">
-                        {% if gs.net_state == "positive" %}+{{ request.feuser.currency }}{{ gs.net|floatformat:2 }}
-                        {% elif gs.net_state == "negative" %}-{{ request.feuser.currency }}{{ gs.net_abs|floatformat:2 }}
-                        {% else %}All settled{% endif %}
-                    </span>
-                </div>
-                {% endif %}
-                {% if gs.group_total_spending %}
-                <div class="bgs-stat">
-                    <span class="bgs-stat-label">Ausgaben</span>
-                    <span class="bgs-stat-value">{{ request.feuser.currency }}{{ gs.group_total_spending|floatformat:2 }}</span>
-                </div>
-                {% endif %}
-            </div>
-            {% if gs.group.description %}
-            <p class="bgs-description">{{ gs.group.description_inline }}</p>
-            {% else %}
-            <div class="bgs-members">
-                {% for name in gs.members_display %}
-                <span class="pill pill--rounded">{{ name }}</span>
-                {% endfor %}
-                {% if gs.extra_members > 0 %}
-                <span class="pill pill--rounded pill--muted">+{{ gs.extra_members }} more</span>
-                {% endif %}
-            </div>
-            {% endif %}
-        </a>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
 
 {% if pending_approvals %}
 <section class="buddies-section">
@@ -120,7 +75,7 @@
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
-                    <form method="post" action="{% url 'buddies:admin_approve_dummy_settlement' exp.buddy_group_id exp.uid %}">
+                    <form method="post" action="{% url 'projects:admin_approve_dummy_settlement' group_id=exp.project_id expense_id=exp.uid %}">
                         {% csrf_token %}
                         <button type="submit" id="btn-admin-approve-{{ exp.uid }}" class="btn btn-sm btn-success">Approve</button>
                     </form>
@@ -139,7 +94,7 @@
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
-                    <a href="{% url 'buddies:admin_approve_dummy_settlement' exp.buddy_group_id exp.uid %}" id="btn-review-dummy-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>
+                    <a href="{% url 'projects:admin_approve_dummy_settlement' group_id=exp.project_id expense_id=exp.uid %}" id="btn-review-dummy-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>
                 </div>
             </div>
             {% include 'partials/_expense_avatars.html' with exp=exp %}

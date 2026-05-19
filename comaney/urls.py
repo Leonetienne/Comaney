@@ -23,6 +23,7 @@ urlpatterns = [
     path("api/v1/", include("api.urls")),
     path("budget/", include("budget.urls")),
     path("buddies/", include("buddies.urls")),
+    path("projects/", include("buddies.urls_projects", namespace="projects")),
     path("media/<path:path>", media_serve, name="media_serve"),
     re_path(r"^docs/(?P<path>.*)$", _serve_docs, name="docs"),
     path("", include("feusers.urls")),

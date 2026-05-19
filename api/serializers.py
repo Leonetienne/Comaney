@@ -88,6 +88,7 @@ def _expense_json(exp):
         "is_buddies_settlement":        exp.is_buddies_settlement,
         "can_delete":                   _settlement_can_delete(exp),
         "can_edit":                     exp.settlement_can_edit,
+        "project":                      {"id": exp.project_id, "name": exp.project.name} if exp.project_id else None,
     }
 
 

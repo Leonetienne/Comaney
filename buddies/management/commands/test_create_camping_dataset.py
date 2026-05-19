@@ -110,7 +110,7 @@ class Command(BaseCommand):
             category=_cat(anna, "Travel & Holidays"),
             date_due=day1,
             buddy_approved=True,
-            buddy_group=group,
+            project=group,
             buddy_spendings=[
                 _s(_fu(ben),   20),
                 _s(_fu(clara), 20),
@@ -129,7 +129,7 @@ class Command(BaseCommand):
             category=_cat(ben, "Miscellaneous"),
             date_due=day1,
             buddy_approved=True,
-            buddy_group=group,
+            project=group,
             buddy_spendings=[
                 _s(_fu(anna),  "33.333"),
                 _s(_fu(clara), "33.334"),
@@ -146,7 +146,7 @@ class Command(BaseCommand):
             category=_cat(clara, "Groceries"),
             date_due=day1,
             buddy_approved=True,
-            buddy_group=group,
+            project=group,
             buddy_spendings=[
                 _s(_fu(anna), "33.333"),
                 _s(_fu(ben),  "33.334"),
@@ -165,7 +165,7 @@ class Command(BaseCommand):
             is_dummy=True,
             upfront_payee_dummy=ranger,
             buddy_approved=True,
-            buddy_group=group,
+            project=group,
             buddy_spendings=[
                 _s(_fu(anna),  20),
                 _s(_fu(ben),   20),
@@ -184,7 +184,7 @@ class Command(BaseCommand):
             category=_cat(anna, "Groceries"),
             date_due=day2,
             buddy_approved=True,
-            buddy_group=group,
+            project=group,
             buddy_spendings=[
                 _s(_fu(ben),   20),
                 _s(_fu(clara), 20),
@@ -203,7 +203,7 @@ class Command(BaseCommand):
             category=_cat(ben, "Entertainment"),
             date_due=day2,
             buddy_approved=True,
-            buddy_group=group,
+            project=group,
             buddy_spendings=[
                 _s(_fu(anna),  "33.333"),
                 _s(_fu(clara), "33.334"),
@@ -222,7 +222,7 @@ class Command(BaseCommand):
             is_dummy=True,
             upfront_payee_dummy=dog,
             buddy_approved=True,
-            buddy_group=group,
+            project=group,
             buddy_spendings=[
                 _s(_fu(ben),   50),
                 _s(_fu(clara), 50),
@@ -239,7 +239,7 @@ class Command(BaseCommand):
             category=_cat(clara, "Dining & Bars"),
             date_due=day2,
             buddy_approved=True,
-            buddy_group=group,
+            project=group,
             buddy_spendings=[
                 _s(_fu(anna), "33.333"),
                 _s(_fu(ben),  "33.334"),
@@ -256,7 +256,7 @@ class Command(BaseCommand):
             category=_cat(anna, "Transport"),
             date_due=day3,
             buddy_approved=True,
-            buddy_group=group,
+            project=group,
             buddy_spendings=[
                 _s(_fu(ben),   "33.333"),
                 _s(_fu(clara), "33.334"),
@@ -271,7 +271,7 @@ class Command(BaseCommand):
             value=Decimal("30.00"),
             date_due=day3,
             buddy_approved=False,
-            buddy_group=group,
+            project=group,
             buddy_spendings=[
                 _s(_fu(anna), 100),
             ],

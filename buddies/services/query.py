@@ -8,8 +8,9 @@ from feusers.templatetags.feuser_tags import avatar_color as _avatar_color
 
 from ..debt_utils import simplify_balances
 from ..models import (
-    BuddyGroup,
-    BuddyGroupInvite,
+    Project,
+    ProjectInvite,
+    BuddyGroupInvite,  # alias for ProjectInvite
     BuddyInvite,
     BuddyLink,
     BuddySpending,
@@ -17,6 +18,9 @@ from ..models import (
     DummyUser,
 )
 from ._helpers import _display_name
+
+# Alias for legacy code
+BuddyGroup = Project
 
 
 class BuddyQueryService:
@@ -35,14 +39,29 @@ class BuddyQueryService:
 
     @staticmethod
     def get_groups_for_feuser(feuser) -> list:
-        """Return list of BuddyGroup objects the feuser is a member of."""
-        return list(
-            BuddyGroup.objects
-            .filter(members__feuser=feuser)
-            .prefetch_related("members__feuser", "members__dummy")
-            .distinct()
-            .order_by("name")
+        """Return list of Project objects the feuser is a member of (legacy name)."""
+        return BuddyQueryService.get_projects_for_feuser(feuser)
+
+    @staticmethod
+    def get_projects_for_feuser(feuser) -> list:
+        """Return projects for feuser, sorted: non-archived first by sorting/last_mod, archived last."""
+        from ..models import ProjectMember
+        memberships = (
+            ProjectMember.objects
+            .filter(feuser=feuser)
+            .select_related("group")
+            .prefetch_related("group__members__feuser", "group__members__dummy")
         )
+        rows = []
+        for m in memberships:
+            rows.append((m.group, m.sorting, m.group.last_mod))
+        rows.sort(key=lambda x: (1 if x[0].archived else 0, x[1], -x[0].last_mod.timestamp()))
+        return [r[0] for r in rows]
+
+    @staticmethod
+    def get_active_projects_for_feuser(feuser) -> list:
+        """Return non-archived projects for feuser, sorted by sorting/last_mod."""
+        return [p for p in BuddyQueryService.get_projects_for_feuser(feuser) if not p.archived]
 
     @staticmethod
     def get_group_summaries_for_feuser(feuser) -> list:
@@ -71,7 +90,7 @@ class BuddyQueryService:
             group_total_spending = Decimal("0")
             expenses = (
                 Expense.objects
-                .filter(buddy_group=group, buddy_approved=True)
+                .filter(project=group, buddy_approved=True)
                 .prefetch_related("buddy_spendings")
             )
             for exp in expenses:
@@ -133,16 +152,24 @@ class BuddyQueryService:
 
     @staticmethod
     def groups_data_for_expense_form(feuser) -> list:
+        """Legacy alias for projects_data_for_expense_form."""
+        return BuddyQueryService.projects_data_for_expense_form(feuser)
+
+    @staticmethod
+    def projects_data_for_expense_form(feuser) -> list:
         """
-        Serialize group membership for JSON injection into the expense form.
-        Returns a list of group dicts with member info.
+        Serialize active project membership for JSON injection into the expense form.
+        Returns a list of project dicts with member info. Excludes archived projects.
         """
-        groups = BuddyQueryService.get_groups_for_feuser(feuser)
+        projects = BuddyQueryService.get_active_projects_for_feuser(feuser)
         result = []
-        for group in groups:
+        for project in projects:
             members = []
-            for m in group.members.select_related("feuser", "dummy").all():
+            feuser_count = 0
+            dummy_count = 0
+            for m in project.members.select_related("feuser", "dummy").all():
                 if m.feuser_id:
+                    feuser_count += 1
                     fu = m.feuser
                     name = f"{fu.first_name} {fu.last_name}".strip() or fu.email
                     members.append({
@@ -155,6 +182,7 @@ class BuddyQueryService:
                         "avatarColor": _avatar_color(fu.initials),
                     })
                 else:
+                    dummy_count += 1
                     members.append({
                         "type": "dummy",
                         "id": m.dummy_id,
@@ -164,10 +192,13 @@ class BuddyQueryService:
                         "initials": m.dummy.initials,
                         "avatarColor": _avatar_color(m.dummy.initials),
                     })
+            is_solo = feuser_count == 1 and dummy_count == 0
             result.append({
-                "id": group.uid,
-                "name": group.name,
-                "is_admin": group.admin_feuser_id == feuser.pk,
+                "id": project.uid,
+                "name": project.name,
+                "is_admin": project.admin_feuser_id == feuser.pk,
+                "is_solo": is_solo,
+                "has_picture": project.group_picture,
                 "members": members,
             })
         return result
@@ -195,7 +226,7 @@ class BuddyQueryService:
                     participant_feuser=buddy_feuser,
                     expense__owning_feuser=feuser,
                     expense__is_dummy=False,
-                    expense__buddy_group__isnull=True,
+                    expense__project__isnull=True,
                     expense__buddy_approved=True,
                 ).select_related("expense")
             )
@@ -205,7 +236,7 @@ class BuddyQueryService:
                     participant_feuser=feuser,
                     expense__owning_feuser=buddy_feuser,
                     expense__is_dummy=False,
-                    expense__buddy_group__isnull=True,
+                    expense__project__isnull=True,
                     expense__buddy_approved=True,
                 ).select_related("expense")
             )
@@ -217,7 +248,7 @@ class BuddyQueryService:
                     participant_dummy=buddy_dummy,
                     expense__owning_feuser=feuser,
                     expense__is_dummy=False,
-                    expense__buddy_group__isnull=True,
+                    expense__project__isnull=True,
                     expense__buddy_approved=True,
                 ).select_related("expense")
             )
@@ -225,7 +256,7 @@ class BuddyQueryService:
                 owning_feuser=feuser,
                 upfront_payee_dummy=buddy_dummy,
                 is_dummy=True,
-                buddy_group__isnull=True,
+                project__isnull=True,
                 buddy_approved=True,
             ).prefetch_related("buddy_spendings")
             for exp in dummy_expenses:
@@ -266,7 +297,7 @@ class BuddyQueryService:
 
         expenses = (
             Expense.objects
-            .filter(buddy_group=group, buddy_approved=True)
+            .filter(project=group, buddy_approved=True)
             .prefetch_related("buddy_spendings")
             .select_related("owning_feuser", "upfront_payee_dummy")
         )
@@ -344,7 +375,7 @@ class BuddyQueryService:
         feuser_key = f"f{feuser.pk}"
         expenses_qs = (
             Expense.objects
-            .filter(buddy_group=group)
+            .filter(project=group)
             .prefetch_related("buddy_spendings")
             .select_related("owning_feuser", "upfront_payee_dummy")
             .order_by("-date_created")
@@ -531,11 +562,11 @@ class BuddyQueryService:
                 Q(owning_feuser=feuser, buddy_spendings__isnull=False) |
                 Q(owning_feuser=feuser, is_dummy=True) |
                 Q(owning_feuser_id__in=buddy_feuserids, buddy_spendings__participant_feuser=feuser) |
-                Q(buddy_group_id__in=group_ids, buddy_spendings__participant_feuser=feuser) |
-                Q(buddy_group_id__in=group_ids, owning_feuser=feuser)
+                Q(project_id__in=group_ids, buddy_spendings__participant_feuser=feuser) |
+                Q(project_id__in=group_ids, owning_feuser=feuser)
             )
             .distinct()
-            .select_related("owning_feuser", "category", "upfront_payee_dummy", "buddy_group")
+            .select_related("owning_feuser", "category", "upfront_payee_dummy", "project")
             .prefetch_related(
                 "buddy_spendings__participant_feuser",
                 "buddy_spendings__participant_dummy",

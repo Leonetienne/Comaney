@@ -261,7 +261,7 @@ class BuddySettlementService:
             notify=False,
             is_buddies_settlement=True,
             buddy_approved=auto_approve,
-            buddy_group=group,
+            project=group,
             buddy_spendings=bs,
             is_dummy=is_dummy_expense,
             upfront_payee_dummy=debtor_dummy if is_dummy_expense else None,
@@ -272,6 +272,7 @@ class BuddySettlementService:
                 expense, acting_feuser, creditor_feuser, debtor_name
             )
 
+        group.update_lastmod()
         return True
 
     @staticmethod
@@ -345,7 +346,7 @@ class BuddySettlementService:
                     notify=False,
                     is_buddies_settlement=True,
                     buddy_approved=auto_approve,
-                    buddy_group=group,
+                    project=group,
                     buddy_spendings=bs,
                     is_dummy=is_dummy_exp,
                     upfront_payee_dummy=debtor_dummy if is_dummy_exp else None,

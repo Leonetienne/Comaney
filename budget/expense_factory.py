@@ -26,7 +26,8 @@ def create_expense(
     is_buddies_settlement: bool = False,
     buddy_approved: bool = True,
     upfront_payee_dummy=None,
-    buddy_group=None,
+    project=None,
+    buddy_group=None,  # legacy alias for project
     buddy_spendings: Optional[list[dict]] = None,
 ) -> Expense:
     expense = Expense.objects.create(
@@ -46,7 +47,7 @@ def create_expense(
         is_buddies_settlement=is_buddies_settlement,
         buddy_approved=buddy_approved,
         upfront_payee_dummy=upfront_payee_dummy,
-        buddy_group=buddy_group,
+        project=project or buddy_group,
     )
     if tags:
         expense.tags.set(tags)

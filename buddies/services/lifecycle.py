@@ -6,7 +6,8 @@ from django.conf import settings
 from django.db import transaction
 
 from ..models import (
-    BuddyGroupMember,
+    ProjectMember,
+    BuddyGroupMember,  # alias for ProjectMember
     BuddyInvite,
     BuddyLink,
     BuddyOnboardingInvite,
@@ -170,7 +171,7 @@ class BuddyLifecycleService:
         feuser_expenses_with_other = Expense.objects.filter(
             owning_feuser=feuser,
             is_dummy=False,
-            buddy_group__isnull=True,
+            project__isnull=True,
             buddy_spendings__participant_feuser=other_feuser,
         ).distinct()
         for exp in feuser_expenses_with_other:
@@ -188,7 +189,7 @@ class BuddyLifecycleService:
         BuddySpending.objects.filter(
             participant_feuser=feuser,
             expense__owning_feuser=other_feuser,
-            expense__buddy_group__isnull=True,
+            expense__project__isnull=True,
         ).update(participant_feuser=None, participant_dummy=kicker_dummy_for_other)
 
         link.delete()
@@ -219,13 +220,13 @@ class BuddyLifecycleService:
             BuddySpending.objects.filter(
                 participant_feuser=feuser,
                 expense__owning_feuser=other,
-                expense__buddy_group__isnull=True,
+                expense__project__isnull=True,
             ).update(participant_feuser=None, participant_dummy=ghost_dummy)
 
             feuser_exps = Expense.objects.filter(
                 owning_feuser=feuser,
                 is_dummy=False,
-                buddy_group__isnull=True,
+                project__isnull=True,
                 buddy_spendings__participant_feuser=other,
             ).distinct()
             for exp in feuser_exps:
@@ -235,6 +236,18 @@ class BuddyLifecycleService:
 
         for membership in BuddyGroupMember.objects.filter(feuser=feuser).select_related("group"):
             group = membership.group
+
+            # If feuser is the only real FeUser in this project, delete the whole project
+            other_real_member = (
+                BuddyGroupMember.objects
+                .filter(group=group, feuser__isnull=False)
+                .exclude(feuser=feuser)
+                .first()
+            )
+            if not other_real_member:
+                group.delete()
+                continue
+
             if group.admin_feuser_id == feuser.pk:
                 other_member = (
                     BuddyGroupMember.objects

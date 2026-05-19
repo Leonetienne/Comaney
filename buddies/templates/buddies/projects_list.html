@@ -1,0 +1,148 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - Projects{% endblock %}
+
+{% block content %}
+{% load feuser_tags %}
+<div class="page-header">
+    <h1>Projects</h1>
+</div>
+<p class="page-subtitle">Track shared expenses across a group or solo. Invite others to join, or keep it personal.</p>
+
+{% if messages %}
+{% for message in messages %}
+<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+
+{% if project_summaries %}
+<section class="buddies-section bgs-grid-section">
+    <div class="bgs-cards" id="projects-sortable">
+        {% for ps in project_summaries %}{% with project=ps.project %}
+        <a href="{% url 'projects:project_detail' project_id=project.uid %}"
+           class="bgs-card bgs-card-{{ ps.net_state }}{% if project.group_picture %} bgs-card--has-bg{% endif %}{% if project.archived %} bgs-card--archived{% endif %}"
+           {% if project.group_picture %}style="background-image: url('/media/bgpics/{{ project.uid }}.webp')"{% endif %}
+           data-project-id="{{ project.uid }}">
+            <div class="bgs-card-top">
+                <span class="bgs-name">{{ project.name }}</span>
+                <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+                    {% if ps.is_admin %}<span class="pill pill--accent">Admin</span>{% endif %}
+                    {% if project.archived %}<span class="pill" style="opacity:0.7;">Archived</span>{% endif %}
+                </div>
+            </div>
+            <div class="bgs-card-stats">
+                {% if ps.has_multiple_members and ps.net_state != 'settled' %}
+                <div class="bgs-stat bgs-stat--{{ ps.net_state }}">
+                    <span class="bgs-stat-label">Your balance</span>
+                    <span class="bgs-stat-value">
+                        {% if ps.net_state == "positive" %}+{{ currency }}{{ ps.net|floatformat:2 }}
+                        {% else %}-{{ currency }}{{ ps.net_abs|floatformat:2 }}
+                        {% endif %}
+                    </span>
+                </div>
+                {% endif %}
+                {% if ps.group_total_spending %}
+                <div class="bgs-stat">
+                    <span class="bgs-stat-label">Total spending</span>
+                    <span class="bgs-stat-value">{{ currency }}{{ ps.group_total_spending|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% if project.description %}
+            <p class="bgs-description">{{ project.description_inline }}</p>
+            {% else %}
+            <div class="bgs-members">
+                {% with members=project.members.all %}
+                {% for m in members|slice:":4" %}
+                <span class="pill pill--rounded">{% if m.feuser %}{{ m.feuser.first_name|default:m.feuser.email }}{% else %}{{ m.dummy.display_name }}{% endif %}</span>
+                {% endfor %}
+                {% if members|length > 4 %}<span class="pill pill--rounded pill--muted">+{{ members|length|add:"-4" }} more</span>{% endif %}
+                {% endwith %}
+            </div>
+            {% endif %}
+        </a>
+        {% endwith %}{% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="buddies-section">
+    <h2>Create a project</h2>
+    <p class="text-muted">A project groups expenses for any activity: solo, with friends, or family.</p>
+    <form method="post" action="{% url 'projects:projects_list' %}" class="stacked-form">
+        {% csrf_token %}
+        <label for="project-name">Project name</label>
+        <input type="text" id="project-name" name="name" placeholder="e.g. Road trip, Home renovation" maxlength="128" required class="input-block">
+        <label for="project-description">Description <span class="text-muted">(optional)</span></label>
+        <textarea id="project-description" name="description" maxlength="500" rows="3" class="input-block" placeholder="Optional description"></textarea>
+        <button type="submit" id="btn-create-project" class="btn">Create project</button>
+    </form>
+</section>
+
+{% if project_summaries %}
+<script>
+(function () {
+    var csrf = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '';
+    var list = document.getElementById('projects-sortable');
+    if (!list) return;
+
+    var dragId = null;
+
+    list.querySelectorAll('.bgs-card:not(.bgs-card--archived)').forEach(function (card) {
+        card.setAttribute('draggable', 'true');
+
+        card.addEventListener('dragstart', function (e) {
+            dragId = card.dataset.projectId;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', dragId);
+        });
+
+        card.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        card.addEventListener('dragleave', function () {});
+
+        card.addEventListener('dragend', function () {
+            dragId = null;
+        });
+
+        card.addEventListener('drop', function (e) {
+            e.preventDefault();
+            var fromId = dragId;
+            dragId = null;
+            if (!fromId || fromId === card.dataset.projectId) return;
+
+            var fromCard = list.querySelector('[data-project-id="' + fromId + '"]');
+            if (!fromCard) return;
+
+            // Reorder: insert fromCard before or after this card depending on position
+            var cards = Array.from(list.querySelectorAll('.bgs-card:not(.bgs-card--archived)'));
+            var fromIdx = cards.indexOf(fromCard);
+            var toIdx   = cards.indexOf(card);
+            if (fromIdx < toIdx) {
+                list.insertBefore(fromCard, card.nextSibling);
+            } else {
+                list.insertBefore(fromCard, card);
+            }
+
+            saveOrder();
+        });
+    });
+
+    function saveOrder() {
+        var ids = Array.from(list.querySelectorAll('.bgs-card:not(.bgs-card--archived)')).map(function (c) {
+            return parseInt(c.dataset.projectId, 10);
+        });
+        fetch('{% url "projects:reorder_projects" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ order: ids }),
+        });
+    }
+})();
+</script>
+{% endif %}
+
+{% endblock %}

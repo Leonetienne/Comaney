@@ -450,16 +450,130 @@
 
 .buddy-payment-section {
   margin-top: 1.25rem;
-  padding: 1rem 1.25rem;
+  padding: 0;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
+  overflow: hidden;
 }
 
 .buddy-payment-section h3 {
   font-size: 0.95rem;
   font-weight: 600;
   margin: 0 0 0.85rem;
+}
+
+// Body content inside the section (carries the normal padding)
+.buddy-section-body {
+  padding: 1rem 1.25rem;
+}
+
+// Project select row (appears below the hero image)
+.buddy-project-select-row {
+  padding: 0.85rem 1.25rem 0;
+
+  label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+  }
+
+  select {
+    width: 100%;
+    max-width: 380px;
+  }
+}
+
+// Hero image: only visible when section is in project mode
+.buddy-payment-section:not(.buddy-section--project) .buddy-project-header-hero {
+  display: none;
+}
+
+// Hero image that bleeds to the top and sides of .buddy-payment-section
+.buddy-project-header-hero {
+  display: block;
+  height: 110px;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg-elevated);
+  border-radius: 7px 7px 0 0;
+  position: relative;
+  overflow: hidden;
+  transition: background-image 0.18s ease;
+
+  // Gradient overlay: light mode → fade to white at bottom
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.0) 0%,
+      rgba(255, 255, 255, 0.55) 100%
+    );
+    border-radius: 7px 7px 0 0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    &::after {
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.0) 0%,
+        rgba(0, 0, 0, 0.65) 100%
+      );
+    }
+  }
+}
+
+// ── Assignment tab group on expense form ────────────────────────────────
+.assign-tab-group {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  width: fit-content;
+  margin-top: 0.35rem;
+}
+
+.assign-tab {
+  padding: 0.55rem 1.15rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.13s, color 0.13s;
+  line-height: 1.3;
+
+  &:last-child {
+    border-right: none;
+  }
+
+  &:hover {
+    background: var(--bg-elevated);
+    color: var(--text);
+  }
+
+  &.assign-tab--active {
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-weight: 600;
+  }
+}
+
+// ── Project list page ────────────────────────────────────────────────────
+.bgs-card.bgs-card--archived {
+  opacity: 0.75;
+}
+
+// Draggable non-archived cards
+#projects-sortable .bgs-card:not(.bgs-card--archived) {
+  cursor: grab;
 }
 
 .buddy-participants-row {
@@ -488,9 +602,16 @@
   gap: 0.5rem;
   font-size: 0.875rem;
 
+  &:first-child {
+      @media (max-width: 480px) {
+            margin-top: 2rem;
+      }
+  }
+
   @media (max-width: 480px) {
     grid-template-columns: 1fr auto auto;
     grid-template-rows: auto auto;
+    margin-top: 1rem;
 
     .buddy-slider-name { grid-column: 1; grid-row: 1; }
     .buddy-slider-pct  { grid-column: 2; grid-row: 1; }

@@ -14,7 +14,7 @@ window.BUDDY_EXPENSE_CONFIG = {
     mePpicUrl:         "{% if request.feuser.profile_picture %}{{ request.feuser.ppic_url|escapejs }}{% endif %}",
     meInitials:        "{{ request.feuser.initials|escapejs }}",
     meAvatarColor:     "{{ request.feuser.initials|avatar_color|escapejs }}",
-    groupsData:        {{ groups_data_json|safe }},
+    groupsData:        {{ projects_data_json|safe }},
     singleBuddies:     {{ single_buddies_json|safe }},
     upfrontType:       "{{ existing_upfront_type|default:'me' }}",
     upfrontId:         {{ existing_upfront_id|default:request.feuser.pk }},
@@ -94,39 +94,61 @@ window.BUDDY_EXPENSE_CONFIG = {
         </div>
 
         {% if buddy_actual or buddy_dummy or buddy_groups %}
+        {# ── Assignment tab group ──────────────────────────────────────────── #}
         <div class="mt-md">
-            <label class="checkbox-inline">
-                <input type="checkbox" id="buddy-payment-cb" name="buddy_payment" value="1"
-                       {% if is_buddy_expense %}checked{% endif %}>
-                This is a buddy payment
-            </label>
+            <label class="form-label">Expense assignment</label>
+            <div class="assign-tab-group" id="assign-tab-group">
+                <button type="button" class="assign-tab" data-assign="none" id="assign-none">None</button>
+                {% if buddy_actual or buddy_dummy %}
+                <button type="button" class="assign-tab" data-assign="buddy" id="assign-buddy">Direct Buddy</button>
+                {% endif %}
+                {% if buddy_groups %}
+                <button type="button" class="assign-tab" data-assign="project" id="assign-project">Project</button>
+                {% endif %}
+            </div>
             <span class="form-hint-sm">Whoever pays upfront logs the expense; the others' shares are tracked as debt.</span>
         </div>
 
+        {# ── Hidden checkbox that buddy_expense.js requires ─────────────────── #}
+        <input type="checkbox" id="buddy-payment-cb" name="buddy_payment" value="1"
+               style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;"
+               {% if is_buddy_expense %}checked{% endif %}>
+
         <div id="buddy-payment-section" class="buddy-payment-section" style="display:none;">
-            <h3>Buddy payment details</h3>
 
             {% if buddy_groups %}
-            <div class="buddy-mode-row">
-                <label class="radio-inline"><input type="radio" name="buddy_mode_ui" id="buddy-mode-single" value="single"> Single buddy</label>
-                <label class="radio-inline"><input type="radio" name="buddy_mode_ui" id="buddy-mode-group" value="group"> Group</label>
-                <div id="buddy-group-select-row" style="display:none;">
-                    <select id="buddy-group-select">
-                        {% for g in buddy_groups %}
-                        <option value="{{ g.uid }}">{{ g.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+            {# Project header image – always rendered at top, full-bleed, empty if no pic #}
+            <div id="buddy-project-header" class="buddy-project-header-hero"></div>
+
+            {# Hidden mode radios that buddy_expense.js reads via getElementById #}
+            <input type="radio" name="buddy_mode_ui" id="buddy-mode-single" value="single"
+                   style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;"
+                   {% if not existing_group_id %}checked{% endif %}>
+            <input type="radio" name="buddy_mode_ui" id="buddy-mode-group" value="group"
+                   style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;"
+                   {% if existing_group_id %}checked{% endif %}>
+
+            {# Project selector row – buddy_expense.js reads id="buddy-group-select" #}
+            <div id="buddy-group-select-row" class="buddy-project-select-row" style="display:none;">
+                <label for="buddy-group-select">Project</label>
+                <select id="buddy-group-select">
+                    {% for g in buddy_groups %}
+                    <option value="{{ g.uid }}"
+                            data-has-pic="{{ g.group_picture|yesno:'true,false' }}"
+                            data-pic-url="/media/bgpics/{{ g.uid }}.webp">{{ g.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
             {% endif %}
 
-            <div class="buddy-payer-row">
+            <div class="buddy-section-body">
+            <div class="buddy-payer-row" id="buddy-payer-row">
                 <label for="buddy-upfront-select">Upfront payer</label>
                 <select id="buddy-upfront-select"></select>
             </div>
             <div id="buddy-payer-notice" style="display:none;"></div>
 
-            <div class="buddy-participants-row">
+            <div class="buddy-participants-row" id="buddy-participants-row">
                 <label>Participants (sharing the cost)</label>
                 <div id="buddy-participants-checkboxes"></div>
             </div>
@@ -135,10 +157,11 @@ window.BUDDY_EXPENSE_CONFIG = {
             <button type="button" id="buddy-equal-btn" class="btn btn-secondary btn-sm buddy-equal-btn">Equal shares</button>
 
             <input type="hidden" name="buddy_mode" id="buddy-mode-input" value="single">
-            <input type="hidden" name="buddy_group_id" id="buddy-group-id-input" value="">
+            <input type="hidden" name="project_id" id="buddy-group-id-input" value="">
             <input type="hidden" name="buddy_upfront_type" id="buddy-upfront-type-input" value="me">
             <input type="hidden" name="buddy_upfront_id" id="buddy-upfront-id-input" value="{{ request.feuser.pk }}">
             <input type="hidden" name="buddy_spendings_json" id="buddy-spendings-json" value="[]">
+            </div>
         </div>
         {% endif %}
 
@@ -151,12 +174,178 @@ window.BUDDY_EXPENSE_CONFIG = {
 </div>
 <script>
 (function () {
-    const settled  = document.getElementById('{{ form.settled.id_for_label }}');
-    const autoWrap = document.getElementById('auto-settle-wrap');
+    var settled  = document.getElementById('{{ form.settled.id_for_label }}');
+    var autoWrap = document.getElementById('auto-settle-wrap');
     function sync() { autoWrap.style.display = settled.checked ? 'none' : ''; }
     settled.addEventListener('change', sync);
     sync();
 })();
+
+{% if buddy_actual or buddy_dummy or buddy_groups %}
+(function () {
+    var cb           = document.getElementById('buddy-payment-cb');
+    var tabs         = document.querySelectorAll('#assign-tab-group .assign-tab');
+    var modeRSingle  = document.getElementById('buddy-mode-single');
+    var modeRGroup   = document.getElementById('buddy-mode-group');
+    var groupSelRow  = document.getElementById('buddy-group-select-row');
+    var groupSel     = document.getElementById('buddy-group-select');
+    var projHeader   = document.getElementById('buddy-project-header');
+    var payerRow     = document.getElementById('buddy-payer-row');
+    var partRow      = document.getElementById('buddy-participants-row');
+    var slidersEl    = document.getElementById('buddy-sliders');
+    var equalBtn     = document.getElementById('buddy-equal-btn');
+    var section      = document.getElementById('buddy-payment-section');
+
+    var projectsData = window.BUDDY_EXPENSE_CONFIG ? window.BUDDY_EXPENSE_CONFIG.groupsData : [];
+
+    // ── Determine initial tab from pre-filled state ──────────────────────────
+    var initAssign = 'none';
+    {% if is_buddy_expense %}
+      {% if existing_group_id %}initAssign = 'project';
+      {% else %}initAssign = 'buddy';
+      {% endif %}
+    {% endif %}
+
+    // ── Tab activation ────────────────────────────────────────────────────────
+    // IMPORTANT: Do NOT dispatch cb 'change' event from here — that triggers
+    // buddy_expense.js's ue() (initFromExisting) which resets to config values.
+    // Instead show/hide the section manually and dispatch ONLY the mode radio,
+    // which calls switchMode() inside the IIFE to build payer/participant UI.
+    function activateTab(mode) {
+        tabs.forEach(function (t) {
+            t.classList.toggle('assign-tab--active', t.dataset.assign === mode);
+        });
+
+        if (mode === 'none') {
+            cb.checked = false;
+            section.style.display = 'none';
+        } else if (mode === 'buddy') {
+            cb.checked = true;
+            section.style.display = 'block';
+            section.classList.remove('buddy-section--project');
+            if (groupSelRow) groupSelRow.style.display = 'none';
+            if (projHeader) { projHeader.style.backgroundImage = ''; projHeader.classList.remove('buddy-project-header-hero--has-img'); }
+            showAllSoloControls(true);
+            // switchMode('single') inside buddy_expense.js builds the dropdown
+            if (modeRSingle) { modeRSingle.checked = true; modeRSingle.dispatchEvent(new Event('change')); }
+        } else if (mode === 'project') {
+            cb.checked = true;
+            section.style.display = 'block';
+            section.classList.add('buddy-section--project');
+            if (groupSelRow) groupSelRow.style.display = '';
+            // switchMode('group') inside buddy_expense.js builds checkboxes synchronously
+            if (modeRGroup) { modeRGroup.checked = true; modeRGroup.dispatchEvent(new Event('change')); }
+            updateProjectImage();
+            checkSolo();
+        }
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            activateTab(this.dataset.assign);
+        });
+    });
+
+    // ── Project image (always shown, empty if no picture) ────────────────────
+    function updateProjectImage() {
+        if (!projHeader) return;
+        var opt = groupSel ? groupSel.options[groupSel.selectedIndex] : null;
+        var hasPic = opt && opt.dataset.hasPic === 'true';
+        if (hasPic) {
+            projHeader.style.backgroundImage = 'url("' + opt.dataset.picUrl + '")';
+            projHeader.classList.add('buddy-project-header-hero--has-img');
+        } else {
+            projHeader.style.backgroundImage = '';
+            projHeader.classList.remove('buddy-project-header-hero--has-img');
+        }
+    }
+
+    function showAllSoloControls(show) {
+        if (payerRow)   payerRow.style.display  = show ? '' : 'none';
+        if (partRow)    partRow.style.display    = show ? '' : 'none';
+        if (equalBtn)   equalBtn.style.display   = show ? '' : 'none';
+        if (!show && slidersEl) slidersEl.style.display = 'none';
+        // When showing, buddy_expense.js manages slider visibility via rebuildSliders()
+    }
+
+    function getProjectData(projectId) {
+        return projectsData.find(function (p) { return p.id === projectId; }) || null;
+    }
+
+    function checkSolo() {
+        if (!groupSel) return;
+        var pid = parseInt(groupSel.value, 10);
+        var pd = getProjectData(pid);
+        var isSolo = pd && pd.is_solo === true;
+        showAllSoloControls(!isSolo);
+        // For solo projects, clear spendings JSON so submit guard doesn't block
+        if (isSolo) {
+            var jsonIn = document.getElementById('buddy-spendings-json');
+            if (jsonIn) jsonIn.value = '[]';
+            // Mark form as solo so the submit guard can skip participant check
+            var frm = cb ? cb.closest('form') : null;
+            if (frm) frm.dataset.soloProject = '1';
+        } else {
+            var frm2 = cb ? cb.closest('form') : null;
+            if (frm2) delete frm2.dataset.soloProject;
+        }
+    }
+
+    // Override the submit guard for solo projects (buddy_expense.js runs first via defer)
+    setTimeout(function () {
+        var frm = cb ? cb.closest('form') : null;
+        if (!frm) return;
+        frm.addEventListener('submit', function (e) {
+            if (frm.dataset.soloProject === '1' && cb && cb.checked) {
+                // Solo project: skip the participants check; server handles it
+                e.stopImmediatePropagation();
+                var errEl = document.getElementById('buddy-no-participants-error');
+                if (errEl) errEl.style.display = 'none';
+            }
+        }, true); // capture phase, runs before the buddy_expense.js listener
+    }, 0);
+
+    if (groupSel) {
+        groupSel.addEventListener('change', function () {
+            updateProjectImage();
+            // Use setTimeout(0) so this runs AFTER buddy_expense.js's own change
+            // listener (which rebuilds participant checkboxes and would undo the hide).
+            setTimeout(checkSolo, 0);
+        });
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    // For editing: set the group select value first; buddy_expense.js will call
+    // ue() (initFromExisting) via the cb.checked startup path and handle
+    // payer/participant restoration from BUDDY_EXPENSE_CONFIG.
+    // For new expenses with no pre-fill, just activate the correct tab.
+    {% if existing_group_id %}
+    if (groupSel) groupSel.value = '{{ existing_group_id }}';
+    {% endif %}
+
+    // Set tab visual state without triggering JS logic (buddy_expense.js not loaded yet)
+    tabs.forEach(function (t) {
+        t.classList.toggle('assign-tab--active', t.dataset.assign === initAssign);
+    });
+
+    // After buddy_expense.js finishes (defer), wire mode radios and fix section state
+    setTimeout(function () {
+        // buddy_expense.js has already called ue() for pre-filled edit forms.
+        // For new expenses, ensure correct initial state.
+        if (initAssign === 'none') {
+            section.style.display = 'none';
+        } else if (initAssign === 'buddy') {
+            section.classList.remove('buddy-section--project');
+            if (groupSelRow) groupSelRow.style.display = 'none';
+        } else if (initAssign === 'project') {
+            section.classList.add('buddy-section--project');
+            if (groupSelRow) groupSelRow.style.display = '';
+            updateProjectImage();
+            checkSolo();
+        }
+    }, 0);
+})();
+{% endif %}
 </script>
 
 {% endblock %}

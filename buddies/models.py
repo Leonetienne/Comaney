@@ -10,7 +10,7 @@ from django.utils import timezone
 INVITE_EXPIRY_DAYS = 7
 
 
-class BuddyGroup(models.Model):
+class Project(models.Model):
     uid = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=128)
     description = models.TextField(blank=True, default="")
@@ -19,6 +19,8 @@ class BuddyGroup(models.Model):
     )
     group_picture = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    archived = models.BooleanField(default=False)
+    last_mod = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ["name"]
@@ -31,6 +33,23 @@ class BuddyGroup(models.Model):
         import re
         return re.sub(r'\s+', ' ', self.description).strip()
 
+    def update_lastmod(self):
+        self.last_mod = timezone.now()
+        self.save(update_fields=["last_mod"])
+
+    @property
+    def is_solo(self) -> bool:
+        """True if this project has exactly one feuser member and no dummy members."""
+        members = list(self.members.all())
+        feuser_count = sum(1 for m in members if m.feuser_id)
+        dummy_count = sum(1 for m in members if m.dummy_id)
+        return feuser_count == 1 and dummy_count == 0
+
+
+# Keep BuddyGroup as an alias so existing code that imports it still works
+# during the transition period. Remove after all references are updated.
+BuddyGroup = Project
+
 
 class DummyUser(models.Model):
     uid = models.BigAutoField(primary_key=True)
@@ -38,7 +57,7 @@ class DummyUser(models.Model):
         "feusers.FeUser", null=True, blank=True, on_delete=models.CASCADE, related_name="dummy_buddies"
     )
     owning_group = models.ForeignKey(
-        BuddyGroup, null=True, blank=True, on_delete=models.CASCADE, related_name="dummy_members"
+        Project, null=True, blank=True, on_delete=models.CASCADE, related_name="dummy_members"
     )
     display_name = models.CharField(max_length=128)
     is_archive = models.BooleanField(default=False)
@@ -63,9 +82,9 @@ class DummyUser(models.Model):
         return f"/media/offline-buddy-ppic/{self.pk}.jpg"
 
 
-class BuddyGroupMember(models.Model):
+class ProjectMember(models.Model):
     uid = models.BigAutoField(primary_key=True)
-    group = models.ForeignKey(BuddyGroup, on_delete=models.CASCADE, related_name="members")
+    group = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="members")
     feuser = models.ForeignKey(
         "feusers.FeUser", null=True, blank=True, on_delete=models.CASCADE,
         related_name="group_memberships"
@@ -75,6 +94,7 @@ class BuddyGroupMember(models.Model):
         related_name="group_memberships"
     )
     joined_at = models.DateTimeField(auto_now_add=True)
+    sorting = models.IntegerField(default=1)
 
     class Meta:
         ordering = ["joined_at"]
@@ -83,10 +103,13 @@ class BuddyGroupMember(models.Model):
         return f"{self.feuser or self.dummy} in {self.group}"
 
 
-class BuddyGroupInvite(models.Model):
-    """Invitation to join a buddy group. Also establishes a BuddyLink if not already buddies."""
+BuddyGroupMember = ProjectMember
+
+
+class ProjectInvite(models.Model):
+    """Invitation to join a project. Also establishes a BuddyLink if not already buddies."""
     uid = models.BigAutoField(primary_key=True)
-    group = models.ForeignKey(BuddyGroup, on_delete=models.CASCADE, related_name="invites")
+    group = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="invites")
     inviting_feuser = models.ForeignKey(
         "feusers.FeUser", on_delete=models.CASCADE, related_name="group_invites_sent"
     )
@@ -106,7 +129,10 @@ class BuddyGroupInvite(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Group invite to {self.group} for {self.invitee_email}"
+        return f"Project invite to {self.group} for {self.invitee_email}"
+
+
+BuddyGroupInvite = ProjectInvite
 
 
 class BuddyLink(models.Model):
@@ -205,8 +231,8 @@ class BuddyOnboardingInvite(models.Model):
     """Sent when inviting a non-existing user.
 
     dummy set: merge invite for a dummy user.
-    group set: group join invite (also creates BuddyLink on accept).
-    dummy + group set: merge invite for a group dummy.
+    group set: project join invite (also creates BuddyLink on accept).
+    dummy + group set: merge invite for a project dummy.
     Neither set: plain buddy invite.
     """
 
@@ -218,7 +244,7 @@ class BuddyOnboardingInvite(models.Model):
         DummyUser, on_delete=models.CASCADE, null=True, blank=True, related_name="onboarding_invites"
     )
     group = models.ForeignKey(
-        BuddyGroup, on_delete=models.CASCADE, null=True, blank=True, related_name="onboarding_invites"
+        Project, on_delete=models.CASCADE, null=True, blank=True, related_name="onboarding_invites"
     )
     invitee_email = models.EmailField(db_index=True)
     token = models.CharField(max_length=64, unique=True, db_index=True)
@@ -286,7 +312,7 @@ def _cleanup_dummy_picture(sender, instance, **kwargs):
         (settings.MEDIA_ROOT / "offline-buddy-ppic" / f"{instance.pk}.jpg").unlink(missing_ok=True)
 
 
-@receiver(pre_delete, sender=BuddyGroup)
+@receiver(pre_delete, sender=Project)
 def _cleanup_group_picture(sender, instance, **kwargs):
     if instance.group_picture:
         (settings.MEDIA_ROOT / "bgpics" / f"{instance.pk}.webp").unlink(missing_ok=True)

@@ -285,20 +285,20 @@ def _parse_buddy_item(item: dict, feuser) -> dict | None:
     if not item.get("buddy_payment") or not item.get("buddy_spendings"):
         return None
 
-    from buddies.models import BuddyGroup, DummyUser
+    from buddies.models import Project, DummyUser
     from feusers.models import FeUser as FU
 
     upfront_type = item.get("buddy_upfront_type", "me")
     upfront_id   = item.get("buddy_upfront_id")
     mode         = item.get("buddy_mode", "single")
-    group_id     = item.get("buddy_group_id")
+    group_id     = item.get("project_id") or item.get("buddy_group_id")
     spendings    = item.get("buddy_spendings", [])
 
     group = None
     if mode == "group" and group_id:
         try:
-            group = BuddyGroup.objects.get(uid=group_id, members__feuser=feuser)
-        except BuddyGroup.DoesNotExist:
+            group = Project.objects.get(uid=group_id, members__feuser=feuser)
+        except Project.DoesNotExist:
             pass
 
     upfront_feuser = None

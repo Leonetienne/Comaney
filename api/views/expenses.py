@@ -35,7 +35,7 @@ def expenses(request, feuser):
         qs = (
             Expense.objects
             .filter(owning_feuser=feuser, date_due__gte=start, date_due__lte=end, is_dummy=False)
-            .select_related("category")
+            .select_related("category", "project")
             .prefetch_related(
                 "tags",
                 "buddy_spendings__participant_feuser",
@@ -70,7 +70,7 @@ def expense_detail(request, feuser, uid):
     try:
         exp = (
             Expense.objects
-            .select_related("category")
+            .select_related("category", "project")
             .prefetch_related("tags")
             .get(uid=uid, owning_feuser=feuser)
         )

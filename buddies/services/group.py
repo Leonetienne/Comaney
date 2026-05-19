@@ -4,9 +4,12 @@ from django.conf import settings
 from django.db import transaction
 
 from ..models import (
-    BuddyGroup,
-    BuddyGroupInvite,
-    BuddyGroupMember,
+    Project,
+    ProjectInvite,
+    ProjectMember,
+    BuddyGroup,  # alias for Project
+    BuddyGroupInvite,  # alias for ProjectInvite
+    BuddyGroupMember,  # alias for ProjectMember
     BuddyLink,
     BuddyOnboardingInvite,
     BuddySpending,
@@ -18,14 +21,14 @@ from .email import BuddyEmailService
 from .expense import BuddyExpenseService
 
 
-class BuddyGroupService:
-    """Manages buddy group lifecycle."""
+class ProjectService:
+    """Manages project lifecycle."""
 
     @staticmethod
     @transaction.atomic
-    def create_group(admin_feuser, name: str) -> BuddyGroup:
+    def create_group(admin_feuser, name: str, description: str = "") -> Project:
         name = name.strip()
-        group = BuddyGroup.objects.create(name=name, admin_feuser=admin_feuser)
+        group = Project.objects.create(name=name, admin_feuser=admin_feuser, description=description.strip())
         BuddyGroupMember.objects.create(group=group, feuser=admin_feuser)
         return group
 
@@ -95,8 +98,8 @@ class BuddyGroupService:
 
     @staticmethod
     @transaction.atomic
-    def accept_group_invite(token: str, accepting_feuser) -> BuddyGroup | None:
-        """Accept a BuddyGroupInvite. Returns the group or None if invalid."""
+    def accept_group_invite(token: str, accepting_feuser) -> Project | None:
+        """Accept a ProjectInvite. Returns the project or None if invalid."""
         try:
             invite = BuddyGroupInvite.objects.select_related(
                 "group", "inviting_feuser"
@@ -118,6 +121,7 @@ class BuddyGroupService:
             _create_link(inviting_feuser, accepting_feuser)
 
         BuddyGroupMember.objects.get_or_create(group=group, feuser=accepting_feuser)
+        group.update_lastmod()
 
         BuddyEmailService.send_group_invite_accepted(invite, _display_name(accepting_feuser))
         invite.delete()
@@ -164,10 +168,11 @@ class BuddyGroupService:
 
         BuddySpending.objects.filter(
             participant_feuser=removed_feuser,
-            expense__buddy_group=group,
+            expense__project=group,
         ).update(participant_feuser=None, participant_dummy=ghost_dummy)
 
         target_member.delete()
+        group.update_lastmod()
 
         if notify:
             BuddyEmailService.send_group_removed_notification(
@@ -186,6 +191,7 @@ class BuddyGroupService:
             display_name=display_name.strip(),
         )
         BuddyGroupMember.objects.create(group=group, dummy=dummy)
+        group.update_lastmod()
         return dummy
 
     @staticmethod
@@ -358,3 +364,6 @@ class BuddyGroupService:
             owning_feuser=admin_feuser,
         )
         group.delete()
+
+
+BuddyGroupService = ProjectService

@@ -16,7 +16,8 @@ Filters:
     deactivated=yes|no|true|false|1|0
     recurring=yes|no|true|false|1|0  (yes/true/1 = only recurring instances; no/false/0 = only non-recurring)
     buddy=yes|no|true|false|1|0  (yes/true/1 = only buddy expenses; no/false/0 = only non-buddy)
-    buddy=<substring>  (match participant name, group name, or group member name)
+    buddy=<substring>  (match participant name, project name, or project member name)
+    project=<substring>  (match project name; project=none for expenses without a project)
     value<N, value<=N, value>N, value>=N, value=N, value==N
     date<dd.mm.yyyy   date>=mm/dd/yyyy  date==yyyy-mm-dd  date>today
         dot delimiter → dd.mm.yyyy  |  slash delimiter → mm/dd/yyyy  |  hyphen → yyyy-mm-dd
@@ -24,7 +25,7 @@ Filters:
     cat=<substring>   cat=none  (expenses with no category)
     tag=<substring>   tag=none  (expenses with no tag)
     payee=<substring>
-    <bare word or "quoted phrase">  →  free-text (title / payee / note / buddy names / group names)
+    <bare word or "quoted phrase">  →  free-text (title / payee / note / buddy names / project names)
     !<atom>           →  NOT  (negates the next atom or parenthesised group)
 """
 
@@ -138,17 +139,17 @@ def _date_q(op: str, raw: str) -> Q:
 
 
 def _buddy_name_q(val: str) -> Q:
-    """Q covering all buddy-related name fields (participants, group, group members)."""
+    """Q covering all buddy-related name fields (participants, project, project members)."""
     return (
         Q(buddy_spendings__participant_feuser__first_name__icontains=val)
         | Q(buddy_spendings__participant_feuser__last_name__icontains=val)
         | Q(buddy_spendings__participant_feuser__email__icontains=val)
         | Q(buddy_spendings__participant_dummy__display_name__icontains=val)
-        | Q(buddy_group__name__icontains=val)
-        | Q(buddy_group__members__feuser__first_name__icontains=val)
-        | Q(buddy_group__members__feuser__last_name__icontains=val)
-        | Q(buddy_group__members__feuser__email__icontains=val)
-        | Q(buddy_group__members__dummy__display_name__icontains=val)
+        | Q(project__name__icontains=val)
+        | Q(project__members__feuser__first_name__icontains=val)
+        | Q(project__members__feuser__last_name__icontains=val)
+        | Q(project__members__feuser__email__icontains=val)
+        | Q(project__members__dummy__display_name__icontains=val)
     )
 
 
@@ -186,6 +187,7 @@ _EQUALS: dict = {
     'tag':         lambda v: Q(tags__isnull=True) if v == 'none' else Q(tags__title__icontains=v),
     'cat':         lambda v: Q(category__isnull=True) if v == 'none' else Q(category__title__icontains=v),
     'payee':       lambda v: Q(payee__icontains=v),
+    'project':     lambda v: Q(project__isnull=True) if v == 'none' else Q(project__name__icontains=v),
 }
 
 _CMP: dict = {

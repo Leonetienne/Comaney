@@ -110,30 +110,6 @@
 </section>
 {% endif %}
 
-{% if my_groups %}
-<section class="buddies-section">
-    <h2>Groups</h2>
-    <div class="buddy-list">
-        {% for group in my_groups %}
-        <div class="buddy-card">
-            <div class="buddy-card-identity">
-                <span class="buddy-name">{{ group.name }}</span>
-                {% if group.admin_feuser_id == request.feuser.pk %}
-                <span class="pill">Admin</span>
-                {% endif %}
-                <span class="buddy-email group-member-list">
-                    {% for m in group.members.all|slice:":3" %}{% if m.feuser %}{{ m.feuser.first_name|default:m.feuser.email }}{% else %}{{ m.dummy.display_name }} (offline member){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}{% if group.members.all|length > 3 %} +{{ group.members.all|length|add:"-3" }} more{% endif %}
-                </span>
-            </div>
-            <div></div>
-            <div class="buddy-card-actions">
-                <a href="{% url 'buddies:group_detail' group.uid %}" class="btn btn-sm btn-secondary">Manage</a>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
 
 {% if group_invites_in or pending_invites_in or pending_invites_out or pending_onboarding_invites_out or merge_invites_in %}
 <section class="buddies-section">
@@ -238,20 +214,10 @@
             </form>
         </div>
 
-        <div class="add-buddy-panel">
-            <h3>Create a group</h3>
-            <p class="text-muted">Groups let you split expenses among three or more people.</p>
-            <form method="post" action="{% url 'buddies:create_group' %}" class="inline-form">
-                {% csrf_token %}
-                <input type="text" name="name" placeholder="Group name" maxlength="128" required class="input-inline">
-                <button type="submit" id="btn-create-group" class="btn">Create</button>
-            </form>
-        </div>
-
     </div>
 </section>
 
-{% if not unified_debts and not my_groups %}
+{% if not unified_debts %}
 <div class="buddies-onboarding-hint">
     <strong>How Buddies work:</strong> Create a group (for 3+ people) or add a direct buddy (for one-on-one splits). Then check "This is a buddy payment" on any expense. The balance updates automatically.
 </div>

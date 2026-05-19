@@ -27,6 +27,9 @@
             <li class="{% if active_nav == 'buddy_summary' %}active{% endif %}">
                 <a href="{% url 'buddies:buddy_summary' %}">Buddy Expenses</a>
             </li>
+            <li class="{% if active_nav == 'projects' %}active{% endif %}">
+                <a href="{% url 'projects:projects_list' %}">Projects</a>
+            </li>
 
             {% if ai_smart_create_available %}
             <li><span class="sidebar-section-label">AI</span></li>

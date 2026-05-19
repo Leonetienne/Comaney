@@ -76,10 +76,14 @@ def settle_direct_freeform(request):
 @feuser_required
 @require_POST
 def group_settle_individual(request, group_id):
-    from ..models import BuddyGroup
+    from ..models import Project
     feuser = request.feuser
-    group = get_object_or_404(BuddyGroup, uid=group_id, members__feuser=feuser)
+    group = get_object_or_404(Project, uid=group_id, members__feuser=feuser)
     is_admin = group.admin_feuser_id == feuser.pk
+
+    if group.archived:
+        django_messages.error(request, "Cannot create settlements for an archived project.")
+        return redirect("projects:project_detail", project_id=group_id)
 
     debtor_key = request.POST.get("debtor_key", "").strip()
     creditor_key = request.POST.get("creditor_key", "").strip()
@@ -87,11 +91,11 @@ def group_settle_individual(request, group_id):
         amount = Decimal(request.POST.get("amount", "0").replace(",", "."))
     except Exception:
         django_messages.error(request, "Invalid amount.")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
 
     if amount < Decimal("0.01"):
         django_messages.error(request, "Amount must be at least 0.01.")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
 
     feuser_key = f"f{feuser.pk}"
     if not is_admin:
@@ -106,11 +110,11 @@ def group_settle_individual(request, group_id):
 
     if debtor_key not in member_keys or creditor_key not in member_keys:
         django_messages.error(request, "Invalid member selection.")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
 
     if debtor_key == creditor_key:
         django_messages.error(request, "Debtor and creditor must be different.")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
 
     ok = BuddySettlementService.create_individual_group_settlement(
         feuser, group, debtor_key, creditor_key, amount
@@ -135,19 +139,22 @@ def group_settle_individual(request, group_id):
         django_messages.success(request, msg)
     else:
         django_messages.error(request, "Settlement could not be created. Check the selected members and amount.")
-    return redirect("buddies:group_detail", group_id=group_id)
+    return redirect("projects:project_detail", project_id=group_id)
 
 
 @feuser_required
 @require_POST
 def group_settle_all(request, group_id):
-    from ..models import BuddyGroup
+    from ..models import Project
     feuser = request.feuser
-    group = get_object_or_404(BuddyGroup, uid=group_id, admin_feuser=feuser)
+    group = get_object_or_404(Project, uid=group_id, admin_feuser=feuser)
+    if group.archived:
+        django_messages.error(request, "Cannot create settlements for an archived project.")
+        return redirect("projects:project_detail", project_id=group_id)
     result = BuddySettlementService.create_group_wide_settlements(feuser, group)
     count = result["created"]
     if count:
         django_messages.success(request, f"{count} settlement record{'s' if count != 1 else ''} created. Emails have been sent to all members.")
     else:
         django_messages.info(request, "No outstanding debts to settle.")
-    return redirect("buddies:group_detail", group_id=group_id)
+    return redirect("projects:project_detail", project_id=group_id)

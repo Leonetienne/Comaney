@@ -5,7 +5,7 @@ from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
 from budget.models import Expense
-from ..models import BuddyGroup
+from ..models import Project, BuddyGroup
 from ..services import BuddyEmailService, BuddyLifecycleService
 
 
@@ -67,9 +67,11 @@ def approve_settlement_as_creditor(request, expense_id):
         BuddyEmailService.send_settlement_approved_notification(
             expense, creditor, expense.owning_feuser
         )
+        if expense.project_id and expense.project:
+            expense.project.update_lastmod()
         django_messages.success(request, "Settlement confirmed. Thank you!")
-        if expense.buddy_group_id:
-            return redirect("buddies:group_detail", group_id=expense.buddy_group_id)
+        if expense.project_id:
+            return redirect("projects:project_detail", project_id=expense.project_id)
         return redirect("buddies:buddy_summary")
     return render(request, "buddies/confirm_settlement.html", {
         "active_nav": "buddies",
@@ -93,12 +95,12 @@ def reject_settlement_as_creditor(request, expense_id):
     )
     debtor = expense.owning_feuser
     creditor = request.feuser
-    group_id = expense.buddy_group_id
+    group_id = expense.project_id
     BuddyEmailService.send_settlement_rejection_notification(expense, creditor, debtor)
     expense.delete()
     django_messages.warning(request, "Settlement rejected. The debtor has been notified.")
     if group_id:
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
     return redirect("buddies:buddy_summary")
 
 
@@ -106,11 +108,11 @@ def reject_settlement_as_creditor(request, expense_id):
 def admin_approve_dummy_settlement(request, group_id, expense_id):
     """Admin reviews and confirms a settlement involving a dummy creditor in their group."""
     feuser = request.feuser
-    group = get_object_or_404(BuddyGroup, uid=group_id, admin_feuser=feuser)
+    group = get_object_or_404(Project, uid=group_id, admin_feuser=feuser)
     expense = get_object_or_404(
         Expense,
         uid=expense_id,
-        buddy_group=group,
+        project=group,
         buddy_approved=False,
     )
     has_dummy_upfront = expense.is_dummy and expense.upfront_payee_dummy_id
@@ -119,17 +121,17 @@ def admin_approve_dummy_settlement(request, group_id, expense_id):
     ).exists()
     if not (has_dummy_upfront or has_dummy_creditor):
         django_messages.error(request, "This expense does not involve an offline member of this group.")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
     has_real_feuser_creditor = expense.buddy_spendings.filter(
         participant_feuser__isnull=False
     ).exists()
     if expense.is_buddies_settlement and has_real_feuser_creditor:
         django_messages.error(request, "Only the creditor can confirm this settlement.")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
     if request.method == "POST":
         BuddyLifecycleService.approve_expense(expense)
         django_messages.success(request, "Settlement confirmed. Thank you!")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
     dummy_bs = expense.buddy_spendings.filter(
         participant_dummy__owning_group=group
     ).select_related("participant_dummy").first()
@@ -139,8 +141,8 @@ def admin_approve_dummy_settlement(request, group_id, expense_id):
     return render(request, "buddies/confirm_settlement.html", {
         "active_nav": "buddies",
         "expense": expense,
-        "approve_url": reverse("buddies:admin_approve_dummy_settlement", args=[group_id, expense_id]),
-        "reject_url": reverse("buddies:admin_reject_dummy_settlement", args=[group_id, expense_id]),
+        "approve_url": reverse("projects:admin_approve_dummy_settlement", args=[group_id, expense_id]),
+        "reject_url": reverse("projects:admin_reject_dummy_settlement", args=[group_id, expense_id]),
         "creditor_name": creditor_name,
         "confirm_question": f"Did {creditor_name} actually receive this payment?" if creditor_name else None,
     })
@@ -151,11 +153,11 @@ def admin_approve_dummy_settlement(request, group_id, expense_id):
 def admin_reject_dummy_settlement(request, group_id, expense_id):
     """Admin rejects a settlement on behalf of a dummy creditor: deletes it and notifies the debtor."""
     feuser = request.feuser
-    group = get_object_or_404(BuddyGroup, uid=group_id, admin_feuser=feuser)
+    group = get_object_or_404(Project, uid=group_id, admin_feuser=feuser)
     expense = get_object_or_404(
         Expense,
         uid=expense_id,
-        buddy_group=group,
+        project=group,
         buddy_approved=False,
     )
     has_dummy_creditor = expense.buddy_spendings.filter(
@@ -163,29 +165,29 @@ def admin_reject_dummy_settlement(request, group_id, expense_id):
     ).exists()
     if not has_dummy_creditor:
         django_messages.error(request, "This expense does not involve an offline member of this group.")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
     debtor = expense.owning_feuser
     BuddyEmailService.send_settlement_rejection_notification(expense, feuser, debtor)
     expense.delete()
     django_messages.warning(request, "Settlement rejected. The debtor has been notified.")
-    return redirect("buddies:group_detail", group_id=group_id)
+    return redirect("projects:project_detail", project_id=group_id)
 
 
 @feuser_required
 @require_POST
 def group_expense_delete(request, group_id, expense_id):
     feuser = request.feuser
-    group = get_object_or_404(BuddyGroup, uid=group_id, members__feuser=feuser)
+    group = get_object_or_404(Project, uid=group_id, members__feuser=feuser)
     is_admin = group.admin_feuser_id == feuser.pk
     dummy_pks_in_group = {
         m.dummy_id for m in group.members.all() if m.dummy_id
     }
 
     try:
-        expense = Expense.objects.get(uid=expense_id, buddy_group=group)
+        expense = Expense.objects.get(uid=expense_id, project=group)
     except Expense.DoesNotExist:
         django_messages.error(request, "Expense not found.")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
 
     is_feuser_direct_owner = expense.owning_feuser_id == feuser.pk and not expense.is_dummy
     is_dummy_exp_in_group = (
@@ -204,9 +206,13 @@ def group_expense_delete(request, group_id, expense_id):
         ).exists()
     )
 
+    if group.archived:
+        django_messages.error(request, "Cannot delete expenses from an archived project.")
+        return redirect("projects:project_detail", project_id=group_id)
+
     if not (is_feuser_direct_owner or (is_admin and is_dummy_exp_in_group) or is_settlement_to_group_dummy):
         django_messages.error(request, "You do not have permission to delete this expense.")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
 
     # Once a group settlement is approved, only specific admin-owned paths may delete it:
     # - admin's own settlement to a group dummy (is_settlement_to_group_dummy)
@@ -220,7 +226,7 @@ def group_expense_delete(request, group_id, expense_id):
         )
         if not can_delete_approved:
             django_messages.error(request, "An approved settlement cannot be deleted.")
-            return redirect("buddies:group_detail", group_id=group_id)
+            return redirect("projects:project_detail", project_id=group_id)
 
     # Notify the real-user creditor when their unapproved settlement is deleted
     if expense.is_buddies_settlement and not expense.buddy_approved and not is_settlement_to_group_dummy:
@@ -233,27 +239,32 @@ def group_expense_delete(request, group_id, expense_id):
             )
 
     expense.delete()
+    group.update_lastmod()
     django_messages.success(request, "Expense deleted.")
-    return redirect("buddies:group_detail", group_id=group_id)
+    return redirect("projects:project_detail", project_id=group_id)
 
 
 @feuser_required
 @require_POST
 def group_expense_unlink(request, group_id, expense_id):
     feuser = request.feuser
-    group = get_object_or_404(BuddyGroup, uid=group_id, members__feuser=feuser)
+    group = get_object_or_404(Project, uid=group_id, members__feuser=feuser)
     is_admin = group.admin_feuser_id == feuser.pk
 
     try:
-        expense = Expense.objects.get(uid=expense_id, buddy_group=group)
+        expense = Expense.objects.get(uid=expense_id, project=group)
     except Expense.DoesNotExist:
         django_messages.error(request, "Expense not found.")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
+
+    if group.archived:
+        django_messages.error(request, "Cannot unlink expenses from an archived project.")
+        return redirect("projects:project_detail", project_id=group_id)
 
     is_feuser_direct_owner = expense.owning_feuser_id == feuser.pk and not expense.is_dummy
     if not (is_feuser_direct_owner or is_admin):
         django_messages.error(request, "You do not have permission to unlink this expense.")
-        return redirect("buddies:group_detail", group_id=group_id)
+        return redirect("projects:project_detail", project_id=group_id)
 
     notify_feusers = set()
     if is_admin and not is_feuser_direct_owner:
@@ -264,7 +275,7 @@ def group_expense_unlink(request, group_id, expense_id):
                 notify_feusers.add(bs.participant_feuser)
 
     expense.buddy_spendings.all().delete()
-    expense.buddy_group = None
+    expense.project = None
     expense.is_dummy = False
     expense.upfront_payee_dummy = None
     expense.buddy_approved = True
@@ -280,4 +291,4 @@ def group_expense_unlink(request, group_id, expense_id):
         )
 
     django_messages.success(request, "Expense unlinked from the group. It remains in the owner's expense list.")
-    return redirect("buddies:group_detail", group_id=group_id)
+    return redirect("projects:project_detail", project_id=group_id)

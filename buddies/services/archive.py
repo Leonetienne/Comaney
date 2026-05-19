@@ -133,7 +133,7 @@ class BuddyArchiveService:
         owed_by = Decimal("0")
         for bs in BuddySpending.objects.filter(
             participant_dummy=dummy,
-            expense__buddy_group=group,
+            expense__project=group,
             expense__buddy_approved=True,
         ).select_related("expense"):
             owed_by += bs.expense.value * bs.share_percent / 100
@@ -141,7 +141,7 @@ class BuddyArchiveService:
         owed_to = Decimal("0")
         for exp in Expense.objects.filter(
             upfront_payee_dummy=dummy,
-            buddy_group=group,
+            project=group,
             is_dummy=True,
             buddy_approved=True,
         ).prefetch_related("buddy_spendings"):
@@ -161,7 +161,7 @@ class BuddyArchiveService:
         for bs in BuddySpending.objects.filter(
             participant_dummy=archive,
             expense__owning_feuser=feuser,
-            expense__buddy_group=group,
+            expense__project=group,
             expense__is_dummy=False,
             expense__buddy_approved=True,
         ).select_related("expense"):
@@ -171,7 +171,7 @@ class BuddyArchiveService:
         for bs in BuddySpending.objects.filter(
             participant_feuser=feuser,
             expense__upfront_payee_dummy=archive,
-            expense__buddy_group=group,
+            expense__project=group,
             expense__is_dummy=True,
             expense__buddy_approved=True,
         ).select_related("expense"):

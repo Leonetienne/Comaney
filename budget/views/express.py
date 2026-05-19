@@ -209,7 +209,7 @@ def express_creation(request):
                         expense = create_expense(
                             owning_feuser=buddy["upfront_feuser"],
                             buddy_approved=False,
-                            buddy_group=buddy["group"],
+                            project=buddy["group"],
                             buddy_spendings=buddy["spendings"],
                             **common_kwargs,
                         )
@@ -220,7 +220,7 @@ def express_creation(request):
                             owning_feuser=feuser,
                             is_dummy=(buddy["upfront_type"] == "dummy"),
                             upfront_payee_dummy=buddy["upfront_dummy"],
-                            buddy_group=buddy["group"],
+                            project=buddy["group"],
                             buddy_spendings=buddy["spendings"],
                             **common_kwargs,
                         )

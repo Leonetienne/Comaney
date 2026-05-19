@@ -80,8 +80,8 @@ class Expense(OwnedModel):
         on_delete=models.SET_NULL,
         related_name="upfront_expenses",
     )
-    buddy_group = models.ForeignKey(
-        "buddies.BuddyGroup",
+    project = models.ForeignKey(
+        "buddies.Project",
         null=True, blank=True,
         on_delete=models.SET_NULL,
         related_name="expenses",

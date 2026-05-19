@@ -31,7 +31,6 @@ def buddies_page(request):
 def my_buddies_page(request):
     feuser = request.feuser
     unified_debts = BuddyQueryService.get_all_debts_unified(feuser)
-    my_groups = BuddyQueryService.get_groups_for_feuser(feuser)
     pending_in = BuddyQueryService.pending_invites_incoming(feuser)
     pending_out = BuddyQueryService.pending_invites_outgoing(feuser)
     pending_onboarding_out = BuddyQueryService.pending_onboarding_invites_outgoing(feuser)
@@ -41,7 +40,6 @@ def my_buddies_page(request):
     return render(request, "buddies/my_buddies.html", {
         "active_nav": "my_buddies",
         "unified_debts": unified_debts,
-        "my_groups": my_groups,
         "pending_invites_in": pending_in,
         "pending_invites_out": pending_out,
         "pending_onboarding_invites_out": pending_onboarding_out,
@@ -53,13 +51,12 @@ def my_buddies_page(request):
 @feuser_required
 def buddy_summary_page(request):
     from budget.models import Expense
-    from ..models import BuddyGroup
+    from ..models import Project
 
     feuser = request.feuser
     unified_debts = BuddyQueryService.get_all_debts_unified(feuser)
     all_shared = BuddyQueryService.shared_expenses(feuser)
-    direct_expenses = all_shared.filter(buddy_group__isnull=True)
-    my_groups_summary = BuddyQueryService.get_group_summaries_for_feuser(feuser)
+    direct_expenses = all_shared.filter(project__isnull=True)
 
     feuser_key = f"f{feuser.pk}"
     direct_settle_members = []
@@ -80,7 +77,7 @@ def buddy_summary_page(request):
             "is_dummy": _is_dummy,
         })
 
-    admin_group_ids = list(BuddyGroup.objects.filter(admin_feuser=feuser).values_list("uid", flat=True))
+    admin_group_ids = list(Project.objects.filter(admin_feuser=feuser).values_list("uid", flat=True))
     admin_group_id_set = set(admin_group_ids)
 
     pending_approvals = []
@@ -90,7 +87,7 @@ def buddy_summary_page(request):
     for exp in (
         Expense.objects
         .filter(owning_feuser=feuser, buddy_approved=False, settled=False)
-        .select_related("buddy_group")
+        .select_related("project")
         .order_by("-date_created")
     ):
         pending_approvals.append({"expense": exp, "kind": "expense_owner", "dummy": None})
@@ -103,7 +100,7 @@ def buddy_summary_page(request):
             buddy_approved=False,
             is_buddies_settlement=True,
         )
-        .select_related("owning_feuser", "upfront_payee_dummy", "buddy_group")
+        .select_related("owning_feuser", "upfront_payee_dummy", "project")
         .distinct()
         .order_by("-date_created")
     ):
@@ -114,12 +111,12 @@ def buddy_summary_page(request):
         for exp in (
             Expense.objects
             .filter(
-                buddy_group_id__in=admin_group_ids,
+                project_id__in=admin_group_ids,
                 is_dummy=True,
                 is_buddies_settlement=False,
                 buddy_approved=False,
             )
-            .select_related("upfront_payee_dummy", "buddy_group")
+            .select_related("upfront_payee_dummy", "project")
             .order_by("-date_created")
         ):
             pending_approvals.append({"expense": exp, "kind": "dummy_payer", "dummy": exp.upfront_payee_dummy})
@@ -132,7 +129,7 @@ def buddy_summary_page(request):
                 buddy_spendings__participant_dummy__owning_group_id__in=admin_group_ids,
                 buddy_approved=False,
             )
-            .select_related("owning_feuser", "upfront_payee_dummy", "buddy_group")
+            .select_related("owning_feuser", "upfront_payee_dummy", "project")
             .prefetch_related("buddy_spendings__participant_dummy")
             .distinct()
             .order_by("-date_created")
@@ -154,7 +151,6 @@ def buddy_summary_page(request):
     return render(request, "buddies/buddy_summary.html", {
         "active_nav": "buddy_summary",
         "direct_expenses": direct_expenses,
-        "my_groups_summary": my_groups_summary,
         "debts_json": _debts_to_json(unified_debts),
         "me_avatar_json": me_avatar_json,
         "feuser_key": feuser_key,

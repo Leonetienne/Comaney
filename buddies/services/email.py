@@ -55,7 +55,7 @@ class BuddyEmailService:
     @staticmethod
     def send_group_invite(invite: BuddyGroupInvite, invitee):
         site_url = getattr(settings, "SITE_URL", "")
-        invite_url = f"{site_url}/buddies/group-invite/{invite.token}/"
+        invite_url = f"{site_url}/projects/project-invite/{invite.token}/"
         BuddyEmailService._send(
             subject=f"{_display_name(invite.inviting_feuser)} invited you to join the group \"{invite.group.name}\" on Comaney",
             template="emails/buddy_group_invite.html",
@@ -74,7 +74,7 @@ class BuddyEmailService:
         site_url = getattr(settings, "SITE_URL", "")
         register_url = f"{site_url}/register/"
         BuddyEmailService._send(
-            subject=f"{_display_name(invite.inviting_feuser)} invited you to join their group on Comaney",
+            subject=f"{_display_name(invite.inviting_feuser)} invited you to join their project on Comaney",
             template="emails/buddy_onboarding_invite.html",
             ctx={
                 "invite": invite,
@@ -179,7 +179,7 @@ class BuddyEmailService:
         """Email sent to the creditor of an individual group settlement asking them to confirm receipt."""
         site_url = getattr(settings, "SITE_URL", "")
         confirm_url = f"{site_url}/buddies/expense/{expense.uid}/approve-settlement/"
-        group_name = expense.buddy_group.name if expense.buddy_group_id else None
+        group_name = expense.project.name if expense.project_id else None
         subject = (
             f"{debtor_name} recorded a settlement with you in {group_name}"
             if group_name
@@ -210,7 +210,7 @@ class BuddyEmailService:
     def send_settlement_approved_notification(expense, creditor_feuser, debtor_feuser):
         """Email sent to the debtor when the creditor confirms receipt of their settlement."""
         creditor_name = _display_name(creditor_feuser)
-        group_name = expense.buddy_group.name if expense.buddy_group_id else None
+        group_name = expense.project.name if expense.project_id else None
         subject = (
             f"{creditor_name} confirmed your settlement in {group_name}"
             if group_name
@@ -231,7 +231,7 @@ class BuddyEmailService:
     def send_settlement_rejection_notification(expense, creditor_feuser, debtor_feuser):
         """Email sent to the debtor when the creditor rejects their settlement record."""
         creditor_name = _display_name(creditor_feuser)
-        group_name = expense.buddy_group.name if expense.buddy_group_id else None
+        group_name = expense.project.name if expense.project_id else None
         subject = (
             f"{creditor_name} rejected your settlement in {group_name}"
             if group_name
@@ -384,7 +384,7 @@ class BuddyEmailService:
             debtor_name = expense.upfront_payee_dummy.display_name + " (offline member)"
         else:
             debtor_name = _display_name(expense.owning_feuser)
-        group_name = expense.buddy_group.name if expense.buddy_group_id else None
+        group_name = expense.project.name if expense.project_id else None
         subject = (
             f"{debtor_name} updated their settlement in {group_name}"
             if group_name
@@ -411,7 +411,7 @@ class BuddyEmailService:
             debtor_name = expense.upfront_payee_dummy.display_name + " (offline member)"
         else:
             debtor_name = _display_name(expense.owning_feuser)
-        group_name = expense.buddy_group.name if expense.buddy_group_id else None
+        group_name = expense.project.name if expense.project_id else None
         subject = (
             f"{debtor_name} cancelled their settlement in {group_name}"
             if group_name

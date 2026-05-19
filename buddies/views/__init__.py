@@ -23,3 +23,12 @@ from .expenses import (
     admin_approve_dummy_settlement, admin_reject_dummy_settlement,
     group_expense_delete, group_expense_unlink,
 )
+# Project views (new namespace)
+from .projects import (
+    projects_list, create_project, project_detail, project_rename, project_picture,
+    project_invite_member, project_revoke_invite, project_remove_member,
+    project_add_dummy, project_rename_dummy, project_send_merge, project_archive_wipe,
+    project_transfer_admin, project_leave, project_delete,
+    project_archive, project_unarchive, reorder_projects,
+    view_project_invite, accept_project_invite, decline_project_invite,
+)
