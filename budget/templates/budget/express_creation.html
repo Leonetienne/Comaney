@@ -13,7 +13,7 @@ window.BUDDY_EXPENSE_CONFIG = {
     mePpicUrl:       "{% if current_feuser.profile_picture %}{{ current_feuser.ppic_url|escapejs }}{% endif %}",
     meInitials:      "{{ current_feuser.initials|escapejs }}",
     meAvatarColor:   "{{ current_feuser.initials|avatar_color|escapejs }}",
-    groupsData:      {{ groups_data_json|safe }},
+    groupsData:      {{ projects_data_json|safe }},
     singleBuddies:   {{ single_buddies_json|safe }},
     urlBuddySummary: "{% url 'buddies:buddy_summary' %}",
     currencySymbol:  "{{ current_feuser.currency|escapejs }}",
@@ -126,7 +126,7 @@ window.BUDDY_EXPENSE_CONFIG = {
 
             <div class="preview-cards">
                 {% for item in preview_items %}
-                <div class="preview-card" data-idx="{{ forloop.counter0 }}">
+                <div class="preview-card" data-idx="{{ forloop.counter0 }}" data-project-uid="{{ item.project_uid|default:'' }}">
 
                     <div class="pcard-header">
                         <label class="pcard-include">
@@ -202,44 +202,51 @@ window.BUDDY_EXPENSE_CONFIG = {
                         </div>
 
                         {% if buddy_actual or buddy_dummy or buddy_groups %}
-                        <!-- Buddy payment -->
-                        <div class="pcard-field pcard-buddy">
-                            <label class="checkbox-inline">
-                                <input type="checkbox" class="buddy-payment-cb">
-                                This is a buddy payment
-                            </label>
+                        <!-- Expense assignment -->
+                        <div class="pcard-field pcard-assign">
+                            <span class="pcard-label">Expense assignment</span>
+                            <div class="assign-tab-group pcard-assign-tabs">
+                                <button type="button" class="assign-tab pcard-assign-none" data-assign="none">None</button>
+                                {% if buddy_actual or buddy_dummy %}
+                                <button type="button" class="assign-tab pcard-assign-buddy" data-assign="buddy">Direct Buddy</button>
+                                {% endif %}
+                                {% if buddy_groups %}
+                                <button type="button" class="assign-tab pcard-assign-project" data-assign="project">Project</button>
+                                {% endif %}
+                            </div>
+                            <span class="form-hint-sm">Whoever pays upfront logs the expense; the others' shares are tracked as debt.</span>
                             <div class="pcard-buddy-details" style="display:none;">
                                 <div class="buddy-payment-section">
-                                    <h4 class="buddy-section-title">Buddy payment details</h4>
-
                                     {% if buddy_groups %}
-                                    <div class="buddy-mode-row">
-                                        <label class="radio-inline"><input type="radio" name="buddy_mode_ui_{{ forloop.counter0 }}" class="buddy-mode-single" value="single" checked> Single buddy</label>
-                                        <label class="radio-inline"><input type="radio" name="buddy_mode_ui_{{ forloop.counter0 }}" class="buddy-mode-group" value="group"> Group</label>
-                                        <div class="buddy-group-select-row" style="display:none;margin-top:0.5rem;">
-                                            <select class="buddy-group-select">
-                                                {% for g in buddy_groups %}
-                                                <option value="{{ g.uid }}">{{ g.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
+                                    <div class="buddy-project-header-hero"></div>
+                                    <div class="buddy-project-select-row" style="display:none;">
+                                        <label>Project</label>
+                                        <select class="buddy-group-select">
+                                            {% for g in buddy_groups %}
+                                            <option value="{{ g.uid }}"
+                                                    data-has-pic="{{ g.group_picture|yesno:'true,false' }}"
+                                                    data-pic-url="/media/bgpics/{{ g.uid }}.webp">{{ g.name }}</option>
+                                            {% endfor %}
+                                        </select>
                                     </div>
                                     {% endif %}
 
-                                    <div class="buddy-payer-row">
-                                        <label>Upfront payer</label>
-                                        <select class="buddy-upfront-select"></select>
-                                    </div>
-                                    <div class="buddy-payer-notice" style="display:none;"></div>
+                                    <div class="buddy-section-body">
+                                        <div class="buddy-payer-row">
+                                            <label>Upfront payer</label>
+                                            <select class="buddy-upfront-select"></select>
+                                        </div>
+                                        <div class="buddy-payer-notice" style="display:none;"></div>
 
-                                    <div class="buddy-participants-row">
-                                        <label class="buddy-participants-label">Participants (sharing the cost)</label>
-                                        <div class="buddy-participants-checkboxes"></div>
-                                    </div>
+                                        <div class="buddy-participants-row">
+                                            <label class="buddy-participants-label">Participants (sharing the cost)</label>
+                                            <div class="buddy-participants-checkboxes"></div>
+                                        </div>
 
-                                    <div class="buddy-sliders-wrap buddy-sliders" style="display:none;"></div>
-                                    <button type="button" class="btn btn-secondary btn-sm buddy-equal-btn">Equal shares</button>
-                                    <p class="buddy-no-participants-error error-msg" style="display:none;">A buddy payment requires at least one participant.</p>
+                                        <div class="buddy-sliders-wrap buddy-sliders" style="display:none;"></div>
+                                        <button type="button" class="btn btn-secondary btn-sm buddy-equal-btn">Equal shares</button>
+                                        <p class="buddy-no-participants-error error-msg" style="display:none;">A buddy payment requires at least one participant.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -348,16 +355,21 @@ document.getElementById('parse-form').addEventListener('submit', function () {
 try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
 {% endif %}
 
-// ── Per-card buddy payment ────────────────────────────────────────────────────
+// ── Per-card expense assignment (tab-based) ───────────────────────────────────
 {% if buddy_actual or buddy_dummy or buddy_groups %}
 function initCardBuddy(cardEl) {
     var cfg = window.BUDDY_EXPENSE_CONFIG;
     if (!cfg) return null;
     function q(s) { return cardEl.querySelector(s); }
-    var cb          = q('.buddy-payment-cb');
-    var detailsEl   = q('.pcard-buddy-details');
-    if (!cb || !detailsEl) return null;
+
+    var tabNone    = q('.pcard-assign-none');
+    var tabBuddy   = q('.pcard-assign-buddy');
+    var tabProject = q('.pcard-assign-project');
+    var detailsEl  = q('.pcard-buddy-details');
+    if (!detailsEl) return null;
+
     var payerSel    = q('.buddy-upfront-select');
+    var payerRow    = q('.buddy-payer-row');
     var partEl      = q('.buddy-participants-checkboxes');
     var partRow     = q('.buddy-participants-row');
     var partLbl     = q('.buddy-participants-label');
@@ -365,10 +377,11 @@ function initCardBuddy(cardEl) {
     var equalBtn    = q('.buddy-equal-btn');
     var payerNotice = q('.buddy-payer-notice');
     var noPartErr   = q('.buddy-no-participants-error');
-    var modeSngl    = q('.buddy-mode-single');
-    var modeGrp     = q('.buddy-mode-group');
-    var grpSelRow   = q('.buddy-group-select-row');
+    var grpSelRow   = q('.buddy-project-select-row');
     var grpSel      = q('.buddy-group-select');
+    var projHeader  = q('.buddy-project-header-hero');
+    var sectionEl   = q('.buddy-payment-section');
+
     var ME_PK           = cfg.mePk;
     var ME_NAME         = (cfg.meFirstName + ' ' + cfg.meLastName).trim() || 'Me';
     var ME_PPIC_URL     = cfg.mePpicUrl || '';
@@ -377,8 +390,9 @@ function initCardBuddy(cardEl) {
     var groups      = cfg.groupsData    || [];
     var singles     = cfg.singleBuddies || [];
     var summaryUrl  = cfg.urlBuddySummary || '';
-    var mode = 'single', groupId = null, parts = [];
+    var mode = 'single', groupId = null, parts = [], isSolo = false, currentTab = 'none';
     var valueInput = cardEl.querySelector('.edit-value');
+
     function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function avatarHtml(ppicUrl, initials, avatarColor) {
         if (ppicUrl) return '<img src="'+esc(ppicUrl)+'" class="user-avatar user-avatar--sm" alt="">';
@@ -392,7 +406,6 @@ function initCardBuddy(cardEl) {
             if(!m.is_me&&m.type===type&&m.id===id)return{ppicUrl:m.ppicUrl||'',initials:m.initials||'',avatarColor:m.avatarColor||''};}}
         return {ppicUrl:'',initials:'',avatarColor:''};
     }
-    // Parallel copy of getExpenseValue/formatAmount lives in build/js/buddy_expense.js.
     function getExpenseValue() {
         if (!valueInput) return 0;
         var v = parseFloat(String(valueInput.value).replace(',', '.'));
@@ -403,24 +416,81 @@ function initCardBuddy(cardEl) {
         if (val <= 0) return '';
         return (pct / 100 * val).toFixed(2) + ' ' + (cfg.currencySymbol || '');
     }
-    if (valueInput) {
-        valueInput.addEventListener('input', function() { refreshSliders(); });
+    if (valueInput) valueInput.addEventListener('input', function() { refreshSliders(); });
+
+    function getCurrentIsSolo() {
+        if (!groupId) return false;
+        var grp = groups.find(function(g) { return g.id === groupId; });
+        return grp && grp.is_solo === true;
     }
-    if (modeSngl) modeSngl.addEventListener('change', function() { if (this.checked) switchMode('single'); });
-    if (modeGrp)  modeGrp.addEventListener('change',  function() { if (this.checked) switchMode('group'); });
-    if (grpSel)   grpSel.addEventListener('change', function() {
+    function showBuddyControls(show) {
+        if (payerRow) payerRow.style.display = show ? '' : 'none';
+        if (partRow)  partRow.style.display  = show ? '' : 'none';
+        if (equalBtn) equalBtn.style.display  = show ? '' : 'none';
+        if (!show && slidersEl) slidersEl.style.display = 'none';
+    }
+    function checkSolo() {
+        isSolo = getCurrentIsSolo();
+        showBuddyControls(!isSolo);
+        if (isSolo) parts = [];
+    }
+    function updateProjectImage() {
+        if (!projHeader) return;
+        var opt = grpSel ? grpSel.options[grpSel.selectedIndex] : null;
+        var hasPic = opt && opt.dataset.hasPic === 'true';
+        if (hasPic) {
+            projHeader.style.backgroundImage = 'url("' + opt.dataset.picUrl + '")';
+            projHeader.classList.add('buddy-project-header-hero--has-img');
+        } else {
+            projHeader.style.backgroundImage = '';
+            projHeader.classList.remove('buddy-project-header-hero--has-img');
+        }
+    }
+    function setTabActive(tab) {
+        [tabNone, tabBuddy, tabProject].forEach(function(t) {
+            if (t) t.classList.toggle('assign-tab--active', t.dataset.assign === tab);
+        });
+    }
+    function activateTab(tab) {
+        currentTab = tab;
+        setTabActive(tab);
+        if (tab === 'none') {
+            detailsEl.style.display = 'none';
+            if (sectionEl) sectionEl.classList.remove('buddy-section--project');
+        } else if (tab === 'buddy') {
+            detailsEl.style.display = 'block';
+            if (sectionEl) sectionEl.classList.remove('buddy-section--project');
+            if (grpSelRow) grpSelRow.style.display = 'none';
+            mode = 'single'; groupId = null; isSolo = false;
+            if (partLbl) partLbl.textContent = 'Buddy (sharing the cost)';
+            showBuddyControls(true);
+            buildPayer(); buildParts(false); refreshParts(); rebuildSliders();
+        } else if (tab === 'project') {
+            detailsEl.style.display = 'block';
+            if (sectionEl) sectionEl.classList.add('buddy-section--project');
+            if (grpSelRow) grpSelRow.style.display = '';
+            mode = 'group';
+            if (grpSel && grpSel.value) groupId = parseInt(grpSel.value);
+            if (partLbl) partLbl.textContent = 'Participants (sharing the cost)';
+            updateProjectImage();
+            checkSolo();
+            buildPayer(); buildParts(true); refreshParts(); rebuildSliders();
+        }
+    }
+
+    if (tabNone)    tabNone.addEventListener('click',    function() { activateTab('none'); });
+    if (tabBuddy)   tabBuddy.addEventListener('click',   function() { activateTab('buddy'); });
+    if (tabProject) tabProject.addEventListener('click', function() { activateTab('project'); });
+
+    if (grpSel) grpSel.addEventListener('change', function() {
         groupId = parseInt(this.value);
+        updateProjectImage();
+        checkSolo();
         buildPayer(); buildParts(true); refreshParts(); rebuildSliders();
     });
-    function switchMode(m) {
-        mode = m;
-        if (grpSelRow) grpSelRow.style.display = m === 'group' ? 'block' : 'none';
-        if (m === 'group' && grpSel && grpSel.value) groupId = parseInt(grpSel.value);
-        if (m === 'single') groupId = null;
-        if (partLbl) partLbl.textContent = m === 'single' ? 'Buddy (sharing the cost)' : 'Participants (sharing the cost)';
-        buildPayer(); buildParts(m === 'group'); refreshParts(); rebuildSliders();
-    }
+
     function buildPayer() {
+        if (!payerSel) return;
         var prev = payerSel.value;
         payerSel.innerHTML = '';
         var opts = [];
@@ -433,33 +503,42 @@ function initCardBuddy(cardEl) {
             });
         } else {
             var grp = groups.find(function(g) { return g.id === groupId; });
-            if (grp) grp.members.forEach(function(m) {
-                opts.push({v:(m.is_me?'me':m.type)+':'+(m.is_me?ME_PK:m.id), t:m.is_me?'Me ('+m.name+')':m.name});
-            });
+            if (grp) {
+                // Current user first, then other members
+                var meEntry = null, others = [];
+                grp.members.forEach(function(m) {
+                    var entry = {v:(m.is_me?'me':m.type)+':'+(m.is_me?ME_PK:m.id), t:m.is_me?'Me ('+m.name+')':m.name};
+                    if (m.is_me) meEntry = entry; else others.push(entry);
+                });
+                if (meEntry) opts.push(meEntry);
+                others.forEach(function(o) { opts.push(o); });
+            }
         }
         opts.forEach(function(o) {
             var el = document.createElement('option'); el.value = o.v; el.textContent = o.t; payerSel.appendChild(el);
         });
-        if (opts.some(function(o) { return o.v === prev; })) payerSel.value = prev;
+        // On fresh activation keep prev selection only if it still exists; otherwise default to first (= me)
+        if (prev && opts.some(function(o) { return o.v === prev; })) payerSel.value = prev;
         updateNotice();
     }
-    payerSel.addEventListener('change', function() { updateNotice(); refreshParts(); rebuildSliders(); });
+    if (payerSel) payerSel.addEventListener('change', function() { updateNotice(); refreshParts(); rebuildSliders(); });
     function updateNotice() {
-        if (!payerNotice || !payerSel.options.length) { if (payerNotice) payerNotice.style.display = 'none'; return; }
+        if (!payerNotice || !payerSel || !payerSel.options.length) { if (payerNotice) payerNotice.style.display = 'none'; return; }
         var pt = payerSel.value.split(':')[0];
         if (pt === 'dummy') {
             var n = esc(payerSel.options[payerSel.selectedIndex].text);
-            payerNotice.className = 'info-box';
+            payerNotice.className = 'info-box box--spaced';
             payerNotice.innerHTML = '<p>Since <strong>'+n+'</strong> paid upfront, this expense won\'t appear in your regular expense list. You\'ll find it under <a href="'+summaryUrl+'">Buddy Expenses</a> instead.</p>';
             payerNotice.style.display = 'block';
         } else if (pt === 'feuser') {
             var n2 = esc(payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim());
-            payerNotice.className = 'warning-box';
+            payerNotice.className = 'warning-box box--spaced';
             payerNotice.innerHTML = '<p><strong>Heads up:</strong> This expense will be recorded on <strong>'+n2+'\'s</strong> account and will require their approval.</p>';
             payerNotice.style.display = 'block';
         } else { payerNotice.style.display = 'none'; }
     }
     function buildParts(preCheck) {
+        if (!partEl) return;
         partEl.innerHTML = '';
         if (mode === 'single') {
             var wrap = document.createElement('div'); wrap.className = 'buddy-single-select-wrap';
@@ -499,6 +578,7 @@ function initCardBuddy(cardEl) {
         }
     }
     function refreshParts() {
+        if (!payerSel || !partEl) return;
         var p = payerSel.value.split(':'), pt = p[0], pid = p[1];
         if (mode === 'single') {
             var show = pt === 'me';
@@ -515,6 +595,7 @@ function initCardBuddy(cardEl) {
         parts = []; syncParts();
     }
     function syncParts() {
+        if (!payerSel) return;
         var pt = payerSel.value.split(':')[0], checked = [];
         if (pt !== 'me') {
             var em = parts.find(function(p) { return p.type === 'feuser' && p.id === ME_PK; });
@@ -527,14 +608,14 @@ function initCardBuddy(cardEl) {
                 }
             });
         } else if (mode === 'single') {
-            var sel = partEl.querySelector('.buddy-participant-select');
+            var sel = partEl ? partEl.querySelector('.buddy-participant-select') : null;
             if (sel && sel.value) {
                 var sp = sel.value.split(':'), so = sel.options[sel.selectedIndex];
                 var ex = parts.find(function(p) { return p.type === sp[0] && p.id === parseInt(sp[1]); });
                 checked.push({type:sp[0], id:parseInt(sp[1]), name:so.dataset.name, share:ex?ex.share:0, ppicUrl:so.dataset.ppicUrl||'', initials:so.dataset.initials||'', avatarColor:so.dataset.avatarColor||''});
             }
         } else {
-            partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
+            if (partEl) partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
                 if (lbl.style.display === 'none') return;
                 if (lbl.querySelector('input').checked) {
                     var ex = parts.find(function(p) { return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id; });
@@ -557,6 +638,7 @@ function initCardBuddy(cardEl) {
         }
     }
     function refreshSliders() {
+        if (!slidersEl) return;
         var pr = slidersEl.querySelector('.buddy-payer-row');
         if (pr) {
             var s = implicitShare();
@@ -564,7 +646,8 @@ function initCardBuddy(cardEl) {
             var pc = pr.querySelector('.buddy-slider-pct'); if (pc) pc.textContent = s.toFixed(1)+'%';
             var am = pr.querySelector('.buddy-slider-amt'); if (am) am.textContent = formatAmount(s);
             var nameText = pr.querySelector('.buddy-slider-name-text');
-            if (nameText) nameText.textContent = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
+            if (nameText && payerSel && payerSel.options.length)
+                nameText.textContent = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
         }
         parts.forEach(function(p,idx) {
             var row = slidersEl.querySelector('[data-sidx="'+idx+'"]'); if (!row) return;
@@ -574,14 +657,16 @@ function initCardBuddy(cardEl) {
         });
     }
     function rebuildSliders() {
+        if (!slidersEl) return;
         slidersEl.innerHTML = '';
         if (!parts.length) { slidersEl.style.display = 'none'; return; }
         slidersEl.style.display = 'block';
         var ps = implicitShare();
-        var _pp = payerSel.value.split(':');
+        var _pp = payerSel ? payerSel.value.split(':') : ['me', ME_PK];
         var _pav = getPersonAvatar(_pp[0], parseInt(_pp[1]));
         var pr = document.createElement('div'); pr.className = 'buddy-slider-row buddy-payer-row';
-        pr.innerHTML = '<span class="buddy-slider-name">'+avatarHtml(_pav.ppicUrl,_pav.initials,_pav.avatarColor)+'<span class="buddy-slider-name-text">'+esc(payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim())+'</span></span>'
+        var payerLabel = payerSel && payerSel.options.length ? payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim() : 'Me';
+        pr.innerHTML = '<span class="buddy-slider-name">'+avatarHtml(_pav.ppicUrl,_pav.initials,_pav.avatarColor)+'<span class="buddy-slider-name-text">'+esc(payerLabel)+'</span></span>'
             +'<input type="range" min="0" max="100" step="0.1" value="'+ps+'">'
             +'<span class="buddy-slider-pct">'+ps.toFixed(1)+'%</span>'
             +'<span class="buddy-slider-amt secondary">'+formatAmount(ps)+'</span>';
@@ -613,26 +698,44 @@ function initCardBuddy(cardEl) {
             });
         });
     }
-    equalBtn.addEventListener('click', function() {
+    if (equalBtn) equalBtn.addEventListener('click', function() {
         var per=+(100/(parts.length+1)).toFixed(3); parts.forEach(function(p){p.share=per;}); refreshSliders();
     });
-    cb.addEventListener('change', function() {
-        detailsEl.style.display = cb.checked ? 'block' : 'none';
-        if (cb.checked && !payerSel.options.length) { buildPayer(); buildParts(false); refreshParts(); rebuildSliders(); }
-    });
+
+    // ── Initialize from AI suggestion ────────────────────────────────────────
+    var initProjectUid = parseInt(cardEl.dataset.projectUid) || null;
+    if (initProjectUid && groups.some(function(g) { return g.id === initProjectUid; })) {
+        if (grpSel) grpSel.value = String(initProjectUid);
+        groupId = initProjectUid;
+        activateTab('project');
+    } else {
+        activateTab('none');
+    }
+
     return {
         validate: function() {
-            if (!cb.checked) return true;
+            if (currentTab === 'none') return true;
+            if (isSolo) return true;
             if (!parts.length) { if (noPartErr) noPartErr.style.display = 'block'; return false; }
-            if (noPartErr) noPartErr.style.display = 'none'; return true;
+            if (noPartErr) noPartErr.style.display = 'none';
+            return true;
         },
         getState: function() {
-            if (!cb.checked) return null;
-            var pp = payerSel.value.split(':');
+            if (currentTab === 'none') {
+                return { buddy_payment: false, project_uid: null };
+            }
+            if (currentTab === 'project' && isSolo) {
+                return { buddy_payment: false, project_uid: groupId };
+            }
+            var pp = payerSel ? payerSel.value.split(':') : ['me', ME_PK];
             return {
-                buddy_payment: true, buddy_mode: mode, buddy_group_id: groupId,
-                buddy_upfront_type: pp[0], buddy_upfront_id: parseInt(pp[1]),
-                buddy_spendings: parts.map(function(p) { return {type:p.type, id:p.id, share_percent:+p.share.toFixed(3)}; })
+                buddy_payment: true,
+                buddy_mode: mode,
+                buddy_group_id: mode === 'group' ? groupId : null,
+                buddy_upfront_type: pp[0],
+                buddy_upfront_id: parseInt(pp[1]),
+                buddy_spendings: parts.map(function(p) { return {type:p.type, id:p.id, share_percent:+p.share.toFixed(3)}; }),
+                project_uid: null,
             };
         }
     };

@@ -65,8 +65,9 @@ Each item in the "items" array must have exactly these keys:
     "date_due"     — ISO date string YYYY-MM-DD if the purchase/transaction date is known or can be inferred (e.g. "yesterday", "last Tuesday", a printed date on a receipt or invoice), otherwise null
     "category_uid" — integer uid from the Categories list below, or null if none fits
     "tag_uids"     — array of integer uids from the Tags list below (can be [])
+    "project_uid"  — integer uid from the Projects list below if this expense clearly belongs to one of the listed projects, or null if it is a personal expense
     "note"         — any extra context worth keeping, or ""
-Only use category_uid and tag_uids values that appear in the lists below.
+Only use category_uid, tag_uids, and project_uid values that appear in the lists below.
 If the user describes a lump sum for categorically different things, split by category/tag group.
 Default type to "expense" unless the description clearly indicates income or savings movement.
 
@@ -101,12 +102,29 @@ def _prepare_image(image_file) -> tuple[str, str]:
 
 
 def _build_catalog(feuser) -> str:
+    from buddies.models import Project
     categories = list(Category.objects.filter(owning_feuser=feuser).values("uid", "title"))
     tags = list(Tag.objects.filter(owning_feuser=feuser).values("uid", "title"))
-    return (
-        f"Categories:\n{json.dumps(categories, ensure_ascii=False)}\n\n"
-        f"Tags:\n{json.dumps(tags, ensure_ascii=False)}"
+    projects_qs = (
+        Project.objects
+        .filter(members__feuser=feuser, archived=False)
+        .distinct()
+        .values("uid", "name", "description")
     )
+    projects = [
+        {"uid": p["uid"], "name": p["name"], "description": p["description"] or ""}
+        for p in projects_qs
+    ]
+    parts = [
+        f"Categories:\n{json.dumps(categories, ensure_ascii=False)}",
+        f"Tags:\n{json.dumps(tags, ensure_ascii=False)}",
+    ]
+    if projects:
+        parts.append(
+            f"Projects (assign each expense to one of these if it clearly belongs to a shared project, otherwise null):\n"
+            f"{json.dumps(projects, ensure_ascii=False)}"
+        )
+    return "\n\n".join(parts)
 
 
 def _call_claude(
@@ -219,12 +237,18 @@ def _call_claude(
 
 
 def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
-    """Validate and sanitise parsed items against the user's actual categories/tags."""
+    """Validate and sanitise parsed items against the user's actual categories/tags/projects."""
+    from buddies.models import Project
     valid_category_uids = set(
         Category.objects.filter(owning_feuser=feuser).values_list("uid", flat=True)
     )
     valid_tag_uids = set(
         Tag.objects.filter(owning_feuser=feuser).values_list("uid", flat=True)
+    )
+    valid_project_uids = set(
+        Project.objects.filter(members__feuser=feuser, archived=False)
+        .distinct()
+        .values_list("uid", flat=True)
     )
     category_map = {
         c["uid"]: c["title"]
@@ -256,6 +280,10 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
 
         tag_uids = [u for u in (raw.get("tag_uids") or []) if u in valid_tag_uids]
 
+        project_uid = raw.get("project_uid")
+        if project_uid not in valid_project_uids:
+            project_uid = None
+
         date_due = None
         date_due_raw = raw.get("date_due")
         if date_due_raw:
@@ -275,6 +303,7 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
             "category_title": category_map.get(cat_uid, "—") if cat_uid else "—",
             "tag_uids":       tag_uids,
             "tag_titles":     [tag_map[u] for u in tag_uids],
+            "project_uid":    project_uid,
         })
 
     return items, errors

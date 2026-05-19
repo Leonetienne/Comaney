@@ -10,7 +10,7 @@
     {% if group %}
     <p><strong>{{ inviting_name }}</strong> has tracked you as an offline member of the group "<strong>{{ group.name }}</strong>" under the name "<strong>{{ invite.dummy.display_name }} (offline member)</strong>" and would like to link that record to your account.</p>
 
-    <div class="info-box info-box--spaced">
+    <div class="info-box box--spaced">
         <p><strong>What happens when you accept:</strong></p>
         <ul>
             <li>You are added to the group "<strong>{{ group.name }}</strong>" as a full member.</li>
@@ -22,7 +22,7 @@
     {% else %}
     <p><strong>{{ inviting_name }}</strong> has tracked you as an offline buddy under the name "<strong>{{ invite.dummy.display_name }} (offline member)</strong>" and would like to link that record to your account.</p>
 
-    <div class="info-box info-box--spaced">
+    <div class="info-box box--spaced">
         <p><strong>What happens when you accept:</strong></p>
         <ul>
             <li>All shared expenses tracked under "{{ invite.dummy.display_name }} (offline member)" are transferred to your account.</li>

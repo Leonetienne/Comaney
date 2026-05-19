@@ -227,7 +227,17 @@ def express_creation(request):
                         from buddies.services import BuddyEmailService
                         BuddyEmailService.notify_expense_created(expense, feuser)
                     else:
-                        create_expense(owning_feuser=feuser, **common_kwargs)
+                        project = None
+                        project_uid = item.get("project_uid")
+                        if project_uid:
+                            from buddies.models import Project
+                            try:
+                                project = Project.objects.get(
+                                    uid=project_uid, members__feuser=feuser, archived=False
+                                )
+                            except Project.DoesNotExist:
+                                pass
+                        create_expense(owning_feuser=feuser, project=project, **common_kwargs)
                     count += 1
                 if not context.get("ai_error"):
                     return redirect(f"{request.path}?created={count}")
