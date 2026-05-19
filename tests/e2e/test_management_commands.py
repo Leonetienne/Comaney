@@ -224,3 +224,59 @@ class TestDeleteUser:
         assert "/budget/" in driver.current_url
         # Clean up the surviving user.
         _run(["delete_user", email, "--yes"])
+
+    def test_delete_admin_user_transfers_group_admin_to_member(self, driver, w, ctx):
+        """
+        delete_user must call handle_account_deletion so that a group where the
+        deleted user is admin is NOT cascade-deleted: a remaining member becomes
+        the new admin instead.
+        """
+        import subprocess
+        admin_email = _fresh_email()
+        member_email = _fresh_email()
+        _run(["create_user", admin_email, "-p", PASSWORD])
+        _run(["create_user", member_email, "-p", PASSWORD])
+
+        # Create a group with admin_email as admin and member_email as member.
+        r = subprocess.run(
+            [
+                "docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c",
+                f"from feusers.models import FeUser; from buddies.services import BuddyGroupService; "
+                f"from buddies.models import BuddyGroupMember; "
+                f"admin = FeUser.objects.get(email='{admin_email}'); "
+                f"member = FeUser.objects.get(email='{member_email}'); "
+                f"g = BuddyGroupService.create_group(admin, 'CmdDelGroup'); "
+                f"BuddyGroupMember.objects.get_or_create(group=g, feuser=member); "
+                f"print(g.pk)",
+            ],
+            capture_output=True, text=True, timeout=15,
+        )
+        assert r.returncode == 0, f"Group creation failed:\n{r.stderr}"
+        group_pk = r.stdout.strip()
+
+        # Delete the admin via management command.
+        _run(["delete_user", admin_email, "--yes"])
+
+        # The group must still exist and member_email must now be admin.
+        r2 = subprocess.run(
+            [
+                "docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c",
+                f"from buddies.models import BuddyGroup, BuddyGroupMember; "
+                f"from feusers.models import FeUser; "
+                f"g = BuddyGroup.objects.filter(pk={group_pk}).first(); "
+                f"member = FeUser.objects.filter(email='{member_email}').first(); "
+                f"print('EXISTS' if g else 'GONE'); "
+                f"print('admin_ok' if (g and member and g.admin_feuser_id == member.pk) else 'wrong_admin'); "
+                f"print('member_ok' if (g and member and BuddyGroupMember.objects.filter(group=g, feuser=member).exists()) else 'member_gone')",
+            ],
+            capture_output=True, text=True, timeout=15,
+        )
+        assert r2.returncode == 0, f"Verification shell failed:\n{r2.stderr}"
+        result = r2.stdout.strip()
+
+        assert "GONE" not in result, "Group must not be deleted when admin is removed via delete_user"
+        assert "admin_ok" in result, "Group admin must be transferred to remaining member"
+        assert "member_ok" in result, "Remaining member must still be in the group"
+
+        # Clean up.
+        _run(["delete_user", member_email, "--yes"])
