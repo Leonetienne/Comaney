@@ -22,4 +22,6 @@ def media_serve(request, path):
         raise Http404
 
     content_type, _ = mimetypes.guess_type(str(full_path))
-    return FileResponse(open(full_path, "rb"), content_type=content_type or "application/octet-stream")
+    response = FileResponse(open(full_path, "rb"), content_type=content_type or "application/octet-stream")
+    response["Cache-Control"] = "private, max-age=86400, immutable"
+    return response
