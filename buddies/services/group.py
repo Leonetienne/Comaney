@@ -148,11 +148,12 @@ class BuddyGroupService:
 
     @staticmethod
     @transaction.atomic
-    def remove_member(group, admin_feuser, target_member: BuddyGroupMember) -> DummyUser:
+    def remove_member(group, admin_feuser, target_member: BuddyGroupMember, *, notify: bool = True) -> DummyUser:
         """
         Remove a feuser member from the group.
         Replaces them with a group dummy in all historical group expenses.
         Returns the created ghost dummy.
+        notify=False suppresses the removal email (voluntary leave, account deletion).
         """
         removed_feuser = target_member.feuser
         ghost_dummy = DummyUser.objects.create(
@@ -167,6 +168,14 @@ class BuddyGroupService:
         ).update(participant_feuser=None, participant_dummy=ghost_dummy)
 
         target_member.delete()
+
+        if notify:
+            BuddyEmailService.send_group_removed_notification(
+                removed_feuser=removed_feuser,
+                admin_feuser=admin_feuser,
+                group=group,
+            )
+
         return ghost_dummy
 
     @staticmethod

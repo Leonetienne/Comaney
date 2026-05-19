@@ -1,0 +1,11 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Removed from group</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ admin_name }}</strong> has removed you from the group <strong style="color:#e0e0e0;">{{ group_name }}</strong>.
+</p>
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
+    Your shared expense history in the group has been preserved under an offline record.
+</p>
+{% endblock %}

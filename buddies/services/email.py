@@ -322,6 +322,19 @@ class BuddyEmailService:
             )
 
     @staticmethod
+    def send_group_removed_notification(removed_feuser, admin_feuser, group):
+        BuddyEmailService._send(
+            subject=f"You have been removed from the group \"{group.name}\"",
+            template="emails/buddy_group_removed.html",
+            ctx={
+                "group_name": group.name,
+                "admin_name": _display_name(admin_feuser),
+                "feuser_recipient": removed_feuser,
+            },
+            recipient_email=removed_feuser.email,
+        )
+
+    @staticmethod
     def send_group_invite_accepted(invite: "BuddyGroupInvite", acceptee_name: str):
         BuddyEmailService._send(
             subject=f"{acceptee_name} joined your group \"{invite.group.name}\"",

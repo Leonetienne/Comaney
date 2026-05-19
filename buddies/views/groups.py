@@ -487,7 +487,7 @@ def group_leave(request, group_id):
         member = BuddyGroupMember.objects.get(group=group, feuser=feuser)
     except BuddyGroupMember.DoesNotExist:
         return redirect("buddies:my_buddies")
-    BuddyGroupService.remove_member(group, group.admin_feuser, member)
+    BuddyGroupService.remove_member(group, group.admin_feuser, member, notify=False)
     django_messages.success(request, f'You have left the group "{group.name}".')
     return redirect("buddies:my_buddies")
 

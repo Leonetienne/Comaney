@@ -250,7 +250,7 @@ class BuddyLifecycleService:
                     BuddyGroupService.dissolve_group(group, feuser)
                     continue
 
-            BuddyGroupService.remove_member(group, group.admin_feuser, membership)
+            BuddyGroupService.remove_member(group, group.admin_feuser, membership, notify=False)
 
     @staticmethod
     @transaction.atomic
