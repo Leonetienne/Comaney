@@ -220,10 +220,8 @@
 {% if group_total_spending %}
 <section class="buddies-section buddies-section--surface">
     <h2>Spending breakdown</h2>
-    <div class="desc-surface">
-        <p class="page-subtitle" style="margin:0 0 0.25rem;">Total group spending: <strong>{{ currency }}{{ group_total_spending|floatformat:2 }}</strong></p>
-        <p class="font-sm text-muted" style="margin:0;">Each slice shows how much of the total each person paid upfront. This is not the same as debt: it does not account for who owes whom or who has already settled.</p>
-    </div>
+    <p class="page-subtitle" style="margin:0 0 0.25rem;">Total group spending: <strong>{{ currency }}{{ group_total_spending|floatformat:2 }}</strong></p>
+    <p class="font-sm text-muted" style="margin:0 0 1rem;">Each slice shows how much of the total each person paid upfront. This is not the same as debt: it does not account for who owes whom or who has already settled.</p>
     <div class="group-spending-wrap">
         <div id="group-spending-pie" class="group-spending-chart"></div>
         <div id="group-spending-legend" class="group-spending-legend"></div>
