@@ -1,12 +1,17 @@
-{% extends "base.html" %}
+{% extends "auth_base.html" %}
 
-{% block title %}Comaney – Email confirmed{% endblock %}
-{% block main_class %}page-narrow page-centered{% endblock %}
+{% block title %}Comaney – Account activated{% endblock %}
 
+{% block auth_panel_title %}You're<br>in. <span class="auth-panel-accent">Welcome.</span>{% endblock %}
+{% block auth_panel_sub %}Your email address has been confirmed and your account is ready to use.{% endblock %}
+{% block auth_panel_list %}
+<li>Account confirmed</li>
+<li>Log in with your credentials</li>
+<li>Start tracking your finances</li>
+{% endblock %}
 
-{% block content %}
+{% block auth_content %}
 <h1>Account activated!</h1>
-<p>Your email address <strong>{{ user.email }}</strong> has been confirmed.<br>
-You can now log in.</p>
-<a href="{% url 'login' %}" class="btn">→ Log in</a>
+<p class="auth-hint">Your email address <strong>{{ user.email }}</strong> has been confirmed.<br>You can now log in.</p>
+<a href="{% url 'login' %}" class="btn btn-full">→ Log in</a>
 {% endblock %}
