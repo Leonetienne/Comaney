@@ -159,3 +159,39 @@ class TestBuddyInviteRevoke:
         driver.get(_url("/buddies/"))
         time.sleep(1)
         assert "Buddy invitations" not in driver.page_source
+
+
+# ---------------------------------------------------------------------------
+# Invite a non-existent email (onboarding invite) -- must not leak user existence
+# ---------------------------------------------------------------------------
+
+class TestBuddyInviteOnboarding:
+    """Inviting an email not registered shows the invite in 'Buddy invitations you sent',
+    not a flash message that would reveal whether the address is registered."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Ona", last_name="Inviter")
+        yield {"a": a, "nonexistent_email": f"nobody-{a['email']}"}
+        cleanup_user(a["email"])
+
+    def test_invite_nonexistent_shows_in_pending_list(self, driver, w, ctx):
+        driver.get(_url("/buddies/"))
+        time.sleep(1)
+        inp = driver.find_element(By.CSS_SELECTOR,
+            "form[action*='invite-actual'] input[name='email']")
+        inp.clear()
+        inp.send_keys(ctx["nonexistent_email"])
+        driver.find_element(By.ID, "btn-invite-actual").click()
+        time.sleep(1)
+        assert "Buddy invitations you sent" in driver.page_source
+        assert ctx["nonexistent_email"] in driver.page_source
+
+    def test_flash_message_is_generic(self, driver, w, ctx):
+        assert "An invitation has been sent to" in driver.page_source
+
+    def test_revoke_onboarding_invite(self, driver, w, ctx):
+        driver.find_element(By.CSS_SELECTOR, "[id^='btn-revoke-onboarding-invite-']").click()
+        time.sleep(1)
+        assert "Buddy invitations you sent" not in driver.page_source
+        assert ctx["nonexistent_email"] not in driver.page_source
