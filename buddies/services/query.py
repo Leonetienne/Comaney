@@ -489,6 +489,8 @@ class BuddyQueryService:
 
         result = list(person_map.values())
         for r in result:
+            if abs(r["net"]) < Decimal("0.005"):
+                r["net"] = Decimal("0")
             r["net_abs"] = abs(r["net"])
         result.sort(key=lambda x: (-x["net_abs"], x["display_name"]))
         return result
