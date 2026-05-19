@@ -95,20 +95,32 @@ def project_detail(request, project_id):
         exp = exp_data["expense"]
         exp_data["creditor_approval_needed"] = False
         exp_data["admin_approval_needed"] = False
+        exp_data["owner_approval_needed"] = False
 
         if not exp.buddy_approved:
-            for share in exp_data["participant_shares"]:
-                if share["key"] == feuser_key:
-                    exp_data["creditor_approval_needed"] = True
-                    break
+            # Feuser paid upfront (real-user, not dummy, not settlement): only they confirm.
+            if not exp.is_dummy and not exp.is_buddies_settlement and exp.owning_feuser_id == feuser.pk:
+                exp_data["owner_approval_needed"] = True
+            # Settlement creditor: current feuser is a participant in a settlement expense.
+            elif exp.is_buddies_settlement:
+                for share in exp_data["participant_shares"]:
+                    if share["key"] == feuser_key:
+                        exp_data["creditor_approval_needed"] = True
+                        break
             if is_admin and not exp_data["creditor_approval_needed"]:
-                has_dummy_creditor = any(
-                    share["key"].startswith("d")
-                    and int(share["key"][1:]) in dummy_pks_in_project
-                    for share in exp_data["participant_shares"]
-                )
-                if has_dummy_creditor:
+                # Dummy paid upfront for a regular expense: admin confirms the dummy actually paid.
+                # Excluded: dummy-debtor settlements — the feuser creditor handles those themselves.
+                if exp.is_dummy and exp.upfront_payee_dummy_id and not exp.is_buddies_settlement:
                     exp_data["admin_approval_needed"] = True
+                # Settlement with dummy creditor: admin confirms dummy received payment.
+                elif exp.is_buddies_settlement:
+                    has_dummy_creditor = any(
+                        share["key"].startswith("d")
+                        and int(share["key"][1:]) in dummy_pks_in_project
+                        for share in exp_data["participant_shares"]
+                    )
+                    if has_dummy_creditor:
+                        exp_data["admin_approval_needed"] = True
 
         is_feuser_direct_owner = exp.owning_feuser_id == feuser.pk and not exp.is_dummy
         is_dummy_exp_in_project = (

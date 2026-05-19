@@ -531,6 +531,16 @@
                     <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23pending-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Edit</a>
                     {% endif %}
 
+                    {% if e.owner_approval_needed %}
+                    <form method="post" action="{% url 'buddies:approve_expense' expense_id=e.expense.uid %}">
+                        {% csrf_token %}
+                        <button type="submit" id="btn-approve-{{ e.expense.uid }}" class="btn btn-sm btn-success">I paid this</button>
+                    </form>
+                    <form method="post" action="{% url 'buddies:reject_expense' expense_id=e.expense.uid %}">
+                        {% csrf_token %}
+                        <button type="submit" id="btn-reject-{{ e.expense.uid }}" class="btn btn-sm btn-danger-subtle">I did not pay</button>
+                    </form>
+                    {% endif %}
                     {% if e.creditor_approval_needed %}
                     <a href="{% url 'buddies:approve_settlement_as_creditor' expense_id=e.expense.uid %}" id="btn-review-settlement-{{ e.expense.uid }}" class="btn btn-sm btn-success">Review</a>
                     {% endif %}
@@ -853,10 +863,21 @@
         <div class="add-buddy-panel">
             <h3>Archive project</h3>
             <p class="text-muted">Freezes the project: no new expenses or settlements can be added. Existing data is preserved. You can unarchive at any time.</p>
-            <form method="post" action="{% url 'projects:project_archive' project_id=project.uid %}">
+            <form method="post" action="{% url 'projects:project_archive' project_id=project.uid %}" id="archive-project-form">
                 {% csrf_token %}
                 <button type="submit" id="btn-archive-project" class="btn btn-secondary">Archive project</button>
             </form>
+            <script>
+            (function () {
+                document.getElementById('archive-project-form').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    window.confirmDialog(
+                        'Archive "{{ project.name|escapejs }}"? No new expenses or settlements can be added while it is archived. You can unarchive at any time.',
+                        'Archive project'
+                    ).then(function () { e.target.submit(); }).catch(function () {});
+                });
+            })();
+            </script>
         </div>
         {% else %}
         <div class="add-buddy-panel">

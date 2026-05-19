@@ -21,10 +21,10 @@
             <td>Amount</td>
             <td class="settle-table-value">{{ expense.owning_feuser.currency }}{{ expense.value|floatformat:2 }}</td>
         </tr>
-        {% if expense.buddy_group %}
+        {% if expense.project %}
         <tr>
             <td>Group</td>
-            <td>{{ expense.buddy_group.name }}</td>
+            <td>{{ expense.project.name }}</td>
         </tr>
         {% endif %}
     </table>
@@ -40,8 +40,8 @@
             <button type="submit" id="btn-reject-settlement" class="btn btn-danger-subtle">{% if creditor_name %}No, they did not receive it{% else %}No, I did not receive it{% endif %}</button>
         </form>
 
-        {% if expense.buddy_group_id %}
-        <a href="{% url 'buddies:group_detail' expense.buddy_group_id %}" class="btn btn-secondary">Cancel</a>
+        {% if expense.project_id %}
+        <a href="{% url 'projects:project_detail' project_id=expense.project_id %}" class="btn btn-secondary">Cancel</a>
         {% else %}
         <a href="{% url 'buddies:buddy_summary' %}" class="btn btn-secondary">Cancel</a>
         {% endif %}

@@ -12,7 +12,7 @@ from ..services import BuddyEmailService, BuddyLifecycleService
 @feuser_required
 @require_POST
 def approve_expense(request, expense_id):
-    expense = get_object_or_404(Expense, uid=expense_id, owning_feuser=request.feuser, buddy_approved=False, settled=False)
+    expense = get_object_or_404(Expense, uid=expense_id, owning_feuser=request.feuser, buddy_approved=False, is_buddies_settlement=False)
     BuddyLifecycleService.approve_expense(expense)
     return redirect("budget:expenses_list")
 

@@ -82,11 +82,12 @@ def buddy_summary_page(request):
 
     pending_approvals = []
 
-    # Expenses logged on feuser's behalf where feuser must confirm they paid.
-    # Settlements (settled=True) are excluded: the debtor must never self-approve.
+    # Expenses logged on feuser's behalf (personal buddy only, not project).
+    # Settlement records and project expenses are excluded: the former must not be
+    # self-approved; the latter are confirmed on the project detail page.
     for exp in (
         Expense.objects
-        .filter(owning_feuser=feuser, buddy_approved=False, settled=False)
+        .filter(owning_feuser=feuser, buddy_approved=False, is_buddies_settlement=False, project__isnull=True)
         .select_related("project")
         .order_by("-date_created")
     ):
@@ -128,6 +129,7 @@ def buddy_summary_page(request):
             .filter(
                 buddy_spendings__participant_dummy__owning_group_id__in=admin_group_ids,
                 buddy_approved=False,
+                is_buddies_settlement=True,
             )
             .select_related("owning_feuser", "upfront_payee_dummy", "project")
             .prefetch_related("buddy_spendings__participant_dummy")
