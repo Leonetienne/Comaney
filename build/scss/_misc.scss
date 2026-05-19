@@ -47,6 +47,16 @@
     flex: 1;
     min-width: 160px;
   }
+
+  &--full {
+    width: 100%;
+  }
+}
+
+.backdrop-css-input {
+  font-family: monospace;
+  font-size: 0.85rem;
+  resize: vertical;
 }
 
 .backdrop-opacity-slider {

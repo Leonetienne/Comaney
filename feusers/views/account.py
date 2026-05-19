@@ -1,5 +1,6 @@
 import csv
 import io
+import re
 import zipfile
 from smtplib import SMTPException
 
@@ -12,6 +13,11 @@ from django.utils import timezone
 
 from ..forms import AISettingsForm, ChangeEmailForm, ChangePasswordForm, ProfileForm
 from ..utils import _get_session_feuser
+
+
+def _sanitize_css(value: str) -> str:
+    """Strip characters that are not needed for CSS property declarations."""
+    return re.sub(r'[<>{}&@`\\]', '', value)
 
 
 def profile(request):
@@ -102,9 +108,13 @@ def profile(request):
                 opacity = max(0, min(100, int(request.POST.get("backdrop_opacity", 100))))
             except (ValueError, TypeError):
                 opacity = 100
+            css = _sanitize_css(request.POST.get("backdrop_css", ""))[:2000]
+            css_mobile = _sanitize_css(request.POST.get("backdrop_css_mobile", ""))[:2000]
             feuser.backdrop_mode = mode
             feuser.backdrop_opacity = opacity
-            feuser.save(update_fields=["backdrop_mode", "backdrop_opacity"])
+            feuser.backdrop_css = css
+            feuser.backdrop_css_mobile = css_mobile
+            feuser.save(update_fields=["backdrop_mode", "backdrop_opacity", "backdrop_css", "backdrop_css_mobile"])
             return redirect(f"{request.path}?success=backdrop_settings")
 
         elif action == "profile":

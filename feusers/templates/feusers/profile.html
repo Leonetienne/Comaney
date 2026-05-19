@@ -83,6 +83,16 @@
                     <input type="range" id="id_backdrop_opacity" name="backdrop_opacity" min="0" max="100" value="{{ current_feuser.backdrop_opacity }}" class="backdrop-opacity-slider">
                 </div>
             </div>
+            <div class="backdrop-settings-field backdrop-settings-field--full">
+                <label for="id_backdrop_css">Extra backdrop styles</label>
+                <textarea id="id_backdrop_css" name="backdrop_css" class="backdrop-css-input" rows="4" placeholder="e.g. filter: blur(4px); transform: scale(1.05);">{{ current_feuser.backdrop_css }}</textarea>
+                <span class="form-hint-sm">CSS property declarations only, no selectors. Applied directly to the backdrop image.</span>
+            </div>
+            <div class="backdrop-settings-field backdrop-settings-field--full">
+                <label for="id_backdrop_css_mobile">Extra mobile backdrop styles</label>
+                <textarea id="id_backdrop_css_mobile" name="backdrop_css_mobile" class="backdrop-css-input" rows="4" placeholder="e.g. opacity: 0.3; object-position: center top;">{{ current_feuser.backdrop_css_mobile }}</textarea>
+                <span class="form-hint-sm">Applied inside a <code>@media (max-width: 768px)</code> block.</span>
+            </div>
             <div class="form-actions" style="margin-top:12px;">
                 <button type="submit" class="btn">Save changes</button>
             </div>
@@ -361,6 +371,34 @@
         modeSelect.addEventListener('change', function () {
             backdropImg.style.objectFit = modeSelect.value;
         });
+    }
+
+    var cssInput       = document.getElementById('id_backdrop_css');
+    var cssMobileInput = document.getElementById('id_backdrop_css_mobile');
+    if (cssInput || cssMobileInput) {
+        var previewStyle = document.createElement('style');
+        previewStyle.id  = 'backdrop-css-preview';
+        document.head.appendChild(previewStyle);
+
+        function updateCssPreview() {
+            var desktop = cssInput       ? cssInput.value       : '';
+            var mobile  = cssMobileInput ? cssMobileInput.value : '';
+            var out = '';
+            if (desktop) out += '.custom-backdrop{' + desktop + '}';
+            if (mobile)  out += '@media(max-width:768px){.custom-backdrop{' + mobile + '}}';
+            previewStyle.textContent = out;
+        }
+
+        function activateLivePreview() {
+            var saved = document.getElementById('backdrop-css-saved');
+            if (saved) saved.remove();
+            updateCssPreview();
+        }
+
+        if (cssInput)       cssInput.addEventListener('focus', activateLivePreview, { once: true });
+        if (cssMobileInput) cssMobileInput.addEventListener('focus', activateLivePreview, { once: true });
+        if (cssInput)       cssInput.addEventListener('input',       updateCssPreview);
+        if (cssMobileInput) cssMobileInput.addEventListener('input', updateCssPreview);
     }
 }());
 </script>

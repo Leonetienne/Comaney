@@ -50,6 +50,8 @@ class FeUser(models.Model):
     custom_backdrop = models.BooleanField(default=False)
     backdrop_mode = models.CharField(max_length=10, default="cover")
     backdrop_opacity = models.SmallIntegerField(default=100)
+    backdrop_css = models.TextField(blank=True, max_length=2000)
+    backdrop_css_mobile = models.TextField(blank=True, max_length=2000)
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(null=True, blank=True)
     last_seen = models.DateTimeField(null=True, blank=True)
@@ -111,7 +113,12 @@ class FeUser(models.Model):
 
     @property
     def backdrop_url(self) -> str:
-        return f"/media/backdrops/{self.pk}.png"
+        from django.conf import settings as _s
+        try:
+            v = int((_s.MEDIA_ROOT / "backdrops" / f"{self.pk}.png").stat().st_mtime)
+        except OSError:
+            v = 0
+        return f"/media/backdrops/{self.pk}.png?v={v}"
 
     @property
     def backdrop_opacity_decimal(self) -> str:
