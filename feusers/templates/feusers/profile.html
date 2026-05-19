@@ -42,6 +42,54 @@
 
     {% include "partials/_image_cropper.html" %}
 
+    <div class="settings-card" id="section-backdrop">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Custom backdrop</h2>
+        </div>
+        <p class="in-page-tip">Upload an image to overlay on the background. It stays fixed while you scroll.</p>
+        {% if success == "backdrop" or success == "backdrop_settings" %}<p class="success-msg">Backdrop updated.</p>{% endif %}
+        {% if success == "backdrop_deleted" %}<p class="success-msg">Backdrop removed.</p>{% endif %}
+        {% if backdrop_error %}<p class="error-msg">{{ backdrop_error }}</p>{% endif %}
+        <div class="ppic-settings-actions">
+            <label for="id_custom_backdrop" class="btn btn-secondary btn-sm" style="cursor:pointer;">Choose image</label>
+            <form method="post" enctype="multipart/form-data" id="backdrop-upload-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="backdrop">
+                <input type="file" id="id_custom_backdrop" name="custom_backdrop" accept="image/*" style="display:none;">
+            </form>
+            {% if current_feuser.custom_backdrop %}
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="backdrop_delete">
+                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+            </form>
+            {% endif %}
+        </div>
+        <p class="in-page-tip" style="margin-top:12px;margin-bottom:0;">PNG, JPEG, WebP or GIF. Max 20 MB.</p>
+        {% if current_feuser.custom_backdrop %}
+        <form method="post" novalidate class="backdrop-settings-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="backdrop_settings">
+            <div class="backdrop-settings-row">
+                <div class="backdrop-settings-field">
+                    <label for="id_backdrop_mode">Mode</label>
+                    <select id="id_backdrop_mode" name="backdrop_mode" class="edit-input">
+                        <option value="cover" {% if current_feuser.backdrop_mode == "cover" %}selected{% endif %}>Cover</option>
+                        <option value="contain" {% if current_feuser.backdrop_mode == "contain" %}selected{% endif %}>Fit</option>
+                    </select>
+                </div>
+                <div class="backdrop-settings-field backdrop-settings-field--slider">
+                    <label for="id_backdrop_opacity">Opacity: <span id="backdrop-opacity-label">{{ current_feuser.backdrop_opacity }}</span>%</label>
+                    <input type="range" id="id_backdrop_opacity" name="backdrop_opacity" min="0" max="100" value="{{ current_feuser.backdrop_opacity }}" class="backdrop-opacity-slider">
+                </div>
+            </div>
+            <div class="form-actions" style="margin-top:12px;">
+                <button type="submit" class="btn">Save changes</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+
     <div class="settings-card" id="section-profile">
         <div class="settings-card-head">
             <h2 class="settings-card-title">Personal info</h2>
@@ -286,6 +334,34 @@
                 });
         });
     });
+}());
+</script>
+<script>
+(function () {
+    var backdropInput = document.getElementById('id_custom_backdrop');
+    if (!backdropInput) return;
+    backdropInput.addEventListener('change', function () {
+        if (backdropInput.files[0]) {
+            document.getElementById('backdrop-upload-form').submit();
+        }
+    });
+
+    var slider = document.getElementById('id_backdrop_opacity');
+    var label  = document.getElementById('backdrop-opacity-label');
+    var modeSelect = document.getElementById('id_backdrop_mode');
+    var backdropImg = document.querySelector('.custom-backdrop');
+
+    if (slider && label) {
+        slider.addEventListener('input', function () {
+            label.textContent = slider.value;
+            if (backdropImg) backdropImg.style.opacity = slider.value / 100;
+        });
+    }
+    if (modeSelect && backdropImg) {
+        modeSelect.addEventListener('change', function () {
+            backdropImg.style.objectFit = modeSelect.value;
+        });
+    }
 }());
 </script>
 <script>

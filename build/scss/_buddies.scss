@@ -111,7 +111,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
-  background: var(--bg-surface);
+  //background: var(--bg-surface);
 }
 
 .buddy-balance-row {
@@ -187,7 +187,6 @@
   .buddy-balance-row {
     display: grid;
     grid-template-columns: 1fr auto;
-    background: var(--bg-surface);
 
     & + & { border-top: 1px solid var(--border); }
     > * { border-top: none !important; }

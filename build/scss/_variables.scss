@@ -1,6 +1,6 @@
 :root {
   --bg:             #fff;
-  --bg-surface:     #f8f8f8;
+  --bg-surface:     #f8f8f8e0;
   --sidebar-top:    #ede8f9;
   --bg-elevated:    #efefef;
   --bg-input:       #fff;
@@ -34,7 +34,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg:             #141414;
-    --bg-surface:     #1c1c1c;
+    --bg-surface:     #1c1c1ce0;
     --sidebar-top:    #170d28;
     --bg-elevated:    #272727;
     --bg-input:       #202020;

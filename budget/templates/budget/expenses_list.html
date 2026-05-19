@@ -28,11 +28,11 @@ window.EXPENSE_CONFIG = {
     <h1>Expenses</h1>
     <a href="{% url 'budget:expense_create' %}" class="btn">+ New expense</a>
 </div>
-<p class="page-tip">Expenses are items that describe transactions. A transaction is you getting paid, receiving money, paying money, depositing savings or withdrawing from savings.</p>
-{% include "partials/_month_nav.html" %}
-
+<div class="desc-surface"><p class="page-tip" style="margin:0;opacity:1;">Expenses are items that describe transactions. A transaction is you getting paid, receiving money, paying money, depositing savings or withdrawing from savings.</p></div>
 <div x-data="expenseList">
-    <div class="exp-controls">
+    <div class="add-buddy-panel" style="margin-bottom:1.25rem;">
+        {% include "partials/_month_nav.html" %}
+        <div class="exp-controls">
         <input type="text" id="exp-search" class="exp-search"
                x-model="query" @input="onInput()"
                placeholder="Search… coffee type=expense  settled=yes  value&lt;100"
@@ -77,6 +77,7 @@ window.EXPENSE_CONFIG = {
         Visible total: <span id="exp-sum-value" x-text="visibleSum"></span> {{ current_feuser.currency }}
     </div>
     <a href="https://github.com/Leonetienne/Comaney#advanced-search-filters" target="_blank" rel="noopener" class="search-hint-link">Advanced search filters</a>
+    </div>
 
     <style>
     #exp-list[data-search-loading] { opacity: 0.5; pointer-events: none; transition: opacity 0.1s; }

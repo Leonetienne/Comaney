@@ -29,6 +29,7 @@
     <script>var AVATAR_COLORS = {% avatar_colors_json %};</script>
 </head>
 <body>
+    {% if current_feuser and current_feuser.custom_backdrop %}<img class="custom-backdrop" src="{{ current_feuser.backdrop_url }}" alt="" style="object-fit:{{ current_feuser.backdrop_mode }};opacity:{{ current_feuser.backdrop_opacity_decimal }};">{% endif %}
     {% include "partials/_header.html" %}
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
     {% block layout %}

@@ -47,6 +47,9 @@ class FeUser(models.Model):
     allowance_transition_month = models.CharField(max_length=10, blank=True)
     has_seen_achim_intro = models.BooleanField(default=False)
     profile_picture = models.BooleanField(default=False)
+    custom_backdrop = models.BooleanField(default=False)
+    backdrop_mode = models.CharField(max_length=10, default="cover")
+    backdrop_opacity = models.SmallIntegerField(default=100)
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(null=True, blank=True)
     last_seen = models.DateTimeField(null=True, blank=True)
@@ -106,12 +109,22 @@ class FeUser(models.Model):
     def ppic_url(self) -> str:
         return f"/media/ppics/{self.pk}.jpg"
 
+    @property
+    def backdrop_url(self) -> str:
+        return f"/media/backdrops/{self.pk}.png"
+
+    @property
+    def backdrop_opacity_decimal(self) -> str:
+        return f"{self.backdrop_opacity / 100:.2f}"
+
 
 # ---------------------------------------------------------------------------
 # Media file cleanup signal
 # ---------------------------------------------------------------------------
 
 @receiver(pre_delete, sender=FeUser)
-def _cleanup_user_picture(sender, instance, **kwargs):
+def _cleanup_user_media(sender, instance, **kwargs):
     if instance.profile_picture:
         (settings.MEDIA_ROOT / "ppics" / f"{instance.pk}.jpg").unlink(missing_ok=True)
+    if instance.custom_backdrop:
+        (settings.MEDIA_ROOT / "backdrops" / f"{instance.pk}.png").unlink(missing_ok=True)

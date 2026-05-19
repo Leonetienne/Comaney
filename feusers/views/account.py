@@ -24,8 +24,9 @@ def profile(request):
     email_form    = ChangeEmailForm(feuser=feuser)
     password_form = ChangePasswordForm(feuser=feuser)
     success       = request.GET.get("success")
-    email_error   = None
-    picture_error = None
+    email_error    = None
+    picture_error  = None
+    backdrop_error = None
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -62,6 +63,49 @@ def profile(request):
             feuser.profile_picture = False
             feuser.save(update_fields=["profile_picture"])
             return redirect(f"{request.path}?success=picture_deleted")
+
+        elif action == "backdrop":
+            upload = request.FILES.get("custom_backdrop")
+            if not upload:
+                backdrop_error = "No file selected."
+            elif upload.size > 20 * 1024 * 1024:
+                backdrop_error = "File too large. Maximum size is 20 MB."
+            else:
+                try:
+                    from PIL import Image
+                    img = Image.open(upload)
+                    img.verify()
+                    upload.seek(0)
+                    img = Image.open(upload)
+                    backdrops_dir = settings.MEDIA_ROOT / "backdrops"
+                    backdrops_dir.mkdir(exist_ok=True)
+                    img.save(backdrops_dir / f"{feuser.pk}.png", "PNG")
+                    feuser.custom_backdrop = True
+                    feuser.save(update_fields=["custom_backdrop"])
+                    return redirect(f"{request.path}?success=backdrop")
+                except Exception:
+                    backdrop_error = "Could not process the image. Please upload a valid image file."
+
+        elif action == "backdrop_delete":
+            backdrop_path = settings.MEDIA_ROOT / "backdrops" / f"{feuser.pk}.png"
+            if backdrop_path.exists():
+                backdrop_path.unlink()
+            feuser.custom_backdrop = False
+            feuser.save(update_fields=["custom_backdrop"])
+            return redirect(f"{request.path}?success=backdrop_deleted")
+
+        elif action == "backdrop_settings":
+            mode = request.POST.get("backdrop_mode", "cover")
+            if mode not in ("cover", "contain"):
+                mode = "cover"
+            try:
+                opacity = max(0, min(100, int(request.POST.get("backdrop_opacity", 100))))
+            except (ValueError, TypeError):
+                opacity = 100
+            feuser.backdrop_mode = mode
+            feuser.backdrop_opacity = opacity
+            feuser.save(update_fields=["backdrop_mode", "backdrop_opacity"])
+            return redirect(f"{request.path}?success=backdrop_settings")
 
         elif action == "profile":
             profile_form = ProfileForm(request.POST, instance=feuser)
@@ -123,6 +167,7 @@ def profile(request):
         "success": success,
         "email_error": email_error,
         "picture_error": picture_error,
+        "backdrop_error": backdrop_error,
     })
 
 

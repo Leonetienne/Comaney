@@ -38,7 +38,7 @@ window.BUDDY_EXPENSE_CONFIG = {
 </div>
 {% endif %}
 
-<div class="form-wrap">
+<div class="form-wrap add-buddy-panel">
     <form method="post" novalidate>
         {% csrf_token %}
         {% if back_url %}<input type="hidden" name="back" value="{{ back_url }}">{% endif %}

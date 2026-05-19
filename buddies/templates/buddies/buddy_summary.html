@@ -10,7 +10,7 @@
 <div class="page-header">
     <h1>Buddy Expenses</h1>
 </div>
-<p class="page-subtitle">All expenses involving you and a buddy, regardless of who holds the record.</p>
+<div class="desc-surface"><p class="page-subtitle" style="margin:0;">All expenses involving you and a buddy, regardless of who holds the record.</p></div>
 
 {% if messages %}
 {% for message in messages %}
@@ -22,7 +22,7 @@
 {% if pending_approvals %}
 <section class="buddies-section">
     <h2>Waiting for your approval</h2>
-    <p class="page-subtitle">These expenses and settlements need your action.</p>
+    <div class="desc-surface"><p class="page-subtitle" style="margin:0;">These expenses and settlements need your action.</p></div>
     <div class="bexp-breakdown-list">
         {% for item in pending_approvals %}
         {% with exp=item.expense %}
@@ -109,7 +109,9 @@
 {% if debts_json != "[]" %}
 <section class="buddies-section">
     <h2>Who owes who</h2>
-    <div id="buddy-debt-graph" class="buddy-debt-graph"></div>
+    <div class="group-debt-graph-panel">
+        <div id="buddy-debt-graph" class="buddy-debt-graph"></div>
+    </div>
     <script>
     (function () {
         var DEBTS = {{ debts_json|safe }};
@@ -292,7 +294,8 @@
 {% if direct_settle_members_json != "[]" %}
 <section class="buddies-section">
     <h2>Pay someone back</h2>
-    <p class="page-subtitle">
+    <div class="add-buddy-panel">
+    <p class="page-subtitle" style="margin-bottom:0.75rem;">
         Pay back a buddy. The amount is pre-filled based on what you owe them, but you can enter any amount. You still need to actually send the money yourself.
     </p>
     <form method="post" action="{% url 'buddies:settle_direct_freeform' %}" id="direct-settle-form">
@@ -314,6 +317,7 @@
         </div>
         <button type="submit" id="btn-direct-settle" class="btn mt-sm">Record payment</button>
     </form>
+    </div>
     <script>
     (function () {
         var MEMBERS   = {{ direct_settle_members_json|safe }};

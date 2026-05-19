@@ -7,7 +7,7 @@
 <div class="page-header">
     <h1>Projects</h1>
 </div>
-<p class="page-subtitle">Track shared expenses across a group or solo. Invite others to join, or keep it personal.</p>
+<div class="desc-surface"><p class="page-subtitle" style="margin:0;">Track shared expenses across a group or solo. Invite others to join, or keep it personal.</p></div>
 
 {% if messages %}
 {% for message in messages %}
@@ -68,7 +68,8 @@
 
 <section class="buddies-section">
     <h2>Create a project</h2>
-    <p class="text-muted">A project groups expenses for any activity: solo, with friends, or family.</p>
+    <div class="add-buddy-panel">
+    <p class="text-muted" style="margin-bottom:0.75rem;">A project groups expenses for any activity: solo, with friends, or family.</p>
     <form method="post" action="{% url 'projects:projects_list' %}" class="stacked-form">
         {% csrf_token %}
         <label for="project-name">Project name</label>
@@ -77,6 +78,7 @@
         <textarea id="project-description" name="description" maxlength="500" rows="3" class="input-block" placeholder="Optional description"></textarea>
         <button type="submit" id="btn-create-project" class="btn">Create project</button>
     </form>
+    </div>
 </section>
 
 {% if project_summaries %}

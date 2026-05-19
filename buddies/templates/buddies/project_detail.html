@@ -62,7 +62,7 @@
         {% endfor %}
     </div>
     {% else %}
-    <p class="page-subtitle mb-md">You are all settled up.</p>
+    <div class="desc-surface"><p class="page-subtitle" style="margin:0;">You are all settled up.</p></div>
     {% endif %}
 
     {% if breakdown.simplified or raw_graph_json != '{"nodes": [], "links": []}' %}
@@ -217,8 +217,10 @@
     {# ── Spending Breakdown Pie Chart ─────────────────────────────────────────── #}
     {% if group_total_spending %}
     <h2>Spending breakdown</h2>
-    <p class="page-subtitle">Total group spending: <strong>{{ currency }}{{ group_total_spending|floatformat:2 }}</strong></p>
-    <p class="font-sm text-muted mb-md">Each slice shows how much of the total each person paid upfront. This is not the same as debt: it does not account for who owes whom or who has already settled.</p>
+    <div class="desc-surface">
+        <p class="page-subtitle" style="margin:0 0 0.25rem;">Total group spending: <strong>{{ currency }}{{ group_total_spending|floatformat:2 }}</strong></p>
+        <p class="font-sm text-muted" style="margin:0;">Each slice shows how much of the total each person paid upfront. This is not the same as debt: it does not account for who owes whom or who has already settled.</p>
+    </div>
     <div class="group-spending-wrap">
         <div id="group-spending-pie" class="group-spending-chart"></div>
         <div id="group-spending-legend" class="group-spending-legend"></div>
@@ -404,7 +406,8 @@
 {% if not is_solo and not project.archived %}
 <section class="buddies-section">
     <h2>Pay someone back</h2>
-    <p class="page-subtitle">
+    <div class="add-buddy-panel">
+    <p class="page-subtitle" style="margin-bottom:0.75rem;">
         Pay back a specific group member. The amount is pre-filled based on what you owe them directly, but you can enter any amount. They'll get a notification to confirm they received it.
     </p>
     <form method="post" action="{% url 'projects:group_settle_individual' group_id=group.uid %}" id="settle-individual-form">
@@ -437,6 +440,7 @@
 
         <button type="submit" id="btn-settle-individual" class="btn mt-sm">Record payment</button>
     </form>
+    </div>
 
     <script>
     (function () {
@@ -510,7 +514,7 @@
 {% if pending_expenses %}
 <section class="buddies-section">
     <h2>Waiting for approval</h2>
-    <p class="page-subtitle">These expenses are not yet confirmed and do not count toward the current balances.</p>
+    <div class="desc-surface"><p class="page-subtitle" style="margin:0;">These expenses are not yet confirmed and do not count toward the current balances.</p></div>
     <div class="bexp-breakdown-list">
         {% for e in pending_expenses %}
         <div id="pending-{{ e.expense.uid }}" class="bexp-breakdown-card {% if e.payer_is_me %}bexp-card-i-paid{% elif e.i_am_participant %}bexp-card-other-paid{% else %}bexp-card-neutral{% endif %} bexp-card-pending{% if e.creditor_approval_needed or e.admin_approval_needed %} bexp-card-approvable{% endif %}">
@@ -594,7 +598,7 @@
 {% if approved_expenses %}
 <section class="buddies-section">
     <h2>Expense Breakdown</h2>
-    <p class="page-subtitle">Each expense and how the shares were calculated.</p>
+    <div class="desc-surface"><p class="page-subtitle" style="margin:0;">Each expense and how the shares were calculated.</p></div>
 
     <div class="bexp-breakdown-list">
         {% for e in approved_expenses %}
