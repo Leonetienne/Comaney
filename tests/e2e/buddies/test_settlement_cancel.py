@@ -36,10 +36,10 @@ def _create_feuser_settlement(debtor_email: str, creditor_pk: int, value: str = 
     """Create a settlement from debtor to a real-user creditor; return pk."""
     if group_pk:
         group_load = (
-            f"from buddies.models import BuddyGroup; "
-            f"grp = BuddyGroup.objects.get(pk={group_pk}); "
+            f"from buddies.models import Project; "
+            f"grp = Project.objects.get(pk={group_pk}); "
         )
-        group_arg = "buddy_group=grp, "
+        group_arg = "project=grp, "
     else:
         group_load = ""
         group_arg = ""
@@ -64,10 +64,10 @@ def _create_dummy_settlement(debtor_email: str, dummy_pk: int, value: str = "25.
     """Create a settlement from debtor to an offline member (dummy); return pk."""
     if group_pk:
         group_load = (
-            f"from buddies.models import BuddyGroup; "
-            f"grp = BuddyGroup.objects.get(pk={group_pk}); "
+            f"from buddies.models import Project; "
+            f"grp = Project.objects.get(pk={group_pk}); "
         )
-        group_arg = "buddy_group=grp, "
+        group_arg = "project=grp, "
     else:
         group_load = ""
         group_arg = ""
@@ -100,8 +100,8 @@ def _create_personal_dummy(owner_email: str, name: str = "Offline Creditor") -> 
 def _create_group_dummy(group_pk: int, name: str = "Offline Member") -> str:
     """Create a DummyUser for a group; return pk."""
     return _shell(
-        f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
-        f"g = BuddyGroup.objects.get(pk={group_pk}); "
+        f"from buddies.models import DummyUser, Project, BuddyGroupMember; "
+        f"g = Project.objects.get(pk={group_pk}); "
         f"d = DummyUser.objects.create(owning_group=g, display_name='{name}'); "
         f"BuddyGroupMember.objects.create(group=g, dummy=d); "
         f"print(d.pk)"
@@ -415,7 +415,7 @@ class TestGroupViewEditButtonAbsentForRealUserSettlement:
 
     def test_edit_button_present_for_pending_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         edit_url = f"/budget/expenses/{ctx['pending_pk']}/edit/"
         assert edit_url in driver.page_source, \
@@ -450,7 +450,7 @@ class TestGroupViewEditButtonPresentForDummySettlement:
 
     def test_edit_button_present_in_group_view(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         edit_url = f"/budget/expenses/{ctx['exp_pk']}/edit/"
         assert edit_url in driver.page_source, \
@@ -489,9 +489,9 @@ class TestGroupViewApprovedSettlementNotDeletable:
 
     def test_delete_button_absent_in_group_view(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
-        delete_action = f"/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/"
+        delete_action = f"/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/"
         assert delete_action not in driver.page_source, \
             "Delete button must not appear for approved settlement in group view"
 
@@ -499,7 +499,7 @@ class TestGroupViewApprovedSettlementNotDeletable:
         driver.execute_script(
             f"var f = document.createElement('form');"
             f"f.method = 'POST';"
-            f"f.action = '/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
+            f"f.action = '/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
             f"var csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;"
             f"var t = document.createElement('input');"
             f"t.name = 'csrfmiddlewaretoken'; t.value = csrf; f.appendChild(t);"

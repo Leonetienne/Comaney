@@ -242,7 +242,7 @@ class TestGroupFullSettlementZeroBalance:
 
     def test_member_initial_debt_shown(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "80.00" in driver.page_source, \
             "Member must see 80.00 owed before settlement"
@@ -261,7 +261,7 @@ class TestGroupFullSettlementZeroBalance:
 
     def test_admin_confirms_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
         time.sleep(1)
@@ -273,7 +273,7 @@ class TestGroupFullSettlementZeroBalance:
 
     def test_member_sees_all_settled_up_on_group_page(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "You are all settled up." in driver.page_source, \
             "Group page must show 'You are all settled up.' when member's balance = 0"
@@ -290,7 +290,7 @@ class TestGroupFullSettlementZeroBalance:
 
     def test_admin_balance_zero_on_group_page(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Everyone is settled up. No transfers needed." in driver.page_source, \
             "Admin must also see 'No transfers needed.' once all debts are cleared"

@@ -29,10 +29,10 @@ class TestGroupInviteAcceptNotifiesAdmin:
         group_id = _create_group(a["email"], "Notify Accept Group")
         seen_before = mailpit_seen_ids()
         _shell(
-            f"from buddies.services import BuddyGroupService; "
-            f"from feusers.models import FeUser; from buddies.models import BuddyGroup; "
+            f"from buddies.services import ProjectService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
             f"admin = FeUser.objects.get(email='{a['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"BuddyGroupService.invite_member(g, admin, '{c['email']}')"
         )
         body = fetch_email(c["email"], "Notify Accept Group", ignore_ids=seen_before)
@@ -47,9 +47,9 @@ class TestGroupInviteAcceptNotifiesAdmin:
         _login_as(driver, ctx["c"])
         driver.get(ctx["invite_link"])
         time.sleep(1)
-        driver.find_element(By.ID, "btn-accept-group-invite").click()
+        driver.find_element(By.ID, "btn-accept-project-invite").click()
         time.sleep(1)
-        assert "/buddies/groups/" in driver.current_url
+        assert "/projects/" in driver.current_url
 
     def test_admin_receives_accepted_notification(self, driver, w, ctx):
         body = fetch_email(
@@ -75,10 +75,10 @@ class TestGroupInviteDeclineNotifiesAdmin:
         group_id = _create_group(a["email"], "Notify Decline Group")
         seen_before = mailpit_seen_ids()
         _shell(
-            f"from buddies.services import BuddyGroupService; "
-            f"from feusers.models import FeUser; from buddies.models import BuddyGroup; "
+            f"from buddies.services import ProjectService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
             f"admin = FeUser.objects.get(email='{a['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"BuddyGroupService.invite_member(g, admin, '{c['email']}')"
         )
         body = fetch_email(c["email"], "Notify Decline Group", ignore_ids=seen_before)
@@ -93,7 +93,7 @@ class TestGroupInviteDeclineNotifiesAdmin:
         _login_as(driver, ctx["c"])
         driver.get(ctx["invite_link"])
         time.sleep(1)
-        driver.find_element(By.ID, "btn-decline-group-invite").click()
+        driver.find_element(By.ID, "btn-decline-project-invite").click()
         time.sleep(1)
         assert "/buddies/" in driver.current_url
 
@@ -120,10 +120,10 @@ class TestGroupDummyMergeOnboardingEmailMentionsGroup:
         a = setup_user(driver, w, first_name="Merge", last_name="Admin")
         group_id = _create_group(a["email"], "Merge Notify Group")
         dummy_uid = _shell(
-            f"from buddies.services import BuddyGroupService; "
-            f"from feusers.models import FeUser; from buddies.models import BuddyGroup; "
+            f"from buddies.services import ProjectService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
             f"admin = FeUser.objects.get(email='{a['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = BuddyGroupService.create_group_dummy(g, admin, 'Offline Gary'); "
             f"print(d.uid)"
         )
@@ -134,11 +134,11 @@ class TestGroupDummyMergeOnboardingEmailMentionsGroup:
         target_email = f"newuser-{ctx['dummy_uid']}@example.test"
         seen_before = mailpit_seen_ids()
         _shell(
-            f"from buddies.services import BuddyGroupService; "
+            f"from buddies.services import ProjectService; "
             f"from feusers.models import FeUser; "
-            f"from buddies.models import BuddyGroup, DummyUser; "
+            f"from buddies.models import Project, DummyUser; "
             f"admin = FeUser.objects.get(email='{ctx['a']['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={ctx['group_id']}); "
+            f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"d = DummyUser.objects.get(uid='{ctx['dummy_uid']}'); "
             f"BuddyGroupService.send_group_dummy_merge_invite(g, admin, d, '{target_email}')"
         )
@@ -168,13 +168,13 @@ class TestGroupMemberRemovedNotification:
         seen_before = mailpit_seen_ids()
         ctx["seen_before_remove"] = seen_before
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         # Find and click the remove button for member b
         member_pk = _shell(
             f"from feusers.models import FeUser; "
-            f"from buddies.models import BuddyGroupMember, BuddyGroup; "
-            f"g = BuddyGroup.objects.get(pk={ctx['group_id']}); "
+            f"from buddies.models import ProjectMember, BuddyGroup; "
+            f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"b = FeUser.objects.get(email='{ctx['b']['email']}'); "
             f"print(BuddyGroupMember.objects.get(group=g, feuser=b).uid)"
         ).strip()
@@ -197,10 +197,10 @@ class TestGroupMemberRemovedNotification:
         _add_group_member(ctx["group_id"], c["email"])
         seen_before = mailpit_seen_ids()
         _shell(
-            f"from buddies.services import BuddyGroupService; "
+            f"from buddies.services import ProjectService; "
             f"from feusers.models import FeUser; "
-            f"from buddies.models import BuddyGroup, BuddyGroupMember; "
-            f"g = BuddyGroup.objects.get(pk={ctx['group_id']}); "
+            f"from buddies.models import Project, BuddyGroupMember; "
+            f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"c = FeUser.objects.get(email='{c['email']}'); "
             f"m = BuddyGroupMember.objects.get(group=g, feuser=c); "
             f"BuddyGroupService.remove_member(g, g.admin_feuser, m, notify=False)"

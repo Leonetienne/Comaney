@@ -29,27 +29,27 @@ class TestAchimGroupCreated:
         group_id = _create_group(email, "Achim Test Group")
         dummy_id = _shell(
             f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Offline Otto'); "
             f"BuddyGroupMember.objects.create(group=g, dummy=d); "
             f"print(d.pk)"
         )
         _shell(
             f"from feusers.models import FeUser; "
-            f"from buddies.models import BuddyGroup, BuddySpending; "
+            f"from buddies.models import Project, BuddySpending; "
             f"from budget.models import Expense; "
             f"from decimal import Decimal; "
             f"u = FeUser.objects.get(email='{email}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"e = Expense.objects.create(owning_feuser=u, title='Group Camping Trip', "
             f"  type='expense', value=Decimal('120.00'), settled=False, "
-            f"  buddy_approved=True, buddy_group=g); "
+            f"  buddy_approved=True, project=g); "
             f"BuddySpending.objects.create(expense=e, participant_dummy_id={dummy_id}, "
             f"  share_percent=Decimal('50'))"
         )
         # Get the BuddyGroupMember uid for the dummy so we can find the Remove link
         member_uid = _shell(
-            f"from buddies.models import BuddyGroupMember; "
+            f"from buddies.models import ProjectMember; "
             f"m = BuddyGroupMember.objects.get(dummy_id={dummy_id}); "
             f"print(m.uid)"
         )
@@ -60,7 +60,7 @@ class TestAchimGroupCreated:
         cleanup_user(a["email"])
 
     def test_group_dummy_visible_before_removal(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Offline Otto" in driver.page_source
 
@@ -83,7 +83,7 @@ class TestAchimGroupCreated:
     def test_submit_redirects_to_group_page(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-confirm-kick").click()
         time.sleep(1.5)
-        assert f"/buddies/groups/{ctx['group_id']}/" in driver.current_url
+        assert f"/projects/{ctx['group_id']}/" in driver.current_url
 
     def test_achim_modal_visible(self, driver, w, ctx):
         assert "Say hello to Achim Archive" in driver.page_source
@@ -98,7 +98,7 @@ class TestAchimGroupCreated:
     def test_archive_exists_in_db(self, driver, w, ctx):
         count = _shell(
             f"from buddies.models import DummyUser, BuddyGroup; "
-            f"g = BuddyGroup.objects.get(pk={ctx['group_id']}); "
+            f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"print(DummyUser.objects.filter(owning_group=g, is_archive=True).count())"
         )
         assert count == "1", "Exactly one group Achim Archive must exist in the DB"
@@ -106,7 +106,7 @@ class TestAchimGroupCreated:
     def test_expense_transferred_to_archive(self, driver, w, ctx):
         count = _shell(
             f"from buddies.models import BuddySpending, DummyUser, BuddyGroup; "
-            f"g = BuddyGroup.objects.get(pk={ctx['group_id']}); "
+            f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"archive = DummyUser.objects.get(owning_group=g, is_archive=True); "
             f"print(BuddySpending.objects.filter(participant_dummy=archive).count())"
         )
@@ -133,12 +133,12 @@ class TestAchimGroupWipe:
             f"from budget.models import Expense; "
             f"from decimal import Decimal; "
             f"u = FeUser.objects.get(email='{email}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='TempGroupBuddy'); "
             f"BuddyGroupMember.objects.create(group=g, dummy=d); "
             f"e = Expense.objects.create(owning_feuser=u, title='Wipe Group Expense', "
             f"  type='expense', value=Decimal('100.00'), settled=False, "
-            f"  buddy_approved=True, buddy_group=g); "
+            f"  buddy_approved=True, project=g); "
             f"BuddySpending.objects.create(expense=e, participant_dummy=d, "
             f"  share_percent=Decimal('50')); "
             f"archive, _ = BuddyArchiveService.get_or_create_group_archive(g); "
@@ -151,7 +151,7 @@ class TestAchimGroupWipe:
         cleanup_user(a["email"])
 
     def test_achim_visible_in_group_members(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Achim Archive" in driver.page_source
 
@@ -173,14 +173,14 @@ class TestAchimGroupWipe:
     def test_submit_wipes_and_redirects(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-confirm-wipe").click()
         time.sleep(1.5)
-        assert f"/buddies/groups/{ctx['group_id']}/" in driver.current_url
+        assert f"/projects/{ctx['group_id']}/" in driver.current_url
 
     def test_flash_message_shown(self, driver, w, ctx):
         assert "cleared" in driver.page_source.lower() or \
                "Achim Archive" in driver.page_source
 
     def test_achim_gone_from_group_members(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Achim Archive" not in driver.page_source, \
             "Achim Archive must be gone from group members after wipe"
@@ -188,7 +188,7 @@ class TestAchimGroupWipe:
     def test_archive_deleted_from_db(self, driver, w, ctx):
         count = _shell(
             f"from buddies.models import DummyUser, BuddyGroup; "
-            f"g = BuddyGroup.objects.get(pk={ctx['group_id']}); "
+            f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"print(DummyUser.objects.filter(owning_group=g, is_archive=True).count())"
         )
         assert count == "0", "Group Achim Archive must be deleted after wipe"
@@ -223,14 +223,14 @@ class TestAchimGroupSelfDebtCancels:
             f"from budget.models import Expense; "
             f"from decimal import Decimal; "
             f"u = FeUser.objects.get(email='{email}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"da = DummyUser.objects.create(owning_group=g, display_name='DummyA'); "
             f"db = DummyUser.objects.create(owning_group=g, display_name='DummyB'); "
             f"BuddyGroupMember.objects.create(group=g, dummy=da); "
             f"BuddyGroupMember.objects.create(group=g, dummy=db); "
             f"e = Expense.objects.create(owning_feuser=u, title='B paid for A', "
             f"  type='expense', value=Decimal('5.00'), settled=False, "
-            f"  buddy_approved=True, buddy_group=g, is_dummy=True, "
+            f"  buddy_approved=True, project=g, is_dummy=True, "
             f"  upfront_payee_dummy=db); "
             f"BuddySpending.objects.create(expense=e, participant_dummy=da, "
             f"  share_percent=Decimal('100')); "
@@ -243,9 +243,9 @@ class TestAchimGroupSelfDebtCancels:
         cleanup_user(a["email"])
 
     def test_group_page_loads(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1.5)
-        assert f"/buddies/groups/{ctx['group_id']}/" in driver.current_url
+        assert f"/projects/{ctx['group_id']}/" in driver.current_url
 
     def test_achim_is_only_dummy_member(self, driver, w, ctx):
         assert "Achim Archive" in driver.page_source

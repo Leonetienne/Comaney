@@ -25,12 +25,12 @@ def _create_dummy_upfront_expense(owner_email: str, group_id: int,
         f"from feusers.models import FeUser; from decimal import Decimal; "
         f"from datetime import date; "
         f"owner = FeUser.objects.get(email='{owner_email}'); "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"g = Project.objects.get(pk={group_id}); "
         f"e = Expense.objects.create(owning_feuser=owner, title='{title}', "
         f"  type='expense', value=Decimal('{value}'), settled=False, "
         f"  date_due=date.today(), "
         f"  is_dummy=True, upfront_payee_dummy_id={dummy_id}, "
-        f"  buddy_approved=True, buddy_group=g); "
+        f"  buddy_approved=True, project=g); "
         f"BuddySpending.objects.create(expense=e, participant_feuser=owner, "
         f"  share_percent=Decimal('100')); "
         f"print(e.pk)"
@@ -48,7 +48,7 @@ class TestAdminCanEditDummyUpfrontExpense:
         _add_group_member(group_id, member["email"])
         dummy_id = int(_shell(
             f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Offline Dan'); "
             f"BuddyGroupMember.objects.create(group=g, dummy=d); "
             f"print(d.pk)"
@@ -67,7 +67,7 @@ class TestAdminCanEditDummyUpfrontExpense:
 
     def test_edit_button_visible_for_admin(self, driver, w, ctx):
         _login_as(driver, ctx)
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         links = driver.find_elements(By.CSS_SELECTOR, "a.btn-secondary")
         edit_links = [l for l in links if "edit" in (l.get_attribute("href") or "")]
@@ -81,7 +81,7 @@ class TestAdminCanEditDummyUpfrontExpense:
 
     def test_edit_button_not_visible_for_non_admin_member(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         links = driver.find_elements(By.CSS_SELECTOR, "a.btn-secondary")
         edit_links = [

@@ -26,8 +26,8 @@ from bhelpers import _shell, _login_as, _create_group, _add_group_member
 
 def _create_group_dummy(group_id: int, display_name: str) -> str:
     return _shell(
-        f"from buddies.models import BuddyGroup, BuddyGroupMember, DummyUser; "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"from buddies.models import Project, BuddyGroupMember, DummyUser; "
+        f"g = Project.objects.get(pk={group_id}); "
         f"d = DummyUser.objects.create(owning_group=g, display_name='{display_name}'); "
         f"BuddyGroupMember.objects.create(group=g, dummy=d); "
         f"print(d.pk)"
@@ -55,7 +55,7 @@ class TestGroupSettlementNonAdminPaysDummy:
 
     def test_member_submits_payment_to_dummy(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Pay someone back" in driver.page_source, \
             "Pay someone back section must be visible for member"
@@ -147,7 +147,7 @@ class TestGroupSettlementAdminPaysDummyAutoApprove:
 
     def test_admin_submits_payment_to_dummy(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Pay someone back" in driver.page_source
 

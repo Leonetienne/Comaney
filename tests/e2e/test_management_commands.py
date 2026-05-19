@@ -241,8 +241,8 @@ class TestDeleteUser:
         r = subprocess.run(
             [
                 "docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c",
-                f"from feusers.models import FeUser; from buddies.services import BuddyGroupService; "
-                f"from buddies.models import BuddyGroupMember; "
+                f"from feusers.models import FeUser; from buddies.services import ProjectService; "
+                f"from buddies.models import ProjectMember; "
                 f"admin = FeUser.objects.get(email='{admin_email}'); "
                 f"member = FeUser.objects.get(email='{member_email}'); "
                 f"g = BuddyGroupService.create_group(admin, 'CmdDelGroup'); "
@@ -261,9 +261,9 @@ class TestDeleteUser:
         r2 = subprocess.run(
             [
                 "docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c",
-                f"from buddies.models import BuddyGroup, BuddyGroupMember; "
+                f"from buddies.models import Project, BuddyGroupMember; "
                 f"from feusers.models import FeUser; "
-                f"g = BuddyGroup.objects.filter(pk={group_pk}).first(); "
+                f"g = Project.objects.filter(pk={group_pk}).first(); "
                 f"member = FeUser.objects.filter(email='{member_email}').first(); "
                 f"print('EXISTS' if g else 'GONE'); "
                 f"print('admin_ok' if (g and member and g.admin_feuser_id == member.pk) else 'wrong_admin'); "

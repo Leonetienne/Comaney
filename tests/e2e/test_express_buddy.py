@@ -187,7 +187,7 @@ class TestExpressBuddyConfirmDummyParticipant:
             title="ExpressDummyPart",
             buddy_payment=True,
             buddy_mode="single",
-            buddy_group_id=None,
+            project_id=None,
             buddy_upfront_type="me",
             buddy_upfront_id=ctx["me_pk"],
             buddy_spendings=[{"type": "dummy", "id": ctx["dummy_id"], "share_percent": 50.0}],
@@ -235,7 +235,7 @@ class TestExpressBuddyConfirmDummyPayer:
             title="ExpressDummyPayer",
             buddy_payment=True,
             buddy_mode="single",
-            buddy_group_id=None,
+            project_id=None,
             buddy_upfront_type="dummy",
             buddy_upfront_id=ctx["dummy_id"],
             buddy_spendings=[{"type": "feuser", "id": ctx["me_pk"], "share_percent": 50.0}],
@@ -287,7 +287,7 @@ class TestExpressBuddyConfirmFeuserPayer:
             title="ExpressFeuserPayer",
             buddy_payment=True,
             buddy_mode="single",
-            buddy_group_id=None,
+            project_id=None,
             buddy_upfront_type="feuser",
             buddy_upfront_id=ctx["b_pk"],
             buddy_spendings=[{"type": "feuser", "id": ctx["me_pk"], "share_percent": 50.0}],
@@ -359,9 +359,9 @@ class TestExpressBuddyCardUI:
         cards = driver.find_elements(By.CSS_SELECTOR, ".preview-card")
         assert cards, "No preview cards rendered"
         first_card = cards[0]
-        assert first_card.find_elements(By.CSS_SELECTOR, ".buddy-payment-cb"), \
-            "buddy-payment-cb checkbox must be present inside each preview card"
-        assert "This is a buddy payment" in first_card.text
+        assert first_card.find_elements(By.CSS_SELECTOR, ".pcard-assign-none"), \
+            "Expense assignment 'None' tab must be present inside each preview card"
+        assert "Expense assignment" in first_card.text
 
     def test_toggle_shows_buddy_details(self, driver, w, ctx):
         if not ctx.get("ai_ok"):
@@ -369,11 +369,11 @@ class TestExpressBuddyCardUI:
         cards = driver.find_elements(By.CSS_SELECTOR, ".preview-card")
         if not cards:
             pytest.skip("No preview cards")
-        cb = cards[0].find_element(By.CSS_SELECTOR, ".buddy-payment-cb")
-        cb.click()
+        tab = cards[0].find_element(By.CSS_SELECTOR, ".pcard-assign-buddy")
+        tab.click()
         time.sleep(0.5)
         details = cards[0].find_element(By.CSS_SELECTOR, ".pcard-buddy-details")
-        assert details.is_displayed(), "Buddy details section must become visible after checking the checkbox"
+        assert details.is_displayed(), "Buddy details section must become visible after clicking the Direct Buddy tab"
 
     def test_payer_dropdown_populated(self, driver, w, ctx):
         if not ctx.get("ai_ok"):
@@ -381,6 +381,10 @@ class TestExpressBuddyCardUI:
         cards = driver.find_elements(By.CSS_SELECTOR, ".preview-card")
         if not cards:
             pytest.skip("No preview cards")
+        # Direct Buddy tab must already be active from previous test; ensure it is
+        tab = cards[0].find_element(By.CSS_SELECTOR, ".pcard-assign-buddy")
+        tab.click()
+        time.sleep(0.5)
         sel = cards[0].find_element(By.CSS_SELECTOR, ".buddy-upfront-select")
         options = sel.find_elements(By.TAG_NAME, "option")
         assert len(options) >= 2, \
@@ -439,9 +443,9 @@ class TestExpressBuddySliderAmounts:
         val_input = card.find_element(By.CSS_SELECTOR, ".edit-value")
         expense_val = float(val_input.get_attribute("value").replace(",", "."))
 
-        # Enable buddy payment.
-        cb = card.find_element(By.CSS_SELECTOR, ".buddy-payment-cb")
-        cb.click()
+        # Enable buddy payment via Direct Buddy tab.
+        tab = card.find_element(By.CSS_SELECTOR, ".pcard-assign-buddy")
+        tab.click()
         time.sleep(0.5)
 
         # Single mode is the default; select the dummy from the participant dropdown.
@@ -509,3 +513,60 @@ class TestExpressBuddySliderAmounts:
         assert "70.00" in payer_amt_text, (
             f"After value -> 100, payer (70 %) must show 70.00, got: {payer_amt_text!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Confirm: project_uid assigns the expense to a solo project (no buddy payment)
+# ---------------------------------------------------------------------------
+
+class TestExpressProjectUidConfirm:
+    """Confirm that a project_uid in the preview JSON assigns the expense to the project.
+
+    Uses a solo project (user is the only member) so no buddy spendings are needed.
+    The expense must appear in the API with the correct project name.
+    """
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        c = setup_user(driver, w, first_name="ProjUID", last_name="Express")
+        _set_fake_api_key(c["email"])
+        # Create a solo project and get its uid
+        project_uid = int(_shell(
+            f"from buddies.services import ProjectService; "
+            f"from feusers.models import FeUser; "
+            f"u = FeUser.objects.get(email='{c['email']}'); "
+            f"g = ProjectService.create_group(u, 'Express Test Project'); "
+            f"print(g.uid)"
+        ))
+        c["project_uid"] = project_uid
+        yield c
+        cleanup_user(c["email"])
+
+    def test_confirm_with_project_uid(self, driver, w, ctx):
+        item = _base_item(
+            title="ExpressProjUID",
+            project_uid=ctx["project_uid"],
+        )
+        resp = _submit_confirm(driver, [item])
+        assert resp.status_code in (200, 302), f"Unexpected status: {resp.status_code}"
+
+    def test_expense_in_api_with_project(self, driver, w, ctx):
+        resp = api_get("/api/v1/expenses/", ctx, params={"q": "ExpressProjUID"})
+        assert resp.status_code == 200
+        expenses = resp.json().get("expenses", [])
+        match = next((e for e in expenses if e["title"] == "ExpressProjUID"), None)
+        assert match is not None, "Expense must appear in the API"
+        assert match.get("project") is not None, "Expense must have a project assigned"
+        assert match["project"]["name"] == "Express Test Project", (
+            f"Project name mismatch: {match['project']!r}"
+        )
+
+    def test_confirm_without_project_uid_has_no_project(self, driver, w, ctx):
+        item = _base_item(title="ExpressNoProjUID")
+        resp = _submit_confirm(driver, [item])
+        assert resp.status_code in (200, 302)
+        resp2 = api_get("/api/v1/expenses/", ctx, params={"q": "ExpressNoProjUID"})
+        expenses = resp2.json().get("expenses", [])
+        match = next((e for e in expenses if e["title"] == "ExpressNoProjUID"), None)
+        assert match is not None, "Expense must appear in the API"
+        assert match.get("project") is None, "Expense without project_uid must not have a project"

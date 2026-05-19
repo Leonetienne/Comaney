@@ -27,8 +27,8 @@ from bhelpers import (
 
 def _mk_group_dummy(group_pk: int, name: str) -> int:
     return int(_shell(
-        f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
-        f"g=BuddyGroup.objects.get(pk={group_pk}); "
+        f"from buddies.models import DummyUser, Project, BuddyGroupMember; "
+        f"g=Project.objects.get(pk={group_pk}); "
         f"d=DummyUser.objects.create(owning_group=g, display_name='{name}'); "
         f"BuddyGroupMember.objects.create(group=g, dummy=d); "
         f"print(d.pk)"
@@ -110,12 +110,12 @@ class TestGroupSettlementCreationNotifiesCreditor:
     def test_creation_sends_confirmation_email_to_creditor(self, driver, w, ctx):
         seen_before = mailpit_seen_ids()
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         driver.execute_script(
             f"var f=document.createElement('form');"
             f"f.method='POST';"
-            f"f.action='/buddies/groups/{ctx['grp_pk']}/settle-individual/';"
+            f"f.action='/projects/{ctx['grp_pk']}/settle-individual/';"
             f"var csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;"
             f"[['csrfmiddlewaretoken',csrf],['debtor_key','f{ctx['a_pk']}'],"
             f" ['creditor_key','f{ctx['b_pk']}'],['amount','40.00']"
@@ -167,12 +167,12 @@ class TestGroupDummyDebtorSettlementCreationNotifiesCreditor:
     def test_creation_sends_confirmation_email_to_creditor(self, driver, w, ctx):
         seen_before = mailpit_seen_ids()
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         driver.execute_script(
             f"var f=document.createElement('form');"
             f"f.method='POST';"
-            f"f.action='/buddies/groups/{ctx['grp_pk']}/settle-individual/';"
+            f"f.action='/projects/{ctx['grp_pk']}/settle-individual/';"
             f"var csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;"
             f"[['csrfmiddlewaretoken',csrf],['debtor_key','d{ctx['dummy_pk']}'],"
             f" ['creditor_key','f{ctx['creditor_pk']}'],['amount','30.00']"

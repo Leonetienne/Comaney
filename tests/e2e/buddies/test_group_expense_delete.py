@@ -30,10 +30,10 @@ def _create_approved_group_expense(owner_email: str, participant_email: str,
         f"from feusers.models import FeUser; from decimal import Decimal; "
         f"owner = FeUser.objects.get(email='{owner_email}'); "
         f"part = FeUser.objects.get(email='{participant_email}'); "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"g = Project.objects.get(pk={group_id}); "
         f"e = Expense.objects.create(owning_feuser=owner, title='{title}', "
         f"  type='expense', value=Decimal('{value}'), settled=False, "
-        f"  buddy_approved=True, buddy_group=g); "
+        f"  buddy_approved=True, project=g); "
         f"BuddySpending.objects.create(expense=e, participant_feuser=part, "
         f"  share_percent=Decimal('50')); "
         f"print(e.pk)"
@@ -47,15 +47,15 @@ def _create_dummy_group_expense(admin_email: str, group_id: int,
     Returns the expense pk (integer) as string."""
     return _shell(
         f"from budget.models import Expense; "
-        f"from buddies.models import BuddyGroup, BuddyGroupMember, DummyUser; "
+        f"from buddies.models import Project, BuddyGroupMember, DummyUser; "
         f"from feusers.models import FeUser; from decimal import Decimal; "
         f"admin = FeUser.objects.get(email='{admin_email}'); "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"g = Project.objects.get(pk={group_id}); "
         f"d = DummyUser.objects.create(owning_group=g, display_name='Del Dummy'); "
         f"BuddyGroupMember.objects.get_or_create(group=g, dummy=d); "
         f"e = Expense.objects.create(owning_feuser=admin, title='{title}', "
         f"  type='expense', value=Decimal('{value}'), settled=False, "
-        f"  buddy_approved=True, buddy_group=g, "
+        f"  buddy_approved=True, project=g, "
         f"  is_dummy=True, upfront_payee_dummy=d); "
         f"print(e.pk)"
     )
@@ -92,7 +92,7 @@ class TestOwnerDeletesOwnGroupExpense:
 
     def test_expense_visible_before_delete(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Owner Deletable Expense" in driver.page_source
 
@@ -140,7 +140,7 @@ class TestMemberDeletesOwnGroupExpense:
 
     def test_member_sees_delete_button_for_own_expense(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Member Own Deletable" in driver.page_source
         delete_forms = driver.find_elements(By.CSS_SELECTOR, "form[action*='/delete/']")
@@ -185,7 +185,7 @@ class TestMemberCannotDeleteOthersGroupExpense:
 
     def test_member_sees_no_delete_button_for_admins_expense(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Admin Only Expense" in driver.page_source, \
             "Expense must be visible to the member"
@@ -198,7 +198,7 @@ class TestMemberCannotDeleteOthersGroupExpense:
         csrftoken = cookie_dict.get("csrftoken", "")
         sessionid = cookie_dict.get("sessionid", "")
         req.post(
-            _url(f"/buddies/groups/{ctx['group_id']}/expense/{ctx['exp_pk']}/delete/"),
+            _url(f"/projects/{ctx['group_id']}/expense/{ctx['exp_pk']}/delete/"),
             headers={"X-CSRFToken": csrftoken, "Referer": _url("/buddies/")},
             cookies={"csrftoken": csrftoken, "sessionid": sessionid},
             timeout=10,
@@ -227,7 +227,7 @@ class TestAdminDeletesDummyGroupExpense:
 
     def test_dummy_expense_visible_on_group_page(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Dummy Payer Expense" in driver.page_source
 

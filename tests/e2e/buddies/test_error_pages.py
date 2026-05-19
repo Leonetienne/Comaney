@@ -171,10 +171,10 @@ class TestAdminCannotRemoveSelf:
         group_id = _create_group(admin["email"], "AdminSelfRemoveGroup")
         # Get admin's BuddyGroupMember uid
         member_uid = _shell(
-            f"from buddies.models import BuddyGroup, BuddyGroupMember; "
+            f"from buddies.models import Project, BuddyGroupMember; "
             f"from feusers.models import FeUser; "
             f"a = FeUser.objects.get(email='{admin['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"m = BuddyGroupMember.objects.get(group=g, feuser=a); "
             f"print(m.uid)"
         )
@@ -184,7 +184,7 @@ class TestAdminCannotRemoveSelf:
 
     def test_admin_self_remove_shows_error(self, driver, w, ctx):
         # POST directly to the remove-member endpoint for the admin themselves
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         # Attempt to remove self: find remove form for the admin member (if present)
         remove_forms = driver.find_elements(By.CSS_SELECTOR,

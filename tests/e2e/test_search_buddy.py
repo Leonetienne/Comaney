@@ -99,10 +99,10 @@ def setup_data(ctx):
 
     # Create a BuddyGroup and link it to another expense
     group_pk = int(_shell(
-        f"from buddies.models import BuddyGroup, BuddyGroupMember, DummyUser; "
+        f"from buddies.models import Project, BuddyGroupMember, DummyUser; "
         f"from feusers.models import FeUser; "
         f"u = FeUser.objects.get(email='{email}'); "
-        f"g = BuddyGroup.objects.create(name='{GROUP_NAME}', admin_feuser=u); "
+        f"g = Project.objects.create(name='{GROUP_NAME}', admin_feuser=u); "
         f"d = DummyUser.objects.create(owning_group=g, display_name='{MEMBER_NAME}'); "
         f"BuddyGroupMember.objects.create(group=g, dummy=d); "
         f"print(g.pk)"
@@ -121,8 +121,8 @@ def setup_data(ctx):
     _shell(
         f"from budget.models import Expense; "
         f"e = Expense.objects.get(uid={group_exp_id}); "
-        f"e.buddy_group_id = {group_pk}; "
-        f"e.save(update_fields=['buddy_group'])"
+        f"e.project_id = {group_pk}; "
+        f"e.save(update_fields=['project'])"
     )
 
     yield
@@ -139,8 +139,8 @@ def setup_data(ctx):
         )
     if "bsrch_group_pk" in ctx:
         _shell(
-            f"from buddies.models import BuddyGroup; "
-            f"BuddyGroup.objects.filter(pk={ctx['bsrch_group_pk']}).delete()"
+            f"from buddies.models import Project; "
+            f"Project.objects.filter(pk={ctx['bsrch_group_pk']}).delete()"
         )
 
 

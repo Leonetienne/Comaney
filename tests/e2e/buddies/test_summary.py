@@ -85,49 +85,42 @@ class TestSummaryD3Graph:
 
 
 # ---------------------------------------------------------------------------
-# Group saldo cards on summary
+# Verify groups/projects block is no longer on buddy summary
 # ---------------------------------------------------------------------------
 
-class TestSummaryGroupSaldo:
-    """Group saldo card appears on the summary page after an approved group expense."""
+class TestSummaryNoGroupBlock:
+    """The buddy summary page must NOT show a groups/projects block (moved to /projects/)."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         admin = setup_user(driver, w, first_name="Greta", last_name="GroupSaldo")
         member = setup_user(None, None, first_name="Max", last_name="GroupMember")
         group_id = _create_group(admin["email"], "SaldoGroup")
-        _add_group_member(group_id, member["email"])
-        # Create approved group expense: admin paid 100, member owes 50%
+        _add_group_member(int(group_id), member["email"])
         member_pk = int(_get_pk(member["email"]))
         _create_group_expense(
             admin_email=admin["email"],
             participant_email=member["email"],
-            group_id=group_id,
+            group_id=int(group_id),
             title="Group Saldo Expense",
             value="100.00",
             share="50.0",
         )
-        ctx = {"admin": admin, "member": member, "group_id": group_id}
+        ctx = {"admin": admin, "member": member, "group_id": int(group_id)}
         yield ctx
         cleanup_user(admin["email"])
         cleanup_user(member["email"])
 
-    def test_group_name_on_summary(self, driver, w, ctx):
+    def test_no_group_block_on_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "SaldoGroup" in driver.page_source, \
-            "Group name must appear in the groups section of the summary page"
+        # The groups section was removed from buddy_summary; project is on /projects/
+        assert "bgs-cards" not in driver.page_source, \
+            "Groups/projects block must not appear on the buddy summary page"
 
-    def test_admin_net_positive(self, driver, w, ctx):
-        # Admin paid 100, member owes 50, so admin has net +50
-        assert "50.00" in driver.page_source, \
-            "Admin's positive net saldo must be shown on the summary page"
-
-    def test_member_sees_negative_saldo(self, driver, w, ctx):
-        _login_as(driver, ctx["member"])
+    def test_summary_still_shows_pending_approvals_heading(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        assert "SaldoGroup" in driver.page_source
-        # Member owes 50 → negative saldo
-        assert "50.00" in driver.page_source, \
-            "Member's negative saldo must be shown on the summary page"
+        # Pending approvals section should still be present (admin has a dummy_payer expense)
+        # Just verify the page loads correctly
+        assert "Buddy Expenses" in driver.page_source

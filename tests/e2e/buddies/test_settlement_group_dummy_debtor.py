@@ -18,8 +18,8 @@ from bhelpers import _shell, _login_as, _create_group
 def _create_group_dummy(group_id: int, display_name: str) -> str:
     """Add a DummyUser to a group; return dummy pk as string."""
     return _shell(
-        f"from buddies.models import BuddyGroup, BuddyGroupMember, DummyUser; "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"from buddies.models import Project, BuddyGroupMember, DummyUser; "
+        f"g = Project.objects.get(pk={group_id}); "
         f"d = DummyUser.objects.create(owning_group=g, display_name='{display_name}'); "
         f"BuddyGroupMember.objects.create(group=g, dummy=d); "
         f"print(d.pk)"
@@ -33,15 +33,15 @@ def _create_group_dummy_paid_expense(admin_email: str, dummy_pk: int,
     # This creates debt: admin owes dummy = 100. But we want dummy owes admin.
     # Instead: admin paid, dummy is a participant owing 100%.
     _shell(
-        f"from feusers.models import FeUser; from buddies.models import BuddyGroup, DummyUser; "
+        f"from feusers.models import FeUser; from buddies.models import Project, DummyUser; "
         f"from budget.expense_factory import create_expense; "
         f"from budget.models import TransactionType; from decimal import Decimal; "
         f"a = FeUser.objects.get(email='{admin_email}'); "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"g = Project.objects.get(pk={group_id}); "
         f"d = DummyUser.objects.get(pk={dummy_pk}); "
         f"create_expense(owning_feuser=a, title='Admin Paid For Dummy', "
         f"  type=TransactionType.EXPENSE, value=Decimal('{value}'), "
-        f"  buddy_approved=True, buddy_group=g, "
+        f"  buddy_approved=True, project=g, "
         f"  buddy_spendings=[{{'type': 'dummy', 'id': d.pk, 'share_percent': 100}}])"
     )
 
@@ -61,7 +61,7 @@ class TestGroupSettlementDummyDebtor:
 
     def test_pay_someone_back_section_visible(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Pay someone back" in driver.page_source, \
             "Pay someone back section must appear on the group page"

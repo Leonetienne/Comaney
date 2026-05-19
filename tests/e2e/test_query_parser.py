@@ -525,28 +525,28 @@ class TestBuddyFilter:
 
         # Group with two dummies: one is a participant, one is just a member
         group_pk = _shell(
-            f"from buddies.services import BuddyGroupService; "
+            f"from buddies.services import ProjectService; "
             f"from feusers.models import FeUser; "
             f"u = FeUser.objects.get(email='{ctx['email']}'); "
-            f"g = BuddyGroupService.create_group(u, 'QPBuddyGroup'); "
+            f"g = ProjectService.create_group(u, 'QPBuddyGroup'); "
             f"print(g.pk)"
         )
         ctx["qp_buddy_group_pk"] = group_pk.strip()
 
         expense_pk = _shell(
             f"from budget.models import Expense; "
-            f"from buddies.models import BuddyGroup, BuddyGroupMember, BuddySpending, DummyUser; "
+            f"from buddies.models import Project, ProjectMember as BuddyGroupMember, BuddySpending, DummyUser; "
             f"from feusers.models import FeUser; "
             f"from decimal import Decimal; import datetime; "
             f"u = FeUser.objects.get(email='{ctx['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={group_pk.strip()}); "
+            f"g = Project.objects.get(pk={group_pk.strip()}); "
             f"participant = DummyUser.objects.create(owning_group=g, display_name='QPParticipant'); "
-            f"BuddyGroupMember.objects.get_or_create(group=g, dummy=participant); "
+            f"ProjectMember.objects.get_or_create(group=g, dummy=participant); "
             f"member_only = DummyUser.objects.create(owning_group=g, display_name='QPMemberOnly'); "
-            f"BuddyGroupMember.objects.get_or_create(group=g, dummy=member_only); "
+            f"ProjectMember.objects.get_or_create(group=g, dummy=member_only); "
             f"e = Expense.objects.create(owning_feuser=u, title='QP BuddyExpense', "
             f"  type='expense', value=Decimal('50.00'), settled=False, "
-            f"  buddy_approved=True, buddy_group=g, "
+            f"  buddy_approved=True, project=g, "
             f"  date_due=datetime.date({int(year)}, {int(month)}, {int(day)})); "
             f"BuddySpending.objects.create(expense=e, participant_dummy=participant, "
             f"  share_percent=Decimal('50.0')); "
@@ -604,7 +604,7 @@ class TestBuddyFilter:
             )
         if "qp_buddy_group_pk" in ctx:
             _shell(
-                f"from buddies.models import BuddyGroup; "
-                f"BuddyGroup.objects.filter(pk={ctx.pop('qp_buddy_group_pk')}).delete()"
+                f"from buddies.models import Project; "
+                f"Project.objects.filter(pk={ctx.pop('qp_buddy_group_pk')}).delete()"
             )
         ctx.pop("qp_buddy_year", None)

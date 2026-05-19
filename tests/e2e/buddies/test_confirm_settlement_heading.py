@@ -34,8 +34,8 @@ def _create_group_dummy_settlement(group_id: int, dummy_name: str,
                                    debtor_email: str) -> tuple[str, str]:
     """Create dummy + pending settlement where dummy is creditor; return (dummy_pk, expense_pk)."""
     dummy_pk = _shell(
-        f"from buddies.models import BuddyGroup, BuddyGroupMember, DummyUser; "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"from buddies.models import Project, BuddyGroupMember, DummyUser; "
+        f"g = Project.objects.get(pk={group_id}); "
         f"d = DummyUser.objects.create(owning_group=g, display_name='{dummy_name}'); "
         f"BuddyGroupMember.objects.create(group=g, dummy=d); "
         f"print(d.pk)"
@@ -43,15 +43,15 @@ def _create_group_dummy_settlement(group_id: int, dummy_name: str,
     expense_pk = _shell(
         f"from budget.expense_factory import create_expense; "
         f"from budget.models import TransactionType; "
-        f"from buddies.models import BuddyGroup; "
+        f"from buddies.models import Project; "
         f"from feusers.models import FeUser; "
         f"from datetime import date; from decimal import Decimal; "
         f"debtor = FeUser.objects.get(email='{debtor_email}'); "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"g = Project.objects.get(pk={group_id}); "
         f"e = create_expense(owning_feuser=debtor, title='Test dummy settlement', "
         f"  type=TransactionType.EXPENSE, value=Decimal('10.00'), "
         f"  date_due=date.today(), settled=True, notify=False, "
-        f"  is_buddies_settlement=True, buddy_approved=False, buddy_group=g, "
+        f"  is_buddies_settlement=True, buddy_approved=False, project=g, "
         f"  buddy_spendings=[{{'type':'dummy','id':{dummy_pk},'share_percent':Decimal('100')}}]); "
         f"print(e.pk)"
     )
@@ -96,7 +96,7 @@ class TestConfirmSettlementHeadingOfflineMember:
     def test_confirm_page_says_did_rainer(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(
-            f"/buddies/groups/{ctx['group_id']}/expense/{ctx['expense_pk']}/approve-dummy/"
+            f"/projects/{ctx['group_id']}/expense/{ctx['expense_pk']}/approve-dummy/"
         ))
         time.sleep(1)
         assert "Did Rainer (offline member)" in driver.page_source, \

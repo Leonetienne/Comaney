@@ -207,7 +207,7 @@ class TestGroupDummyMergeAccept:
         # Add a group dummy
         dummy_uid = _shell(
             f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Group Dummy'); "
             f"BuddyGroupMember.objects.create(group=g, dummy=d); "
             f"print(d.uid)"
@@ -222,7 +222,7 @@ class TestGroupDummyMergeAccept:
         cleanup_user(c["email"])
 
     def test_invite_as_user_button_visible_on_group_detail(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         buttons = driver.find_elements(By.XPATH,
             "//*[contains(text(),'Invite as user')]")
@@ -243,7 +243,7 @@ class TestGroupDummyMergeAccept:
         merge_form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
         time.sleep(1)
         assert "Merge invitation sent" in driver.page_source or \
-               "/buddies/groups/" in driver.current_url
+               "/projects/" in driver.current_url
 
     def test_group_merge_email_arrives(self, driver, w, ctx):
         body = fetch_email(
@@ -268,7 +268,7 @@ class TestGroupDummyMergeAccept:
         assert "/buddies/" in driver.current_url
 
     def test_c_is_member_after_merge(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert ctx["c"]["email"] in driver.page_source or \
                "Clara GroupJoiner" in driver.page_source, \

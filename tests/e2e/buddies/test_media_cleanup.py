@@ -100,7 +100,7 @@ class TestDummyPictureCleanupOnGroupCascade:
             "from django.conf import settings; import pathlib; "
             "u = FeUser.objects.create(email='cascade-group-ppic@example.test', "
             "  password='!', is_active=True, is_confirmed=True); "
-            "g = BuddyGroup.objects.create(name='CascGroup', admin_feuser=u); "
+            "g = Project.objects.create(name='CascGroup', admin_feuser=u); "
             "d = DummyUser.objects.create(owning_group=g, display_name='CascGroupDummy', profile_picture=True); "
             "p = settings.MEDIA_ROOT / 'offline-buddy-ppic' / f'{d.pk}.jpg'; "
             "p.parent.mkdir(parents=True, exist_ok=True); p.write_bytes(b'x'); "
@@ -121,11 +121,11 @@ class TestGroupPictureCleanupOnDelete:
 
     def test_group_picture_cleaned_up_on_delete(self, driver, w):
         result = _shell(
-            "from feusers.models import FeUser; from buddies.models import BuddyGroup; "
+            "from feusers.models import FeUser; from buddies.models import Project; "
             "from django.conf import settings; import pathlib; "
             "u = FeUser.objects.create(email='group-pic-cleanup@example.test', "
             "  password='!', is_active=True, is_confirmed=True); "
-            "g = BuddyGroup.objects.create(name='PicGroup', admin_feuser=u, group_picture=True); "
+            "g = Project.objects.create(name='PicGroup', admin_feuser=u, group_picture=True); "
             "p = settings.MEDIA_ROOT / 'bgpics' / f'{g.pk}.webp'; "
             "p.parent.mkdir(parents=True, exist_ok=True); p.write_bytes(b'x'); "
             "pk = g.pk; "
@@ -145,11 +145,11 @@ class TestGroupPictureCleanupOnUserCascade:
 
     def test_group_picture_cleaned_up_on_admin_user_delete(self, driver, w):
         result = _shell(
-            "from feusers.models import FeUser; from buddies.models import BuddyGroup; "
+            "from feusers.models import FeUser; from buddies.models import Project; "
             "from django.conf import settings; import pathlib; "
             "u = FeUser.objects.create(email='user-group-pic-casc@example.test', "
             "  password='!', is_active=True, is_confirmed=True); "
-            "g = BuddyGroup.objects.create(name='AdminPicGroup', admin_feuser=u, group_picture=True); "
+            "g = Project.objects.create(name='AdminPicGroup', admin_feuser=u, group_picture=True); "
             "p = settings.MEDIA_ROOT / 'bgpics' / f'{g.pk}.webp'; "
             "p.parent.mkdir(parents=True, exist_ok=True); p.write_bytes(b'x'); "
             "gpk = g.pk; "
@@ -173,7 +173,7 @@ class TestDissolvePictureCleanup:
     def test_dissolve_group_cleans_archive_picture_and_preserves_non_archive(self, driver, w):
         result = _shell(
             "from feusers.models import FeUser; "
-            "from buddies.models import BuddyGroup, DummyUser, BuddyGroupMember; "
+            "from buddies.models import Project, DummyUser, BuddyGroupMember; "
             "from buddies.services.group import BuddyGroupService; "
             "from django.conf import settings; import pathlib; "
 
@@ -182,7 +182,7 @@ class TestDissolvePictureCleanup:
             "  password='!', is_active=True, is_confirmed=True); "
 
             # group
-            "g = BuddyGroup.objects.create(name='DissolvePicGroup', admin_feuser=admin); "
+            "g = Project.objects.create(name='DissolvePicGroup', admin_feuser=admin); "
 
             # archive dummy with a picture
             "arch = DummyUser.objects.create(owning_group=g, display_name='Achim Archive', "

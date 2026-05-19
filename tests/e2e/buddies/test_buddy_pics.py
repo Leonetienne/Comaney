@@ -142,7 +142,7 @@ class TestGroupDummyPicture:
         group_id = _create_group(a["email"], "Pic Group")
         dummy_id = _shell(
             f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Group Pic Member'); "
             f"BuddyGroupMember.objects.create(group=g, dummy=d); "
             f"print(d.pk)"
@@ -153,7 +153,7 @@ class TestGroupDummyPicture:
         cleanup_user(a["email"])
 
     def test_initials_shown_for_group_dummy(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['a']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['a']['group_id']}/"))
         time.sleep(1)
         assert _avatar_tag(driver, ctx["a"]["dummy_id"]) == "span", \
             "Before upload the group dummy avatar should be an initials span"
@@ -176,7 +176,7 @@ class TestGroupDummyPicture:
         assert resp.headers.get("Content-Type", "").startswith("image/")
 
     def test_group_dummy_pic_persists_after_reload(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['a']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['a']['group_id']}/"))
         time.sleep(1)
         assert _avatar_tag(driver, ctx["a"]["dummy_id"]) == "img", \
             "After reload the group dummy avatar should still be <img>"
@@ -190,7 +190,7 @@ class TestGroupDummyPicture:
             "After removal the group dummy avatar should revert to initials span"
 
     def test_group_dummy_initials_restored_after_reload(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['a']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['a']['group_id']}/"))
         time.sleep(1)
         assert _avatar_tag(driver, ctx["a"]["dummy_id"]) == "span", \
             "After reload post-removal the group dummy avatar should be initials span"
@@ -240,7 +240,7 @@ class TestFeuserPicInBuddyLists:
 
     def test_you_card_shows_initials_before_upload(self, driver, w, ctx):
         # The admin has no ppic yet; their "You" card should show initials.
-        driver.get(_url(f"/buddies/groups/{ctx['admin']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['admin']['group_id']}/"))
         time.sleep(1)
         assert "user-avatar--initials" in driver.page_source
         # "Frank Admin" -> "FA"
@@ -248,7 +248,7 @@ class TestFeuserPicInBuddyLists:
 
     def test_member_ppic_shown_in_group_member_card(self, driver, w, ctx):
         # Mary Member has a ppic; her card should contain an <img> with her ppic URL.
-        driver.get(_url(f"/buddies/groups/{ctx['admin']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['admin']['group_id']}/"))
         time.sleep(1)
         assert _ppic_url_in_page(
             driver, ctx["admin"]["member_pk"], subdir="ppics"
@@ -269,7 +269,7 @@ class TestFeuserPicInBuddyLists:
 
     def test_you_card_shows_img_after_upload(self, driver, w, ctx):
         admin_pk = _get_pk(ctx["admin"]["email"])
-        driver.get(_url(f"/buddies/groups/{ctx['admin']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['admin']['group_id']}/"))
         time.sleep(1)
         assert _ppic_url_in_page(driver, admin_pk, subdir="ppics"), \
             "After upload the admin's You card should contain their ppic URL"

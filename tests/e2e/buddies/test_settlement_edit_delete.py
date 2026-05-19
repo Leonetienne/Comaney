@@ -44,10 +44,10 @@ from bhelpers import (
 def _mk_feuser_settlement(debtor_email: str, creditor_pk: int, value: str = "50.00",
                            approved: bool = False, group_pk: int = None) -> int:
     group_clause = (
-        f"from buddies.models import BuddyGroup; grp=BuddyGroup.objects.get(pk={group_pk}); "
+        f"from buddies.models import Project; grp=Project.objects.get(pk={group_pk}); "
         if group_pk else ""
     )
-    group_arg = "buddy_group=grp, " if group_pk else ""
+    group_arg = "project=grp, " if group_pk else ""
     return int(_shell(
         f"from budget.expense_factory import create_expense; "
         f"from feusers.models import FeUser; from budget.models import TransactionType; "
@@ -67,10 +67,10 @@ def _mk_feuser_settlement(debtor_email: str, creditor_pk: int, value: str = "50.
 def _mk_dummy_creditor_settlement(debtor_email: str, dummy_pk: int, value: str = "25.00",
                                    approved: bool = True, group_pk: int = None) -> int:
     group_clause = (
-        f"from buddies.models import BuddyGroup; grp=BuddyGroup.objects.get(pk={group_pk}); "
+        f"from buddies.models import Project; grp=Project.objects.get(pk={group_pk}); "
         if group_pk else ""
     )
-    group_arg = "buddy_group=grp, " if group_pk else ""
+    group_arg = "project=grp, " if group_pk else ""
     return int(_shell(
         f"from budget.expense_factory import create_expense; "
         f"from feusers.models import FeUser; from budget.models import TransactionType; "
@@ -116,8 +116,8 @@ def _mk_personal_dummy(owner_email: str, name: str = "Offline Friend") -> int:
 
 def _mk_group_dummy(group_pk: int, name: str = "Offline Member") -> int:
     return int(_shell(
-        f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
-        f"g=BuddyGroup.objects.get(pk={group_pk}); "
+        f"from buddies.models import DummyUser, Project, BuddyGroupMember; "
+        f"g=Project.objects.get(pk={group_pk}); "
         f"d=DummyUser.objects.create(owning_group=g, display_name='{name}'); "
         f"BuddyGroupMember.objects.create(group=g, dummy=d); "
         f"print(d.pk)"
@@ -152,7 +152,7 @@ class TestGroupUnapprovedRealUserSettlementEditable:
 
     def test_edit_button_present_in_group_pending_section(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         assert f"/budget/expenses/{ctx['exp_pk']}/edit/" in driver.page_source, \
             "[G1] Edit button must appear for unapproved real-user settlement in group pending section"
@@ -186,9 +186,9 @@ class TestGroupUnapprovedSettlementDeletionEmail:
 
     def test_delete_button_present(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
-        assert f"/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" in driver.page_source, \
+        assert f"/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" in driver.page_source, \
             "[G2] Delete button must appear for unapproved real-user settlement in group view"
 
     def test_delete_sends_cancellation_email(self, driver, w, ctx):
@@ -197,7 +197,7 @@ class TestGroupUnapprovedSettlementDeletionEmail:
         driver.execute_script(
             f"var f=document.createElement('form');"
             f"f.method='POST';"
-            f"f.action='/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
+            f"f.action='/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
             f"var csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;"
             f"var t=document.createElement('input');t.name='csrfmiddlewaretoken';t.value=csrf;f.appendChild(t);"
             f"document.body.appendChild(f);f.submit();"
@@ -497,16 +497,16 @@ def _mk_group_dummy_debtor_settlement(admin_email: str, dummy_pk: int, creditor_
     return int(_shell(
         f"from budget.expense_factory import create_expense; "
         f"from feusers.models import FeUser; from budget.models import TransactionType; "
-        f"from buddies.models import DummyUser, BuddyGroup; "
+        f"from buddies.models import DummyUser, Project; "
         f"from decimal import Decimal; import datetime; "
         f"admin=FeUser.objects.get(email='{admin_email}'); "
         f"d=DummyUser.objects.get(pk={dummy_pk}); "
-        f"g=BuddyGroup.objects.get(pk={group_pk}); "
+        f"g=Project.objects.get(pk={group_pk}); "
         f"e=create_expense(owning_feuser=admin, title='DummyDebtorGroupSettlement', "
         f"  type=TransactionType.EXPENSE, value=Decimal('{value}'), "
         f"  date_due=datetime.date.today(), settled=True, notify=False, "
         f"  is_buddies_settlement=True, buddy_approved=False, "
-        f"  is_dummy=True, upfront_payee_dummy=d, buddy_group=g, "
+        f"  is_dummy=True, upfront_payee_dummy=d, project=g, "
         f"  buddy_spendings=[{{'type':'feuser','id':{creditor_pk},'share_percent':100}}]); "
         f"print(e.pk)"
     ))
@@ -536,7 +536,7 @@ class TestGroupAdminDummyDebtorSettlementEditable:
 
     def test_edit_button_present_in_group_view(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         assert f"/budget/expenses/{ctx['exp_pk']}/edit/" in driver.page_source, \
             "[G3] Edit button must appear for admin on dummy-debtor unapproved group settlement"
@@ -551,12 +551,12 @@ class TestGroupAdminDummyDebtorSettlementEditable:
         """[G4] Cancellation email must name the offline member, not the admin."""
         seen_before = mailpit_seen_ids()
         ctx["seen_before"] = seen_before
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         driver.execute_script(
             f"var f=document.createElement('form');"
             f"f.method='POST';"
-            f"f.action='/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
+            f"f.action='/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
             f"var csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;"
             f"var t=document.createElement('input');t.name='csrfmiddlewaretoken';t.value=csrf;f.appendChild(t);"
             f"document.body.appendChild(f);f.submit();"
@@ -588,16 +588,16 @@ def _mk_group_dummy_to_dummy_settlement(admin_email: str, debtor_dummy_pk: int,
     return int(_shell(
         f"from budget.expense_factory import create_expense; "
         f"from feusers.models import FeUser; from budget.models import TransactionType; "
-        f"from buddies.models import DummyUser, BuddyGroup; "
+        f"from buddies.models import DummyUser, Project; "
         f"from decimal import Decimal; import datetime; "
         f"admin=FeUser.objects.get(email='{admin_email}'); "
         f"d_debtor=DummyUser.objects.get(pk={debtor_dummy_pk}); "
-        f"g=BuddyGroup.objects.get(pk={group_pk}); "
+        f"g=Project.objects.get(pk={group_pk}); "
         f"e=create_expense(owning_feuser=admin, title='DummyToDummySettlement', "
         f"  type=TransactionType.EXPENSE, value=Decimal('{value}'), "
         f"  date_due=datetime.date.today(), settled=True, notify=False, "
         f"  is_buddies_settlement=True, buddy_approved=True, "
-        f"  is_dummy=True, upfront_payee_dummy=d_debtor, buddy_group=g, "
+        f"  is_dummy=True, upfront_payee_dummy=d_debtor, project=g, "
         f"  buddy_spendings=[{{'type':'dummy','id':{creditor_dummy_pk},'share_percent':100}}]); "
         f"print(e.pk)"
     ))
@@ -622,13 +622,13 @@ class TestGroupAdminDummyToDummySettlementAlwaysModifiable:
 
     def test_edit_button_present_for_dummy_to_dummy_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         assert f"/budget/expenses/{ctx['exp_pk']}/edit/" in driver.page_source, \
             "[G5] Edit button must appear for admin on dummy-to-dummy settlement"
 
     def test_delete_button_present_for_dummy_to_dummy_settlement(self, driver, w, ctx):
-        assert f"/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" in driver.page_source, \
+        assert f"/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" in driver.page_source, \
             "[G5] Delete button must appear for admin on dummy-to-dummy settlement"
 
     def test_edit_page_opens_without_redirect(self, driver, w, ctx):
@@ -640,12 +640,12 @@ class TestGroupAdminDummyToDummySettlementAlwaysModifiable:
     def test_delete_actually_works(self, driver, w, ctx):
         """[G5] Admin can actually delete a dummy-to-dummy settlement."""
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         driver.execute_script(
             f"var f=document.createElement('form');"
             f"f.method='POST';"
-            f"f.action='/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
+            f"f.action='/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
             f"var csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;"
             f"var t=document.createElement('input');t.name='csrfmiddlewaretoken';t.value=csrf;f.appendChild(t);"
             f"document.body.appendChild(f);f.submit();"
@@ -837,7 +837,7 @@ class TestGroupAdminCannotModifyApprovedDummyDebtorSettlement:
 
     def test_edit_button_absent_in_group_view(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         assert f"/budget/expenses/{ctx['exp_pk']}/edit/" not in driver.page_source, \
             "[G13] Edit button must not appear for approved dummy-debtor settlement in group view"
@@ -850,16 +850,16 @@ class TestGroupAdminCannotModifyApprovedDummyDebtorSettlement:
 
     def test_delete_button_absent_in_group_view(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
-        assert f"/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" not in driver.page_source, \
+        assert f"/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" not in driver.page_source, \
             "[G14] Delete button must not appear for approved dummy-debtor settlement in group view"
 
     def test_direct_delete_post_is_rejected(self, driver, w, ctx):
         driver.execute_script(
             f"var f=document.createElement('form');"
             f"f.method='POST';"
-            f"f.action='/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
+            f"f.action='/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
             f"var csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;"
             f"var t=document.createElement('input');t.name='csrfmiddlewaretoken';t.value=csrf;f.appendChild(t);"
             f"document.body.appendChild(f);f.submit();"
@@ -878,7 +878,7 @@ class TestGroupAdminCannotModifyApprovedDummyDebtorSettlement:
         """[E5] A crafted POST to the edit endpoint must not save changes for an
         approved dummy-debtor group settlement."""
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(1)
         driver.execute_script(
             f"var f=document.createElement('form');"
@@ -968,7 +968,7 @@ class TestGroupApprovedSettlementEditEndpointBlocked:
         """[E3] A crafted POST to the edit endpoint must not save changes for an
         approved group real-user settlement."""
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(1)
         driver.execute_script(
             f"var f=document.createElement('form');"
@@ -994,9 +994,9 @@ class TestGroupApprovedSettlementEditEndpointBlocked:
     def test_delete_button_absent_in_group_view(self, driver, w, ctx):
         """[E4] Delete button must not appear in group view for an approved real-user settlement."""
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
-        assert f"/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" not in driver.page_source, \
+        assert f"/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" not in driver.page_source, \
             "[E4] Delete button must not appear for approved real-user group settlement in group view"
 
     def test_direct_group_delete_post_is_rejected(self, driver, w, ctx):
@@ -1004,7 +1004,7 @@ class TestGroupApprovedSettlementEditEndpointBlocked:
         driver.execute_script(
             f"var f=document.createElement('form');"
             f"f.method='POST';"
-            f"f.action='/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
+            f"f.action='/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
             f"var csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;"
             f"var t=document.createElement('input');t.name='csrfmiddlewaretoken';t.value=csrf;f.appendChild(t);"
             f"document.body.appendChild(f);f.submit();"
@@ -1046,7 +1046,7 @@ class TestGroupNonAdminDebtorCannotModifyApprovedDummyCreditorSettlement:
     def test_edit_button_absent_in_group_view(self, driver, w, ctx):
         """[G18] The group view must not offer an edit link to the non-admin debtor."""
         _login_as(driver, ctx["debtor"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         assert f"/budget/expenses/{ctx['exp_pk']}/edit/" not in driver.page_source, \
             "[G18] Edit button must not appear for non-admin debtor in group view"
@@ -1061,7 +1061,7 @@ class TestGroupNonAdminDebtorCannotModifyApprovedDummyCreditorSettlement:
     def test_forged_edit_post_is_rejected(self, driver, w, ctx):
         """[G18] A crafted POST to the edit endpoint must not save changes."""
         _login_as(driver, ctx["debtor"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(1)
         driver.execute_script(
             f"var f=document.createElement('form');"
@@ -1087,9 +1087,9 @@ class TestGroupNonAdminDebtorCannotModifyApprovedDummyCreditorSettlement:
     def test_delete_button_absent_in_group_view(self, driver, w, ctx):
         """[G19] The group view must not offer a delete link to the non-admin debtor."""
         _login_as(driver, ctx["debtor"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
-        assert f"/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" not in driver.page_source, \
+        assert f"/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" not in driver.page_source, \
             "[G19] Delete button must not appear for non-admin debtor in group view"
 
     def test_forged_personal_delete_post_is_rejected(self, driver, w, ctx):
@@ -1109,12 +1109,12 @@ class TestGroupNonAdminDebtorCannotModifyApprovedDummyCreditorSettlement:
     def test_forged_group_delete_post_is_rejected(self, driver, w, ctx):
         """[G19] A crafted POST to the group delete endpoint must not remove the expense."""
         _login_as(driver, ctx["debtor"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(1)
         driver.execute_script(
             f"var f=document.createElement('form');"
             f"f.method='POST';"
-            f"f.action='/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
+            f"f.action='/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
             f"var csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;"
             f"var t=document.createElement('input');t.name='csrfmiddlewaretoken';t.value=csrf;f.appendChild(t);"
             f"document.body.appendChild(f);f.submit();"
@@ -1128,14 +1128,14 @@ class TestGroupNonAdminDebtorCannotModifyApprovedDummyCreditorSettlement:
     def test_admin_edit_button_absent_in_group_view(self, driver, w, ctx):
         """[G18] Admin must not see an edit button for another member's approved dummy-creditor settlement."""
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['grp_pk']}/"))
+        driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
         time.sleep(2)
         assert f"/budget/expenses/{ctx['exp_pk']}/edit/" not in driver.page_source, \
             "[G18] Edit button must not appear for admin on another member's approved dummy-creditor settlement"
 
     def test_admin_delete_button_absent_in_group_view(self, driver, w, ctx):
         """[G19] Admin must not see a delete button for another member's approved dummy-creditor settlement."""
-        assert f"/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" not in driver.page_source, \
+        assert f"/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/" not in driver.page_source, \
             "[G19] Delete button must not appear for admin on another member's approved dummy-creditor settlement"
 
     def test_admin_forged_group_delete_post_is_rejected(self, driver, w, ctx):
@@ -1143,7 +1143,7 @@ class TestGroupNonAdminDebtorCannotModifyApprovedDummyCreditorSettlement:
         driver.execute_script(
             f"var f=document.createElement('form');"
             f"f.method='POST';"
-            f"f.action='/buddies/groups/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
+            f"f.action='/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/';"
             f"var csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;"
             f"var t=document.createElement('input');t.name='csrfmiddlewaretoken';t.value=csrf;f.appendChild(t);"
             f"document.body.appendChild(f);f.submit();"

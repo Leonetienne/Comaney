@@ -34,15 +34,13 @@ class TestGroupCreate:
         cleanup_user(a["email"])
 
     def test_create_group_via_ui(self, driver, w, ctx):
-        driver.get(_url("/buddies/"))
+        driver.get(_url("/projects/"))
         time.sleep(1)
-        inp = driver.find_element(By.CSS_SELECTOR,
-            "form[action*='create'] input[name='name']")
-        inp.clear()
-        inp.send_keys("Test Group Alpha")
-        driver.find_element(By.ID, "btn-create-group").click()
+        inp = driver.find_element(By.ID, "project-name")
+        driver.execute_script("arguments[0].value = arguments[1];", inp, "Test Group Alpha")
+        driver.find_element(By.ID, "btn-create-project").click()
         time.sleep(1)
-        assert "/buddies/groups/" in driver.current_url
+        assert "/projects/" in driver.current_url
 
     def test_group_name_on_detail_page(self, driver, w, ctx):
         assert "Test Group Alpha" in driver.page_source
@@ -54,7 +52,7 @@ class TestGroupCreate:
         assert "Invite members" in driver.page_source
 
     def test_group_appears_on_my_buddies(self, driver, w, ctx):
-        driver.get(_url("/buddies/"))
+        driver.get(_url("/projects/"))
         time.sleep(1)
         assert "Test Group Alpha" in driver.page_source
 
@@ -76,7 +74,7 @@ class TestGroupInviteAccept:
         cleanup_user(c["email"])
 
     def test_admin_invites_member(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         inp = driver.find_element(By.CSS_SELECTOR,
             "form[action*='invite'] input[name='email']")
@@ -94,11 +92,11 @@ class TestGroupInviteAccept:
     def test_invite_email_arrives_for_c(self, driver, w, ctx):
         body = fetch_email(ctx["c"]["email"], "Invite Test Group")
         ctx["group_invite_link"] = extract_link(body)
-        assert "/buddies/group-invite/" in ctx["group_invite_link"]
+        assert "/projects/project-invite/" in ctx["group_invite_link"]
 
     def test_c_sees_group_invite_on_buddies_page(self, driver, w, ctx):
         _login_as(driver, ctx["c"])
-        driver.get(_url("/buddies/"))
+        driver.get(_url("/projects/"))
         time.sleep(1)
         assert "Group invitations" in driver.page_source
         assert "Invite Test Group" in driver.page_source
@@ -108,9 +106,9 @@ class TestGroupInviteAccept:
         time.sleep(1)
         assert "You're invited!" in driver.page_source
         assert "Invite Test Group" in driver.page_source
-        driver.find_element(By.ID, "btn-accept-group-invite").click()
+        driver.find_element(By.ID, "btn-accept-project-invite").click()
         time.sleep(1)
-        assert f"/buddies/groups/{ctx['group_id']}/" in driver.current_url
+        assert f"/projects/{ctx['group_id']}/" in driver.current_url
 
     def test_c_in_member_list_after_accept(self, driver, w, ctx):
         assert ctx["c"]["email"] in driver.page_source
@@ -141,11 +139,11 @@ class TestGroupInviteDecline:
         group_id = _create_group(a["email"], "Decline Test Group")
         # Create invite directly via shell
         _shell(
-            f"from buddies.services import BuddyGroupService; "
-            f"from feusers.models import FeUser; from buddies.models import BuddyGroup; "
+            f"from buddies.services import ProjectService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
             f"admin = FeUser.objects.get(email='{a['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
-            f"BuddyGroupService.invite_member(g, admin, '{c['email']}')"
+            f"g = Project.objects.get(pk={group_id}); "
+            f"ProjectService.invite_member(g, admin, '{c['email']}')"
         )
         yield {"a": a, "c": c, "group_id": int(group_id)}
         cleanup_user(a["email"])
@@ -153,27 +151,27 @@ class TestGroupInviteDecline:
 
     def test_c_sees_group_invite(self, driver, w, ctx):
         _login_as(driver, ctx["c"])
-        driver.get(_url("/buddies/"))
+        driver.get(_url("/projects/"))
         time.sleep(1)
         assert "Decline Test Group" in driver.page_source
 
     def test_c_clicks_view_invite(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR,
-            ".invite-card a[href*='group-invite']").click()
+            ".invite-card a[href*='project-invite']").click()
         time.sleep(1)
         assert "Decline Test Group" in driver.page_source
 
     def test_c_declines_group_invite(self, driver, w, ctx):
-        driver.find_element(By.ID, "btn-decline-group-invite").click()
+        driver.find_element(By.ID, "btn-decline-project-invite").click()
         time.sleep(1)
-        assert "/buddies/" in driver.current_url
+        assert "/projects/" in driver.current_url
 
     def test_c_not_in_group_after_decline(self, driver, w, ctx):
         count = _shell(
-            f"from buddies.models import BuddyGroupMember; "
+            f"from buddies.models import ProjectMember; "
             f"from feusers.models import FeUser; "
             f"c = FeUser.objects.get(email='{ctx['c']['email']}'); "
-            f"print(BuddyGroupMember.objects.filter(feuser=c, group_id={ctx['group_id']}).count())"
+            f"print(ProjectMember.objects.filter(feuser=c, group_id={ctx['group_id']}).count())"
         )
         assert count == "0"
 
@@ -191,18 +189,18 @@ class TestGroupInviteRevoke:
         c = setup_user(None, None, first_name="Cleo", last_name="RevokeTarget")
         group_id = _create_group(a["email"], "Revoke Test Group")
         _shell(
-            f"from buddies.services import BuddyGroupService; "
-            f"from feusers.models import FeUser; from buddies.models import BuddyGroup; "
+            f"from buddies.services import ProjectService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
             f"admin = FeUser.objects.get(email='{a['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
-            f"BuddyGroupService.invite_member(g, admin, '{c['email']}')"
+            f"g = Project.objects.get(pk={group_id}); "
+            f"ProjectService.invite_member(g, admin, '{c['email']}')"
         )
         yield {"a": a, "c": c, "group_id": int(group_id)}
         cleanup_user(a["email"])
         cleanup_user(c["email"])
 
     def test_pending_invite_shown(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert ctx["c"]["email"] in driver.page_source
 
@@ -230,7 +228,7 @@ class TestGroupInviteErrors:
         cleanup_user(c["email"])
 
     def test_self_invite_shows_error(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         inp = driver.find_element(By.CSS_SELECTOR,
             "form[action*='invite'] input[name='email']")
@@ -241,7 +239,7 @@ class TestGroupInviteErrors:
         assert "cannot invite yourself" in driver.page_source.lower()
 
     def test_already_member_invite_shows_info(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         inp = driver.find_element(By.CSS_SELECTOR,
             "form[action*='invite'] input[name='email']")
@@ -267,7 +265,7 @@ class TestGroupDummyManagement:
         cleanup_user(a["email"])
 
     def test_add_group_dummy(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         inp = driver.find_element(By.CSS_SELECTOR,
             "form[action*='add-dummy'] input[name='display_name']")
@@ -305,7 +303,7 @@ class TestGroupRemoveMember:
         cleanup_user(c["email"])
 
     def test_c_in_member_list(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert ctx["c"]["email"] in driver.page_source
 
@@ -354,13 +352,13 @@ class TestGroupTransferAdmin:
         cleanup_user(c["email"])
 
     def test_admin_selects_new_admin_and_transfers(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         sel = Select(driver.find_element(By.CSS_SELECTOR, "select[name='new_admin_id']"))
         sel.select_by_value(str(ctx["c_pk"]))
         driver.find_element(By.ID, "btn-transfer-admin").click()
         _confirm(driver)
-        assert "/buddies/groups/" in driver.current_url
+        assert "/projects/" in driver.current_url
 
     def test_old_admin_no_longer_sees_admin_ui(self, driver, w, ctx):
         assert "Transfer admin rights" not in driver.page_source
@@ -368,14 +366,14 @@ class TestGroupTransferAdmin:
 
     def test_new_admin_sees_admin_ui(self, driver, w, ctx):
         _login_as(driver, ctx["c"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "You are admin" in driver.page_source or "Admin" in driver.page_source
         assert "Transfer admin rights" in driver.page_source
 
 
 # ---------------------------------------------------------------------------
-# Leave group (non-admin member)
+# Leave project (non-admin member)
 # ---------------------------------------------------------------------------
 
 class TestGroupLeave:
@@ -394,28 +392,28 @@ class TestGroupLeave:
 
     def test_c_can_see_leave_button(self, driver, w, ctx):
         _login_as(driver, ctx["c"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
-        assert "Leave group" in driver.page_source
+        assert "Leave project" in driver.page_source
 
     def test_c_leaves_group(self, driver, w, ctx):
-        driver.find_element(By.ID, "btn-leave-group").click()
+        driver.find_element(By.ID, "btn-leave-project").click()
         _confirm(driver)
-        assert "/buddies/" in driver.current_url
+        assert "/projects/" in driver.current_url
 
     def test_flash_message_after_leave(self, driver, w, ctx):
-        assert "You have left the group" in driver.page_source
+        assert "You have left the project" in driver.page_source
 
     def test_group_gone_from_c_list(self, driver, w, ctx):
-        driver.get(_url("/buddies/"))
+        driver.get(_url("/projects/"))
         time.sleep(1)
         assert "Leave Test Group" not in driver.page_source
 
     def test_admin_cannot_see_leave_button(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
-        assert "Leave group" not in driver.page_source
+        assert "Leave project" not in driver.page_source
 
 
 # ---------------------------------------------------------------------------
@@ -423,7 +421,7 @@ class TestGroupLeave:
 # ---------------------------------------------------------------------------
 
 class TestGroupDissolve:
-    """Admin dissolves group; group disappears; admin returns to /buddies/."""
+    """Admin deletes a solo project; project disappears from /projects/ list."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -433,17 +431,21 @@ class TestGroupDissolve:
         cleanup_user(a["email"])
 
     def test_dissolve_group(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
-        driver.find_element(By.ID, "btn-dissolve-group").click()
-        _confirm(driver)
-        assert "/buddies/" in driver.current_url
+        inp = driver.find_element(By.ID, "delete-confirm-name")
+        driver.execute_script("arguments[0].value = arguments[1];", inp, "Dissolve Test Group")
+        driver.execute_script("arguments[0].dispatchEvent(new Event('input'));", inp)
+        time.sleep(0.3)
+        driver.find_element(By.ID, "btn-delete-project").click()
+        time.sleep(1)
+        assert "/projects/" in driver.current_url
 
     def test_flash_message_after_dissolve(self, driver, w, ctx):
-        assert "dissolved" in driver.page_source.lower()
+        assert "deleted" in driver.page_source.lower()
 
     def test_group_gone_from_my_buddies(self, driver, w, ctx):
-        driver.get(_url("/buddies/"))
+        driver.get(_url("/projects/"))
         time.sleep(1)
         assert "Dissolve Test Group" not in driver.page_source
 
@@ -476,7 +478,7 @@ class TestGroupBreakdown:
         cleanup_user(b["email"])
 
     def test_expense_in_breakdown_table(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Breakdown Expense" in driver.page_source, \
             "Group expense must appear in the Expense Breakdown section"
@@ -561,7 +563,7 @@ class TestGroupExpenseCreateUI:
             "Group expense (I pay) must redirect to expense list"
 
     def test_expense_appears_in_group_breakdown(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "UI Group Expense" in driver.page_source, \
             "Group expense created via UI must appear in the group breakdown"

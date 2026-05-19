@@ -63,41 +63,41 @@ def _get_pk(email: str) -> str:
 
 
 def _create_group(admin_email: str, name: str) -> str:
-    """Create a BuddyGroup via the service layer; return group pk as string."""
+    """Create a Project via the service layer; return project pk as string."""
     return _shell(
-        f"from buddies.services import BuddyGroupService; "
+        f"from buddies.services import ProjectService; "
         f"from feusers.models import FeUser; "
         f"a = FeUser.objects.get(email='{admin_email}'); "
-        f"g = BuddyGroupService.create_group(a, '{name}'); "
+        f"g = ProjectService.create_group(a, '{name}'); "
         f"print(g.pk)"
     )
 
 
 def _add_group_member(group_id: int, member_email: str) -> None:
-    """Add a feuser to a group as a regular member (no invite flow)."""
+    """Add a feuser to a project as a regular member (no invite flow)."""
     _shell(
-        f"from buddies.models import BuddyGroupMember, BuddyGroup; "
+        f"from buddies.models import ProjectMember, Project; "
         f"from feusers.models import FeUser; "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"g = Project.objects.get(pk={group_id}); "
         f"u = FeUser.objects.get(email='{member_email}'); "
-        f"BuddyGroupMember.objects.get_or_create(group=g, feuser=u)"
+        f"ProjectMember.objects.get_or_create(group=g, feuser=u)"
     )
 
 
 def _create_group_expense(admin_email: str, participant_email: str,
                            group_id: int, title: str = "Group Expense",
                            value: str = "100.00", share: str = "50.0") -> str:
-    """Create an approved group expense; return expense pk as string."""
+    """Create an approved project expense; return expense pk as string."""
     return _shell(
         f"from budget.models import Expense; "
-        f"from buddies.models import BuddySpending, BuddyGroup; "
+        f"from buddies.models import BuddySpending, Project; "
         f"from feusers.models import FeUser; from decimal import Decimal; "
         f"a = FeUser.objects.get(email='{admin_email}'); "
         f"b = FeUser.objects.get(email='{participant_email}'); "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"g = Project.objects.get(pk={group_id}); "
         f"e = Expense.objects.create(owning_feuser=a, title='{title}', "
         f"  type='expense', value=Decimal('{value}'), settled=False, "
-        f"  buddy_approved=True, buddy_group=g); "
+        f"  buddy_approved=True, project=g); "
         f"BuddySpending.objects.create(expense=e, participant_feuser=b, "
         f"  share_percent=Decimal('{share}')); "
         f"print(e.pk)"
@@ -109,7 +109,7 @@ def _create_personal_expense_with_buddy(
     title: str = "Buddy Expense", value: str = "100.00",
     share: str = "50.0", approved: bool = True,
 ) -> str:
-    """Create a personal buddy expense (no group); return pk as string."""
+    """Create a personal buddy expense (no project); return pk as string."""
     approved_val = "True" if approved else "False"
     if participant_type == "feuser":
         participant_arg = f"participant_feuser_id={participant_pk}"

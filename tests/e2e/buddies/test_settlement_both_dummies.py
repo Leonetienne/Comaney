@@ -20,8 +20,8 @@ from bhelpers import _shell, _login_as, _create_group
 
 def _create_group_dummy(group_id: int, display_name: str) -> str:
     return _shell(
-        f"from buddies.models import BuddyGroup, BuddyGroupMember, DummyUser; "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"from buddies.models import Project, BuddyGroupMember, DummyUser; "
+        f"g = Project.objects.get(pk={group_id}); "
         f"d = DummyUser.objects.create(owning_group=g, display_name='{display_name}'); "
         f"BuddyGroupMember.objects.create(group=g, dummy=d); "
         f"print(d.pk)"
@@ -33,17 +33,17 @@ def _create_dummy_paid_expense_for_dummy(admin_email: str, payer_pk: int,
                                           value: str = "40.00") -> None:
     """Dummy A paid; dummy B owes 100%. Creates D_ower -> D_payer simplified debt."""
     _shell(
-        f"from feusers.models import FeUser; from buddies.models import BuddyGroup, DummyUser; "
+        f"from feusers.models import FeUser; from buddies.models import Project, DummyUser; "
         f"from budget.expense_factory import create_expense; "
         f"from budget.models import TransactionType; from decimal import Decimal; "
         f"admin = FeUser.objects.get(email='{admin_email}'); "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"g = Project.objects.get(pk={group_id}); "
         f"payer = DummyUser.objects.get(pk={payer_pk}); "
         f"ower = DummyUser.objects.get(pk={ower_pk}); "
         f"create_expense(owning_feuser=admin, title='Dummy Paid For Dummy', "
         f"  type=TransactionType.EXPENSE, value=Decimal('{value}'), "
         f"  is_dummy=True, upfront_payee_dummy=payer, "
-        f"  buddy_approved=True, buddy_group=g, "
+        f"  buddy_approved=True, project=g, "
         f"  buddy_spendings=[{{'type': 'dummy', 'id': ower.pk, 'share_percent': 100}}])"
     )
 
@@ -71,7 +71,7 @@ class TestBothDummiesSettlementAutoApprove:
 
     def test_admin_submits_both_dummy_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Pay someone back" in driver.page_source
 

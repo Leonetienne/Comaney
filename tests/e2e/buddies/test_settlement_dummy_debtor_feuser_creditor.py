@@ -25,8 +25,8 @@ from bhelpers import _shell, _login_as, _create_group, _add_group_member
 
 def _create_group_dummy(group_id: int, display_name: str) -> str:
     return _shell(
-        f"from buddies.models import BuddyGroup, BuddyGroupMember, DummyUser; "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"from buddies.models import Project, BuddyGroupMember, DummyUser; "
+        f"g = Project.objects.get(pk={group_id}); "
         f"d = DummyUser.objects.create(owning_group=g, display_name='{display_name}'); "
         f"BuddyGroupMember.objects.create(group=g, dummy=d); "
         f"print(d.pk)"
@@ -40,16 +40,16 @@ def _create_settlement_dummy_debtor_feuser_creditor(
     """Admin creates a settlement: dummy D owes real user B; returns expense pk."""
     return _shell(
         f"from buddies.services import BuddySettlementService; "
-        f"from buddies.models import BuddyGroup; "
+        f"from buddies.models import Project; "
         f"from feusers.models import FeUser; "
         f"from decimal import Decimal; "
         f"admin = FeUser.objects.get(email='{admin_email}'); "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"g = Project.objects.get(pk={group_id}); "
         f"BuddySettlementService.create_individual_group_settlement("
         f"  admin, g, 'd{dummy_pk}', 'f{creditor_pk}', Decimal('{value}')); "
         f"from budget.models import Expense; "
         f"e = Expense.objects.filter("
-        f"  is_buddies_settlement=True, buddy_group=g, buddy_approved=False,"
+        f"  is_buddies_settlement=True, project=g, buddy_approved=False,"
         f"  upfront_payee_dummy_id={dummy_pk}"
         f").first(); "
         f"print(e.pk if e else 'none')"
@@ -116,7 +116,7 @@ class TestSettlementDummyDebtorFeuserCreditor:
         cookies = {c["name"]: c["value"] for c in driver.get_cookies()}
         csrftoken = cookies.get("csrftoken", "")
         resp = _requests.post(
-            _url(f"/buddies/groups/{group_id}/expense/{exp_pk}/approve-dummy/"),
+            _url(f"/projects/{group_id}/expense/{exp_pk}/approve-dummy/"),
             data={"csrfmiddlewaretoken": csrftoken},
             cookies=cookies,
             allow_redirects=False,
@@ -133,12 +133,12 @@ class TestSettlementDummyDebtorFeuserCreditor:
     def test_b2_admin_sees_error_flash_after_attempt(self, driver, w, ctx):
         group_id = ctx["group_id"]
         exp_pk = ctx["exp_pk"]
-        driver.get(_url(f"/buddies/groups/{group_id}/"))
+        driver.get(_url(f"/projects/{group_id}/"))
         time.sleep(1)
         cookies = {c["name"]: c["value"] for c in driver.get_cookies()}
         csrftoken = cookies.get("csrftoken", "")
         resp = _requests.post(
-            _url(f"/buddies/groups/{group_id}/expense/{exp_pk}/approve-dummy/"),
+            _url(f"/projects/{group_id}/expense/{exp_pk}/approve-dummy/"),
             data={"csrfmiddlewaretoken": csrftoken},
             cookies=cookies,
             allow_redirects=True,

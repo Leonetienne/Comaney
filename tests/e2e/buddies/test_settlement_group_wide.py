@@ -37,8 +37,8 @@ CLARA = {"email": "clara@test.local", "password": "1234", "first": "Clara"}
 
 def _get_group_id() -> str:
     return _shell(
-        "from buddies.models import BuddyGroup; "
-        "g = BuddyGroup.objects.get(name='Camping Weekend'); "
+        "from buddies.models import Project; "
+        "g = Project.objects.get(name='Camping Weekend'); "
         "print(g.uid)"
     )
 
@@ -47,7 +47,7 @@ def _settlement_count() -> int:
     return int(_shell(
         "from budget.models import Expense; "
         "print(Expense.objects.filter(is_buddies_settlement=True, "
-        "  buddy_group__name='Camping Weekend').count())"
+        "  project__name='Camping Weekend').count())"
     ))
 
 
@@ -69,9 +69,9 @@ class TestGroupWideSettlementCamping:
 
     def test_non_admin_cannot_see_settle_all_button(self, driver, w, camping):
         _login_as(driver, BEN)
-        driver.get(_url(f"/buddies/groups/{camping['group_id']}/"))
+        driver.get(_url(f"/projects/{camping['group_id']}/"))
         time.sleep(2)
-        assert f"/buddies/groups/{camping['group_id']}/" in driver.current_url, \
+        assert f"/projects/{camping['group_id']}/" in driver.current_url, \
             f"Ben must land on the group page, got: {driver.current_url}"
         forms = driver.find_elements(By.ID, "settle-all-form")
         assert not forms, \
@@ -81,9 +81,9 @@ class TestGroupWideSettlementCamping:
         _login_as(driver, ANNA)
         assert "/login/" not in driver.current_url, \
             f"Anna login failed, landed on: {driver.current_url}"
-        driver.get(_url(f"/buddies/groups/{camping['group_id']}/"))
+        driver.get(_url(f"/projects/{camping['group_id']}/"))
         time.sleep(2)
-        assert f"/buddies/groups/{camping['group_id']}/" in driver.current_url, \
+        assert f"/projects/{camping['group_id']}/" in driver.current_url, \
             f"Anna must land on the group page, got: {driver.current_url}"
         btn = driver.find_element(By.ID, "btn-settle-all")
         assert btn.is_displayed(), \
@@ -146,7 +146,7 @@ class TestGroupWideSettlementCamping:
 
     def test_ben_sees_waiting_for_approval(self, driver, w, camping):
         _login_as(driver, BEN)
-        driver.get(_url(f"/buddies/groups/{camping['group_id']}/"))
+        driver.get(_url(f"/projects/{camping['group_id']}/"))
         time.sleep(2)
         assert "Waiting for approval" in driver.page_source, \
             "Ben must see Waiting for approval section after group-wide settle"
@@ -155,7 +155,7 @@ class TestGroupWideSettlementCamping:
         assert camping.get("created", 0) > 0, \
             "Settlements must exist (test_submit_settle_all_creates_records must run first)"
         _login_as(driver, CLARA)
-        driver.get(_url(f"/buddies/groups/{camping['group_id']}/"))
+        driver.get(_url(f"/projects/{camping['group_id']}/"))
         time.sleep(2)
         assert "Waiting for approval" in driver.page_source, \
             "Clara must see Waiting for approval section after group-wide settle"
@@ -207,16 +207,16 @@ class TestGroupWideSettlementCamping:
         # (which is not is_buddies_settlement and would 404 on the Review flow).
         _shell(
             "from budget.models import Expense; "
-            "from buddies.models import BuddyGroup; "
-            "g = BuddyGroup.objects.get(name='Camping Weekend'); "
-            "Expense.objects.filter(buddy_group=g, is_buddies_settlement=True, "
+            "from buddies.models import Project; "
+            "g = Project.objects.get(name='Camping Weekend'); "
+            "Expense.objects.filter(project=g, is_buddies_settlement=True, "
             "  buddy_approved=False).update(buddy_approved=True)"
         )
         # The group page must no longer show a "Settle entire group" button now
         # that all settlement debts are cleared. The pre-existing non-settlement
         # pending expense still exists but does not affect simplified debts.
         _login_as(driver, ANNA)
-        driver.get(_url(f"/buddies/groups/{camping['group_id']}/"))
+        driver.get(_url(f"/projects/{camping['group_id']}/"))
         time.sleep(1)
         forms = driver.find_elements(By.ID, "settle-all-form")
         assert not forms, \

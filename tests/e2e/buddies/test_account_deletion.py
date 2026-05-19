@@ -183,10 +183,10 @@ class TestAccountDeletionGroupAdmin:
 
     def test_a_is_admin_before_deletion(self, driver, w, ctx):
         result = _shell(
-            f"from buddies.models import BuddyGroup; "
+            f"from buddies.models import Project; "
             f"from feusers.models import FeUser; "
             f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={ctx['group_id']}); "
+            f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"print(g.admin_feuser_id == a.pk)"
         )
         assert result == "True", "A must be the group admin before the test"
@@ -204,17 +204,17 @@ class TestAccountDeletionGroupAdmin:
 
     def test_group_still_exists(self, driver, w, ctx):
         count = _shell(
-            f"from buddies.models import BuddyGroup; "
-            f"print(BuddyGroup.objects.filter(pk={ctx['group_id']}).count())"
+            f"from buddies.models import Project; "
+            f"print(Project.objects.filter(pk={ctx['group_id']}).count())"
         )
         assert count == "1", "Group must still exist after the admin deletes their account"
 
     def test_b_is_new_admin(self, driver, w, ctx):
         result = _shell(
-            f"from buddies.models import BuddyGroup; "
+            f"from buddies.models import Project; "
             f"from feusers.models import FeUser; "
             f"b = FeUser.objects.get(email='{ctx['b']['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={ctx['group_id']}); "
+            f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"print(g.admin_feuser_id == b.pk)"
         )
         assert result == "True", "B must become the group admin after A deletes their account"
@@ -227,17 +227,44 @@ class TestAccountDeletionGroupAdmin:
             "B must still see the group on their buddies page"
 
     def test_b_is_shown_as_admin_on_group_page(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "You are admin" in driver.page_source or "Admin" in driver.page_source, \
             "B must be displayed as the group admin on the group detail page"
 
     def test_a_ghost_dummy_present_in_group(self, driver, w, ctx):
         dummy_count = int(_shell(
-            f"from buddies.models import DummyUser, BuddyGroup; "
-            f"g = BuddyGroup.objects.get(pk={ctx['group_id']}); "
+            f"from buddies.models import DummyUser, Project; "
+            f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"print(DummyUser.objects.filter(owning_group=g, "
             f"  display_name__icontains='Greta').count())"
         ))
         assert dummy_count >= 1, \
             "A ghost dummy for Greta must be present in the group after account deletion"
+
+
+# ---------------------------------------------------------------------------
+# Solo admin deletes account: project deleted
+# ---------------------------------------------------------------------------
+
+class TestAccountDeletionSoloAdmin:
+    """A (solo admin, no other real feuser) deletes account: project is deleted too."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Vera", last_name="SoloGone")
+        group_id = int(_create_group(a["email"], "SoloDeleteGroup"))
+        yield {"a": a, "group_id": group_id}
+        # No cleanup_user needed: a's account is deleted in the test
+
+    def test_a_deletes_account(self, driver, w, ctx):
+        _delete_account_via_ui(driver, ctx["a"])
+        assert "/account/delete/" not in driver.current_url
+
+    def test_project_deleted_with_account(self, driver, w, ctx):
+        count = _shell(
+            f"from buddies.models import Project; "
+            f"print(Project.objects.filter(pk={ctx['group_id']}).count())"
+        )
+        assert count == "0", \
+            "Project must be deleted when its only real member deletes their account"

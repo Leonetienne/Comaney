@@ -16,8 +16,8 @@ from bhelpers import (
 
 def _get_group_uid(group_id: int) -> str:
     return _shell(
-        f"from buddies.models import BuddyGroup; "
-        f"print(BuddyGroup.objects.get(pk={group_id}).uid)"
+        f"from buddies.models import Project; "
+        f"print(Project.objects.get(pk={group_id}).uid)"
     )
 
 
@@ -55,7 +55,7 @@ class TestGroupSpendingChart:
 
     def test_spending_section_visible(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['uid']}/"))
+        driver.get(_url(f"/projects/{ctx['uid']}/"))
         time.sleep(1)
         assert "Spending breakdown" in driver.page_source, \
             "Spending breakdown section must appear when group has approved non-settlement expenses"
@@ -108,10 +108,10 @@ class TestGroupSpendingChartHidden:
             f"from feusers.models import FeUser; from decimal import Decimal; "
             f"a = FeUser.objects.get(email='{admin['email']}'); "
             f"b = FeUser.objects.get(pk={member_pk}); "
-            f"g = BuddyGroup.objects.get(pk={gid}); "
+            f"g = Project.objects.get(pk={gid}); "
             f"e = Expense.objects.create(owning_feuser=a, title='Settlement', "
             f"  type='expense', value=Decimal('50.00'), settled=True, "
-            f"  is_buddies_settlement=True, buddy_approved=True, buddy_group=g); "
+            f"  is_buddies_settlement=True, buddy_approved=True, project=g); "
             f"BuddySpending.objects.create(expense=e, participant_feuser=b, share_percent=Decimal('100.0')); "
             f"print(e.pk)"
         )
@@ -122,7 +122,7 @@ class TestGroupSpendingChartHidden:
 
     def test_spending_section_absent(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['uid']}/"))
+        driver.get(_url(f"/projects/{ctx['uid']}/"))
         time.sleep(1)
         assert "Spending breakdown" not in driver.page_source, \
             "Spending breakdown section must not appear when group only has settlement expenses"

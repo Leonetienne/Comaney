@@ -107,10 +107,10 @@ class TestRenameGroupDummy:
         c = setup_user(driver, w, first_name="Greg", last_name="GroupAdmin")
         group_id = _create_group(c["email"], "Rename Group")
         dummy_id = _shell(
-            f"from buddies.services import BuddyGroupService; "
-            f"from feusers.models import FeUser; from buddies.models import BuddyGroup; "
+            f"from buddies.services import ProjectService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
             f"a = FeUser.objects.get(email='{c['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = BuddyGroupService.create_group_dummy(g, a, 'Old Group Member'); "
             f"print(d.pk)"
         )
@@ -120,7 +120,7 @@ class TestRenameGroupDummy:
         cleanup_user(c["email"])
 
     def test_group_detail_shows_dummy(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Old Group Member" in driver.page_source
 
@@ -146,7 +146,7 @@ class TestRenameGroupDummy:
         assert "New Group Member" in driver.page_source
 
     def test_old_name_gone(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Old Group Member" not in driver.page_source
 
@@ -198,10 +198,10 @@ class TestRenameGroupDummyNonAdminUnauthorized:
         admin = setup_user(driver, w, first_name="Ada", last_name="Admin")
         group_id = _create_group(admin["email"], "Auth Test Group")
         dummy_id = _shell(
-            f"from buddies.services import BuddyGroupService; "
-            f"from feusers.models import FeUser; from buddies.models import BuddyGroup; "
+            f"from buddies.services import ProjectService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
             f"a = FeUser.objects.get(email='{admin['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = BuddyGroupService.create_group_dummy(g, a, 'Group Victim'); "
             f"print(d.pk)"
         )
@@ -217,7 +217,7 @@ class TestRenameGroupDummyNonAdminUnauthorized:
         s = _session(driver)
         resp = _json_post(
             s,
-            f"/buddies/groups/{ctx['group_id']}/dummy/{ctx['dummy_id']}/rename/",
+            f"/projects/{ctx['group_id']}/dummy/{ctx['dummy_id']}/rename/",
             {"display_name": "Hacked"},
         )
         assert resp.status_code == 404

@@ -35,7 +35,7 @@ class TestGroupPicture:
     # ── upload ──────────────────────────────────────────────────────────────
 
     def test_upload_form_visible_for_admin(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['admin']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['admin']['group_id']}/"))
         time.sleep(1)
         assert "group_picture" in driver.page_source, \
             "Admin should see the group picture upload form"
@@ -46,7 +46,7 @@ class TestGroupPicture:
         )
         driver.find_element(By.ID, "group-pic-input").send_keys(ASSET)
         driver.execute_script(
-            "document.getElementById('btn-upload-group-pic').closest('form').submit();"
+            "document.getElementById('btn-upload-project-pic').closest('form').submit();"
         )
         time.sleep(2)
 
@@ -54,7 +54,7 @@ class TestGroupPicture:
 
     def test_group_detail_header_has_bg_image(self, driver, w, ctx):
         gid = ctx["admin"]["group_id"]
-        driver.get(_url(f"/buddies/groups/{gid}/"))
+        driver.get(_url(f"/projects/{gid}/"))
         time.sleep(1)
         assert f"/media/bgpics/{gid}.webp" in driver.page_source, \
             "Group detail header should contain the bgpics URL after upload"
@@ -89,16 +89,16 @@ class TestGroupPicture:
 
     def test_remove_group_picture(self, driver, w, ctx):
         gid = ctx["admin"]["group_id"]
-        driver.get(_url(f"/buddies/groups/{gid}/"))
+        driver.get(_url(f"/projects/{gid}/"))
         time.sleep(1)
         driver.execute_script(
-            "document.getElementById('btn-delete-group-pic').closest('form').submit();"
+            "document.getElementById('btn-delete-project-pic').closest('form').submit();"
         )
         time.sleep(2)
 
     def test_group_detail_bg_image_gone_after_remove(self, driver, w, ctx):
         gid = ctx["admin"]["group_id"]
-        driver.get(_url(f"/buddies/groups/{gid}/"))
+        driver.get(_url(f"/projects/{gid}/"))
         time.sleep(1)
         assert f"/media/bgpics/{gid}.webp" not in driver.page_source, \
             "bgpics URL should be gone from group detail after removal"
@@ -134,7 +134,7 @@ class TestGroupPicture:
         cookies = {c["name"]: c["value"] for c in driver.get_cookies()}
         csrf = cookies.get("csrftoken", "")
         resp = requests.post(
-            f"{BASE_URL}/buddies/groups/{gid}/picture/",
+            f"{BASE_URL}/projects/{gid}/picture/",
             data={"csrfmiddlewaretoken": csrf},
             cookies=cookies,
             allow_redirects=False,
@@ -162,7 +162,7 @@ class TestGroupPicture:
 
         member_ctx = {"email": member_email, "password": "TestPass456!"}
         _login_as(driver, member_ctx)
-        driver.get(_url(f"/buddies/groups/{ctx['admin']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['admin']['group_id']}/"))
         time.sleep(1)
         assert "group-pic-input" not in driver.page_source, \
             "Non-admin should not see the group picture upload form"

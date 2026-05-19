@@ -14,7 +14,7 @@ Locations:
                              the API filters is_dummy=False so Cases 2 and 3 are excluded.
   /buddies/summary/         "One-on-one expenses"
   /buddies/summary/         "Waiting for your approval"
-  /buddies/groups/<id>/     "Waiting for approval" + "Expense Breakdown"
+  /projects/<id>/     "Waiting for approval" + "Expense Breakdown"
 """
 import time
 import uuid
@@ -167,7 +167,7 @@ class TestExpenseAvatarStacks:
         # Group dummy 1: payer in Case 2  (initials "GG")
         gdummy1_pk = _shell(
             f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Group Gamma'); "
             f"BuddyGroupMember.objects.create(group=g, dummy=d); "
             f"print(d.pk)"
@@ -175,7 +175,7 @@ class TestExpenseAvatarStacks:
         # Group dummy 2: participant in Case 2  (initials "GD")
         gdummy2_pk = _shell(
             f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Group Delta'); "
             f"BuddyGroupMember.objects.create(group=g, dummy=d); "
             f"print(d.pk)"
@@ -221,10 +221,10 @@ class TestExpenseAvatarStacks:
             f"from budget.models import Expense; from buddies.models import BuddySpending, BuddyGroup; "
             f"from feusers.models import FeUser; from decimal import Decimal; from datetime import date; "
             f"a = FeUser.objects.get(email='{alice['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"e = Expense.objects.create(owning_feuser=a, title='AvatarTest Dummy Payer Pending', "
             f"  type='expense', value=Decimal('90.00'), buddy_approved=False, "
-            f"  is_dummy=True, upfront_payee_dummy_id={gdummy1_pk}, buddy_group=g, "
+            f"  is_dummy=True, upfront_payee_dummy_id={gdummy1_pk}, project=g, "
             f"  date_due=date.fromisoformat('{today}')); "
             f"BuddySpending.objects.create(expense=e, participant_feuser_id={bob_pk}, "
             f"  share_percent=Decimal('33.0')); "
@@ -236,10 +236,10 @@ class TestExpenseAvatarStacks:
             f"from budget.models import Expense; from buddies.models import BuddySpending, BuddyGroup; "
             f"from feusers.models import FeUser; from decimal import Decimal; from datetime import date; "
             f"a = FeUser.objects.get(email='{alice['email']}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"e = Expense.objects.create(owning_feuser=a, title='AvatarTest Dummy Payer Approved', "
             f"  type='expense', value=Decimal('90.00'), buddy_approved=True, "
-            f"  is_dummy=True, upfront_payee_dummy_id={gdummy1_pk}, buddy_group=g, "
+            f"  is_dummy=True, upfront_payee_dummy_id={gdummy1_pk}, project=g, "
             f"  date_due=date.fromisoformat('{today}')); "
             f"BuddySpending.objects.create(expense=e, participant_feuser_id={bob_pk}, "
             f"  share_percent=Decimal('33.0')); "
@@ -431,10 +431,10 @@ class TestExpenseAvatarStacks:
         assert "AA" in texts, f"Alice 'AA' missing from {texts}"
         assert len(texts) == len(set(texts)), f"Duplicate avatars: {texts}"
 
-    # ── /buddies/groups/<id>/ — "Waiting for approval" ────────────────────────
+    # ── /projects/<id>/ — "Waiting for approval" ────────────────────────
 
     def _load_group(self, driver, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(2)
 
     def test_group_pending_case2_count(self, driver, w, ctx):
@@ -453,7 +453,7 @@ class TestExpenseAvatarStacks:
         assert "GD" in texts, f"GDummy2 'GD' missing from {texts}"
         assert len(texts) == len(set(texts)), f"Duplicate avatars: {texts}"
 
-    # ── /buddies/groups/<id>/ — "Expense Breakdown" ────────────────────────────
+    # ── /projects/<id>/ — "Expense Breakdown" ────────────────────────────
 
     def test_group_breakdown_case2_count(self, driver, w, ctx):
         """Case 2 approved in group Expense Breakdown: 3 avatars (GDummy1 + Bob + GDummy2)."""

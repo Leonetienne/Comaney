@@ -36,11 +36,11 @@ def _create_approved_group_expense(owner_email: str, participant_email: str,
         f"import datetime; "
         f"owner = FeUser.objects.get(email='{owner_email}'); "
         f"part = FeUser.objects.get(email='{participant_email}'); "
-        f"g = BuddyGroup.objects.get(pk={group_id}); "
+        f"g = Project.objects.get(pk={group_id}); "
         f"e = Expense.objects.create(owning_feuser=owner, title='{title}', "
         f"  type='expense', value=Decimal('{value}'), settled=False, "
         f"  date_due=datetime.date.today(), "
-        f"  buddy_approved=True, buddy_group=g); "
+        f"  buddy_approved=True, project=g); "
         f"BuddySpending.objects.create(expense=e, participant_feuser=part, "
         f"  share_percent=Decimal('50')); "
         f"print(e.pk)"
@@ -52,7 +52,7 @@ def _expense_in_group(exp_pk: str, group_id: int) -> bool:
     result = _shell(
         f"from budget.models import Expense; "
         f"e = Expense.objects.filter(pk={exp_pk}).first(); "
-        f"print(e.buddy_group_id if e else 'none')"
+        f"print(e.project_id if e else 'none')"
     )
     return result == str(group_id)
 
@@ -89,7 +89,7 @@ class TestOwnerUnlinksOwnExpense:
 
     def test_expense_visible_on_group_page(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Owner Unlink Expense" in driver.page_source
 
@@ -159,7 +159,7 @@ class TestAdminUnlinksMemberExpense:
 
     def test_admin_sees_unlink_button_for_members_expense(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Member Expense To Unlink" in driver.page_source
         unlink_forms = driver.find_elements(By.CSS_SELECTOR, "form[action*='/unlink/']")
@@ -230,7 +230,7 @@ class TestNonAdminCannotUnlinkOthersExpense:
 
     def test_member_sees_no_unlink_button_for_admins_expense(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Admin Expense No Unlink" in driver.page_source
         # Member owns no expense in this group, so no unlink button should appear
@@ -243,7 +243,7 @@ class TestNonAdminCannotUnlinkOthersExpense:
         csrftoken = cookie_dict.get("csrftoken", "")
         sessionid = cookie_dict.get("sessionid", "")
         req.post(
-            _url(f"/buddies/groups/{ctx['group_id']}/expense/{ctx['exp_pk']}/unlink/"),
+            _url(f"/projects/{ctx['group_id']}/expense/{ctx['exp_pk']}/unlink/"),
             headers={"X-CSRFToken": csrftoken, "Referer": _url("/buddies/")},
             cookies={"csrftoken": csrftoken, "sessionid": sessionid},
             timeout=10,

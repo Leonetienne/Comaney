@@ -57,11 +57,11 @@ class TestBuddyPaymentSectionUI:
     def test_buddy_section_visible_with_buddy(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
         time.sleep(1)
-        assert "This is a buddy payment" in driver.page_source
+        assert "Expense assignment" in driver.page_source
         assert "Form Buddy" in driver.page_source
 
     def test_enable_buddy_payment_shows_section(self, driver, w, ctx):
-        driver.find_element(By.ID, "buddy-payment-cb").click()
+        driver.find_element(By.ID, "assign-buddy").click()
         time.sleep(0.5)
         section = driver.find_element(By.ID, "buddy-payment-section")
         assert section.is_displayed()
@@ -121,7 +121,7 @@ class TestExpenseWithDummyParticipant:
             f"document.getElementById('id_date_due').value = '{today}';"
             "document.getElementById('id_settled').checked = true;"
         )
-        driver.find_element(By.ID, "buddy-payment-cb").click()
+        driver.find_element(By.ID, "assign-buddy").click()
         time.sleep(0.5)
         _select_first_participant(driver)
         driver.find_element(By.ID, "buddy-equal-btn").click()
@@ -176,7 +176,7 @@ class TestExpenseWithDummyAsPayer:
             f"document.getElementById('id_date_due').value = '{today}';"
             "document.getElementById('id_settled').checked = true;"
         )
-        driver.find_element(By.ID, "buddy-payment-cb").click()
+        driver.find_element(By.ID, "assign-buddy").click()
         time.sleep(0.5)
         # Select dummy as upfront payer via JS
         driver.execute_script(
@@ -250,9 +250,9 @@ class TestBuddyExpenseReEdit:
         ctx["exp_id"] = exp_id
         driver.get(_url(f"/budget/expenses/{exp_id}/edit/"))
         time.sleep(1)
-        cb = driver.find_element(By.ID, "buddy-payment-cb")
+        cb = driver.find_element(By.ID, "assign-buddy")
         assert cb.get_attribute("checked") is not None, \
-            "buddy-payment-cb must be pre-checked when re-editing a buddy expense"
+            "assign-buddy must be pre-checked when re-editing a buddy expense"
 
     def test_slider_rows_present(self, driver, w, ctx):
         pct_els = driver.find_elements(By.CSS_SELECTOR, "#buddy-sliders .buddy-slider-pct")
@@ -307,7 +307,7 @@ class TestRealBuddyAsUptrontPayer:
         driver.execute_script(
             f"document.getElementById('id_date_due').value = '{today}';"
         )
-        driver.find_element(By.ID, "buddy-payment-cb").click()
+        driver.find_element(By.ID, "assign-buddy").click()
         time.sleep(0.5)
         # Set B (real buddy) as upfront payer
         driver.execute_script(
@@ -376,18 +376,18 @@ class TestGroupModeParticipantCheckboxWithNonMePayer:
         email = user["email"]
         group_id = _create_group(email, "Test Group Regression")
         thomas_id = _shell(
-            f"from buddies.services import BuddyGroupService; "
-            f"from feusers.models import FeUser; from buddies.models import BuddyGroup; "
+            f"from buddies.services import ProjectService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
             f"u = FeUser.objects.get(email='{email}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = BuddyGroupService.create_group_dummy(g, u, 'Thomas Payer'); "
             f"print(d.pk)"
         )
         jim_id = _shell(
-            f"from buddies.services import BuddyGroupService; "
-            f"from feusers.models import FeUser; from buddies.models import BuddyGroup; "
+            f"from buddies.services import ProjectService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
             f"u = FeUser.objects.get(email='{email}'); "
-            f"g = BuddyGroup.objects.get(pk={group_id}); "
+            f"g = Project.objects.get(pk={group_id}); "
             f"d = BuddyGroupService.create_group_dummy(g, u, 'Jim Participant'); "
             f"print(d.pk)"
         )
@@ -397,22 +397,20 @@ class TestGroupModeParticipantCheckboxWithNonMePayer:
     def test_open_new_expense_form(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
         time.sleep(1)
-        assert "This is a buddy payment" in driver.page_source
+        assert "Expense assignment" in driver.page_source
 
     def test_enable_buddy_checkbox(self, driver, w, ctx):
-        driver.find_element(By.ID, "buddy-payment-cb").click()
+        driver.find_element(By.ID, "assign-project").click()
         time.sleep(0.5)
         assert driver.find_element(By.ID, "buddy-payment-section").is_displayed()
 
     def test_switch_to_group_mode(self, driver, w, ctx):
-        driver.find_element(By.ID, "buddy-mode-group").click()
-        time.sleep(0.4)
-        row = driver.find_element(By.ID, "buddy-group-select-row")
+        row = driver.find_element(By.ID, "buddy-project-row")
         assert row.is_displayed()
 
     def test_select_group(self, driver, w, ctx):
         driver.execute_script(
-            f"var sel = document.getElementById('buddy-group-select');"
+            f"var sel = document.getElementById('buddy-project-select');"
             f"sel.value = '{ctx['group_id']}';"
             f"sel.dispatchEvent(new Event('change', {{bubbles: true}}));"
         )
@@ -503,7 +501,7 @@ class TestBuddySliderCurrencyAmounts:
         )
 
     def test_enable_buddy_and_select_participant(self, driver, w, ctx):
-        driver.find_element(By.ID, "buddy-payment-cb").click()
+        driver.find_element(By.ID, "assign-buddy").click()
         time.sleep(0.5)
         _select_first_participant(driver)
         time.sleep(0.3)

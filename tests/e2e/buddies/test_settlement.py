@@ -370,7 +370,7 @@ class TestDirectSettlementRejection:
 
 
 # ---------------------------------------------------------------------------
-# Group settlement on /buddies/groups/<id>/
+# Group settlement on /projects/<id>/
 # ---------------------------------------------------------------------------
 
 class TestGroupSettlement:
@@ -398,7 +398,7 @@ class TestGroupSettlement:
     def test_settle_section_visible_for_debtor(self, driver, w, ctx):
         # Member owes admin 100; settle-up should be visible for member
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Pay someone back" in driver.page_source, \
             "Pay someone back section must appear for the group member who owes money"
@@ -441,7 +441,7 @@ class TestGroupSettlement:
         # "Pay someone back" is always rendered; what matters is that the admin
         # who is owed money has no "You owe" row in "Your balances".
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "You owe" not in driver.page_source, \
             "Admin who is owed money must not see a 'You owe' balance row"
@@ -477,7 +477,7 @@ class TestGroupSettlementReviewFlow:
 
     def test_member_submits_group_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         amt = driver.find_element(By.ID, "settle-amount")
         driver.execute_script("arguments[0].value = '50.00';", amt)
@@ -508,7 +508,7 @@ class TestGroupSettlementReviewFlow:
 
     def test_creditor_sees_waiting_for_approval_section(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Waiting for approval" in driver.page_source, \
             "Creditor must see the 'Waiting for approval' section on the group page"
@@ -531,8 +531,8 @@ class TestGroupSettlementReviewFlow:
     def test_cancel_returns_to_group_page(self, driver, w, ctx):
         driver.find_element(By.PARTIAL_LINK_TEXT, "Cancel").click()
         time.sleep(1)
-        assert f"/buddies/groups/{ctx['group_id']}/" in driver.current_url, \
-            "Cancel must return to the group detail page, not the buddy summary"
+        assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
+            f"Cancel must return to the group detail page, not the buddy summary. Landed on {driver.current_url}"
 
     def test_creditor_approves_via_review_flow(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
@@ -541,7 +541,7 @@ class TestGroupSettlementReviewFlow:
         time.sleep(1)
         assert "confirmed" in driver.page_source.lower(), \
             "Flash must confirm receipt after creditor approves"
-        assert f"/buddies/groups/{ctx['group_id']}/" in driver.current_url, \
+        assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
             "After approving, must redirect back to the group detail page"
 
     def test_waiting_section_gone_after_approval(self, driver, w, ctx):
@@ -592,7 +592,7 @@ class TestGroupSettlementRejectionFlow:
 
     def test_member_submits_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         amt = driver.find_element(By.ID, "settle-amount")
         driver.execute_script("arguments[0].value = '40.00';", amt)
@@ -605,7 +605,7 @@ class TestGroupSettlementRejectionFlow:
 
     def test_creditor_rejects_via_review_page(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
         time.sleep(1)
@@ -615,7 +615,7 @@ class TestGroupSettlementRejectionFlow:
         time.sleep(1)
         assert "rejected" in driver.page_source.lower(), \
             "Flash must confirm the settlement was rejected"
-        assert f"/buddies/groups/{ctx['group_id']}/" in driver.current_url, \
+        assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
             "After rejecting, must redirect back to the group detail page"
 
     def test_waiting_section_gone_after_rejection(self, driver, w, ctx):

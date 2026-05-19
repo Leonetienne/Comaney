@@ -45,7 +45,7 @@ class TestGroupRenameAdmin:
         cleanup_user(a["email"])
 
     def test_group_detail_loads(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         assert "Original Name" in driver.page_source
 
@@ -55,7 +55,7 @@ class TestGroupRenameAdmin:
     def test_rename_group_via_form(self, driver, w, ctx):
         name_input = driver.find_element(By.ID, "group-rename-name")
         driver.execute_script("arguments[0].value = arguments[1];", name_input, "Renamed Group")
-        driver.find_element(By.ID, "btn-rename-group").click()
+        driver.find_element(By.ID, "btn-rename-project").click()
         time.sleep(1)
         assert "Renamed Group" in driver.page_source
 
@@ -64,37 +64,37 @@ class TestGroupRenameAdmin:
 
     def test_renamed_in_database(self, driver, w, ctx):
         name = _shell(
-            f"from buddies.models import BuddyGroup; "
-            f"print(BuddyGroup.objects.get(pk={ctx['group_id']}).name)"
+            f"from buddies.models import Project; "
+            f"print(Project.objects.get(pk={ctx['group_id']}).name)"
         )
         assert name == "Renamed Group"
 
     def test_set_description_via_form(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         desc_input = driver.find_element(By.ID, "group-rename-desc")
         driver.execute_script("arguments[0].value = arguments[1];", desc_input, "A test description.")
-        driver.find_element(By.ID, "btn-rename-group").click()
+        driver.find_element(By.ID, "btn-rename-project").click()
         time.sleep(1)
         assert "A test description." in driver.page_source
 
     def test_description_in_database(self, driver, w, ctx):
         desc = _shell(
-            f"from buddies.models import BuddyGroup; "
-            f"print(BuddyGroup.objects.get(pk={ctx['group_id']}).description)"
+            f"from buddies.models import Project; "
+            f"print(Project.objects.get(pk={ctx['group_id']}).description)"
         )
         assert desc == "A test description."
 
     def test_clear_description(self, driver, w, ctx):
-        driver.get(_url(f"/buddies/groups/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
         desc_input = driver.find_element(By.ID, "group-rename-desc")
         driver.execute_script("arguments[0].value = '';", desc_input)
-        driver.find_element(By.ID, "btn-rename-group").click()
+        driver.find_element(By.ID, "btn-rename-project").click()
         time.sleep(1)
         desc = _shell(
-            f"from buddies.models import BuddyGroup; "
-            f"print(repr(BuddyGroup.objects.get(pk={ctx['group_id']}).description))"
+            f"from buddies.models import Project; "
+            f"print(repr(Project.objects.get(pk={ctx['group_id']}).description))"
         )
         assert desc == "''"
 
@@ -121,15 +121,15 @@ class TestGroupRenameNonAdminRejected:
         s = _session(driver)
         resp = _form_post(
             s,
-            f"/buddies/groups/{ctx['group_id']}/rename/",
+            f"/projects/{ctx['group_id']}/rename/",
             {"name": "Hacked Name", "description": ""},
         )
         assert resp.status_code == 404
 
     def test_group_name_unchanged_in_database(self, driver, w, ctx):
         name = _shell(
-            f"from buddies.models import BuddyGroup; "
-            f"print(BuddyGroup.objects.get(pk={ctx['group_id']}).name)"
+            f"from buddies.models import Project; "
+            f"print(Project.objects.get(pk={ctx['group_id']}).name)"
         )
         assert name == "Admin Only Group"
 
@@ -154,7 +154,7 @@ class TestGroupRenameUnauthenticatedRejected:
         s.get(BASE_URL + "/login/")
         csrf = s.cookies.get("csrftoken", "")
         resp = s.post(
-            BASE_URL + f"/buddies/groups/{ctx['group_id']}/rename/",
+            BASE_URL + f"/projects/{ctx['group_id']}/rename/",
             data={"name": "Hacked", "description": ""},
             headers={"X-CSRFToken": csrf},
             allow_redirects=False,
@@ -165,7 +165,7 @@ class TestGroupRenameUnauthenticatedRejected:
 
     def test_group_name_unchanged_in_database(self, driver, w, ctx):
         name = _shell(
-            f"from buddies.models import BuddyGroup; "
-            f"print(BuddyGroup.objects.get(pk={ctx['group_id']}).name)"
+            f"from buddies.models import Project; "
+            f"print(Project.objects.get(pk={ctx['group_id']}).name)"
         )
         assert name == "Unauth Target Group"
