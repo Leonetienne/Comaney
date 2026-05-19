@@ -154,12 +154,23 @@ class TestBgsCardTotalSpending:
         _login_as(driver, ctx["admin"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        total_els = driver.find_elements(By.CLASS_NAME, "bgs-total-spending")
-        assert len(total_els) >= 1, \
-            "At least one bgs-card must show the .bgs-total-spending element"
+        # Total spending is now rendered as a .bgs-stat row with label "Ausgaben"
+        stat_labels = driver.find_elements(By.CLASS_NAME, "bgs-stat-label")
+        ausgaben_labels = [el for el in stat_labels if "Ausgaben" in el.text]
+        assert len(ausgaben_labels) >= 1, \
+            "At least one bgs-card must show an 'Ausgaben' stat row"
 
     def test_bgs_card_total_value(self, driver, w, ctx):
-        total_els = driver.find_elements(By.CLASS_NAME, "bgs-total-spending")
-        texts = [el.text for el in total_els]
-        assert any("80.00" in t for t in texts), \
-            "The bgs-card must display the group total spending (80.00)"
+        # Find all .bgs-stat rows that contain "Ausgaben" and check the value
+        stat_rows = driver.find_elements(By.CLASS_NAME, "bgs-stat")
+        ausgaben_values = []
+        for row in stat_rows:
+            try:
+                label = row.find_element(By.CLASS_NAME, "bgs-stat-label")
+                value = row.find_element(By.CLASS_NAME, "bgs-stat-value")
+                if "Ausgaben" in label.text:
+                    ausgaben_values.append(value.text)
+            except Exception:
+                pass
+        assert any("80.00" in v for v in ausgaben_values), \
+            "The bgs-card must display the group total spending (80.00) in the Ausgaben stat"
