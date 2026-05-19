@@ -50,10 +50,10 @@ class TestGroupRenameAdmin:
         assert "Original Name" in driver.page_source
 
     def test_rename_form_visible_for_admin(self, driver, w, ctx):
-        assert "Rename group" in driver.page_source
+        assert "Rename project" in driver.page_source
 
     def test_rename_group_via_form(self, driver, w, ctx):
-        name_input = driver.find_element(By.ID, "group-rename-name")
+        name_input = driver.find_element(By.ID, "project-rename-name")
         driver.execute_script("arguments[0].value = arguments[1];", name_input, "Renamed Group")
         driver.find_element(By.ID, "btn-rename-project").click()
         time.sleep(1)
@@ -72,7 +72,7 @@ class TestGroupRenameAdmin:
     def test_set_description_via_form(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
-        desc_input = driver.find_element(By.ID, "group-rename-desc")
+        desc_input = driver.find_element(By.ID, "project-rename-desc")
         driver.execute_script("arguments[0].value = arguments[1];", desc_input, "A test description.")
         driver.find_element(By.ID, "btn-rename-project").click()
         time.sleep(1)
@@ -88,7 +88,7 @@ class TestGroupRenameAdmin:
     def test_clear_description(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
-        desc_input = driver.find_element(By.ID, "group-rename-desc")
+        desc_input = driver.find_element(By.ID, "project-rename-desc")
         driver.execute_script("arguments[0].value = '';", desc_input)
         driver.find_element(By.ID, "btn-rename-project").click()
         time.sleep(1)

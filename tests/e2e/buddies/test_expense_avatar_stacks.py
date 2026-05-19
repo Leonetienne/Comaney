@@ -166,18 +166,18 @@ class TestExpenseAvatarStacks:
 
         # Group dummy 1: payer in Case 2  (initials "GG")
         gdummy1_pk = _shell(
-            f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
+            f"from buddies.models import Project, DummyUser, ProjectMember; "
             f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Group Gamma'); "
-            f"BuddyGroupMember.objects.create(group=g, dummy=d); "
+            f"ProjectMember.objects.create(group=g, dummy=d); "
             f"print(d.pk)"
         )
         # Group dummy 2: participant in Case 2  (initials "GD")
         gdummy2_pk = _shell(
-            f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
+            f"from buddies.models import Project, DummyUser, ProjectMember; "
             f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Group Delta'); "
-            f"BuddyGroupMember.objects.create(group=g, dummy=d); "
+            f"ProjectMember.objects.create(group=g, dummy=d); "
             f"print(d.pk)"
         )
         # Personal dummy: used in Cases 3 and 4  (initials "PZ")
@@ -218,7 +218,7 @@ class TestExpenseAvatarStacks:
         #     3 avatars: GG + BB + GD.  Appears in group "Waiting for approval" and buddy_summary
         #     "Waiting for approval" (dummy_payer kind).  NOT in the expense list (is_dummy=True).
         e2_pk = _shell(
-            f"from budget.models import Expense; from buddies.models import BuddySpending, BuddyGroup; "
+            f"from budget.models import Expense; from buddies.models import Project, BuddySpending; "
             f"from feusers.models import FeUser; from decimal import Decimal; from datetime import date; "
             f"a = FeUser.objects.get(email='{alice['email']}'); "
             f"g = Project.objects.get(pk={group_id}); "
@@ -233,7 +233,7 @@ class TestExpenseAvatarStacks:
         )
         # E2_approved: Case 2 approved — same setup, for group "Expense Breakdown".
         e2_appr_pk = _shell(
-            f"from budget.models import Expense; from buddies.models import BuddySpending, BuddyGroup; "
+            f"from budget.models import Expense; from buddies.models import Project, BuddySpending; "
             f"from feusers.models import FeUser; from decimal import Decimal; from datetime import date; "
             f"a = FeUser.objects.get(email='{alice['email']}'); "
             f"g = Project.objects.get(pk={group_id}); "

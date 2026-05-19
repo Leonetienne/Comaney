@@ -206,7 +206,7 @@ class TestGroupDummyMergeAccept:
         group_id = _create_group(admin["email"], "MergeGroup")
         # Add a group dummy
         dummy_uid = _shell(
-            f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
+            f"from buddies.models import Project, DummyUser, BuddyGroupMember; "
             f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Group Dummy'); "
             f"BuddyGroupMember.objects.create(group=g, dummy=d); "

@@ -31,7 +31,7 @@ def _create_approved_group_expense(owner_email: str, participant_email: str,
     """Create an approved group expense; return expense pk as string."""
     return _shell(
         f"from budget.models import Expense; "
-        f"from buddies.models import BuddySpending, BuddyGroup; "
+        f"from buddies.models import Project, BuddySpending; "
         f"from feusers.models import FeUser; from decimal import Decimal; "
         f"import datetime; "
         f"owner = FeUser.objects.get(email='{owner_email}'); "

@@ -15,6 +15,20 @@
 {% endfor %}
 {% endif %}
 
+{% if incoming_project_invites %}
+<section class="buddies-section">
+    <h2>Group invitations</h2>
+    {% for invite in incoming_project_invites %}
+    <div class="invite-card">
+        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> ({{ invite.inviting_feuser.email }}) invited you to join the group <strong>{{ invite.group.name }}</strong>.</p>
+        <div class="invite-actions">
+            <a href="{% url 'projects:view_project_invite' invite.token %}" class="btn btn-sm">View invite</a>
+        </div>
+    </div>
+    {% endfor %}
+</section>
+{% endif %}
+
 {% if project_summaries %}
 <section class="buddies-section bgs-grid-section">
     <div class="bgs-cards" id="projects-sortable">

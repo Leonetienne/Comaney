@@ -96,7 +96,7 @@ class TestDummyPictureCleanupOnGroupCascade:
 
     def test_dummy_picture_cleaned_up_on_group_delete(self, driver, w):
         result = _shell(
-            "from feusers.models import FeUser; from buddies.models import DummyUser, BuddyGroup; "
+            "from feusers.models import FeUser; from buddies.models import Project, DummyUser; "
             "from django.conf import settings; import pathlib; "
             "u = FeUser.objects.create(email='cascade-group-ppic@example.test', "
             "  password='!', is_active=True, is_confirmed=True); "

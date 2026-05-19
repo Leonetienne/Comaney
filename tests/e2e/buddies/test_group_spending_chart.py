@@ -104,7 +104,7 @@ class TestGroupSpendingChartHidden:
         # Only create a settlement expense
         member_pk = int(_get_pk(member["email"]))
         _shell(
-            f"from budget.models import Expense; from buddies.models import BuddySpending, BuddyGroup; "
+            f"from budget.models import Expense; from buddies.models import BuddySpending, Project; "
             f"from feusers.models import FeUser; from decimal import Decimal; "
             f"a = FeUser.objects.get(email='{admin['email']}'); "
             f"b = FeUser.objects.get(pk={member_pk}); "
@@ -152,25 +152,25 @@ class TestBgsCardTotalSpending:
 
     def test_bgs_card_shows_total(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url("/buddies/summary/"))
+        driver.get(_url("/projects/"))
         time.sleep(1)
-        # Total spending is now rendered as a .bgs-stat row with label "Ausgaben"
+        # Total spending is rendered as a .bgs-stat row with label "Total spending"
         stat_labels = driver.find_elements(By.CLASS_NAME, "bgs-stat-label")
-        ausgaben_labels = [el for el in stat_labels if "Ausgaben" in el.text]
-        assert len(ausgaben_labels) >= 1, \
-            "At least one bgs-card must show an 'Ausgaben' stat row"
+        total_labels = [el for el in stat_labels if "Total spending" in el.text]
+        assert len(total_labels) >= 1, \
+            "At least one bgs-card must show a 'Total spending' stat row"
 
     def test_bgs_card_total_value(self, driver, w, ctx):
-        # Find all .bgs-stat rows that contain "Ausgaben" and check the value
+        # Find all .bgs-stat rows that contain "Total spending" and check the value
         stat_rows = driver.find_elements(By.CLASS_NAME, "bgs-stat")
-        ausgaben_values = []
+        total_values = []
         for row in stat_rows:
             try:
                 label = row.find_element(By.CLASS_NAME, "bgs-stat-label")
                 value = row.find_element(By.CLASS_NAME, "bgs-stat-value")
-                if "Ausgaben" in label.text:
-                    ausgaben_values.append(value.text)
+                if "Total spending" in label.text:
+                    total_values.append(value.text)
             except Exception:
                 pass
-        assert any("80.00" in v for v in ausgaben_values), \
-            "The bgs-card must display the group total spending (80.00) in the Ausgaben stat"
+        assert any("80.00" in v for v in total_values), \
+            "The bgs-card must display the group total spending (80.00) in the Total spending stat"

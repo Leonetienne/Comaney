@@ -21,7 +21,7 @@ def _create_dummy_upfront_expense(owner_email: str, group_id: int,
     Returns the expense pk as string."""
     return _shell(
         f"from budget.models import Expense; "
-        f"from buddies.models import BuddySpending, BuddyGroup; "
+        f"from buddies.models import Project, BuddySpending; "
         f"from feusers.models import FeUser; from decimal import Decimal; "
         f"from datetime import date; "
         f"owner = FeUser.objects.get(email='{owner_email}'); "
@@ -47,10 +47,10 @@ class TestAdminCanEditDummyUpfrontExpense:
         group_id = int(_create_group(admin["email"], "Edit Test Group"))
         _add_group_member(group_id, member["email"])
         dummy_id = int(_shell(
-            f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
+            f"from buddies.models import Project, DummyUser, ProjectMember; "
             f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Offline Dan'); "
-            f"BuddyGroupMember.objects.create(group=g, dummy=d); "
+            f"ProjectMember.objects.create(group=g, dummy=d); "
             f"print(d.pk)"
         ))
         expense_pk = int(_create_dummy_upfront_expense(

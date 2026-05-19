@@ -221,10 +221,10 @@ class TestAccountDeletionGroupAdmin:
 
     def test_b_sees_group_on_buddies_page(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
-        driver.get(_url("/buddies/"))
+        driver.get(_url("/projects/"))
         time.sleep(1)
         assert "AdminGoneGroup" in driver.page_source, \
-            "B must still see the group on their buddies page"
+            "B must still see the group on their projects page"
 
     def test_b_is_shown_as_admin_on_group_page(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))

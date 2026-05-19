@@ -116,17 +116,17 @@ window.BUDDY_EXPENSE_CONFIG = {
 
         <div id="buddy-payment-section" class="buddy-payment-section" style="display:none;">
 
-            {% if buddy_groups %}
-            {# Project header image – always rendered at top, full-bleed, empty if no pic #}
-            <div id="buddy-project-header" class="buddy-project-header-hero"></div>
-
-            {# Hidden mode radios that buddy_expense.js reads via getElementById #}
+            {# Hidden mode radios that buddy_expense.js reads via getElementById. Always present so activateTab('buddy') can dispatch change events even when the user has no projects. #}
             <input type="radio" name="buddy_mode_ui" id="buddy-mode-single" value="single"
                    style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;"
                    {% if not existing_group_id %}checked{% endif %}>
             <input type="radio" name="buddy_mode_ui" id="buddy-mode-group" value="group"
                    style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;"
                    {% if existing_group_id %}checked{% endif %}>
+
+            {% if buddy_groups %}
+            {# Project header image – always rendered at top, full-bleed, empty if no pic #}
+            <div id="buddy-project-header" class="buddy-project-header-hero"></div>
 
             {# Project selector row – buddy_expense.js reads id="buddy-group-select" #}
             <div id="buddy-group-select-row" class="buddy-project-select-row" style="display:none;">

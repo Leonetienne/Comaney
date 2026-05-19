@@ -30,9 +30,9 @@ class TestProjectsListPage:
         assert "My Test Project" in driver.page_source
 
     def test_project_card_is_link_to_detail(self, driver, w, ctx):
-        link = driver.find_element(By.CSS_SELECTOR,
-            f".bgs-card[data-project-id='{ctx['group_id']}'] a")
-        assert f"/projects/{ctx['group_id']}/" in link.get_attribute("href")
+        card = driver.find_element(By.CSS_SELECTOR,
+            f".bgs-card[data-project-id='{ctx['group_id']}']")
+        assert f"/projects/{ctx['group_id']}/" in card.get_attribute("href")
 
 
 class TestProjectCreationViaForm:

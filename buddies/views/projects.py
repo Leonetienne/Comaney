@@ -54,11 +54,14 @@ def projects_list(request):
         for p in my_projects
     ]
 
+    incoming_invites = BuddyQueryService.pending_group_invites_incoming(feuser)
+
     return render(request, "buddies/projects_list.html", {
         "active_nav": "projects",
         "my_projects": my_projects,
         "project_summaries": project_summaries,
         "currency": feuser.currency,
+        "incoming_project_invites": incoming_invites,
     })
 
 
@@ -681,7 +684,7 @@ def accept_project_invite(request, token):
 @require_POST
 def decline_project_invite(request, token):
     ProjectService.decline_group_invite(token, request.feuser)
-    return redirect("buddies:my_buddies")
+    return redirect("projects:projects_list")
 
 
 @feuser_required

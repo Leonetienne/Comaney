@@ -42,9 +42,9 @@ class TestGroupPicture:
 
     def test_upload_group_picture(self, driver, w, ctx):
         driver.execute_script(
-            "document.getElementById('group-pic-input').style.display = 'block';"
+            "document.getElementById('project-pic-input').style.display = 'block';"
         )
-        driver.find_element(By.ID, "group-pic-input").send_keys(ASSET)
+        driver.find_element(By.ID, "project-pic-input").send_keys(ASSET)
         driver.execute_script(
             "document.getElementById('btn-upload-project-pic').closest('form').submit();"
         )
@@ -67,10 +67,10 @@ class TestGroupPicture:
 
     def test_summary_card_has_bg_image(self, driver, w, ctx):
         gid = ctx["admin"]["group_id"]
-        driver.get(_url("/buddies/summary/"))
+        driver.get(_url("/projects/"))
         time.sleep(1)
         assert f"/media/bgpics/{gid}.webp" in driver.page_source, \
-            "Group card on summary page should contain the bgpics URL"
+            "Group card on projects page should contain the bgpics URL"
 
     # ── media URL serves the file ─────────────────────────────────────────────
 
@@ -107,10 +107,10 @@ class TestGroupPicture:
 
     def test_summary_card_bg_image_gone_after_remove(self, driver, w, ctx):
         gid = ctx["admin"]["group_id"]
-        driver.get(_url("/buddies/summary/"))
+        driver.get(_url("/projects/"))
         time.sleep(1)
         assert f"/media/bgpics/{gid}.webp" not in driver.page_source, \
-            "bgpics URL should be gone from summary card after removal"
+            "bgpics URL should be gone from projects page after removal"
 
     # ── non-admin picture endpoint rejects ───────────────────────────────────
 
@@ -164,7 +164,7 @@ class TestGroupPicture:
         _login_as(driver, member_ctx)
         driver.get(_url(f"/projects/{ctx['admin']['group_id']}/"))
         time.sleep(1)
-        assert "group-pic-input" not in driver.page_source, \
+        assert "project-pic-input" not in driver.page_source, \
             "Non-admin should not see the group picture upload form"
 
         _shell(f"from feusers.models import FeUser; FeUser.objects.get(email='{member_email}').delete()")

@@ -43,7 +43,7 @@ class TestDummyCRUD:
     def test_dummy_appears_in_expense_form(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
         time.sleep(1)
-        assert "This is a buddy payment" in driver.page_source
+        assert "Expense assignment" in driver.page_source
         assert "Offline Alice" in driver.page_source
 
     def test_kick_dummy_no_debt_shows_confirm(self, driver, w, ctx):

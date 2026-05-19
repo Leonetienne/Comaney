@@ -28,10 +28,10 @@ class TestAchimGroupCreated:
         email = a["email"]
         group_id = _create_group(email, "Achim Test Group")
         dummy_id = _shell(
-            f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
+            f"from buddies.models import Project, DummyUser, ProjectMember; "
             f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Offline Otto'); "
-            f"BuddyGroupMember.objects.create(group=g, dummy=d); "
+            f"ProjectMember.objects.create(group=g, dummy=d); "
             f"print(d.pk)"
         )
         _shell(
@@ -50,7 +50,7 @@ class TestAchimGroupCreated:
         # Get the BuddyGroupMember uid for the dummy so we can find the Remove link
         member_uid = _shell(
             f"from buddies.models import ProjectMember; "
-            f"m = BuddyGroupMember.objects.get(dummy_id={dummy_id}); "
+            f"m = ProjectMember.objects.get(dummy_id={dummy_id}); "
             f"print(m.uid)"
         )
         a["group_id"] = int(group_id)
@@ -97,7 +97,7 @@ class TestAchimGroupCreated:
 
     def test_archive_exists_in_db(self, driver, w, ctx):
         count = _shell(
-            f"from buddies.models import DummyUser, BuddyGroup; "
+            f"from buddies.models import Project, DummyUser; "
             f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"print(DummyUser.objects.filter(owning_group=g, is_archive=True).count())"
         )
@@ -105,7 +105,7 @@ class TestAchimGroupCreated:
 
     def test_expense_transferred_to_archive(self, driver, w, ctx):
         count = _shell(
-            f"from buddies.models import BuddySpending, DummyUser, BuddyGroup; "
+            f"from buddies.models import Project, BuddySpending, DummyUser; "
             f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"archive = DummyUser.objects.get(owning_group=g, is_archive=True); "
             f"print(BuddySpending.objects.filter(participant_dummy=archive).count())"
@@ -128,14 +128,14 @@ class TestAchimGroupWipe:
         # Create group archive with an expense via shell
         _shell(
             f"from feusers.models import FeUser; "
-            f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember, BuddySpending; "
+            f"from buddies.models import Project, DummyUser, ProjectMember, BuddySpending; "
             f"from buddies.services.archive import BuddyArchiveService; "
             f"from budget.models import Expense; "
             f"from decimal import Decimal; "
             f"u = FeUser.objects.get(email='{email}'); "
             f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='TempGroupBuddy'); "
-            f"BuddyGroupMember.objects.create(group=g, dummy=d); "
+            f"ProjectMember.objects.create(group=g, dummy=d); "
             f"e = Expense.objects.create(owning_feuser=u, title='Wipe Group Expense', "
             f"  type='expense', value=Decimal('100.00'), settled=False, "
             f"  buddy_approved=True, project=g); "
@@ -187,7 +187,7 @@ class TestAchimGroupWipe:
 
     def test_archive_deleted_from_db(self, driver, w, ctx):
         count = _shell(
-            f"from buddies.models import DummyUser, BuddyGroup; "
+            f"from buddies.models import Project, DummyUser; "
             f"g = Project.objects.get(pk={ctx['group_id']}); "
             f"print(DummyUser.objects.filter(owning_group=g, is_archive=True).count())"
         )
@@ -217,7 +217,7 @@ class TestAchimGroupSelfDebtCancels:
         group_id = _create_group(email, "Self Debt Test Group")
         _shell(
             f"from feusers.models import FeUser; "
-            f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember, BuddySpending; "
+            f"from buddies.models import Project, DummyUser, ProjectMember, BuddySpending; "
             f"from buddies.services.archive import BuddyArchiveService; "
             f"from buddies.services.group import BuddyGroupService; "
             f"from budget.models import Expense; "
@@ -226,8 +226,8 @@ class TestAchimGroupSelfDebtCancels:
             f"g = Project.objects.get(pk={group_id}); "
             f"da = DummyUser.objects.create(owning_group=g, display_name='DummyA'); "
             f"db = DummyUser.objects.create(owning_group=g, display_name='DummyB'); "
-            f"BuddyGroupMember.objects.create(group=g, dummy=da); "
-            f"BuddyGroupMember.objects.create(group=g, dummy=db); "
+            f"ProjectMember.objects.create(group=g, dummy=da); "
+            f"ProjectMember.objects.create(group=g, dummy=db); "
             f"e = Expense.objects.create(owning_feuser=u, title='B paid for A', "
             f"  type='expense', value=Decimal('5.00'), settled=False, "
             f"  buddy_approved=True, project=g, is_dummy=True, "

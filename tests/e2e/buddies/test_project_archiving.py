@@ -9,7 +9,7 @@ import pytest
 import requests
 from selenium.webdriver.common.by import By
 
-from helpers import _url, setup_user, cleanup_user, api_create, api_delete
+from helpers import _url, setup_user, cleanup_user, api_delete
 from bhelpers import _shell, _create_group, _add_group_member, _create_group_expense
 
 
@@ -32,6 +32,8 @@ class TestProjectArchiveBasic:
         form = driver.find_element(By.CSS_SELECTOR,
             f"form[action*='/projects/{ctx['gid']}/archive/']")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
+        time.sleep(0.5)
+        driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(1)
         assert "Archived" in driver.page_source
 

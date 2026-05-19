@@ -26,7 +26,7 @@ def _create_approved_group_expense(owner_email: str, participant_email: str,
     Returns the expense pk (integer) as string."""
     return _shell(
         f"from budget.models import Expense; "
-        f"from buddies.models import BuddySpending, BuddyGroup; "
+        f"from buddies.models import Project, BuddySpending; "
         f"from feusers.models import FeUser; from decimal import Decimal; "
         f"owner = FeUser.objects.get(email='{owner_email}'); "
         f"part = FeUser.objects.get(email='{participant_email}'); "

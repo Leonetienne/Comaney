@@ -141,10 +141,10 @@ class TestGroupDummyPicture:
         a = setup_user(driver, w, first_name="Greta", last_name="GroupPic")
         group_id = _create_group(a["email"], "Pic Group")
         dummy_id = _shell(
-            f"from buddies.models import DummyUser, BuddyGroup, BuddyGroupMember; "
+            f"from buddies.models import Project, DummyUser, ProjectMember; "
             f"g = Project.objects.get(pk={group_id}); "
             f"d = DummyUser.objects.create(owning_group=g, display_name='Group Pic Member'); "
-            f"BuddyGroupMember.objects.create(group=g, dummy=d); "
+            f"ProjectMember.objects.create(group=g, dummy=d); "
             f"print(d.pk)"
         )
         a["group_id"] = int(group_id)

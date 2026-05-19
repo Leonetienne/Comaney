@@ -45,6 +45,8 @@ class TestAdminSoloCannotLeave:
         assert "/projects/" in driver.current_url
 
     def test_project_gone_from_list(self, driver, w, ctx):
+        driver.get(_url("/projects/"))
+        time.sleep(1)
         assert "Solo Admin Project" not in driver.page_source
 
 

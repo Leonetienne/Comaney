@@ -38,8 +38,8 @@ class TestRadioGroupVisible:
         assert driver.find_element(By.ID, "assign-project")
 
     def test_default_none_selected(self, driver, w, ctx):
-        none_radio = driver.find_element(By.ID, "assign-none")
-        assert none_radio.is_selected()
+        none_btn = driver.find_element(By.ID, "assign-none")
+        assert "assign-tab--active" in none_btn.get_attribute("class")
 
     def test_section_hidden_by_default(self, driver, w, ctx):
         section = driver.find_element(By.ID, "buddy-payment-section")
@@ -95,7 +95,7 @@ class TestRadioProjectOption:
         assert section.is_displayed()
 
     def test_project_dropdown_shown(self, driver, w, ctx):
-        row = driver.find_element(By.ID, "buddy-project-row")
+        row = driver.find_element(By.ID, "buddy-group-select-row")
         assert row.is_displayed()
 
     def test_switch_to_none_hides_project_section(self, driver, w, ctx):
@@ -116,7 +116,7 @@ class TestRadioProjectOption:
         time.sleep(1)
         driver.find_element(By.ID, "assign-project").click()
         time.sleep(0.5)
-        sel = driver.find_element(By.ID, "buddy-project-select")
+        sel = driver.find_element(By.ID, "buddy-group-select")
         options = [o.get_attribute("value") for o in sel.find_elements(By.TAG_NAME, "option")]
         assert str(archived_gid) not in options, "Archived project must not appear in dropdown"
 
@@ -159,5 +159,6 @@ class TestRadioPreselectedOnEdit:
     def test_project_radio_preselected(self, driver, w, ctx):
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
         time.sleep(1)
-        project_radio = driver.find_element(By.ID, "assign-project")
-        assert project_radio.is_selected(), "Project radio must be pre-selected when editing project expense"
+        project_btn = driver.find_element(By.ID, "assign-project")
+        assert "assign-tab--active" in project_btn.get_attribute("class"), \
+            "Project radio must be pre-selected when editing project expense"

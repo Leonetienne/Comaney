@@ -61,7 +61,7 @@ class TestSoloProjectExpenseCreation:
 
     def test_select_solo_project_hides_participant_controls(self, driver, w, ctx):
         driver.execute_script(
-            f"var sel = document.getElementById('buddy-project-select');"
+            f"var sel = document.getElementById('buddy-group-select');"
             f"if (sel) {{ sel.value = '{ctx['gid']}';"
             f"sel.dispatchEvent(new Event('change', {{bubbles: true}})); }}"
         )
@@ -89,7 +89,7 @@ class TestSoloProjectExpenseCreation:
         driver.find_element(By.ID, "assign-project").click()
         time.sleep(0.4)
         driver.execute_script(
-            f"var sel = document.getElementById('buddy-project-select');"
+            f"var sel = document.getElementById('buddy-group-select');"
             f"if (sel) {{ sel.value = '{ctx['gid']}';"
             f"sel.dispatchEvent(new Event('change', {{bubbles: true}})); }}"
         )
@@ -117,6 +117,6 @@ class TestSoloProjectExpenseCreation:
         exp_data = result.json()
         assert exp_data.get("project") is not None
         assert exp_data["project"]["id"] == ctx["gid"]
-        # Should have buddy_participants with 100%
+        # Solo project expenses have no buddy spendings (solo-project path)
         participants = exp_data.get("buddy_participants", [])
-        assert len(participants) > 0, "Solo project expense must have at least one buddy_participant"
+        assert len(participants) == 0, "Solo project expense must not have buddy_participants"

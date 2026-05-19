@@ -107,7 +107,7 @@ class TestRenameGroupDummy:
         c = setup_user(driver, w, first_name="Greg", last_name="GroupAdmin")
         group_id = _create_group(c["email"], "Rename Group")
         dummy_id = _shell(
-            f"from buddies.services import ProjectService; "
+            f"from buddies.services import BuddyGroupService; "
             f"from feusers.models import FeUser; from buddies.models import Project; "
             f"a = FeUser.objects.get(email='{c['email']}'); "
             f"g = Project.objects.get(pk={group_id}); "
@@ -198,7 +198,7 @@ class TestRenameGroupDummyNonAdminUnauthorized:
         admin = setup_user(driver, w, first_name="Ada", last_name="Admin")
         group_id = _create_group(admin["email"], "Auth Test Group")
         dummy_id = _shell(
-            f"from buddies.services import ProjectService; "
+            f"from buddies.services import BuddyGroupService; "
             f"from feusers.models import FeUser; from buddies.models import Project; "
             f"a = FeUser.objects.get(email='{admin['email']}'); "
             f"g = Project.objects.get(pk={group_id}); "
