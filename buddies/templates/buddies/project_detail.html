@@ -214,8 +214,11 @@
     </script>
     {% endif %}
 
-    {# ── Spending Breakdown Pie Chart ─────────────────────────────────────────── #}
-    {% if group_total_spending %}
+</section>
+
+{# ── Spending Breakdown Pie Chart ─────────────────────────────────────────── #}
+{% if group_total_spending %}
+<section class="buddies-section buddies-section--surface">
     <h2>Spending breakdown</h2>
     <div class="desc-surface">
         <p class="page-subtitle" style="margin:0 0 0.25rem;">Total group spending: <strong>{{ currency }}{{ group_total_spending|floatformat:2 }}</strong></p>
@@ -359,8 +362,10 @@
         });
     })();
     </script>
-    {% endif %}
+</section>
+{% endif %}
 
+<section class="buddies-section buddies-section--surface">
     <h2>Clear everything at once</h2>
     {% if breakdown.simplified %}
     {% if not is_admin %}<p class="font-xs text-muted mb-sm">Your group admin can kick off a group-wide settlement.</p>{% endif %}

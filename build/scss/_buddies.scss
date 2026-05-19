@@ -3,8 +3,14 @@
 .buddies-section {
   margin-bottom: 2.5rem;
 
-  &--narrow { max-width: 560px; }
-  &--sm     { max-width: 480px; }
+  &--narrow  { max-width: 560px; }
+  &--sm      { max-width: 480px; }
+  &--surface {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+  }
 
   h2 {
     font-size: 1.1rem;
