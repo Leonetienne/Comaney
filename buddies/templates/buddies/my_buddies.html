@@ -135,7 +135,7 @@
 </section>
 {% endif %}
 
-{% if group_invites_in or pending_invites_in or pending_invites_out or merge_invites_in %}
+{% if group_invites_in or pending_invites_in or pending_invites_out or pending_onboarding_invites_out or merge_invites_in %}
 <section class="buddies-section">
     <h2>Pending Invitations</h2>
 
@@ -189,7 +189,7 @@
     {% endfor %}
     {% endif %}
 
-    {% if pending_invites_out %}
+    {% if pending_invites_out or pending_onboarding_invites_out %}
     <h3>Buddy invitations you sent</h3>
     {% for invite in pending_invites_out %}
     <div class="invite-card invite-card-outgoing">
@@ -197,6 +197,15 @@
         <form method="post" action="{% url 'buddies:revoke_invite' invite.token %}">
             {% csrf_token %}
             <button type="submit" id="btn-revoke-invite-{{ invite.token }}" class="btn btn-sm btn-secondary">Revoke</button>
+        </form>
+    </div>
+    {% endfor %}
+    {% for invite in pending_onboarding_invites_out %}
+    <div class="invite-card invite-card-outgoing">
+        <p>Sent to <strong>{{ invite.invitee_email }}</strong>. Expires {{ invite.expires_at|date:"N j, Y" }}.</p>
+        <form method="post" action="{% url 'buddies:revoke_onboarding_invite' invite.token %}">
+            {% csrf_token %}
+            <button type="submit" id="btn-revoke-onboarding-invite-{{ invite.token }}" class="btn btn-sm btn-secondary">Revoke</button>
         </form>
     </div>
     {% endfor %}

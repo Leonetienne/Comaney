@@ -561,6 +561,17 @@ class BuddyQueryService:
         )
 
     @staticmethod
+    def pending_onboarding_invites_outgoing(feuser):
+        from django.utils import timezone
+        from ..models import BuddyOnboardingInvite
+        return BuddyOnboardingInvite.objects.filter(
+            inviting_feuser=feuser,
+            dummy__isnull=True,
+            group__isnull=True,
+            expires_at__gt=timezone.now(),
+        )
+
+    @staticmethod
     def pending_merge_invites_incoming(feuser):
         from django.utils import timezone
         return DummyMergeInvite.objects.filter(

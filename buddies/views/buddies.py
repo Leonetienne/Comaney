@@ -141,8 +141,8 @@ def invite_actual(request):
     elif outcome == "onboarding_no_email":
         site_url = getattr(django_settings, "SITE_URL", "")
         django_messages.info(request, f"Emailing is deactivated for this instance. Give this link to your friend: {site_url}/register/")
-    elif outcome == "onboarding":
-        django_messages.success(request, f"A registration invitation has been sent to {email}. They will be linked as your buddy once they sign up.")
+    elif outcome in ("invite", "onboarding"):
+        django_messages.success(request, f"An invitation has been sent to {email}.")
     return redirect("buddies:my_buddies")
 
 
@@ -191,6 +191,23 @@ def decline_invite(request, token):
 def revoke_invite(request, token):
     BuddyLifecycleService.revoke_invite(token, request.feuser)
     return redirect("buddies:buddies_page")
+
+
+@feuser_required
+@require_POST
+def revoke_onboarding_invite(request, token):
+    from ..models import BuddyOnboardingInvite
+    try:
+        invite = BuddyOnboardingInvite.objects.get(
+            token=token,
+            inviting_feuser=request.feuser,
+            dummy__isnull=True,
+            group__isnull=True,
+        )
+        invite.delete()
+    except BuddyOnboardingInvite.DoesNotExist:
+        pass
+    return redirect("buddies:my_buddies")
 
 
 @feuser_required

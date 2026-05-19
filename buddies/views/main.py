@@ -34,6 +34,7 @@ def my_buddies_page(request):
     my_groups = BuddyQueryService.get_groups_for_feuser(feuser)
     pending_in = BuddyQueryService.pending_invites_incoming(feuser)
     pending_out = BuddyQueryService.pending_invites_outgoing(feuser)
+    pending_onboarding_out = BuddyQueryService.pending_onboarding_invites_outgoing(feuser)
     merge_in = BuddyQueryService.pending_merge_invites_incoming(feuser)
     group_invites_in = BuddyQueryService.pending_group_invites_incoming(feuser)
 
@@ -43,6 +44,7 @@ def my_buddies_page(request):
         "my_groups": my_groups,
         "pending_invites_in": pending_in,
         "pending_invites_out": pending_out,
+        "pending_onboarding_invites_out": pending_onboarding_out,
         "merge_invites_in": merge_in,
         "group_invites_in": group_invites_in,
     })

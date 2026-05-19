@@ -23,6 +23,7 @@ urlpatterns = [
     path("invite/<str:token>/accept/", views.accept_invite, name="accept_invite"),
     path("invite/<str:token>/decline/", views.decline_invite, name="decline_invite"),
     path("invite/<str:token>/revoke/", views.revoke_invite, name="revoke_invite"),
+    path("onboarding-invite/<str:token>/revoke/", views.revoke_onboarding_invite, name="revoke_onboarding_invite"),
 
     # Actual-buddy kick
     path("link/<int:link_id>/kick/", views.kick_actual, name="kick_actual"),
