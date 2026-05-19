@@ -218,8 +218,9 @@
 
 {# ── Spending Breakdown Pie Chart ─────────────────────────────────────────── #}
 {% if group_total_spending %}
-<section class="buddies-section buddies-section--surface">
+<section class="buddies-section">
     <h2>Spending breakdown</h2>
+    <div class="buddies-section--surface">
     <p class="page-subtitle" style="margin:0 0 0.25rem;">Total group spending: <strong>{{ currency }}{{ group_total_spending|floatformat:2 }}</strong></p>
     <p class="font-sm text-muted" style="margin:0 0 1rem;">Each slice shows how much of the total each person paid upfront. This is not the same as debt: it does not account for who owes whom or who has already settled.</p>
     <div class="group-spending-wrap">
@@ -360,11 +361,13 @@
         });
     })();
     </script>
+    </div>
 </section>
 {% endif %}
 
-<section class="buddies-section buddies-section--surface">
+<section class="buddies-section">
     <h2>Clear everything at once</h2>
+    <div class="buddies-section--surface">
     {% if breakdown.simplified %}
     {% if not is_admin %}<p class="font-xs text-muted mb-sm">Your group admin can kick off a group-wide settlement.</p>{% endif %}
     <div class="group-settle-list mt-1 {% if is_admin %}mb-1{% else %}mb-0{% endif %}">
@@ -402,6 +405,7 @@
     {% else %}
     <p class="settled-up-msg">Everyone is settled up. No transfers needed.</p>
     {% endif %}
+    </div>
 </section>
 {% endif %}{# end not is_solo #}
 
