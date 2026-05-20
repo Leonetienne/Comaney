@@ -462,6 +462,7 @@ def expense_delete(request, uid):
                     expense, bs.participant_feuser
                 )
     expense.delete()
+    messages.success(request, "Expense deleted.")
     back = _safe_back_url(request.POST.get("back", ""))
     return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
 
