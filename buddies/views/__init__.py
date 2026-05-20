@@ -11,7 +11,7 @@ from .buddies import (
     dummy_picture,
 )
 from .groups import (
-    create_group, group_detail, group_rename, group_picture,
+    create_group, group_rename, group_picture,
     group_invite_member, group_revoke_invite, group_remove_member,
     group_add_dummy, group_rename_dummy, group_send_merge, group_archive_wipe,
     group_transfer_admin, group_leave, group_dissolve,

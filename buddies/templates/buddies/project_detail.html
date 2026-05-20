@@ -567,27 +567,7 @@
                 </div>
             </div>
             {% include 'partials/_expense_avatars.html' with exp=e.expense payer_obj=e.payer_obj payer_name=e.payer_name %}
-            <table class="bexp-breakdown-table">
-                <thead>
-                    <tr><th>Person</th><th class="text-right">Share</th><th class="text-right">Amount</th><th>Role</th></tr>
-                </thead>
-                <tbody>
-                    <tr class="{% if e.payer_is_me %}bexp-row-me{% endif %}">
-                        <td>{{ e.payer_name }}</td>
-                        <td class="text-right">{{ e.payer_percent|floatformat:1 }}%</td>
-                        <td class="text-right">{{ currency }}{{ e.payer_amount|floatformat:2 }}</td>
-                        <td><span class="pill">Paid</span></td>
-                    </tr>
-                    {% for s in e.participant_shares %}
-                    <tr class="{% if s.is_me %}bexp-row-me{% endif %}">
-                        <td>{{ s.name }}</td>
-                        <td class="text-right">{{ s.percent|floatformat:1 }}%</td>
-                        <td class="text-right">{{ currency }}{{ s.amount|floatformat:2 }}</td>
-                        <td><span class="pill">Owes</span></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            {% include 'partials/_bexp_breakdown_collapsible.html' %}
         </div>
         {% endfor %}
     </div>
@@ -648,27 +628,7 @@
                 </div>
             </div>
             {% include 'partials/_expense_avatars.html' with exp=e.expense payer_obj=e.payer_obj payer_name=e.payer_name %}
-            <table class="bexp-breakdown-table">
-                <thead>
-                    <tr><th>Person</th><th class="text-right">Share</th><th class="text-right">Amount</th><th>Role</th></tr>
-                </thead>
-                <tbody>
-                    <tr class="{% if e.payer_is_me %}bexp-row-me{% endif %}">
-                        <td>{{ e.payer_name }}</td>
-                        <td class="text-right">{{ e.payer_percent|floatformat:1 }}%</td>
-                        <td class="text-right">{{ currency }}{{ e.payer_amount|floatformat:2 }}</td>
-                        <td><span class="pill">Paid</span></td>
-                    </tr>
-                    {% for s in e.participant_shares %}
-                    <tr class="{% if s.is_me %}bexp-row-me{% endif %}">
-                        <td>{{ s.name }}</td>
-                        <td class="text-right">{{ s.percent|floatformat:1 }}%</td>
-                        <td class="text-right">{{ currency }}{{ s.amount|floatformat:2 }}</td>
-                        <td><span class="pill">Owes</span></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            {% include 'partials/_bexp_breakdown_collapsible.html' %}
         </div>
         {% endfor %}
     </div>

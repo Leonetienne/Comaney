@@ -337,60 +337,7 @@
   gap: 0.5rem;
 }
 
-.buddy-expense-row {
-  padding: 0.85rem 1rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.4rem 1rem;
-  align-items: start;
-
-  &.bexp-i-paid {
-    border-left: 3px solid #cf222e;
-    background: color-mix(in srgb, #cf222e 5%, var(--bg-surface));
-  }
-
-  &.bexp-other-paid {
-    border-left: 3px solid #2da44e;
-    background: color-mix(in srgb, #2da44e 5%, var(--bg-surface));
-  }
-
-  &.bexp-neutral {
-    border-left: 3px solid var(--text-muted);
-    opacity: 0.72;
-  }
-
-  &.buddy-expense-pending {
-    border-left: 3px solid #e3a008;
-    background: color-mix(in srgb, #e3a008 6%, var(--bg-surface));
-  }
-}
-
-.bexp-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  grid-column: 1;
-}
-
 .bexp-title {
-  font-weight: 600;
-  color: var(--text);
-}
-
-.bexp-details {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  font-size: 0.85rem;
-  color: var(--text-subtle);
-  grid-column: 1;
-}
-
-.bexp-value {
   font-weight: 600;
   color: var(--text);
 }
@@ -398,24 +345,8 @@
 .bexp-participants {
   display: flex;
   align-items: center;
-  grid-column: 1 / -1;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border);
-
-  .bexp-breakdown-card & {
-    padding: 0.5rem 1rem;
-    border-top: none;
-    border-bottom: 1px solid var(--border);
-  }
-}
-
-
-.bexp-actions {
-  display: flex;
-  gap: 0.4rem;
-  grid-column: 2;
-  grid-row: 1 / span 3;
-  align-self: center;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
 }
 
 // ── Misc ──────────────────────────────────────────────────────────────────────
@@ -1266,6 +1197,11 @@
     opacity: 1;
     border-style: solid !important;
   }
+
+  &.buddy-expense-pending {
+    border-left: 3px solid #e3a008;
+    background: color-mix(in srgb, #e3a008 6%, var(--bg-surface));
+  }
 }
 
 .bexp-breakdown-header {
@@ -1344,6 +1280,37 @@
     font-weight: 600;
     color: var(--danger, #cf222e);
     text-align: right;
+  }
+}
+
+.bexp-collapsible {
+  display: block;
+  width: 100%;
+  border-top: 1px solid var(--border);
+
+  .bexp-collapsible-summary {
+    display: block;
+    padding: 0.45rem 1rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+
+    &::-webkit-details-marker { display: none; }
+
+    &::before {
+      content: "▶\00a0";
+      font-size: 0.65rem;
+      display: inline-block;
+      transition: transform 0.15s;
+    }
+
+    &:hover { color: var(--text); }
+  }
+
+  &[open] .bexp-collapsible-summary::before {
+    transform: rotate(90deg);
   }
 }
 

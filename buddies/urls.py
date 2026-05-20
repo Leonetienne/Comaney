@@ -35,7 +35,6 @@ urlpatterns = [
 
     # Group management
     path("groups/create/", views.create_group, name="create_group"),
-    path("groups/<int:group_id>/", views.group_detail, name="group_detail"),
     path("groups/<int:group_id>/invite/", views.group_invite_member, name="group_invite_member"),
     path("groups/<int:group_id>/invite/<str:token>/revoke/", views.group_revoke_invite, name="group_revoke_invite"),
     path("groups/<int:group_id>/member/<int:member_id>/remove/", views.group_remove_member, name="group_remove_member"),
@@ -66,8 +65,6 @@ urlpatterns = [
     # Group settlement actions
     path("groups/<int:group_id>/expense/<int:expense_id>/approve-dummy/", views.admin_approve_dummy_settlement, name="admin_approve_dummy_settlement"),
     path("groups/<int:group_id>/expense/<int:expense_id>/reject-dummy/", views.admin_reject_dummy_settlement, name="admin_reject_dummy_settlement"),
-    path("groups/<int:group_id>/expense/<int:expense_id>/delete/", views.group_expense_delete, name="group_expense_delete"),
-    path("groups/<int:group_id>/expense/<int:expense_id>/unlink/", views.group_expense_unlink, name="group_expense_unlink"),
     path("groups/<int:group_id>/settle-individual/", views.group_settle_individual, name="group_settle_individual"),
     path("groups/<int:group_id>/settle-all/", views.group_settle_all, name="group_settle_all"),
 

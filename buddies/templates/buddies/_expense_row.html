@@ -1,45 +1,44 @@
-<div id="expense-{{ exp.uid }}" class="buddy-expense-row {{ bexp_color_class }} {% if not exp.buddy_approved %}buddy-expense-pending{% endif %}">
-    <div class="bexp-meta">
-        <span class="bexp-title">{{ exp.title }}</span>
-        {% if not exp.buddy_approved %}<span class="pill pill--warning">Needs approval</span>{% endif %}
-    </div>
-    <div class="bexp-details">
-        <span class="bexp-value">{{ exp.owning_feuser.currency }}{{ exp.value }}</span>
-        <span class="bexp-owner">
-            Paid by:
-            {% if exp.is_dummy %}{{ exp.upfront_payee_dummy.display_name }} (offline member)
-            {% else %}{{ exp.owning_feuser.first_name }} {{ exp.owning_feuser.last_name }}{% endif %}
-        </span>
-        {% if exp.date_due %}<span class="bexp-date">{{ exp.date_due|date:"N j, Y" }}</span>{% endif %}
+<div id="expense-{{ exp.uid }}" class="bexp-breakdown-card {{ bexp_color_class }}{% if not exp.buddy_approved %} buddy-expense-pending{% endif %}">
+    <div class="bexp-breakdown-header">
+        <div class="bexp-breakdown-header-left">
+            <span class="bexp-title">{{ exp.title }}</span>
+            {% if not exp.buddy_approved %}<span class="pill pill--warning">Needs approval</span>{% endif %}
+            <span class="bexp-breakdown-meta">
+                <strong>{{ exp.owning_feuser.currency }}{{ exp.value }}</strong>
+                &middot; Paid by: <strong>{% if exp.is_dummy %}{{ exp.upfront_payee_dummy.display_name }} (offline buddy){% else %}{{ exp.owning_feuser.first_name }} {{ exp.owning_feuser.last_name }}{% endif %}</strong>
+                {% if exp.date_due %}&middot; {{ exp.date_due|date:"N j, Y" }}{% endif %}
+            </span>
+        </div>
+        <div class="bexp-breakdown-header-right">
+            {% if not exp.buddy_approved and exp.owning_feuser == request.feuser and not exp.is_buddies_settlement and not exp.is_dummy %}
+            <a href="{% url 'buddies:review_expense_as_owner' exp.uid %}" id="btn-review-exp-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>
+            {% endif %}
+            {% if not exp.is_buddies_settlement %}
+            {% for bs in exp.buddy_spendings.all %}{% if bs.participant_feuser == request.feuser and not bs.consent_locked %}
+            <div class="consent-btns">
+                <form method="post" action="{% url 'buddies:participant_approve' exp.uid %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-consent{% if bs.approval_state == 1 %} btn-consent--approved{% endif %}" title="Approve">✓</button>
+                </form>
+                <form method="post" action="{% url 'buddies:participant_reject' exp.uid %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-consent{% if bs.approval_state == 2 %} btn-consent--rejected{% endif %}" title="Reject">✗</button>
+                </form>
+            </div>
+            {% endif %}{% endfor %}
+            {% endif %}
+            {% if exp.owning_feuser == request.feuser and exp.settlement_can_edit %}
+            <a href="{% url 'budget:expense_edit' exp.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ exp.uid }}" class="btn btn-sm btn-secondary">Edit</a>
+            {% endif %}
+            {% if exp.owning_feuser == request.feuser and exp.settlement_can_delete %}
+            <form method="post" action="{% url 'budget:expense_delete' exp.uid %}" class="confirm-form" data-confirm="{% if exp.is_buddies_settlement %}Cancel this settlement? This cannot be undone.{% else %}Delete this expense? This cannot be undone.{% endif %}" data-ok="{% if exp.is_buddies_settlement %}Cancel{% else %}Delete{% endif %}">
+                {% csrf_token %}
+                <input type="hidden" name="back" value="{{ request.get_full_path }}">
+                <button type="submit" id="btn-delete-exp-{{ exp.uid }}" class="btn btn-sm btn-danger-subtle">Delete</button>
+            </form>
+            {% endif %}
+        </div>
     </div>
     {% include 'partials/_expense_avatars.html' %}
-    <div class="bexp-actions">
-        {% if not exp.buddy_approved and exp.owning_feuser == request.feuser and not exp.is_buddies_settlement and not exp.is_dummy %}
-        <a href="{% url 'buddies:review_expense_as_owner' exp.uid %}" id="btn-review-exp-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>
-        {% endif %}
-        {% if not exp.is_buddies_settlement %}
-        {% for bs in exp.buddy_spendings.all %}{% if bs.participant_feuser == request.feuser and not bs.consent_locked %}
-        <div class="consent-btns">
-            <form method="post" action="{% url 'buddies:participant_approve' exp.uid %}">
-                {% csrf_token %}
-                <button type="submit" class="btn-consent{% if bs.approval_state == 1 %} btn-consent--approved{% endif %}" title="Approve">✓</button>
-            </form>
-            <form method="post" action="{% url 'buddies:participant_reject' exp.uid %}">
-                {% csrf_token %}
-                <button type="submit" class="btn-consent{% if bs.approval_state == 2 %} btn-consent--rejected{% endif %}" title="Reject">✗</button>
-            </form>
-        </div>
-        {% endif %}{% endfor %}
-        {% endif %}
-        {% if exp.owning_feuser == request.feuser and exp.settlement_can_edit %}
-        <a href="{% url 'budget:expense_edit' exp.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ exp.uid }}" class="btn btn-sm btn-secondary">Edit</a>
-        {% endif %}
-        {% if exp.owning_feuser == request.feuser and exp.settlement_can_delete %}
-        <form method="post" action="{% url 'budget:expense_delete' exp.uid %}" class="confirm-form" data-confirm="{% if exp.is_buddies_settlement %}Cancel this settlement? This cannot be undone.{% else %}Delete this expense? This cannot be undone.{% endif %}" data-ok="{% if exp.is_buddies_settlement %}Cancel{% else %}Delete{% endif %}">
-            {% csrf_token %}
-            <input type="hidden" name="back" value="{{ request.get_full_path }}">
-            <button type="submit" id="btn-delete-exp-{{ exp.uid }}" class="btn btn-sm btn-danger-subtle">Delete</button>
-        </form>
-        {% endif %}
-    </div>
+    {% include 'partials/_bexp_breakdown_collapsible.html' %}
 </div>

@@ -56,7 +56,43 @@ def buddy_summary_page(request):
     feuser = request.feuser
     unified_debts = BuddyQueryService.get_all_debts_unified(feuser)
     all_shared = BuddyQueryService.shared_expenses(feuser)
-    direct_expenses = all_shared.filter(project__isnull=True)
+    direct_expenses_qs = all_shared.filter(project__isnull=True).select_related(
+        "owning_feuser", "upfront_payee_dummy"
+    ).prefetch_related(
+        "buddy_spendings__participant_feuser", "buddy_spendings__participant_dummy"
+    )
+
+    direct_expense_data = []
+    for exp in direct_expenses_qs:
+        if exp.is_dummy and exp.upfront_payee_dummy_id:
+            payer_name = exp.upfront_payee_dummy.display_name + " (offline buddy)"
+            payer_is_me = False
+        else:
+            fu = exp.owning_feuser
+            payer_name = f"{fu.first_name} {fu.last_name}".strip() or fu.email
+            payer_is_me = fu.pk == feuser.pk
+        participant_shares = []
+        total_pct = Decimal("0")
+        for bs in exp.buddy_spendings.all():
+            if bs.participant_feuser_id:
+                pf = bs.participant_feuser
+                name = f"{pf.first_name} {pf.last_name}".strip() or pf.email
+                is_me = pf.pk == feuser.pk
+            else:
+                name = bs.participant_dummy.display_name + " (offline buddy)"
+                is_me = False
+            amount = exp.value * bs.share_percent / 100
+            total_pct += bs.share_percent
+            participant_shares.append({"name": name, "is_me": is_me, "amount": amount, "percent": bs.share_percent})
+        payer_pct = Decimal("100") - total_pct
+        direct_expense_data.append({
+            "expense": exp,
+            "payer_name": payer_name,
+            "payer_is_me": payer_is_me,
+            "payer_amount": exp.value * payer_pct / 100,
+            "payer_percent": payer_pct,
+            "participant_shares": participant_shares,
+        })
 
     feuser_key = f"f{feuser.pk}"
     direct_settle_members = []
@@ -153,7 +189,8 @@ def buddy_summary_page(request):
 
     return render(request, "buddies/buddy_summary.html", {
         "active_nav": "buddy_summary",
-        "direct_expenses": direct_expenses,
+        "direct_expense_data": direct_expense_data,
+        "currency": feuser.currency,
         "debts_json": _debts_to_json(unified_debts),
         "me_avatar_json": me_avatar_json,
         "feuser_key": feuser_key,

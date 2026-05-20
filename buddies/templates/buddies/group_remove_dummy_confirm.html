@@ -50,7 +50,7 @@
         <input type="hidden" name="confirmed" value="yes">
         <div class="action-row">
             <button type="submit" id="btn-confirm-kick" class="btn btn-danger-subtle">Remove {{ dummy.display_name }} (offline member)</button>
-            <a href="{% url 'buddies:group_detail' group.uid %}" class="btn btn-secondary">Cancel</a>
+            <a href="{% url 'projects:project_detail' project_id=group.uid %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

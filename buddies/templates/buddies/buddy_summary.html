@@ -422,14 +422,10 @@
 <section class="buddies-section">
     <h2>One-on-one expenses</h2>
     <p class="bgs-section-note">Only expenses shared directly between you and one other person appear here. Group expenses live on each group's page above.</p>
-    {% if direct_expenses %}
+    {% if direct_expense_data %}
     <div class="buddy-expense-list">
-        {% for exp in direct_expenses %}
-        {% if exp.owning_feuser == request.feuser and not exp.is_dummy %}
-        {% include "buddies/_expense_row.html" with bexp_color_class="bexp-i-paid" %}
-        {% else %}
-        {% include "buddies/_expense_row.html" with bexp_color_class="bexp-other-paid" %}
-        {% endif %}
+        {% for e in direct_expense_data %}
+        {% include "buddies/_expense_row.html" with exp=e.expense e=e bexp_color_class=e.payer_is_me|yesno:"bexp-card-i-paid,bexp-card-other-paid" %}
         {% endfor %}
     </div>
     {% else %}
@@ -439,7 +435,7 @@
     {% endif %}
 </section>
 
-{% if not my_groups_summary and not direct_expenses %}
+{% if not my_groups_summary and not direct_expense_data %}
 <div class="buddies-onboarding-hint">
     <strong>No shared expenses yet.</strong> Add a buddy on <a href="{% url 'buddies:my_buddies' %}">My Buddies</a>, then check "This is a buddy payment" when creating an expense.
 </div>
