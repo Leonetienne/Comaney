@@ -1,15 +1,15 @@
 {% extends "budget_base.html" %}
 
-{% block title %}Comaney - Confirm Settlement{% endblock %}
+{% block title %}Comaney - {% if page_title %}{{ page_title }}{% else %}Confirm Settlement{% endif %}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1>Confirm {% if creditor_name %}{{ creditor_name }}{% else %}you{% endif %} received the money</h1>
+    <h1>{% if page_title %}{{ page_title }}{% else %}Confirm {% if creditor_name %}{{ creditor_name }}{% else %}you{% endif %} received the money{% endif %}</h1>
 </div>
 
 <div class="buddies-section buddies-section--sm">
     <p class="text-muted mb-lg">
-        {% if confirm_question %}{{ confirm_question }}{% else %}Did you actually receive this payment?{% endif %} Confirming marks the debt as cleared.
+        {% if confirm_question %}{{ confirm_question }}{% else %}Did you actually receive this payment? Confirming marks the debt as cleared.{% endif %}
     </p>
 
     <table class="settle-table">
@@ -32,12 +32,12 @@
     <div class="action-row">
         <form method="post" action="{% if approve_url %}{{ approve_url }}{% else %}{% url 'buddies:approve_settlement_as_creditor' expense.uid %}{% endif %}">
             {% csrf_token %}
-            <button type="submit" id="btn-approve-settlement" class="btn btn-success">{% if creditor_name %}Yes, they got the money{% else %}Yes, I got the money{% endif %}</button>
+            <button type="submit" id="btn-approve-settlement" class="btn btn-success">{% if approve_label %}{{ approve_label }}{% elif creditor_name %}Yes, they got the money{% else %}Yes, I got the money{% endif %}</button>
         </form>
 
         <form method="post" action="{% if reject_url %}{{ reject_url }}{% else %}{% url 'buddies:reject_settlement_as_creditor' expense.uid %}{% endif %}" id="reject-settlement-form">
             {% csrf_token %}
-            <button type="submit" id="btn-reject-settlement" class="btn btn-danger-subtle">{% if creditor_name %}No, they did not receive it{% else %}No, I did not receive it{% endif %}</button>
+            <button type="submit" id="btn-reject-settlement" class="btn btn-danger-subtle">{% if reject_label %}{{ reject_label }}{% elif creditor_name %}No, they did not receive it{% else %}No, I did not receive it{% endif %}</button>
         </form>
 
         {% if expense.project_id %}
@@ -54,8 +54,8 @@
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         window.confirmDialog(
-            'Reject this settlement? The payment record will be deleted and the debtor will be notified that they have not received the money.',
-            'Reject settlement'
+            '{% if reject_confirm_text %}{{ reject_confirm_text }}{% else %}Reject this settlement? The payment record will be deleted and the debtor will be notified that they have not received the money.{% endif %}',
+            '{% if reject_label %}{{ reject_label }}{% else %}Reject settlement{% endif %}'
         ).then(function () { form.submit(); }).catch(function () {});
     });
 })();

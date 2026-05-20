@@ -128,10 +128,29 @@ def admin_approve_dummy_settlement(request, group_id, expense_id):
     if expense.is_buddies_settlement and has_real_feuser_creditor:
         django_messages.error(request, "Only the creditor can confirm this settlement.")
         return redirect("projects:project_detail", project_id=group_id)
+    is_dummy_upfront = has_dummy_upfront and not expense.is_buddies_settlement
     if request.method == "POST":
         BuddyLifecycleService.approve_expense(expense)
-        django_messages.success(request, "Settlement confirmed. Thank you!")
+        if is_dummy_upfront:
+            django_messages.success(request, "Expense confirmed.")
+        else:
+            django_messages.success(request, "Settlement confirmed. Thank you!")
         return redirect("projects:project_detail", project_id=group_id)
+    approve_url = reverse("projects:admin_approve_dummy_settlement", args=[group_id, expense_id])
+    reject_url = reverse("projects:admin_reject_dummy_settlement", args=[group_id, expense_id])
+    if is_dummy_upfront:
+        payer_name = expense.upfront_payee_dummy.display_name + " (offline member)"
+        return render(request, "buddies/confirm_settlement.html", {
+            "active_nav": "buddies",
+            "expense": expense,
+            "approve_url": approve_url,
+            "reject_url": reject_url,
+            "page_title": f"Confirm expense paid by {payer_name}",
+            "confirm_question": f"Did {payer_name} actually pay for this expense upfront? Confirming accepts it into the project.",
+            "approve_label": "Yes, confirm expense",
+            "reject_label": "No, reject this expense",
+            "reject_confirm_text": "Reject this expense? It will be removed from the project.",
+        })
     dummy_bs = expense.buddy_spendings.filter(
         participant_dummy__owning_group=group
     ).select_related("participant_dummy").first()
@@ -141,8 +160,8 @@ def admin_approve_dummy_settlement(request, group_id, expense_id):
     return render(request, "buddies/confirm_settlement.html", {
         "active_nav": "buddies",
         "expense": expense,
-        "approve_url": reverse("projects:admin_approve_dummy_settlement", args=[group_id, expense_id]),
-        "reject_url": reverse("projects:admin_reject_dummy_settlement", args=[group_id, expense_id]),
+        "approve_url": approve_url,
+        "reject_url": reject_url,
         "creditor_name": creditor_name,
         "confirm_question": f"Did {creditor_name} actually receive this payment?" if creditor_name else None,
     })
@@ -160,13 +179,18 @@ def admin_reject_dummy_settlement(request, group_id, expense_id):
         project=group,
         buddy_approved=False,
     )
+    has_dummy_upfront = expense.is_dummy and expense.upfront_payee_dummy_id and not expense.is_buddies_settlement
     has_dummy_creditor = expense.buddy_spendings.filter(
         participant_dummy__owning_group=group
     ).exists()
-    if not has_dummy_creditor:
+    if not has_dummy_creditor and not has_dummy_upfront:
         django_messages.error(request, "This expense does not involve an offline member of this group.")
         return redirect("projects:project_detail", project_id=group_id)
     debtor = expense.owning_feuser
+    if has_dummy_upfront:
+        expense.delete()
+        django_messages.warning(request, "Expense rejected and removed.")
+        return redirect("projects:project_detail", project_id=group_id)
     BuddyEmailService.send_settlement_rejection_notification(expense, feuser, debtor)
     expense.delete()
     django_messages.warning(request, "Settlement rejected. The debtor has been notified.")

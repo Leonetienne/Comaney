@@ -242,6 +242,11 @@ def expense_create(request):
                     expense.is_dummy = (buddy["upfront_type"] == "dummy")
                     expense.upfront_payee_dummy = buddy.get("upfront_dummy")
                     expense.project = buddy.get("group")
+                    # Dummy upfront payer in a project requires admin approval unless creator is admin
+                    if (buddy["upfront_type"] == "dummy"
+                            and expense.project
+                            and expense.project.admin_feuser_id != feuser.pk):
+                        expense.buddy_approved = False
                 expense.save()
                 form.save_m2m()
                 if buddy:
@@ -338,6 +343,12 @@ def expense_edit(request, uid):
                         new_payer_feuser=(new_feuser if new_type == "feuser" else None),
                         new_payer_dummy=(new_dummy if new_type == "dummy" else None),
                     )
+                    # Non-admin changing payer to a project dummy needs admin approval
+                    if new_type == "dummy" and new_dummy:
+                        proj = buddy.get("group")
+                        if proj and proj.admin_feuser_id != feuser.pk:
+                            expense.buddy_approved = False
+                            expense.save(update_fields=["buddy_approved"])
                     if new_type == "feuser" and new_feuser:
                         BuddyEmailService.send_expense_approval_request(expense, feuser)
                         BuddyEmailService.notify_expense_updated(
