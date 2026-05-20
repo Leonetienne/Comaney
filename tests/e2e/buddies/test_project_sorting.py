@@ -105,6 +105,36 @@ class TestReorderEndpoint:
         assert r.status_code == 200
 
 
+class TestUpdateLastmod:
+    """Project.update_lastmod() sets last_mod to now and persists it."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Lastmod", last_name="Tester")
+        g = _create_group(a["email"], "Lastmod Test Project")
+        yield {"a": a, "g": int(g)}
+        cleanup_user(a["email"])
+
+    def test_update_lastmod_sets_field(self, driver, w, ctx):
+        before = _shell(
+            f"from buddies.models import Project; "
+            f"p = Project.objects.get(pk={ctx['g']}); "
+            f"print(p.last_mod.isoformat())"
+        )
+        _shell(
+            f"import time; time.sleep(1); "
+            f"from buddies.models import Project; "
+            f"p = Project.objects.get(pk={ctx['g']}); "
+            f"p.update_lastmod()"
+        )
+        after = _shell(
+            f"from buddies.models import Project; "
+            f"p = Project.objects.get(pk={ctx['g']}); "
+            f"print(p.last_mod.isoformat())"
+        )
+        assert after > before, f"last_mod was not updated: before={before} after={after}"
+
+
 class TestNonAdminCanReorder:
     """A non-admin member can update their own sorting via the reorder endpoint."""
 

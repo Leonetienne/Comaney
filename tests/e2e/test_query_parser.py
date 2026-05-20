@@ -535,7 +535,7 @@ class TestBuddyFilter:
 
         expense_pk = _shell(
             f"from budget.models import Expense; "
-            f"from buddies.models import Project, ProjectMember as BuddyGroupMember, BuddySpending, DummyUser; "
+            f"from buddies.models import Project, ProjectMember, BuddySpending, DummyUser; "
             f"from feusers.models import FeUser; "
             f"from decimal import Decimal; import datetime; "
             f"u = FeUser.objects.get(email='{ctx['email']}'); "

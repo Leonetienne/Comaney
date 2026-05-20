@@ -1,9 +1,9 @@
 """
-Unit tests for Project.update_lastmod() and project sorting logic.
+Unit tests for the project sorting algorithm.
 No DB required; uses simple mock objects.
 """
 from datetime import datetime, timezone as tz
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 
 def _make_project(uid, archived, last_mod_dt):
@@ -21,25 +21,6 @@ def _make_row(project, sorting):
 def _sort_rows(rows):
     rows.sort(key=lambda x: (1 if x[0].archived else 0, x[1], -x[0].last_mod.timestamp()))
     return [r[0] for r in rows]
-
-
-class TestUpdateLastmod:
-    def test_update_lastmod_sets_field(self):
-        from buddies.models import Project
-        p = MagicMock(spec=Project)
-        p.last_mod = datetime(2020, 1, 1, tzinfo=tz.utc)
-
-        def _save(update_fields=None):
-            pass
-
-        p.save = _save
-        now_val = datetime(2026, 6, 2, 12, 0, 0, tzinfo=tz.utc)
-
-        with patch("buddies.models.timezone") as mock_tz:
-            mock_tz.now.return_value = now_val
-            Project.update_lastmod(p)
-
-        assert p.last_mod == now_val
 
 
 class TestProjectSortingAlgorithm:
