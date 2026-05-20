@@ -55,7 +55,9 @@ class TestExpenseApproval:
         assert "Approval Expense" in driver.page_source
 
     def test_b_approves_expense(self, driver, w, ctx):
-        driver.find_element(By.ID, f"btn-approve-exp-{ctx['exp_pk']}").click()
+        driver.find_element(By.ID, f"btn-review-exp-{ctx['exp_pk']}").click()
+        time.sleep(1)
+        driver.find_element(By.ID, "btn-approve-settlement").click()
         time.sleep(1)
         assert "/budget/expenses/" in driver.current_url
 
@@ -109,7 +111,11 @@ class TestExpenseOwnerRejection:
     def test_b_rejects_expense(self, driver, w, ctx):
         seen_before = mailpit_seen_ids()
         ctx["seen_before"] = seen_before
-        driver.find_element(By.ID, f"btn-reject-exp-{ctx['exp_pk']}").click()
+        driver.find_element(By.ID, f"btn-review-exp-{ctx['exp_pk']}").click()
+        time.sleep(1)
+        driver.find_element(By.ID, "btn-reject-settlement").click()
+        time.sleep(0.5)
+        driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(1)
         assert "/budget/expenses/" in driver.current_url
 
@@ -173,9 +179,7 @@ class TestParticipantSeesNeedsApproval:
         assert "Pending For A" in driver.page_source
         assert "Needs approval" in driver.page_source
 
-    def test_a_has_no_approve_reject_buttons(self, driver, w, ctx):
-        # Only the expense owner (B) gets Approve/Reject; A must not
-        approve_buttons = driver.find_elements(By.CSS_SELECTOR, "[id^='btn-approve-exp-']")
-        reject_buttons = driver.find_elements(By.CSS_SELECTOR, "[id^='btn-reject-exp-']")
-        assert len(approve_buttons) == 0, "Participant A must not see the Approve button"
-        assert len(reject_buttons) == 0, "Participant A must not see the Reject button"
+    def test_a_has_no_review_button(self, driver, w, ctx):
+        # Only the expense owner (B) gets the Review button; A must not
+        review_buttons = driver.find_elements(By.CSS_SELECTOR, "[id^='btn-review-exp-']")
+        assert len(review_buttons) == 0, "Participant A must not see the Review button"
