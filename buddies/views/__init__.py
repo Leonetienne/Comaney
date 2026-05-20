@@ -27,7 +27,8 @@ from .expenses import (
 )
 # Project views (new namespace)
 from .projects import (
-    projects_list, create_project, project_detail, project_rename, project_picture,
+    projects_list, create_project, project_detail, project_settings,
+    project_rename, project_picture,
     project_invite_member, project_revoke_invite, project_remove_member,
     project_add_dummy, project_rename_dummy, project_send_merge, project_archive_wipe,
     project_transfer_admin, project_leave, project_delete,

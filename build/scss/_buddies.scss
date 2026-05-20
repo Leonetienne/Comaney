@@ -284,9 +284,10 @@
 .stacked-form {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 0.3rem;
 
-  label { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+  label { font-size: 0.875rem; font-weight: 500; color: var(--text); width: 100%; }
 
   input, textarea {
     width: 100%;
@@ -460,6 +461,154 @@
         rgba(0, 0, 0, 0.65) 100%
       );
     }
+  }
+}
+
+// ── Project tab navigation (Reitermenü) ──────────────────────────────────────
+.project-tab-nav {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+.project-tab {
+  padding: 0.65rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.13s, border-color 0.13s;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  &--active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+  }
+}
+
+// ── Settings panel (Manage tab) ───────────────────────────────────────────────
+.settings-group {
+  margin-bottom: 1.75rem;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.settings-group-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin: 0 0 0.5rem;
+}
+
+.settings-list {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.settings-row {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+
+  &:last-child { border-bottom: none; }
+
+  &__title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 0.15rem;
+  }
+
+  &__desc {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin: 0 0 0.65rem;
+    line-height: 1.5;
+  }
+}
+
+// ── Project picture upload row ────────────────────────────────────────────────
+.project-pic-row {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-top: 0.5rem;
+
+  @media (max-width: 560px) {
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+}
+
+.project-pic-controls {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+
+  form { margin: 0; }
+}
+
+.project-pic-thumb {
+  width: 200px;
+  height: 112px;
+  max-width: 240px;
+  max-height: 135px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+  display: block;
+
+  &--placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    text-align: center;
+  }
+
+  @media (max-width: 560px) {
+    width: 100%;
+    max-width: none;
+    height: 100px;
+    max-height: none;
+    flex-shrink: 1;
+  }
+}
+
+// ── input-block: styled input outside form context ────────────────────────────
+.input-block {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--bg-input);
+  color: var(--text);
+  box-sizing: border-box;
+
+  &:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
   }
 }
 

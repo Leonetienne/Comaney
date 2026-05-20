@@ -284,10 +284,7 @@ def project_detail(request, project_id):
             continue
         project_total_spending += exp_data["total"]
         pk = exp_data["payer_key"]
-        member_spending[pk] = member_spending.get(pk, Decimal("0")) + exp_data["payer_amount"]
-        for share in exp_data["participant_shares"]:
-            key = share["key"]
-            member_spending[key] = member_spending.get(key, Decimal("0")) + share["amount"]
+        member_spending[pk] = member_spending.get(pk, Decimal("0")) + exp_data["total"]
 
     spending_pie_json = json.dumps([
         {
@@ -330,6 +327,30 @@ def project_detail(request, project_id):
 
 
 @feuser_required
+def project_settings(request, project_id):
+    feuser = request.feuser
+    project = get_object_or_404(
+        Project.objects.prefetch_related("members__feuser", "members__dummy"),
+        uid=project_id,
+        members__feuser=feuser,
+    )
+    is_admin = project.admin_feuser_id == feuser.pk
+    pending_invites = BuddyQueryService.pending_group_invites_for_group(project) if is_admin else []
+    feuser_members = [
+        m for m in project.members.all() if m.feuser_id and m.feuser_id != feuser.pk
+    ]
+    return render(request, "buddies/project_settings.html", {
+        "active_nav": "projects",
+        "project": project,
+        "group": project,
+        "is_admin": is_admin,
+        "feuser_members": feuser_members,
+        "pending_invites": pending_invites,
+        "currency": feuser.currency,
+    })
+
+
+@feuser_required
 @require_POST
 def project_invite_member(request, project_id):
     from django.conf import settings as django_settings
@@ -338,11 +359,11 @@ def project_invite_member(request, project_id):
 
     if project.archived:
         django_messages.error(request, "Cannot invite members to an archived project.")
-        return redirect("projects:project_detail", project_id=project_id)
+        return redirect("projects:project_settings", project_id=project_id)
 
     email = request.POST.get("email", "").strip()
     if not email:
-        return redirect("projects:project_detail", project_id=project_id)
+        return redirect("projects:project_settings", project_id=project_id)
 
     outcome, obj = ProjectService.invite_member(project, feuser, email)
     if outcome == "registration_disabled":
@@ -360,7 +381,7 @@ def project_invite_member(request, project_id):
         django_messages.success(request, f"Project invitation sent to {email}.")
     elif outcome == "member":
         django_messages.success(request, f"{email} has been added to the project.")
-    return redirect("projects:project_detail", project_id=project_id)
+    return redirect("projects:project_settings", project_id=project_id)
 
 
 @feuser_required
@@ -368,7 +389,7 @@ def project_invite_member(request, project_id):
 def project_revoke_invite(request, project_id, token):
     project = get_object_or_404(Project, uid=project_id, admin_feuser=request.feuser)
     ProjectService.revoke_group_invite(token, request.feuser)
-    return redirect("projects:project_detail", project_id=project_id)
+    return redirect("projects:project_settings", project_id=project_id)
 
 
 @feuser_required
@@ -536,11 +557,11 @@ def project_transfer_admin(request, project_id):
         new_admin = FeUser.objects.get(pk=new_admin_id, is_active=True)
     except (ValueError, FeUser.DoesNotExist):
         django_messages.error(request, "Invalid user selection.")
-        return redirect("projects:project_detail", project_id=project_id)
+        return redirect("projects:project_settings", project_id=project_id)
     ok = ProjectService.transfer_admin(project, feuser, new_admin)
     if not ok:
         django_messages.error(request, "That user is not a project member.")
-    return redirect("projects:project_detail", project_id=project_id)
+    return redirect("projects:project_settings", project_id=project_id)
 
 
 @feuser_required
@@ -582,7 +603,7 @@ def project_delete(request, project_id):
         confirmed_name = request.POST.get("confirm_name", "").strip()
         if confirmed_name != project.name:
             django_messages.error(request, "Project name does not match. Deletion cancelled.")
-            return redirect("projects:project_detail", project_id=project_id)
+            return redirect("projects:project_settings", project_id=project_id)
         project_name = project.name
         project.delete()
         django_messages.success(request, f'Project "{project_name}" has been deleted.')
@@ -599,7 +620,7 @@ def project_archive(request, project_id):
     project.archived = True
     project.save(update_fields=["archived"])
     django_messages.success(request, f'Project "{project.name}" has been archived.')
-    return redirect("projects:project_detail", project_id=project_id)
+    return redirect("projects:project_settings", project_id=project_id)
 
 
 @feuser_required
@@ -610,7 +631,7 @@ def project_unarchive(request, project_id):
     project.archived = False
     project.save(update_fields=["archived"])
     django_messages.success(request, f'Project "{project.name}" has been unarchived.')
-    return redirect("projects:project_detail", project_id=project_id)
+    return redirect("projects:project_settings", project_id=project_id)
 
 
 @feuser_required
@@ -696,16 +717,16 @@ def project_rename(request, project_id):
     name = request.POST.get("name", "").strip()
     if not name:
         django_messages.error(request, "Project name cannot be empty.")
-        return redirect("projects:project_detail", project_id=project_id)
+        return redirect("projects:project_settings", project_id=project_id)
     if len(name) > 128:
         django_messages.error(request, "Project name must be 128 characters or fewer.")
-        return redirect("projects:project_detail", project_id=project_id)
+        return redirect("projects:project_settings", project_id=project_id)
     description = request.POST.get("description", "").strip()
     project.name = name
     project.description = description
     project.save(update_fields=["name", "description"])
     project.update_lastmod()
-    return redirect("projects:project_detail", project_id=project_id)
+    return redirect("projects:project_settings", project_id=project_id)
 
 
 @feuser_required
@@ -741,4 +762,4 @@ def project_picture(request, project_id):
                 except Exception:
                     django_messages.error(request, "Could not process the image.")
 
-    return redirect("projects:project_detail", project_id=project.uid)
+    return redirect("projects:project_settings", project_id=project.uid)

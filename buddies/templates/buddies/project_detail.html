@@ -25,9 +25,14 @@
 
 {% if project.archived %}
 <div class="info-box mb-md" style="border-left:4px solid var(--text-muted);background:var(--bg-surface);opacity:0.85;">
-    <p><strong>This project is archived.</strong> Expenses and member data are read-only. To make changes, unarchive the project from the Admin actions section below.</p>
+    <p><strong>This project is archived.</strong> Expenses and member data are read-only. To make changes, open the <a href="{% url 'projects:project_settings' project_id=project.uid %}">Manage</a> tab.</p>
 </div>
 {% endif %}
+
+<nav class="project-tab-nav">
+    <a href="{% url 'projects:project_detail' project_id=project.uid %}" class="project-tab project-tab--active">Overview</a>
+    <a href="{% url 'projects:project_settings' project_id=project.uid %}" class="project-tab">Manage</a>
+</nav>
 
 {% if request.GET.achim == "new" %}
 <div id="achim-modal" class="cdialog-backdrop cdialog-visible">
@@ -745,183 +750,6 @@
 
     </div>
 </section>
-
-{% if is_admin and not project.archived %}
-<section class="buddies-section">
-    <h2>Invite members</h2>
-    <div class="add-buddy-forms">
-
-        <div class="add-buddy-panel">
-            <h3>Invite by email</h3>
-            <p class="text-muted">Sends a group invitation. If the person is not yet your buddy, a buddy connection is established at the same time.</p>
-            <form method="post" action="{% url 'projects:project_invite_member' project_id=group.uid %}" class="inline-form">
-                {% csrf_token %}
-                <input type="email" name="email" placeholder="Email address" required class="input-inline">
-                <button type="submit" id="btn-group-invite" class="btn">Send invite</button>
-            </form>
-        </div>
-
-        <div class="add-buddy-panel">
-            <h3>Add offline member</h3>
-            <p class="text-muted">For people who don't use Comaney. You can invite them to the group later.</p>
-            <form method="post" action="{% url 'projects:project_add_dummy' project_id=group.uid %}" class="inline-form">
-                {% csrf_token %}
-                <input type="text" name="display_name" placeholder="Display name" maxlength="128" required class="input-inline">
-                <button type="submit" id="btn-group-add-dummy" class="btn">Add</button>
-            </form>
-        </div>
-
-    </div>
-
-    {% if pending_invites %}
-    <h3>Pending invitations</h3>
-    {% for invite in pending_invites %}
-    <div class="invite-card invite-card-outgoing">
-        <p>Sent to <strong>{{ invite.invitee_email }}</strong>. Expires {{ invite.expires_at|date:"N j, Y" }}.</p>
-        <form method="post" action="{% url 'projects:project_revoke_invite' project_id=group.uid token=invite.token %}">
-            {% csrf_token %}
-            <button type="submit" id="btn-revoke-group-invite-{{ invite.token }}" class="btn btn-sm btn-secondary">Revoke</button>
-        </form>
-    </div>
-    {% endfor %}
-    {% endif %}
-</section>
-{% endif %}{# end is_admin and not archived #}
-
-{% if is_admin %}
-<section class="buddies-section">
-    <h2>Admin actions</h2>
-    <div class="add-buddy-forms">
-
-        <div class="add-buddy-panel">
-            <h3>Rename project</h3>
-            <p class="text-muted">Update the project name and optional description.</p>
-            <form method="post" action="{% url 'projects:project_rename' project_id=project.uid %}" class="stacked-form">
-                {% csrf_token %}
-                <label for="project-rename-name">Project name</label>
-                <input type="text" id="project-rename-name" name="name" value="{{ project.name }}" maxlength="128" required class="input-block">
-                <label for="project-rename-desc">Description <span class="text-muted">(optional)</span></label>
-                <textarea id="project-rename-desc" name="description" maxlength="500" rows="3" class="input-block">{{ project.description }}</textarea>
-                <button type="submit" id="btn-rename-project" class="btn">Save</button>
-            </form>
-        </div>
-
-        {% if feuser_members %}
-        <div class="add-buddy-panel">
-            <h3>Transfer admin rights</h3>
-            <p class="text-muted">Transfer your admin role to another member. You will remain a regular member.</p>
-            <form method="post" action="{% url 'projects:project_transfer_admin' project_id=group.uid %}" class="inline-form confirm-form" data-confirm="Transfer admin rights? You will become a regular member." data-ok="Transfer">
-                {% csrf_token %}
-                <select name="new_admin_id" class="input-inline">
-                    {% for m in feuser_members %}
-                    <option value="{{ m.feuser.pk }}">{{ m.feuser.first_name }} {{ m.feuser.last_name }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" id="btn-transfer-admin" class="btn btn-secondary">Transfer</button>
-            </form>
-        </div>
-        {% endif %}
-
-        <div class="add-buddy-panel">
-            <h3>Project picture</h3>
-            <p class="text-muted">Shown as a background on the project card. Recommended: landscape, at least 800 px wide.</p>
-            <form method="post" action="{% url 'projects:project_picture' project_id=project.uid %}" enctype="multipart/form-data" class="inline-form">
-                {% csrf_token %}
-                <input type="file" name="group_picture" accept="image/*" class="input-inline" id="project-pic-input">
-                <button type="submit" id="btn-upload-project-pic" class="btn">Upload</button>
-            </form>
-            {% if project.group_picture %}
-            <form method="post" action="{% url 'projects:project_picture' project_id=project.uid %}" class="mt-sm">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="delete">
-                <button type="submit" id="btn-delete-project-pic" class="btn btn-danger-subtle btn-sm">Remove picture</button>
-            </form>
-            {% endif %}
-        </div>
-
-        {% if not project.archived %}
-        <div class="add-buddy-panel">
-            <h3>Archive project</h3>
-            <p class="text-muted">Freezes the project: no new expenses or settlements can be added. Existing data is preserved. You can unarchive at any time.</p>
-            <form method="post" action="{% url 'projects:project_archive' project_id=project.uid %}" id="archive-project-form">
-                {% csrf_token %}
-                <button type="submit" id="btn-archive-project" class="btn btn-secondary">Archive project</button>
-            </form>
-            <script>
-            (function () {
-                document.getElementById('archive-project-form').addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    window.confirmDialog(
-                        'Archive "{{ project.name|escapejs }}"? No new expenses or settlements can be added while it is archived. You can unarchive at any time.',
-                        'Archive project'
-                    ).then(function () { e.target.submit(); }).catch(function () {});
-                });
-            })();
-            </script>
-        </div>
-        {% else %}
-        <div class="add-buddy-panel">
-            <h3>Unarchive project</h3>
-            <p class="text-muted">Reactivates the project so new expenses and settlements can be added.</p>
-            <form method="post" action="{% url 'projects:project_unarchive' project_id=project.uid %}" id="unarchive-project-form">
-                {% csrf_token %}
-                <button type="submit" id="btn-unarchive-project" class="btn btn-secondary">Unarchive project</button>
-            </form>
-            <script>
-            (function () {
-                document.getElementById('unarchive-project-form').addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    window.confirmDialog(
-                        'Unarchive "{{ project.name|escapejs }}"? New expenses and settlements can be added again.',
-                        'Unarchive project'
-                    ).then(function () { e.target.submit(); }).catch(function () {});
-                });
-            })();
-            </script>
-        </div>
-        {% endif %}
-
-        {% if not feuser_members %}
-        <div class="add-buddy-panel">
-            <h3>Delete project</h3>
-            <p class="text-muted">Permanently deletes this project and all associated data. This cannot be undone. Enter the project name to confirm.</p>
-            <div id="delete-project-panel">
-                <input type="text" id="delete-confirm-name" class="input-block mb-sm" placeholder="Type project name to confirm">
-                <form method="post" action="{% url 'projects:project_delete' project_id=project.uid %}" id="delete-project-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="confirm_name" id="delete-confirm-name-input">
-                    <button type="submit" id="btn-delete-project" class="btn btn-danger-subtle" disabled>Delete project</button>
-                </form>
-            </div>
-            <script>
-            (function() {
-                var inp = document.getElementById('delete-confirm-name');
-                var btn = document.getElementById('btn-delete-project');
-                var hidden = document.getElementById('delete-confirm-name-input');
-                var expected = "{{ project.name|escapejs }}";
-                inp.addEventListener('input', function() {
-                    btn.disabled = inp.value !== expected;
-                    hidden.value = inp.value;
-                });
-            })();
-            </script>
-        </div>
-        {% endif %}
-
-    </div>
-</section>
-{% endif %}
-
-{% if not is_admin %}
-<section class="buddies-section">
-    <h2>Leave project</h2>
-    <p class="text-muted">You'll be removed from this project. Your past expenses will remain visible to other members, listed under an offline entry with your name.</p>
-    <form method="post" action="{% url 'projects:project_leave' project_id=project.uid %}" class="confirm-form" data-confirm='Leave "{{ project.name }}"? Your past expenses will stay in the project history under an offline entry.' data-ok="Leave">
-        {% csrf_token %}
-        <button type="submit" id="btn-leave-project" class="btn btn-danger-subtle">Leave project</button>
-    </form>
-</section>
-{% endif %}
 
 <div class="mt-1">
     <a href="{% url 'projects:projects_list' %}" class="btn btn-secondary btn-sm">&larr; Back to Projects</a>
