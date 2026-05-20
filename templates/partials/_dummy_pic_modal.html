@@ -58,22 +58,22 @@
     }
 
     function updateListAvatar(id, blobUrl, initials, color) {
-        var el = document.querySelector('[data-dummy-avatar="' + id + '"]');
-        if (!el) return;
-        var replacement;
-        if (blobUrl) {
-            replacement = document.createElement('img');
-            replacement.src = blobUrl;
-            replacement.className = 'user-avatar';
-            replacement.alt = '';
-        } else {
-            replacement = document.createElement('span');
-            replacement.className = 'user-avatar user-avatar--initials';
-            replacement.style.background = color;
-            replacement.textContent = initials;
-        }
-        replacement.setAttribute('data-dummy-avatar', id);
-        el.replaceWith(replacement);
+        document.querySelectorAll('[data-dummy-avatar="' + id + '"]').forEach(function (el) {
+            var replacement;
+            if (blobUrl) {
+                replacement = document.createElement('img');
+                replacement.src = blobUrl;
+                replacement.className = 'user-avatar';
+                replacement.alt = '';
+            } else {
+                replacement = document.createElement('span');
+                replacement.className = 'user-avatar user-avatar--initials';
+                replacement.style.background = color;
+                replacement.textContent = initials;
+            }
+            replacement.setAttribute('data-dummy-avatar', id);
+            el.replaceWith(replacement);
+        });
     }
 
     window.openDummyPicModal = function (btn) {
