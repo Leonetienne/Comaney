@@ -273,3 +273,86 @@ class TestFeuserPicInBuddyLists:
         time.sleep(1)
         assert _ppic_url_in_page(driver, admin_pk, subdir="ppics"), \
             "After upload the admin's You card should contain their ppic URL"
+
+
+# ── group dummy with expense: member card avatar updates immediately ────────────
+
+def _member_card_avatar_tag(driver, dummy_id):
+    """Return 'img' or 'span' for the avatar inside the dummy's member card."""
+    return driver.execute_script(
+        f'var el = document.querySelector(\'.buddy-card-dummy [data-dummy-avatar="{dummy_id}"]\');'
+        "return el ? el.tagName.toLowerCase() : null;"
+    )
+
+
+def _all_dummy_avatar_tags(driver, dummy_id):
+    """Return list of tag names for every data-dummy-avatar element on the page."""
+    return driver.execute_script(
+        f'return Array.from(document.querySelectorAll(\'[data-dummy-avatar="{dummy_id}"]\'))'
+        ".map(function(e){{return e.tagName.toLowerCase();}})"
+    )
+
+
+class TestGroupDummyPicWithExpense:
+    """
+    When a group dummy is a participant in expenses, their avatar appears in
+    both the expense breakdown rows AND the member card.  After upload the
+    member card avatar must update immediately (no reload required).
+    """
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Hans", last_name="ExpPic")
+        group_id = _create_group(a["email"], "ExpPic Group")
+        dummy_id = _shell(
+            f"from buddies.models import Project, DummyUser, ProjectMember; "
+            f"from budget.expense_factory import create_expense; "
+            f"from feusers.models import FeUser; "
+            f"from budget.models import TransactionType; "
+            f"from decimal import Decimal; "
+            f"g = Project.objects.get(pk={group_id}); "
+            f"d = DummyUser.objects.create(owning_group=g, display_name='Exp Pic Member'); "
+            f"ProjectMember.objects.create(group=g, dummy=d); "
+            f"owner = FeUser.objects.get(email='{a['email']}'); "
+            f"create_expense(owning_feuser=owner, title='ExpPic Expense', "
+            f"  type=TransactionType.EXPENSE, value=Decimal('30.00'), "
+            f"  date_due=None, settled=False, buddy_approved=True, project=g, "
+            f"  buddy_spendings=[{{'type': 'dummy', 'id': d.pk, 'share_percent': 50}}]); "
+            f"print(d.pk)"
+        )
+        a["group_id"] = int(group_id)
+        a["dummy_id"] = int(dummy_id)
+        yield {"a": a}
+        cleanup_user(a["email"])
+
+    def test_multiple_dummy_avatar_elements_exist(self, driver, w, ctx):
+        driver.get(_url(f"/projects/{ctx['a']['group_id']}/"))
+        time.sleep(1)
+        tags = _all_dummy_avatar_tags(driver, ctx["a"]["dummy_id"])
+        assert len(tags) >= 2, (
+            "Expected at least 2 data-dummy-avatar elements (expense row + member card)"
+        )
+        assert all(t == "span" for t in tags), \
+            "All dummy avatar elements should be initials spans before upload"
+
+    def test_member_card_avatar_updates_immediately_after_upload(self, driver, w, ctx):
+        _open_dummy_pic_modal(driver, ctx["a"]["dummy_id"])
+        _upload_via_cropper(driver)
+        tag = _member_card_avatar_tag(driver, ctx["a"]["dummy_id"])
+        assert tag == "img", (
+            "After upload the member card avatar should switch to <img> without a page reload"
+        )
+
+    def test_all_avatar_elements_updated_after_upload(self, driver, w, ctx):
+        tags = _all_dummy_avatar_tags(driver, ctx["a"]["dummy_id"])
+        assert all(t == "img" for t in tags), \
+            "Every data-dummy-avatar element should switch to <img> after upload"
+
+    def test_remove_member_card_avatar_updates_immediately(self, driver, w, ctx):
+        _open_dummy_pic_modal(driver, ctx["a"]["dummy_id"])
+        time.sleep(0.5)
+        driver.find_element(By.ID, "dummy-pic-delete").click()
+        time.sleep(2)
+        tag = _member_card_avatar_tag(driver, ctx["a"]["dummy_id"])
+        assert tag == "span", \
+            "After removal the member card avatar should revert to initials span without a reload"
