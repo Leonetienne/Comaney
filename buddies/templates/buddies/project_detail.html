@@ -894,10 +894,21 @@
         <div class="add-buddy-panel">
             <h3>Unarchive project</h3>
             <p class="text-muted">Reactivates the project so new expenses and settlements can be added.</p>
-            <form method="post" action="{% url 'projects:project_unarchive' project_id=project.uid %}">
+            <form method="post" action="{% url 'projects:project_unarchive' project_id=project.uid %}" id="unarchive-project-form">
                 {% csrf_token %}
                 <button type="submit" id="btn-unarchive-project" class="btn btn-secondary">Unarchive project</button>
             </form>
+            <script>
+            (function () {
+                document.getElementById('unarchive-project-form').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    window.confirmDialog(
+                        'Unarchive "{{ project.name|escapejs }}"? New expenses and settlements can be added again.',
+                        'Unarchive project'
+                    ).then(function () { e.target.submit(); }).catch(function () {});
+                });
+            })();
+            </script>
         </div>
         {% endif %}
 
