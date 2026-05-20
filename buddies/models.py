@@ -276,6 +276,10 @@ class BuddyOnboardingInvite(models.Model):
 class BuddySpending(models.Model):
     """One row per (expense, participant). The expense owner is never a participant here."""
 
+    APPROVAL_NEUTRAL = 0
+    APPROVAL_APPROVED = 1
+    APPROVAL_REJECTED = 2
+
     uid = models.BigAutoField(primary_key=True)
     expense = models.ForeignKey(
         "budget.Expense", on_delete=models.CASCADE, related_name="buddy_spendings"
@@ -293,6 +297,17 @@ class BuddySpending(models.Model):
         related_name="buddy_spending_rows",
     )
     share_percent = models.DecimalField(max_digits=6, decimal_places=3)
+    approval_state = models.SmallIntegerField(default=0)
+    consent_set_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def consent_locked(self) -> bool:
+        """True once the 24-hour change window after first consent has elapsed."""
+        if self.consent_set_at is None:
+            return False
+        from django.utils import timezone
+        from datetime import timedelta
+        return timezone.now() > self.consent_set_at + timedelta(hours=24)
 
     class Meta:
         ordering = ["uid"]

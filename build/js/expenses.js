@@ -229,10 +229,18 @@ function expenseList() {
             return (participants || []).map(function(p) {
                 const name = String(p.name || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
                 const initials = String(p.initials || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                if (p.ppic_url) {
-                    return `<img src="${p.ppic_url}" class="user-avatar" title="${name}" alt="">`;
+                const avatar = p.ppic_url
+                    ? `<img src="${p.ppic_url}" class="user-avatar" title="${name}" alt="">`
+                    : `<span class="user-avatar user-avatar--initials" style="background:${p.color}" title="${name}">${initials}</span>`;
+                let badge = '';
+                if (p.approval_state === 1) {
+                    badge = '<span class="approval-badge approval-badge--approved" title="Approved">✓</span>';
+                } else if (p.approval_state === 2) {
+                    badge = '<span class="approval-badge approval-badge--rejected" title="Rejected">✗</span>';
+                } else if (p.approval_state === 0) {
+                    badge = '<span class="approval-badge approval-badge--neutral" title="No decision yet">?</span>';
                 }
-                return `<span class="user-avatar user-avatar--initials" style="background:${p.color}" title="${name}">${initials}</span>`;
+                return `<span class="avatar-wrap">${avatar}${badge}</span>`;
             }).join('');
         },
     };

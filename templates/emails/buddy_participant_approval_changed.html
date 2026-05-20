@@ -1,0 +1,41 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">
+  {% if new_state == APPROVAL_APPROVED %}
+    Participant approved a shared expense
+  {% elif new_state == APPROVAL_REJECTED %}
+    Participant rejected a shared expense
+  {% else %}
+    Participant reset their decision on a shared expense
+  {% endif %}
+</h2>
+<p style="color:#ccc;line-height:1.6;">
+  <strong style="color:#e0e0e0;">{{ participant_name }}</strong> has {{ state_label }} the shared expense
+  <strong style="color:#e0e0e0;">{{ expense.title }}</strong>{% if group_name %} in <strong style="color:#e0e0e0;">{{ group_name }}</strong>{% endif %}.
+</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Expense</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.title }}</td>
+  </tr>
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Amount</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.owning_feuser.currency }}{{ expense.value }}</td>
+  </tr>
+  {% if group_name %}
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Group</td>
+    <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ group_name }}</td>
+  </tr>
+  {% endif %}
+  <tr>
+    <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Decision</td>
+    <td style="padding:6px 0;font-size:0.9rem;text-align:right;font-weight:600;
+      {% if new_state == APPROVAL_APPROVED %}color:#2da44e;{% elif new_state == APPROVAL_REJECTED %}color:#cf222e;{% else %}color:#888;{% endif %}">
+      {% if new_state == APPROVAL_APPROVED %}Approved{% elif new_state == APPROVAL_REJECTED %}Rejected{% else %}Undecided{% endif %}
+    </td>
+  </tr>
+</table>
+<p style="color:#777;font-size:0.85rem;line-height:1.5;">This is purely for your records. Disputes must be resolved outside of Comaney.</p>
+{% endblock %}

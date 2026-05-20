@@ -17,6 +17,20 @@
         {% if not exp.buddy_approved and exp.owning_feuser == request.feuser and not exp.is_buddies_settlement and not exp.is_dummy %}
         <a href="{% url 'buddies:review_expense_as_owner' exp.uid %}" id="btn-review-exp-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>
         {% endif %}
+        {% if not exp.is_buddies_settlement %}
+        {% for bs in exp.buddy_spendings.all %}{% if bs.participant_feuser == request.feuser and not bs.consent_locked %}
+        <div class="consent-btns">
+            <form method="post" action="{% url 'buddies:participant_approve' exp.uid %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-consent{% if bs.approval_state == 1 %} btn-consent--approved{% endif %}" title="Approve">✓</button>
+            </form>
+            <form method="post" action="{% url 'buddies:participant_reject' exp.uid %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-consent{% if bs.approval_state == 2 %} btn-consent--rejected{% endif %}" title="Reject">✗</button>
+            </form>
+        </div>
+        {% endif %}{% endfor %}
+        {% endif %}
         {% if exp.owning_feuser == request.feuser and exp.settlement_can_edit %}
         <a href="{% url 'budget:expense_edit' exp.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ exp.uid }}" class="btn btn-sm btn-secondary">Edit</a>
         {% endif %}

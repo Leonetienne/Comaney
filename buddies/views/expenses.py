@@ -5,7 +5,7 @@ from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
 from budget.models import Expense
-from ..models import Project, BuddyGroup
+from ..models import Project, BuddyGroup, BuddySpending
 from ..services import BuddyEmailService, BuddyLifecycleService
 
 
@@ -230,6 +230,52 @@ def admin_reject_dummy_settlement(request, group_id, expense_id):
     expense.delete()
     django_messages.warning(request, "Settlement rejected. The debtor has been notified.")
     return redirect("projects:project_detail", project_id=group_id)
+
+
+def _participant_set_approval(request, expense_id, new_state):
+    from django.utils import timezone
+    from django.http import HttpResponseForbidden
+    feuser = request.feuser
+    expense = get_object_or_404(
+        Expense,
+        uid=expense_id,
+        is_buddies_settlement=False,
+        buddy_spendings__participant_feuser=feuser,
+    )
+    bs = expense.buddy_spendings.filter(participant_feuser=feuser).first()
+    if not bs:
+        return redirect("buddies:buddy_summary")
+
+    if bs.consent_locked:
+        return HttpResponseForbidden("Decision is locked after 24 hours.")
+
+    if bs.approval_state != new_state:
+        update_fields = ["approval_state"]
+        if bs.consent_set_at is None:
+            bs.consent_set_at = timezone.now()
+            update_fields.append("consent_set_at")
+        bs.approval_state = new_state
+        bs.save(update_fields=update_fields)
+        BuddyEmailService.send_participant_approval_notification(expense, feuser, new_state)
+
+    back = request.POST.get("back") or request.GET.get("back")
+    if back:
+        return redirect(back)
+    if expense.project_id:
+        return redirect("projects:project_detail", project_id=expense.project_id)
+    return redirect("buddies:buddy_summary")
+
+
+@feuser_required
+def participant_approve(request, expense_id):
+    """Record feuser consent as approved. Accepts GET (email) and POST (inline button)."""
+    return _participant_set_approval(request, expense_id, BuddySpending.APPROVAL_APPROVED)
+
+
+@feuser_required
+def participant_reject(request, expense_id):
+    """Record feuser consent as rejected. Accepts GET (email) and POST (inline button)."""
+    return _participant_set_approval(request, expense_id, BuddySpending.APPROVAL_REJECTED)
 
 
 @feuser_required

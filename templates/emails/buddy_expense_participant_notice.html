@@ -71,4 +71,13 @@
   </tr>
   {% endfor %}
 </table>
+
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;margin:20px 0 8px;">
+  Do you agree with this expense? You can record your decision now:
+</p>
+<div style="margin:16px 0;display:flex;gap:12px;">
+  <a href="{{ approve_url }}" style="display:inline-block;background:#2da44e;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">Approve</a>
+  <a href="{{ reject_url }}" style="display:inline-block;background:#cf222e;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">Reject</a>
+</div>
+<p style="color:#777;font-size:0.8rem;">You can also change your decision later from the expense page.</p>
 {% endblock %}

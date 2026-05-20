@@ -29,6 +29,8 @@ def _buddy_participants(exp) -> list:
                 "initials": initials,
                 "ppic_url": fu.ppic_url if fu.profile_picture else None,
                 "color": _avatar_color(initials),
+                "approval_state": bs.approval_state,
+                "is_payer": False,
             })
         elif bs.participant_dummy_id:
             du = bs.participant_dummy
@@ -38,6 +40,8 @@ def _buddy_participants(exp) -> list:
                 "initials": initials,
                 "ppic_url": du.ppic_url if du.profile_picture else None,
                 "color": _avatar_color(initials),
+                "approval_state": None,
+                "is_payer": False,
             })
     if not participants:
         return []
@@ -49,6 +53,8 @@ def _buddy_participants(exp) -> list:
             "initials": initials,
             "ppic_url": du.ppic_url if du.profile_picture else None,
             "color": _avatar_color(initials),
+            "approval_state": None,
+            "is_payer": True,
         }
     else:
         fu = exp.owning_feuser
@@ -59,6 +65,8 @@ def _buddy_participants(exp) -> list:
             "initials": initials,
             "ppic_url": fu.ppic_url if fu.profile_picture else None,
             "color": _avatar_color(initials),
+            "approval_state": 1 if exp.buddy_approved else 0,
+            "is_payer": True,
         }
     return [payer] + participants
 

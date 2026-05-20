@@ -613,6 +613,22 @@
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
+                    {% if e.i_am_participant and not e.expense.is_buddies_settlement %}
+                    {% for s in e.participant_shares %}{% if s.is_me and not s.consent_locked %}
+                    <div class="consent-btns">
+                        <form method="post" action="{% url 'buddies:participant_approve' e.expense.uid %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="back" value="{{ request.get_full_path }}#expense-{{ e.expense.uid }}">
+                            <button type="submit" class="btn-consent{% if s.approval_state == 1 %} btn-consent--approved{% endif %}" title="Approve">✓</button>
+                        </form>
+                        <form method="post" action="{% url 'buddies:participant_reject' e.expense.uid %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="back" value="{{ request.get_full_path }}#expense-{{ e.expense.uid }}">
+                            <button type="submit" class="btn-consent{% if s.approval_state == 2 %} btn-consent--rejected{% endif %}" title="Reject">✗</button>
+                        </form>
+                    </div>
+                    {% endif %}{% endfor %}
+                    {% endif %}
                     {% if e.can_edit %}
                     <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Edit</a>
                     {% endif %}

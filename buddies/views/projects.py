@@ -276,6 +276,7 @@ def project_detail(request, project_id):
     pending_expenses = [e for e in breakdown["expenses"] if not e["expense"].buddy_approved]
     approved_expenses = [e for e in breakdown["expenses"] if e["expense"].buddy_approved]
 
+
     member_spending: dict[str, Decimal] = {}
     project_total_spending = Decimal("0")
     for exp_data in approved_expenses:

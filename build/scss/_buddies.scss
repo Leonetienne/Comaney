@@ -1125,6 +1125,63 @@
   border-style: dashed !important;
 }
 
+.consent-btns {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.btn-consent {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0;
+  line-height: 1;
+  transition: border-color 0.1s, background 0.1s, color 0.1s;
+
+  &:hover {
+    border-color: var(--text-subtle);
+    color: var(--text);
+  }
+
+  &--approved {
+    border-color: #2da44e;
+    background: color-mix(in srgb, #2da44e 15%, var(--bg-surface));
+    color: #2da44e;
+  }
+
+  &--rejected {
+    border-color: #cf222e;
+    background: color-mix(in srgb, #cf222e 15%, var(--bg-surface));
+    color: #cf222e;
+  }
+}
+
+.pill--success {
+  background: color-mix(in srgb, #2da44e 18%, var(--bg-surface));
+  color: #2da44e;
+  border: 1px solid color-mix(in srgb, #2da44e 35%, transparent);
+  font-size: 0.75rem;
+  padding: 1px 7px;
+}
+
+.pill--danger {
+  background: color-mix(in srgb, #cf222e 18%, var(--bg-surface));
+  color: #cf222e;
+  border: 1px solid color-mix(in srgb, #cf222e 35%, transparent);
+  font-size: 0.75rem;
+  padding: 1px 7px;
+}
+
 .pill--warn {
   background: color-mix(in srgb, #e3a000 18%, var(--bg-surface));
   color: #e3a000;

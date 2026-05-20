@@ -144,6 +144,7 @@ def buddy_summary_page(request):
                     seen_dummy_cred.add(exp.pk)
                     break
 
+
     me_avatar_json = json.dumps({
         "has_pic": feuser.profile_picture,
         "avatar_url": feuser.ppic_url if feuser.profile_picture else None,

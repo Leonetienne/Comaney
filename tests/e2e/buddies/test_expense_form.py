@@ -544,3 +544,61 @@ class TestBuddySliderCurrencyAmounts:
         payer_text = driver.find_element(By.ID, "buddy-payer-amt").text.strip()
         assert "140.00" in payer_text, \
             f"After value -> 200, 70% payer must show 140.00, got: {payer_text!r}"
+
+
+# ---------------------------------------------------------------------------
+# Default upfront payer is "me" in both direct-buddy and project modes
+# ---------------------------------------------------------------------------
+
+class TestDefaultPayerIsMe:
+    """Opening the buddy section for the first time (direct buddy or project)
+    must pre-select the current user as the upfront payer in both modes."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        user = setup_user(driver, w, first_name="Default", last_name="PayerCheck")
+        email = user["email"]
+        _shell(
+            f"from buddies.models import DummyUser; "
+            f"from feusers.models import FeUser; "
+            f"u = FeUser.objects.get(email='{email}'); "
+            f"DummyUser.objects.create(owning_feuser=u, display_name='Other Person')"
+        )
+        group_id = _create_group(email, "Payer Default Group")
+        _shell(
+            f"from buddies.services import BuddyGroupService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
+            f"u = FeUser.objects.get(email='{email}'); "
+            f"g = Project.objects.get(pk={group_id}); "
+            f"BuddyGroupService.create_group_dummy(g, u, 'Group Other')"
+        )
+        yield {**user, "group_id": int(group_id)}
+        cleanup_user(email)
+
+    def test_direct_buddy_default_payer_is_me(self, driver, w, ctx):
+        driver.get(_url("/budget/expenses/new/"))
+        time.sleep(1)
+        driver.find_element(By.ID, "assign-buddy").click()
+        time.sleep(0.5)
+        val = driver.execute_script(
+            "return document.getElementById('buddy-upfront-select').value;"
+        )
+        assert val.startswith("me:"), \
+            f"Direct-buddy mode: default upfront payer must be 'me:...', got: {val!r}"
+
+    def test_project_default_payer_is_me(self, driver, w, ctx):
+        driver.get(_url("/budget/expenses/new/"))
+        time.sleep(1)
+        driver.find_element(By.ID, "assign-project").click()
+        time.sleep(0.5)
+        driver.execute_script(
+            f"var sel = document.getElementById('buddy-group-select');"
+            f"sel.value = '{ctx['group_id']}';"
+            f"sel.dispatchEvent(new Event('change', {{bubbles: true}}));"
+        )
+        time.sleep(0.5)
+        val = driver.execute_script(
+            "return document.getElementById('buddy-upfront-select').value;"
+        )
+        assert val.startswith("me:"), \
+            f"Project mode: default upfront payer must be 'me:...', got: {val!r}"

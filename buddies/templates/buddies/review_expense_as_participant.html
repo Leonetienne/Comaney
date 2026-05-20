@@ -1,0 +1,90 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney - Review shared expense{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Review shared expense</h1>
+</div>
+
+<div class="buddies-section buddies-section--sm">
+    <p class="text-muted mb-lg">
+        Do you agree that your share of this expense is correct? Your decision is purely for documentation; it does not affect the balance calculation.
+    </p>
+
+    <table class="settle-table">
+        <tr>
+            <td>Description</td>
+            <td>{{ expense.title }}</td>
+        </tr>
+        <tr>
+            <td>Total amount</td>
+            <td class="settle-table-value">{{ expense.owning_feuser.currency }}{{ expense.value|floatformat:2 }}</td>
+        </tr>
+        {% if expense.project %}
+        <tr>
+            <td>Group</td>
+            <td>{{ expense.project.name }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td>Your share</td>
+            <td class="settle-table-value">{{ expense.owning_feuser.currency }}{{ share_value|floatformat:2 }} ({{ bs.share_percent|floatformat:1 }}%)</td>
+        </tr>
+    </table>
+
+    {% if current_state == APPROVAL_APPROVED %}
+    <p class="mt-md" style="color:var(--color-success);font-weight:600;">You have approved this expense.</p>
+    {% elif current_state == APPROVAL_REJECTED %}
+    <p class="mt-md" style="color:var(--color-danger);font-weight:600;">You have rejected this expense.</p>
+    {% else %}
+    <p class="mt-md text-muted">You have not yet recorded a decision.</p>
+    {% endif %}
+
+    <div class="action-row">
+        {% if current_state != APPROVAL_APPROVED %}
+        <form method="post" action="{{ approve_url }}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="approve">
+            <button type="submit" id="btn-participant-approve" class="btn btn-success">Approve</button>
+        </form>
+        {% endif %}
+
+        {% if current_state != APPROVAL_REJECTED %}
+        <form method="post" action="{{ reject_url }}" id="participant-reject-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="reject">
+            <button type="submit" id="btn-participant-reject" class="btn btn-danger-subtle">Reject</button>
+        </form>
+        {% endif %}
+
+        {% if current_state != APPROVAL_NEUTRAL %}
+        <form method="post" action="{{ approve_url }}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="reset">
+            <button type="submit" id="btn-participant-reset" class="btn btn-secondary">Reset decision</button>
+        </form>
+        {% endif %}
+
+        {% if expense.project_id %}
+        <a href="{% url 'projects:project_detail' project_id=expense.project_id %}" class="btn btn-secondary">Cancel</a>
+        {% else %}
+        <a href="{% url 'buddies:buddy_summary' %}" class="btn btn-secondary">Cancel</a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function () {
+    var form = document.getElementById('participant-reject-form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        window.confirmDialog(
+            'Record that you reject this expense? This is for documentation only and will notify the payer.',
+            'Reject'
+        ).then(function () { form.submit(); }).catch(function () {});
+    });
+})();
+</script>
+{% endblock %}

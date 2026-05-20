@@ -506,6 +506,9 @@ class BuddyEmailService:
             if is_added_to_existing
             else f"{actor_name} included you in a shared expense: {expense.title}"
         )
+        site_url = getattr(settings, "SITE_URL", "")
+        approve_url = f"{site_url}/buddies/expense/{expense.uid}/participant-approve/"
+        reject_url = f"{site_url}/buddies/expense/{expense.uid}/participant-reject/"
         BuddyEmailService._send(
             subject=subject,
             template="emails/buddy_expense_participant_notice.html",
@@ -519,8 +522,55 @@ class BuddyEmailService:
                 "currency": currency,
                 "is_added_to_existing": is_added_to_existing,
                 "feuser_recipient": recipient_feuser,
+                "approve_url": approve_url,
+                "reject_url": reject_url,
             },
             recipient_email=recipient_feuser.email,
+        )
+
+    @staticmethod
+    def send_participant_approval_notification(expense, participant_feuser, new_state):
+        """Notify the upfront payer (or group admin) when a participant changes their approval state."""
+        from ..models import BuddySpending
+
+        if expense.is_dummy:
+            if expense.project_id and expense.project:
+                notify_feuser = expense.project.admin_feuser
+            else:
+                notify_feuser = expense.owning_feuser
+        else:
+            notify_feuser = expense.owning_feuser
+
+        if notify_feuser.pk == participant_feuser.pk:
+            return
+
+        participant_name = _display_name(participant_feuser)
+        state_label = {
+            BuddySpending.APPROVAL_APPROVED: "approved",
+            BuddySpending.APPROVAL_REJECTED: "rejected",
+            BuddySpending.APPROVAL_NEUTRAL: "reset their decision on",
+        }.get(new_state, "changed their decision on")
+
+        group_name = expense.project.name if expense.project_id else None
+        subject = (
+            f"{participant_name} {state_label} a shared expense in {group_name}: {expense.title}"
+            if group_name
+            else f"{participant_name} {state_label} a shared expense: {expense.title}"
+        )
+        BuddyEmailService._send(
+            subject=subject,
+            template="emails/buddy_participant_approval_changed.html",
+            ctx={
+                "expense": expense,
+                "participant_name": participant_name,
+                "new_state": new_state,
+                "state_label": state_label,
+                "group_name": group_name,
+                "feuser_recipient": notify_feuser,
+                "APPROVAL_APPROVED": BuddySpending.APPROVAL_APPROVED,
+                "APPROVAL_REJECTED": BuddySpending.APPROVAL_REJECTED,
+            },
+            recipient_email=notify_feuser.email,
         )
 
     @staticmethod

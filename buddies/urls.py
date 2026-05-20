@@ -60,6 +60,8 @@ urlpatterns = [
     path("expense/<int:expense_id>/reject/", views.reject_expense, name="reject_expense"),
     path("expense/<int:expense_id>/approve-settlement/", views.approve_settlement_as_creditor, name="approve_settlement_as_creditor"),
     path("expense/<int:expense_id>/reject-settlement/", views.reject_settlement_as_creditor, name="reject_settlement_as_creditor"),
+    path("expense/<int:expense_id>/participant-approve/", views.participant_approve, name="participant_approve"),
+    path("expense/<int:expense_id>/participant-reject/", views.participant_reject, name="participant_reject"),
 
     # Group settlement actions
     path("groups/<int:group_id>/expense/<int:expense_id>/approve-dummy/", views.admin_approve_dummy_settlement, name="admin_approve_dummy_settlement"),
