@@ -55,6 +55,7 @@ urlpatterns = [
     path("group-invite/<str:token>/decline/", views.decline_group_invite, name="decline_group_invite"),
 
     # Expense approval
+    path("expense/<int:expense_id>/review/", views.review_expense_as_owner, name="review_expense_as_owner"),
     path("expense/<int:expense_id>/approve/", views.approve_expense, name="approve_expense"),
     path("expense/<int:expense_id>/reject/", views.reject_expense, name="reject_expense"),
     path("expense/<int:expense_id>/approve-settlement/", views.approve_settlement_as_creditor, name="approve_settlement_as_creditor"),

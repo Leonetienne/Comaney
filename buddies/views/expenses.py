@@ -10,6 +10,41 @@ from ..services import BuddyEmailService, BuddyLifecycleService
 
 
 @feuser_required
+def review_expense_as_owner(request, expense_id):
+    """
+    Upfront-payer confirmation. GET shows a review page; POST confirms they paid.
+    The email link points here (GET).
+    """
+    expense = get_object_or_404(
+        Expense,
+        uid=expense_id,
+        owning_feuser=request.feuser,
+        buddy_approved=False,
+        is_buddies_settlement=False,
+        is_dummy=False,
+    )
+    if request.method == "POST":
+        BuddyLifecycleService.approve_expense(expense)
+        django_messages.success(request, "Expense confirmed.")
+        if expense.project_id:
+            return redirect("projects:project_detail", project_id=expense.project_id)
+        return redirect("budget:expenses_list")
+    approve_url = reverse("buddies:review_expense_as_owner", args=[expense_id])
+    reject_url = reverse("buddies:reject_expense", args=[expense_id])
+    return render(request, "buddies/confirm_settlement.html", {
+        "active_nav": "buddies",
+        "expense": expense,
+        "approve_url": approve_url,
+        "reject_url": reject_url,
+        "page_title": "Review shared expense",
+        "confirm_question": "Did you actually pay for this expense upfront? Confirming accepts it into the group.",
+        "approve_label": "Yes, I paid this",
+        "reject_label": "I did not pay this",
+        "reject_confirm_text": "Reject this expense? Your participation will be removed and shares redistributed.",
+    })
+
+
+@feuser_required
 @require_POST
 def approve_expense(request, expense_id):
     expense = get_object_or_404(Expense, uid=expense_id, owning_feuser=request.feuser, buddy_approved=False, is_buddies_settlement=False)

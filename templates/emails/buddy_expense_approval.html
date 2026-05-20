@@ -22,10 +22,9 @@
     {% endif %}
 </table>
 <p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
-    Review the expense and approve or reject it. If you reject it, your participation is removed and the remaining shares are redistributed.
+    Open the review page to confirm or reject the expense.
 </p>
-<div style="margin:24px 0;display:flex;gap:12px;text-align:center;">
-    <a href="{{ approve_url }}" style="display:inline-block;background:#e0e0e0;color:#141414;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;margin-right:8px;">Approve</a>
-    <a href="{{ reject_url }}" style="display:inline-block;background:#333;color:#ccc;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">Reject</a>
+<div style="margin:24px 0;text-align:center;">
+    <a href="{{ review_url }}" style="display:inline-block;background:#e0e0e0;color:#141414;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">Review</a>
 </div>
 {% endblock %}

@@ -18,6 +18,7 @@ from .groups import (
     view_group_invite, accept_group_invite, decline_group_invite,
 )
 from .expenses import (
+    review_expense_as_owner,
     approve_expense, reject_expense,
     approve_settlement_as_creditor, reject_settlement_as_creditor,
     admin_approve_dummy_settlement, admin_reject_dummy_settlement,

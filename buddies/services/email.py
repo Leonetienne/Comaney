@@ -92,16 +92,14 @@ class BuddyEmailService:
     @staticmethod
     def send_expense_approval_request(expense, initiating_feuser):
         site_url = getattr(settings, "SITE_URL", "")
-        approve_url = f"{site_url}/buddies/expense/{expense.uid}/approve/"
-        reject_url = f"{site_url}/buddies/expense/{expense.uid}/reject/"
+        review_url = f"{site_url}/buddies/expense/{expense.uid}/review/"
         BuddyEmailService._send(
             subject=f"New shared expense needs your approval: {expense.title}",
             template="emails/buddy_expense_approval.html",
             ctx={
                 "expense": expense,
                 "initiating_name": _display_name(initiating_feuser),
-                "approve_url": approve_url,
-                "reject_url": reject_url,
+                "review_url": review_url,
                 "feuser_recipient": expense.owning_feuser,
             },
             recipient_email=expense.owning_feuser.email,

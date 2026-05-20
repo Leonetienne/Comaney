@@ -543,14 +543,7 @@
                     {% endif %}
 
                     {% if e.owner_approval_needed %}
-                    <form method="post" action="{% url 'buddies:approve_expense' expense_id=e.expense.uid %}">
-                        {% csrf_token %}
-                        <button type="submit" id="btn-approve-{{ e.expense.uid }}" class="btn btn-sm btn-success">I paid this</button>
-                    </form>
-                    <form method="post" action="{% url 'buddies:reject_expense' expense_id=e.expense.uid %}">
-                        {% csrf_token %}
-                        <button type="submit" id="btn-reject-{{ e.expense.uid }}" class="btn btn-sm btn-danger-subtle">I did not pay</button>
-                    </form>
+                    <a href="{% url 'buddies:review_expense_as_owner' expense_id=e.expense.uid %}" id="btn-review-expense-{{ e.expense.uid }}" class="btn btn-sm btn-success">Review</a>
                     {% endif %}
                     {% if e.creditor_approval_needed %}
                     <a href="{% url 'buddies:approve_settlement_as_creditor' expense_id=e.expense.uid %}" id="btn-review-settlement-{{ e.expense.uid }}" class="btn btn-sm btn-success">Review</a>

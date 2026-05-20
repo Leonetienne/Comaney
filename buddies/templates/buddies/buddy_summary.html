@@ -36,14 +36,7 @@
                     </span>
                 </div>
                 <div class="bexp-breakdown-header-right">
-                    <form method="post" action="{% url 'buddies:approve_expense' exp.uid %}">
-                        {% csrf_token %}
-                        <button type="submit" id="btn-approve-pending-{{ exp.uid }}" class="btn btn-sm btn-success">Approve</button>
-                    </form>
-                    <form method="post" action="{% url 'buddies:reject_expense' exp.uid %}">
-                        {% csrf_token %}
-                        <button type="submit" id="btn-reject-pending-{{ exp.uid }}" class="btn btn-sm btn-secondary">Reject</button>
-                    </form>
+                    <a href="{% url 'buddies:review_expense_as_owner' exp.uid %}" id="btn-review-expense-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>
                 </div>
             </div>
             {% include 'partials/_expense_avatars.html' with exp=exp %}

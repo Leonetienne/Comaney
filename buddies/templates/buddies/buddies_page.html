@@ -196,15 +196,8 @@
                 {% endfor %}
             </div>
             <div class="bexp-actions">
-                {% if not exp.buddy_approved and exp.owning_feuser == request.feuser %}
-                <form method="post" action="{% url 'buddies:approve_expense' exp.uid %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm">Approve</button>
-                </form>
-                <form method="post" action="{% url 'buddies:reject_expense' exp.uid %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-secondary">Reject</button>
-                </form>
+                {% if not exp.buddy_approved and exp.owning_feuser == request.feuser and not exp.is_buddies_settlement and not exp.is_dummy %}
+                <a href="{% url 'buddies:review_expense_as_owner' exp.uid %}" class="btn btn-sm btn-success">Review</a>
                 {% endif %}
                 {% if exp.owning_feuser == request.feuser and not exp.is_dummy %}
                 <a href="{% url 'budget:expense_edit' exp.uid %}" class="btn btn-sm btn-secondary">Edit</a>
