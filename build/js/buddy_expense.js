@@ -117,12 +117,16 @@
         } else {
             var grp = groupsData.find(function (g) { return g.id === currentGroupId; });
             if (grp) {
+                var meEntry = null, others = [];
                 grp.members.forEach(function (m) {
                     var prefix = m.is_me ? 'me' : m.type;
                     var vid    = m.is_me ? ME_PK : m.id;
                     var label  = m.is_me ? 'Me (' + m.name + ')' : m.name;
-                    opts.push({value: prefix + ':' + vid, text: label});
+                    var entry  = {value: prefix + ':' + vid, text: label};
+                    if (m.is_me) { meEntry = entry; } else { others.push(entry); }
                 });
+                if (meEntry) opts.push(meEntry);
+                others.forEach(function (o) { opts.push(o); });
             }
         }
         opts.forEach(function (o) {
