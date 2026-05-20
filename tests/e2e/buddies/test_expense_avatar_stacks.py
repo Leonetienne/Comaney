@@ -88,7 +88,7 @@ def _avatars_in_card(driver, title: str) -> int:
         var titleEls = document.querySelectorAll('.bexp-title');
         for (var t of titleEls) {
             if (firstText(t) === arguments[0]) {
-                var card = t.closest('.bexp-breakdown-card, .buddy-expense-row');
+                var card = t.closest('.bexp-breakdown-card');
                 if (!card) return -1;
                 var stack = card.querySelector('.avatar-stack');
                 return stack ? stack.querySelectorAll('.user-avatar').length : 0;
@@ -113,7 +113,7 @@ def _avatar_texts_in_card(driver, title: str) -> list:
         var titleEls = document.querySelectorAll('.bexp-title');
         for (var t of titleEls) {
             if (firstText(t) === arguments[0]) {
-                var card = t.closest('.bexp-breakdown-card, .buddy-expense-row');
+                var card = t.closest('.bexp-breakdown-card');
                 if (!card) return null;
                 var stack = card.querySelector('.avatar-stack');
                 if (!stack) return [];

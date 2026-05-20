@@ -139,7 +139,7 @@ class TestDirectSettlement:
 
     def test_settlement_row_has_no_approve_reject_buttons(self, driver, w, ctx):
         # BF-3: Approve/Reject buttons must not appear on the settlement row for the debtor
-        rows = driver.find_elements(By.CSS_SELECTOR, ".buddy-expense-row")
+        rows = driver.find_elements(By.CSS_SELECTOR, ".bexp-breakdown-card")
         settlement_rows = [r for r in rows if "Settlement to Beth" in r.text]
         assert settlement_rows, "Settlement row must be visible in One-on-one expenses"
         row_html = settlement_rows[0].get_attribute("innerHTML")
