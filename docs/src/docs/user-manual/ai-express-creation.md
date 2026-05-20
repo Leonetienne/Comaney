@@ -9,7 +9,7 @@ Express creation lets you log expenses by describing them in plain language or t
     - **Take a photo or upload an image** of a receipt, invoice, or any document with prices.
     - **Type a description** of what you bought. For example: "Bought groceries at REWE for 37.50 and a coffee for 4.20".
 3. Click **Submit**.
-4. Review the suggested expenses. You can change any field: title, type, value, payee, date, category, or tags.
+4. Review the suggested expenses. You can change any field: title, type, value, payee, date, category, tags, or project assignment.
 5. Click **Save** to add them.
 
 Nothing is saved until you click Save. You are always in control.
@@ -38,12 +38,22 @@ Combine grocery items into one expense unless they belong to different categorie
 
 The AI will follow these instructions every time.
 
+## Project assignment
+
+If you have projects set up, the AI will suggest which project each expense belongs to, based on the project name and description. You can review and change the assignment in each card using the **Expense assignment** tabs:
+
+- **None**: personal expense, not linked to any project.
+- **Direct Buddy**: a direct one-on-one buddy payment.
+- **Project**: assign to a shared project. For projects with multiple members, you can also set the upfront payer and split shares.
+
+The AI will never assign a project without a strong reason.
+
 ## Privacy
 
-Photos and descriptions you submit are sent to Anthropic's AI service for processing. Do not upload documents containing sensitive personal data such as identity card numbers or passport scans.  
+Photos and descriptions you submit are sent to Anthropic's AI service for processing. Do not upload documents containing sensitive personal data such as identity card numbers or passport scans.
 
-The data transmitted to Anthropic includes only your list of tags, categories, your custom instruction, your expense description and/or receipt picture.
-Comaney will never transmit your existing transactions. 
+The data transmitted to Anthropic includes only your list of tags, categories, projects (names and descriptions), your custom instruction, your expense description and/or receipt picture.
+Comaney will never transmit your existing transactions.
 
 ## AI Licensing
 

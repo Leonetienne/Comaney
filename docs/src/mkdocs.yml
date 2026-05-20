@@ -65,8 +65,8 @@ nav:
       - Adding Buddies: user-manual/buddies/adding-buddies.md
       - Shared Expenses: user-manual/buddies/shared-expenses.md
       - Settling Up: user-manual/buddies/settling-up.md
-      - Managing Groups: user-manual/buddies/groups.md
       - Achim Archive: user-manual/buddies/achim-archive.md
+    - Projects: user-manual/projects.md
     - AI Express Creation: user-manual/ai-express-creation.md
     - Notifications: user-manual/notifications.md
     - Account & Settings: user-manual/account-settings.md

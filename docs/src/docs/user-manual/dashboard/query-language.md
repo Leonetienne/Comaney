@@ -46,7 +46,7 @@ recurring=no
 
 The **Hide recurring** checkbox on the expense list is a shortcut for this filter.
 
-## Filter by buddy group or participant
+## Filter by buddy or participant
 
 ```
 buddy=yes
@@ -62,13 +62,22 @@ buddy="holiday trip"
 
 When given a name or phrase, `buddy=` matches against:
 
-- The buddy group name
+- The project name
 - The name of any participant in the expense
-- The name of any member of the group (including those who are not a participant in that specific expense)
+- The name of any member of the project (including those who are not a participant in that specific expense)
 
 Matching is partial and case-insensitive, so `buddy=rai` would find "Rainer".
 
-Free-text search (typing without a filter prefix) also looks through group names and participant names automatically.
+Free-text search (typing without a filter prefix) also looks through project names and participant names automatically.
+
+## Filter by project
+
+```
+project=Holiday
+project=none
+```
+
+`project=<name>` shows only expenses linked to a project whose name contains the given phrase (partial match, case-insensitive). Use `project=none` to find expenses with no project assigned.
 
 ## Filter by category
 

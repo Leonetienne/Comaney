@@ -15,7 +15,8 @@ You do not need any technical knowledge to use Comaney. If you can fill in a for
 | Get email reminders before bills are due | [Notifications](notifications.md) |
 | Change my name, currency, or password | [Account & Settings](account-settings.md) |
 | Make my account more secure | [Two-Factor Authentication](two-factor-auth.md) |
-| Split costs with friends or a group | [Buddies](buddies/index.md) |
+| Split costs with a friend | [Buddies](buddies/index.md) |
+| Track expenses for a trip, project, or goal | [Projects](projects.md) |
 | Log an expense from a receipt photo | [AI Express Creation](ai-express-creation.md) |
 | Download my data as a spreadsheet | [Data Export](data-export.md) |
 | Use Comaney from another app or script | [REST API Access](api-access.md) |
