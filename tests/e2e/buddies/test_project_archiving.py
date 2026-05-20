@@ -104,6 +104,8 @@ class TestArchivedProjectFrozen:
         form = driver.find_element(By.CSS_SELECTOR,
             f"form[action*='/projects/{ctx['gid']}/unarchive/']")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
+        time.sleep(0.5)
+        driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(1)
         assert "Unarchive project" not in driver.page_source
         assert "Archive project" in driver.page_source
