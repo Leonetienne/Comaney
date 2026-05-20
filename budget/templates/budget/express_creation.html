@@ -98,6 +98,15 @@ window.BUDDY_EXPENSE_CONFIG = {
 
     {% if trial_just_exhausted %}
     <div class="ai-error">Your trial budget is now used up. You can review and save the result below, but no further AI requests are possible. Add your own Anthropic API key in <a href="{% url 'profile' %}">your profile</a> to keep going.</div>
+    {% elif ai_error_overloaded %}
+    <div class="ai-refusal-modal">
+        <span class="ai-refusal-icon">?</span>
+        <p class="ai-refusal-msg">Oh nyoo qwq! The clanker is overloaded :&lt; try again later qwq</p>
+        {% if ai_error_detail %}
+        <a class="ai-refusal-details-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.textContent=this.nextElementSibling.style.display==='block'?'hide details':'show details'">show details</a>
+        <pre class="ai-refusal-raw" style="display:none">{{ ai_error_detail }}</pre>
+        {% endif %}
+    </div>
     {% elif ai_error or ai_raw_output %}
     <div class="ai-refusal-modal">
         <span class="ai-refusal-icon">?</span>

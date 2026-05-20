@@ -46,6 +46,8 @@ def express_creation(request):
         "preview_json":       "",
         "usage":              None,
         "ai_error":           None,
+        "ai_error_overloaded": False,
+        "ai_error_detail":    "",
         "created_count":      None,
         "categories":         categories,
         "tags":               tags,
@@ -133,6 +135,9 @@ def express_creation(request):
                             _handle_billing()
                         else:
                             context["ai_error"] = "Anthropic rate limit reached. Please wait a moment and try again."
+                    elif isinstance(exc, _anthropic.InternalServerError):
+                        context["ai_error_overloaded"] = True
+                        context["ai_error_detail"] = str(exc)
                     elif isinstance(exc, _anthropic.APIConnectionError):
                         context["ai_error"] = "Could not reach the Anthropic API. Please check your internet connection."
                     elif isinstance(exc, _anthropic.APIStatusError):
