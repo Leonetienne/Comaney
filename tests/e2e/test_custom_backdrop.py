@@ -49,7 +49,7 @@ class TestCustomBackdrop:
             driver.get(_url("/budget/"))
             time.sleep(1)
             assert 'class="custom-backdrop"' in driver.page_source
-            match = re.search(r'src="(/media/backdrops/\d+\.png)"', driver.page_source)
+            match = re.search(r'src="(/media/backdrops/\d+\.png[^"]*)"', driver.page_source)
             assert match, "custom-backdrop img src not found in page source"
             cookies = {c["name"]: c["value"] for c in driver.get_cookies()}
             resp = requests.get(f"{BASE_URL}{match.group(1)}", cookies=cookies, timeout=10)

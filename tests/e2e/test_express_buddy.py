@@ -361,7 +361,7 @@ class TestExpressBuddyCardUI:
         first_card = cards[0]
         assert first_card.find_elements(By.CSS_SELECTOR, ".pcard-assign-none"), \
             "Expense assignment 'None' tab must be present inside each preview card"
-        assert "Expense assignment" in first_card.text
+        assert "Expense assignment" in first_card.text or "EXPENSE ASSIGNMENT" in first_card.text
 
     def test_toggle_shows_buddy_details(self, driver, w, ctx):
         if not ctx.get("ai_ok"):

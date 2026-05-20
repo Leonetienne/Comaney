@@ -245,8 +245,8 @@ class TestDeleteUser:
                 f"from buddies.models import ProjectMember; "
                 f"admin = FeUser.objects.get(email='{admin_email}'); "
                 f"member = FeUser.objects.get(email='{member_email}'); "
-                f"g = BuddyGroupService.create_group(admin, 'CmdDelGroup'); "
-                f"BuddyGroupMember.objects.get_or_create(group=g, feuser=member); "
+                f"g = ProjectService.create_group(admin, 'CmdDelGroup'); "
+                f"ProjectMember.objects.get_or_create(group=g, feuser=member); "
                 f"print(g.pk)",
             ],
             capture_output=True, text=True, timeout=15,
