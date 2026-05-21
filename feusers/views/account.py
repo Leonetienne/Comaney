@@ -58,7 +58,8 @@ def profile(request):
                     ppics_dir.mkdir(exist_ok=True)
                     img.save(ppics_dir / f"{feuser.pk}.jpg", "JPEG", quality=85)
                     feuser.profile_picture = True
-                    feuser.save(update_fields=["profile_picture"])
+                    feuser.last_mod = timezone.now()
+                    feuser.save(update_fields=["profile_picture", "last_mod"])
                     return redirect(f"{request.path}?success=picture")
                 except Exception:
                     picture_error = "Could not process the image. Please upload a valid image file."
@@ -68,7 +69,8 @@ def profile(request):
             if ppic_path.exists():
                 ppic_path.unlink()
             feuser.profile_picture = False
-            feuser.save(update_fields=["profile_picture"])
+            feuser.last_mod = timezone.now()
+            feuser.save(update_fields=["profile_picture", "last_mod"])
             return redirect(f"{request.path}?success=picture_deleted")
 
         elif action == "backdrop":
@@ -88,7 +90,8 @@ def profile(request):
                     backdrops_dir.mkdir(exist_ok=True)
                     img.save(backdrops_dir / f"{feuser.pk}.png", "PNG")
                     feuser.custom_backdrop = True
-                    feuser.save(update_fields=["custom_backdrop"])
+                    feuser.last_mod = timezone.now()
+                    feuser.save(update_fields=["custom_backdrop", "last_mod"])
                     return redirect(f"{request.path}?success=backdrop")
                 except Exception:
                     backdrop_error = "Could not process the image. Please upload a valid image file."
@@ -98,7 +101,8 @@ def profile(request):
             if backdrop_path.exists():
                 backdrop_path.unlink()
             feuser.custom_backdrop = False
-            feuser.save(update_fields=["custom_backdrop"])
+            feuser.last_mod = timezone.now()
+            feuser.save(update_fields=["custom_backdrop", "last_mod"])
             return redirect(f"{request.path}?success=backdrop_deleted")
 
         elif action == "backdrop_settings":
@@ -115,24 +119,28 @@ def profile(request):
             feuser.backdrop_opacity = opacity
             feuser.backdrop_css = css
             feuser.backdrop_css_mobile = css_mobile
-            feuser.save(update_fields=["backdrop_mode", "backdrop_opacity", "backdrop_css", "backdrop_css_mobile"])
+            feuser.last_mod = timezone.now()
+            feuser.save(update_fields=["backdrop_mode", "backdrop_opacity", "backdrop_css", "backdrop_css_mobile", "last_mod"])
             return redirect(f"{request.path}?success=backdrop_settings")
 
         elif action == "profile":
             profile_form = ProfileForm(request.POST, instance=feuser)
             if profile_form.is_valid():
+                feuser.last_mod = timezone.now()
                 profile_form.save()
                 return redirect(f"{request.path}?success=profile")
 
         elif action == "notifications":
             notifications_form = NotificationPreferencesForm(request.POST, instance=feuser)
             if notifications_form.is_valid():
+                feuser.last_mod = timezone.now()
                 notifications_form.save()
                 return redirect(f"{request.path}?success=notifications")
 
         elif action == "ai":
             ai_form = AISettingsForm(request.POST, instance=feuser)
             if ai_form.is_valid():
+                feuser.last_mod = timezone.now()
                 ai_form.save()
                 return redirect(f"{request.path}?success=ai")
 
@@ -142,7 +150,8 @@ def profile(request):
                 new_email = email_form.cleaned_data["email"]
                 if settings.DISABLE_EMAILING:
                     feuser.email = new_email
-                    feuser.save(update_fields=["email"])
+                    feuser.last_mod = timezone.now()
+                    feuser.save(update_fields=["email", "last_mod"])
                     return redirect(f"{request.path}?success=email_direct")
                 feuser.generate_email_change_token(new_email)
                 feuser.save(update_fields=["pending_email", "email_change_token"])
@@ -172,7 +181,8 @@ def profile(request):
             password_form = ChangePasswordForm(request.POST, feuser=feuser)
             if password_form.is_valid():
                 feuser.set_password(password_form.cleaned_data["new_password"])
-                feuser.save(update_fields=["password"])
+                feuser.last_mod = timezone.now()
+                feuser.save(update_fields=["password", "last_mod"])
                 return redirect(f"{request.path}?success=password")
 
     return render(request, "feusers/profile.html", {
@@ -524,7 +534,8 @@ def api_key_generate(request):
     if not user:
         return redirect("login")
     user.generate_api_key()
-    user.save(update_fields=["api_key"])
+    user.last_mod = timezone.now()
+    user.save(update_fields=["api_key", "last_mod"])
     return redirect("profile")
 
 
@@ -535,7 +546,8 @@ def api_key_revoke(request):
     if not user:
         return redirect("login")
     user.revoke_api_key()
-    user.save(update_fields=["api_key"])
+    user.last_mod = timezone.now()
+    user.save(update_fields=["api_key", "last_mod"])
     return redirect("profile")
 
 

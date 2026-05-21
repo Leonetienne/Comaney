@@ -1,6 +1,8 @@
 """Overlay helpers: personal per-participant category/tags on buddy expenses."""
 from __future__ import annotations
 
+from django.utils import timezone
+
 
 def upsert_overlay(expense, feuser, category, tags: list, note: str | None = None):
     """
@@ -23,7 +25,8 @@ def upsert_overlay(expense, feuser, category, tags: list, note: str | None = Non
     )
     overlay.category = category
     overlay.note = note
-    overlay.save(update_fields=["category", "note"])
+    overlay.last_mod = timezone.now()
+    overlay.save(update_fields=["category", "note", "last_mod"])
     overlay.tags.set(tags)
     return overlay
 

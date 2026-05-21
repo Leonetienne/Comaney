@@ -1,4 +1,5 @@
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from budget.models import Category
@@ -49,7 +50,8 @@ def category_detail(request, feuser, uid):
             if len(title) > 128:
                 return _err("'title' must be 128 characters or fewer.")
             cat.title = title
-            cat.save(update_fields=["title"])
+            cat.last_mod = timezone.now()
+            cat.save(update_fields=["title", "last_mod"])
         return _ok({"id": cat.uid, "title": cat.title})
 
     if request.method == "DELETE":

@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from feusers.models import FeUser
 
@@ -29,6 +30,7 @@ class OwnedModel(models.Model):
 class Category(OwnedModel):
     title = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
+    last_mod = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name_plural = "categories"
@@ -37,16 +39,25 @@ class Category(OwnedModel):
     def __str__(self) -> str:
         return self.title
 
+    def update_lastmod(self) -> None:
+        self.last_mod = timezone.now()
+        self.save(update_fields=["last_mod"])
+
 
 class Tag(OwnedModel):
     title = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
+    last_mod = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ["title"]
 
     def __str__(self) -> str:
         return self.title
+
+    def update_lastmod(self) -> None:
+        self.last_mod = timezone.now()
+        self.save(update_fields=["last_mod"])
 
 
 class Expense(OwnedModel):
@@ -70,6 +81,7 @@ class Expense(OwnedModel):
         "ScheduledExpense", null=True, blank=True, on_delete=models.SET_NULL,
         related_name="generated_expenses",
     )
+    last_mod = models.DateTimeField(default=timezone.now)
     # Buddy fields
     is_dummy = models.BooleanField(default=False)
     is_buddies_settlement = models.BooleanField(default=False)
@@ -89,6 +101,14 @@ class Expense(OwnedModel):
 
     class Meta:
         ordering = ["-date_created"]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            self.last_mod = timezone.now()
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = list(update_fields) + ["last_mod"]
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return self.title
@@ -146,9 +166,18 @@ class ScheduledExpense(OwnedModel):
     deactivated = models.BooleanField(default=False)
     notify = models.BooleanField(default=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    last_mod = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ["title"]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            self.last_mod = timezone.now()
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = list(update_fields) + ["last_mod"]
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return self.title
@@ -177,17 +206,31 @@ class ExpenseDataOverlay(models.Model):
     )
     tags = models.ManyToManyField(Tag, blank=True)
     note = models.TextField(blank=True, null=True, max_length=1024, default=None)
+    last_mod = models.DateTimeField(default=timezone.now)
 
     class Meta:
         unique_together = [("expense", "feuser")]
+
+    def update_lastmod(self) -> None:
+        self.last_mod = timezone.now()
+        self.save(update_fields=["last_mod"])
 
 
 class DashboardCard(OwnedModel):
     yaml_config = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    last_mod = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ['created_at']
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            self.last_mod = timezone.now()
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = list(update_fields) + ["last_mod"]
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"DashboardCard #{self.pk}"

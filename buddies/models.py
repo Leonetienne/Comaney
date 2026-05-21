@@ -63,6 +63,7 @@ class DummyUser(models.Model):
     is_archive = models.BooleanField(default=False)
     profile_picture = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    last_mod = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ["display_name"]
@@ -76,6 +77,10 @@ class DummyUser(models.Model):
         if len(parts) >= 2:
             return (parts[0][:1] + parts[-1][:1]).upper()
         return self.display_name[:2].upper()
+
+    def update_lastmod(self) -> None:
+        self.last_mod = timezone.now()
+        self.save(update_fields=["last_mod"])
 
     @property
     def ppic_url(self) -> str:
@@ -95,6 +100,7 @@ class ProjectMember(models.Model):
     )
     joined_at = models.DateTimeField(auto_now_add=True)
     sorting = models.IntegerField(default=1)
+    last_mod = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ["joined_at"]
@@ -117,6 +123,7 @@ class ProjectInvite(models.Model):
     token = models.CharField(max_length=64, unique=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
+    last_mod = models.DateTimeField(default=timezone.now)
 
     def is_valid(self):
         return timezone.now() < self.expires_at
@@ -149,6 +156,7 @@ class BuddyLink(models.Model):
         "feusers.FeUser", on_delete=models.CASCADE, related_name="buddy_links_b"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    last_mod = models.DateTimeField(default=timezone.now)
 
     class Meta:
         unique_together = [("user_a", "user_b")]
@@ -183,6 +191,7 @@ class BuddyInvite(models.Model):
     token = models.CharField(max_length=64, unique=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
+    last_mod = models.DateTimeField(default=timezone.now)
 
     def is_valid(self):
         return timezone.now() < self.expires_at
@@ -212,6 +221,7 @@ class DummyMergeInvite(models.Model):
     token = models.CharField(max_length=64, unique=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
+    last_mod = models.DateTimeField(default=timezone.now)
 
     def is_valid(self):
         return timezone.now() < self.expires_at
@@ -250,6 +260,7 @@ class BuddyOnboardingInvite(models.Model):
     token = models.CharField(max_length=64, unique=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
+    last_mod = models.DateTimeField(default=timezone.now)
 
     def is_valid(self):
         return timezone.now() < self.expires_at
@@ -299,6 +310,7 @@ class BuddySpending(models.Model):
     share_percent = models.DecimalField(max_digits=6, decimal_places=3)
     approval_state = models.SmallIntegerField(default=0)
     consent_set_at = models.DateTimeField(null=True, blank=True)
+    last_mod = models.DateTimeField(default=timezone.now)
 
     @property
     def consent_locked(self) -> bool:

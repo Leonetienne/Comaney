@@ -2,6 +2,7 @@ import json
 
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from ..decorators import feuser_required
@@ -52,7 +53,8 @@ def category_rename(request, uid):
     if len(title) > 128:
         return JsonResponse({"error": "Title must be 128 characters or fewer."}, status=400)
     category.title = title
-    category.save(update_fields=["title"])
+    category.last_mod = timezone.now()
+    category.save(update_fields=["title", "last_mod"])
     return JsonResponse({"uid": category.uid, "title": category.title})
 
 
@@ -88,5 +90,6 @@ def tag_rename(request, uid):
     if len(title) > 128:
         return JsonResponse({"error": "Title must be 128 characters or fewer."}, status=400)
     tag.title = title
-    tag.save(update_fields=["title"])
+    tag.last_mod = timezone.now()
+    tag.save(update_fields=["title", "last_mod"])
     return JsonResponse({"uid": tag.uid, "title": tag.title})

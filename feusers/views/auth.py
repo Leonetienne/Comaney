@@ -328,7 +328,9 @@ def password_reset(request, token):
         if form.is_valid():
             user.set_password(form.cleaned_data["password"])
             user.clear_password_reset_token()
-            user.save(update_fields=["password", "password_reset_token", "password_reset_expires"])
+            from django.utils import timezone as _tz
+            user.last_mod = _tz.now()
+            user.save(update_fields=["password", "password_reset_token", "password_reset_expires", "last_mod"])
             return redirect("password_reset_done")
     else:
         form = PasswordResetForm()
@@ -341,8 +343,10 @@ def password_reset_done(request):
 
 def confirm_email_change(request, token):
     user = get_object_or_404(FeUser, email_change_token=token)
+    from django.utils import timezone as _tz
     user.email = user.pending_email
     user.pending_email = ""
     user.email_change_token = ""
-    user.save(update_fields=["email", "pending_email", "email_change_token"])
+    user.last_mod = _tz.now()
+    user.save(update_fields=["email", "pending_email", "email_change_token", "last_mod"])
     return render(request, "feusers/email_change_confirmed.html", {"user": user})

@@ -27,8 +27,10 @@ def rename_dummy(request, dummy_id):
         return JsonResponse({"error": "Name must be 128 characters or fewer."}, status=400)
     if dummy.is_archive:
         return JsonResponse({"error": "Cannot rename the archive."}, status=400)
+    from django.utils import timezone as _tz
     dummy.display_name = name
-    dummy.save(update_fields=["display_name"])
+    dummy.last_mod = _tz.now()
+    dummy.save(update_fields=["display_name", "last_mod"])
     return JsonResponse({"display_name": dummy.display_name})
 
 
@@ -334,8 +336,10 @@ def dummy_picture(request, dummy_id):
             ppics_dir = settings.MEDIA_ROOT / "offline-buddy-ppic"
             ppics_dir.mkdir(exist_ok=True)
             img.save(ppics_dir / f"{dummy.pk}.jpg", "JPEG", quality=85)
+            from django.utils import timezone as _tz
             dummy.profile_picture = True
-            dummy.save(update_fields=["profile_picture"])
+            dummy.last_mod = _tz.now()
+            dummy.save(update_fields=["profile_picture", "last_mod"])
             return JsonResponse({"ok": True})
         except Exception:
             return JsonResponse(
@@ -344,10 +348,12 @@ def dummy_picture(request, dummy_id):
             )
 
     elif action == "picture_delete":
+        from django.utils import timezone as _tz
         ppic_path = settings.MEDIA_ROOT / "offline-buddy-ppic" / f"{dummy.pk}.jpg"
         ppic_path.unlink(missing_ok=True)
         dummy.profile_picture = False
-        dummy.save(update_fields=["profile_picture"])
+        dummy.last_mod = _tz.now()
+        dummy.save(update_fields=["profile_picture", "last_mod"])
         return JsonResponse({"ok": True})
 
     return JsonResponse({"ok": False, "error": "Unknown action."}, status=400)

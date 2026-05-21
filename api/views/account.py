@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from ..utils import _err, _ok, _parse_body, _require_auth
@@ -87,7 +88,8 @@ def account(request, feuser):
                 setattr(feuser, field, bool(data[field]))
                 update_fields.append(field)
         if update_fields:
-            feuser.save(update_fields=update_fields)
+            feuser.last_mod = timezone.now()
+            feuser.save(update_fields=update_fields + ["last_mod"])
         return _ok({
             "email":                        feuser.email,
             "first_name":                   feuser.first_name,

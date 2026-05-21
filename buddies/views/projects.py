@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib import messages as django_messages
+from django.utils import timezone
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -623,7 +624,8 @@ def project_rename_dummy(request, project_id, dummy_id):
     if dummy.is_archive:
         return JsonResponse({"error": "Cannot rename the archive."}, status=400)
     dummy.display_name = name
-    dummy.save(update_fields=["display_name"])
+    dummy.last_mod = timezone.now()
+    dummy.save(update_fields=["display_name", "last_mod"])
     return JsonResponse({"display_name": dummy.display_name})
 
 
@@ -778,7 +780,7 @@ def reorder_projects(request):
         ProjectMember.objects.filter(
             feuser=feuser,
             group_id=project_id,
-        ).update(sorting=idx)
+        ).update(sorting=idx, last_mod=timezone.now())
 
     return JsonResponse({"ok": True})
 

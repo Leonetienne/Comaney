@@ -62,6 +62,7 @@ class FeUser(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(null=True, blank=True)
     last_seen = models.DateTimeField(null=True, blank=True)
+    last_mod = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ["email"]
@@ -100,6 +101,10 @@ class FeUser(models.Model):
         self.pending_email = new_email
         self.email_change_token = secrets.token_urlsafe(32)
         return self.email_change_token
+
+    def update_lastmod(self) -> None:
+        self.last_mod = timezone.now()
+        self.save(update_fields=["last_mod"])
 
     def generate_api_key(self) -> str:
         self.api_key = secrets.token_urlsafe(32)

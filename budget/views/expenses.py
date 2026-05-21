@@ -553,8 +553,10 @@ def expense_mute_notifications(request, uid):
 @feuser_required
 def mute_all_notifications(request):
     """Disable all email notifications for the current user."""
+    from django.utils import timezone as _tz
     request.feuser.email_notifications = False
-    request.feuser.save(update_fields=["email_notifications"])
+    request.feuser.last_mod = _tz.now()
+    request.feuser.save(update_fields=["email_notifications", "last_mod"])
     return redirect("budget:expenses_list")
 
 

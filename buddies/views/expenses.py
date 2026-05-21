@@ -258,6 +258,8 @@ def _participant_set_approval(request, expense_id, new_state):
             bs.consent_set_at = timezone.now()
             update_fields.append("consent_set_at")
         bs.approval_state = new_state
+        bs.last_mod = timezone.now()
+        update_fields.append("last_mod")
         bs.save(update_fields=update_fields)
         BuddyEmailService.send_participant_approval_notification(expense, feuser, new_state)
 
