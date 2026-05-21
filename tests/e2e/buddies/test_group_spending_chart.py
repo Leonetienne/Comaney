@@ -78,9 +78,7 @@ class TestGroupSpendingChart:
     def test_legend_shows_amounts(self, driver, w, ctx):
         legend = driver.find_element(By.ID, "group-spending-legend")
         text = legend.text
-        # Admin paid 100 and owes 50% of 60 = 30, so admin spent: 60 (payer_amount of 100) + 30 = 90
-        # Member owes 40% of 100 = 40, paid 60 and has payer_amount of 30, spent = 40 + 30 = 70
-        # Check that meaningful amounts appear (just verify non-zero values)
+        # Pie chart shows upfront payments only: admin paid 100, member paid 60
         assert "%" in text, "Legend must include percentage values"
 
     def test_svg_has_clip_paths(self, driver, w, ctx):

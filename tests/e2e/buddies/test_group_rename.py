@@ -45,7 +45,7 @@ class TestGroupRenameAdmin:
         cleanup_user(a["email"])
 
     def test_group_detail_loads(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
         assert "Original Name" in driver.page_source
 
@@ -70,7 +70,7 @@ class TestGroupRenameAdmin:
         assert name == "Renamed Group"
 
     def test_set_description_via_form(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
         desc_input = driver.find_element(By.ID, "project-rename-desc")
         driver.execute_script("arguments[0].value = arguments[1];", desc_input, "A test description.")
@@ -86,7 +86,7 @@ class TestGroupRenameAdmin:
         assert desc == "A test description."
 
     def test_clear_description(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
         desc_input = driver.find_element(By.ID, "project-rename-desc")
         driver.execute_script("arguments[0].value = '';", desc_input)

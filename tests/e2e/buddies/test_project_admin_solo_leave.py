@@ -21,7 +21,7 @@ class TestAdminSoloCannotLeave:
         cleanup_user(a["email"])
 
     def test_no_leave_button_for_solo_admin(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['gid']}/"))
+        driver.get(_url(f"/projects/{ctx['gid']}/settings/"))
         time.sleep(1)
         assert "Leave project" not in driver.page_source
 
@@ -69,7 +69,7 @@ class TestAdminWithDummyCannotLeave:
         cleanup_user(a["email"])
 
     def test_no_leave_button_when_only_dummies(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['gid']}/"))
+        driver.get(_url(f"/projects/{ctx['gid']}/settings/"))
         time.sleep(1)
         assert "Leave project" not in driver.page_source
 

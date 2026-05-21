@@ -120,13 +120,15 @@ def _ui_create_project(driver, name: str, description: str = "") -> int:
 
 
 def _ui_upload_picture(driver, project_uid: int) -> None:
-    """Upload projectpic.jpg via the project detail page."""
-    driver.get(_url(f"/projects/{project_uid}/"))
+    """Upload projectpic.jpg via the project settings page."""
+    driver.get(_url(f"/projects/{project_uid}/settings/"))
     time.sleep(1)
     driver.execute_script("document.getElementById('project-pic-input').style.display = 'block';")
     driver.find_element(By.ID, "project-pic-input").send_keys(ASSET)
+    time.sleep(0.3)
+    # Fallback submit in case the change-event auto-upload did not fire
     driver.execute_script(
-        "document.getElementById('btn-upload-project-pic').closest('form').submit();"
+        "var f = document.getElementById('project-pic-upload-form'); if (f) f.submit();"
     )
     time.sleep(2)
 
@@ -152,8 +154,8 @@ def _ui_add_personal_dummy(driver, name: str) -> None:
 
 
 def _ui_add_dummy(driver, project_uid: int, name: str) -> None:
-    """Add an offline member via the project detail form."""
-    driver.get(_url(f"/projects/{project_uid}/"))
+    """Add an offline member via the project settings form."""
+    driver.get(_url(f"/projects/{project_uid}/settings/"))
     time.sleep(2)
     inp = driver.find_element(By.CSS_SELECTOR, "input[name='display_name']")
     driver.execute_script("arguments[0].value = arguments[1];", inp, name)

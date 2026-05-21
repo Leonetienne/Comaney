@@ -24,7 +24,7 @@ class TestProjectArchiveBasic:
         cleanup_user(a["email"])
 
     def test_archive_button_present(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['gid']}/"))
+        driver.get(_url(f"/projects/{ctx['gid']}/settings/"))
         time.sleep(1)
         assert "Archive project" in driver.page_source
 
@@ -69,10 +69,10 @@ class TestArchivedProjectFrozen:
         cleanup_user(b["email"])
 
     def test_add_expense_button_not_visible(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['gid']}/"))
+        driver.get(_url(f"/projects/{ctx['gid']}/settings/"))
         time.sleep(1)
-        # Archived project should not show invite members section
-        assert "Invite members" not in driver.page_source
+        # Archived project does not show invite/add members section in settings
+        assert "Invite by email" not in driver.page_source
 
     def test_expense_delete_button_not_visible(self, driver, w, ctx):
         source = driver.page_source
@@ -99,7 +99,7 @@ class TestArchivedProjectFrozen:
         assert r3.status_code in (200, 302, 403)
 
     def test_unarchive_restores_project(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['gid']}/"))
+        driver.get(_url(f"/projects/{ctx['gid']}/settings/"))
         time.sleep(1)
         form = driver.find_element(By.CSS_SELECTOR,
             f"form[action*='/projects/{ctx['gid']}/unarchive/']")
@@ -140,6 +140,6 @@ class TestArchivedProjectMemberLeave:
         # Verify Bob is still a member
         from bhelpers import _login_as
         _login_as(driver, ctx["b"])
-        driver.get(_url(f"/projects/{ctx['gid']}/"))
+        driver.get(_url(f"/projects/{ctx['gid']}/settings/"))
         time.sleep(1)
         assert "Leave project" in driver.page_source
