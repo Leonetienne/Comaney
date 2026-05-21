@@ -6,6 +6,8 @@
 - Only analyze, modify, create, or delete files and run commands
 - Updating a feature: keep CLAUDE.md, AGENTS.md, and docs/src/ in sync
 - New functional features or fixes: must add tests
+- Always code in a way a human can maintain it!
+- Use best practices, Don't repeat yourself (DRY), clear architecture
 
 ## Stack
 - Python 3.12, Django, Gunicorn, WhiteNoise, mysqlclient, MariaDB
