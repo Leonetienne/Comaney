@@ -429,7 +429,7 @@ def expense_edit(request, uid):
         existing_upfront_type = "me"
         existing_upfront_id = form_feuser.pk
 
-    is_buddy_expense = expense.buddy_spendings.exists() or expense.is_dummy
+    is_buddy_expense = expense.buddy_spendings.exists() or expense.is_dummy or bool(expense.project_id)
 
     return render(request, "budget/expense_form.html", {
         "active_nav": "expenses",
