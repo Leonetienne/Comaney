@@ -538,3 +538,96 @@ class TestAutoSettleAndApiSettled:
                     and "ExpenseMuted" in m.get("Subject", "")]
         assert len(new_msgs) == 0
         api_delete(f"/api/v1/expenses/{eid}/", ctx)
+
+
+class TestNotificationClasses:
+    """Per-class notification preferences block the right emails."""
+
+    def _no_new_msgs(self, label):
+        msgs = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
+        return [m for m in msgs if label in m.get("Subject", "")]
+
+    def test_api_defaults_all_true(self, driver, w, ctx):
+        account = api_get("/api/v1/account/", ctx).json()
+        assert account["notify_expense_reminders"] is True
+        assert account["notify_expense_settled"] is True
+        assert account["notify_expense_participation"] is True
+        assert account["notify_expense_assignments"] is True
+        assert account["notify_participant_decisions"] is True
+        assert account["notify_settlements"] is True
+        assert account["notify_group_activity"] is True
+
+    def test_api_patch_class_flag(self, driver, w, ctx):
+        resp = api_patch("/api/v1/account/", ctx, json={"notify_expense_reminders": False})
+        assert resp.status_code == 200
+        assert resp.json()["notify_expense_reminders"] is False
+        api_patch("/api/v1/account/", ctx, json={"notify_expense_reminders": True})
+        assert api_get("/api/v1/account/", ctx).json()["notify_expense_reminders"] is True
+
+    def test_reminder_blocked_when_class_disabled(self, driver, w, ctx):
+        """Cron sends no reminder when notify_expense_reminders=False."""
+        api_patch("/api/v1/account/", ctx, json={"notify_expense_reminders": False})
+        e = _mk(ctx, "ClassBlock Reminder", IN_10_DAYS)
+        eid = e["id"]
+        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": IN_3_DAYS})
+        seen = mailpit_seen_ids()
+        _run_notify()
+        time.sleep(2)
+        new_msgs = {
+            m["ID"] for m in
+            requests.get("http://localhost:8030/api/v1/messages", timeout=5)
+            .json().get("messages", [])
+        }
+        assert not (new_msgs - seen), "Reminder must be blocked when notify_expense_reminders=False"
+        api_patch("/api/v1/account/", ctx, json={"notify_expense_reminders": True})
+        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+
+    def test_settled_blocked_when_class_disabled(self, driver, w, ctx):
+        """Settled notification is suppressed when notify_expense_settled=False."""
+        api_patch("/api/v1/account/", ctx, json={"notify_expense_settled": False})
+        e = _mk(ctx, "ClassBlock Settled", IN_3_DAYS)
+        eid = e["id"]
+        msgs_before = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
+        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"settled": True})
+        time.sleep(2)
+        msgs_after = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
+        new_settled = [m for m in msgs_after
+                       if m.get("ID") not in {x.get("ID") for x in msgs_before}
+                       and "ClassBlock Settled" in m.get("Subject", "")]
+        assert len(new_settled) == 0
+        api_patch("/api/v1/account/", ctx, json={"notify_expense_settled": True})
+        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+
+    def test_profile_page_shows_notification_checkboxes(self, driver, w, ctx):
+        """Profile settings page renders all notification class checkboxes."""
+        driver.get(_url("/profile/"))
+        time.sleep(1)
+        for field_id in (
+            "id_email_notifications",
+            "id_notify_expense_reminders",
+            "id_notify_expense_settled",
+            "id_notify_expense_participation",
+            "id_notify_expense_assignments",
+            "id_notify_participant_decisions",
+            "id_notify_settlements",
+            "id_notify_group_activity",
+        ):
+            el = driver.find_element(By.ID, field_id)
+            assert el is not None, f"Missing checkbox: {field_id}"
+            assert el.is_selected(), f"{field_id} should be checked by default"
+
+    def test_profile_page_saves_notification_preferences(self, driver, w, ctx):
+        """Unchecking a class checkbox on the profile page and saving persists the change."""
+        driver.get(_url("/profile/"))
+        time.sleep(1)
+        cb = driver.find_element(By.ID, "id_notify_expense_reminders")
+        assert cb.is_selected()
+        cb.click()
+        time.sleep(0.1)
+        driver.execute_script(
+            "document.querySelector(\"input[name='action'][value='notifications']\").closest('form').submit()"
+        )
+        time.sleep(2)
+        assert api_get("/api/v1/account/", ctx).json()["notify_expense_reminders"] is False
+        # Re-enable via API so state is clean for subsequent tests
+        api_patch("/api/v1/account/", ctx, json={"notify_expense_reminders": True})

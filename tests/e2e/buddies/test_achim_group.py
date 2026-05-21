@@ -89,7 +89,15 @@ class TestAchimGroupCreated:
         assert "Say hello to Achim Archive" in driver.page_source
 
     def test_offline_otto_gone(self, driver, w, ctx):
-        assert "Offline Otto" not in driver.page_source
+        # Check the member-list cards specifically. The expense note written by
+        # merge_dummy_into_archive ("Original participant was: Offline Otto") is
+        # rendered in a collapsed DOM section, so page_source always contains the
+        # name; what matters is that no member card still lists Otto.
+        member_names = [
+            el.text for el in driver.find_elements(By.CSS_SELECTOR, ".buddy-card-dummy .buddy-name")
+        ]
+        assert "Offline Otto" not in member_names, \
+            f"Offline Otto must not appear in the member list, got: {member_names}"
 
     def test_achim_archive_appears_in_member_list(self, driver, w, ctx):
         assert "Achim Archive" in driver.page_source, \
@@ -248,9 +256,17 @@ class TestAchimGroupSelfDebtCancels:
         assert f"/projects/{ctx['group_id']}/" in driver.current_url
 
     def test_achim_is_only_dummy_member(self, driver, w, ctx):
-        assert "Achim Archive" in driver.page_source
-        assert "DummyA" not in driver.page_source
-        assert "DummyB" not in driver.page_source
+        # Check member cards only — archived notes in collapsed DOM sections
+        # contain "DummyA"/"DummyB" as audit trail text, so page_source is not reliable.
+        member_names = [
+            el.text for el in driver.find_elements(By.CSS_SELECTOR, ".buddy-card-dummy .buddy-name")
+        ]
+        assert "Achim Archive" in member_names, \
+            f"Achim Archive must appear in the member list, got: {member_names}"
+        assert "DummyA" not in member_names, \
+            f"DummyA must not appear in the member list, got: {member_names}"
+        assert "DummyB" not in member_names, \
+            f"DummyB must not appear in the member list, got: {member_names}"
 
     def test_no_simplified_links_in_page(self, driver, w, ctx):
         src = driver.page_source

@@ -76,7 +76,7 @@ class TestAISettings:
 
 class TestEmailNotificationsToggle:
 
-    def test_disable_via_profile_form(self, driver, w, ctx):
+    def test_disable_via_notifications_form(self, driver, w, ctx):
         api_patch("/api/v1/account/", ctx, json={"email_notifications": True})
 
         driver.get(_url("/profile/"))
@@ -86,14 +86,14 @@ class TestEmailNotificationsToggle:
             checkbox.click()
             time.sleep(0.2)
 
-        _submit_form(driver, "profile")
+        _submit_form(driver, "notifications")
         time.sleep(2)
         assert "Saved." in driver.page_source
 
         time.sleep(1)
         assert api_get("/api/v1/account/", ctx).json()["email_notifications"] is False
 
-    def test_enable_via_profile_form(self, driver, w, ctx):
+    def test_enable_via_notifications_form(self, driver, w, ctx):
         driver.get(_url("/profile/"))
         time.sleep(1)
         checkbox = driver.find_element(By.ID, "id_email_notifications")
@@ -101,7 +101,7 @@ class TestEmailNotificationsToggle:
             checkbox.click()
             time.sleep(0.2)
 
-        _submit_form(driver, "profile")
+        _submit_form(driver, "notifications")
         time.sleep(2)
         assert "Saved." in driver.page_source
 

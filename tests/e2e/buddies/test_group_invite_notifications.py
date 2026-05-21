@@ -192,6 +192,7 @@ class TestGroupMemberRemovedNotification:
         assert "Remove" in body or "Admin" in body
 
     def test_voluntary_leave_sends_no_email(self, driver, w, ctx):
+
         """A member who leaves voluntarily must NOT receive a removal email."""
         c = setup_user(None, None, first_name="Leaving", last_name="Voluntarily")
         _add_group_member(ctx["group_id"], c["email"])
@@ -213,3 +214,58 @@ class TestGroupMemberRemovedNotification:
         except TimeoutError:
             pass  # expected: no email sent
         cleanup_user(c["email"])
+
+
+# ---------------------------------------------------------------------------
+# Suppression: notify_group_activity=False
+# ---------------------------------------------------------------------------
+
+class TestGroupActivityNotificationSuppressed:
+    """notify_group_activity=False: group membership change emails are not sent."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="GrpAdmin", last_name="Suppressed")
+        c = setup_user(None, None, first_name="GrpJoiner", last_name="Suppressed")
+        group_id = _create_group(a["email"], "Suppressed Activity Group")
+        seen_before = mailpit_seen_ids()
+        _shell(
+            f"from buddies.services import BuddyGroupService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
+            f"admin = FeUser.objects.get(email='{a['email']}'); "
+            f"g = Project.objects.get(pk={group_id}); "
+            f"BuddyGroupService.invite_member(g, admin, '{c['email']}')"
+        )
+        body = fetch_email(c["email"], "Suppressed Activity Group", ignore_ids=seen_before)
+        invite_link = extract_link(body)
+        yield {"a": a, "c": c, "group_id": int(group_id), "invite_link": invite_link}
+        cleanup_user(a["email"])
+        cleanup_user(c["email"])
+
+    def test_no_accepted_email_when_group_activity_disabled(self, driver, w, ctx):
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"FeUser.objects.filter(email='{ctx['a']['email']}')"
+            f".update(notify_group_activity=False)"
+        )
+        seen_before = mailpit_seen_ids()
+        _login_as(driver, ctx["c"])
+        driver.get(ctx["invite_link"])
+        time.sleep(1)
+        driver.find_element(By.ID, "btn-accept-project-invite").click()
+        time.sleep(2)
+        import requests
+        from helpers import MAILPIT_API
+        msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])
+        new_for_a = [
+            m for m in msgs
+            if m["ID"] not in seen_before
+            and any(t.get("Address") == ctx["a"]["email"] for t in m.get("To", []))
+        ]
+        assert len(new_for_a) == 0, \
+            "No group-activity email expected when notify_group_activity=False"
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"FeUser.objects.filter(email='{ctx['a']['email']}')"
+            f".update(notify_group_activity=True)"
+        )

@@ -183,3 +183,119 @@ class TestParticipantSeesNeedsApproval:
         # Only the expense owner (B) gets the Review button; A must not
         review_buttons = driver.find_elements(By.CSS_SELECTOR, "[id^='btn-review-exp-']")
         assert len(review_buttons) == 0, "Participant A must not see the Review button"
+
+
+# ---------------------------------------------------------------------------
+# Suppression: notify_expense_assignments=False
+# ---------------------------------------------------------------------------
+
+class TestExpenseAssignmentNotificationSuppressed:
+    """notify_expense_assignments=False: approval-request email not sent to the payer."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Assign", last_name="Initiator")
+        b = setup_user(None, None, first_name="Assign", last_name="Payer")
+        _create_buddy_link(a["email"], b["email"])
+        a_pk = int(_get_pk(a["email"]))
+        exp_pk = _create_personal_expense_with_buddy(
+            owner_email=b["email"],
+            participant_pk=a_pk,
+            title="Assignment Suppressed",
+            value="40.00",
+            share="50.0",
+            approved=False,
+        )
+        yield {"a": a, "b": b, "exp_pk": int(exp_pk)}
+        cleanup_user(a["email"])
+        cleanup_user(b["email"])
+
+    def test_no_assignment_email_when_class_disabled(self, driver, w, ctx):
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"FeUser.objects.filter(email='{ctx['b']['email']}')"
+            f".update(notify_expense_assignments=False)"
+        )
+        seen_before = mailpit_seen_ids()
+        _shell(
+            f"from buddies.services.email import BuddyEmailService; "
+            f"from budget.models import Expense; from feusers.models import FeUser; "
+            f"exp = Expense.objects.get(pk={ctx['exp_pk']}); "
+            f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
+            f"BuddyEmailService.send_expense_approval_request(exp, a)"
+        )
+        time.sleep(2)
+        import requests
+        from helpers import MAILPIT_API
+        msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])
+        new_for_b = [
+            m for m in msgs
+            if m["ID"] not in seen_before
+            and any(t.get("Address") == ctx["b"]["email"] for t in m.get("To", []))
+        ]
+        assert len(new_for_b) == 0, \
+            "No approval-request email expected when notify_expense_assignments=False"
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"FeUser.objects.filter(email='{ctx['b']['email']}')"
+            f".update(notify_expense_assignments=True)"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Suppression: notify_participant_decisions=False
+# ---------------------------------------------------------------------------
+
+class TestParticipantDecisionNotificationSuppressed:
+    """notify_participant_decisions=False: participant approval change not sent to the payer."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Payer", last_name="NoDecision")
+        b = setup_user(None, None, first_name="Part", last_name="Decider")
+        _create_buddy_link(a["email"], b["email"])
+        b_pk = int(_get_pk(b["email"]))
+        exp_pk = _create_personal_expense_with_buddy(
+            owner_email=a["email"],
+            participant_pk=b_pk,
+            title="Decision Suppressed",
+            value="60.00",
+            share="50.0",
+            approved=True,
+        )
+        yield {"a": a, "b": b, "b_pk": b_pk, "exp_pk": int(exp_pk)}
+        cleanup_user(a["email"])
+        cleanup_user(b["email"])
+
+    def test_no_decision_email_when_class_disabled(self, driver, w, ctx):
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"FeUser.objects.filter(email='{ctx['a']['email']}')"
+            f".update(notify_participant_decisions=False)"
+        )
+        seen_before = mailpit_seen_ids()
+        _shell(
+            f"from buddies.services.email import BuddyEmailService; "
+            f"from buddies.models import BuddySpending; "
+            f"from budget.models import Expense; from feusers.models import FeUser; "
+            f"exp = Expense.objects.get(pk={ctx['exp_pk']}); "
+            f"b = FeUser.objects.get(email='{ctx['b']['email']}'); "
+            f"BuddyEmailService.send_participant_approval_notification("
+            f"  exp, b, BuddySpending.APPROVAL_APPROVED)"
+        )
+        time.sleep(2)
+        import requests
+        from helpers import MAILPIT_API
+        msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])
+        new_for_a = [
+            m for m in msgs
+            if m["ID"] not in seen_before
+            and any(t.get("Address") == ctx["a"]["email"] for t in m.get("To", []))
+        ]
+        assert len(new_for_a) == 0, \
+            "No participant-decision email expected when notify_participant_decisions=False"
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"FeUser.objects.filter(email='{ctx['a']['email']}')"
+            f".update(notify_participant_decisions=True)"
+        )

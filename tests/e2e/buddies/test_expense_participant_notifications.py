@@ -429,3 +429,58 @@ class TestSettlementNoNotification:
                 raise AssertionError(
                     f"Settlement must not trigger a participation notice, but got: {subj}"
                 )
+
+
+# ---------------------------------------------------------------------------
+# Suppression: notify_expense_participation=False
+# ---------------------------------------------------------------------------
+
+class TestParticipationNotificationSuppressed:
+    """notify_expense_participation=False: participation emails are not sent."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Mia", last_name="Payer")
+        b = setup_user(None, None, first_name="Nick", last_name="Participant")
+        _create_buddy_link(a["email"], b["email"])
+        b_pk = int(_get_pk(b["email"]))
+        yield {"a": a, "b": b, "b_pk": b_pk}
+        cleanup_user(a["email"])
+        cleanup_user(b["email"])
+
+    def test_no_participation_email_when_class_disabled(self, driver, w, ctx):
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"FeUser.objects.filter(email='{ctx['b']['email']}')"
+            f".update(notify_expense_participation=False)"
+        )
+        seen_before = mailpit_seen_ids()
+        exp_pk = _shell(
+            f"from budget.expense_factory import create_expense; "
+            f"from feusers.models import FeUser; from budget.models import TransactionType; "
+            f"from decimal import Decimal; import datetime; "
+            f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
+            f"e = create_expense(owning_feuser=a, title='Suppressed Part Notice', "
+            f"  type=TransactionType.EXPENSE, value=Decimal('50.00'), "
+            f"  date_due=datetime.date.today(), settled=False, "
+            f"  buddy_spendings=[{{'type': 'feuser', 'id': {ctx['b_pk']}, 'share_percent': 50}}]); "
+            f"from buddies.services.email import BuddyEmailService; "
+            f"BuddyEmailService.notify_expense_created(e, a); "
+            f"print(e.pk)"
+        )
+        time.sleep(2)
+        import requests
+        from helpers import MAILPIT_API
+        msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])
+        new_for_b = [
+            m for m in msgs
+            if m["ID"] not in seen_before
+            and any(t.get("Address") == ctx["b"]["email"] for t in m.get("To", []))
+        ]
+        assert len(new_for_b) == 0, \
+            "No participation email expected when notify_expense_participation=False"
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"FeUser.objects.filter(email='{ctx['b']['email']}')"
+            f".update(notify_expense_participation=True)"
+        )

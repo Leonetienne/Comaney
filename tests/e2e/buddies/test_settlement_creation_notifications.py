@@ -194,3 +194,58 @@ class TestGroupDummyDebtorSettlementCreationNotifiesCreditor:
         body = fetch_email(ctx["creditor"]["email"], "settlement")
         assert "approve-settlement" in body, \
             "[CN3] Confirmation email must contain a link to approve the settlement"
+
+
+# ============================================================================
+# Suppression: notify_settlements=False
+# ============================================================================
+
+class TestSettlementNotificationSuppressed:
+    """notify_settlements=False: settlement confirmation email not sent to the creditor."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="SuppDebtor", last_name="S")
+        b = setup_user(None, None, first_name="SuppCreditor", last_name="S")
+        _create_buddy_link(a["email"], b["email"])
+        a_pk = int(_get_pk(a["email"]))
+        b_pk = int(_get_pk(b["email"]))
+        exp_pk = _create_personal_expense_with_buddy(
+            owner_email=b["email"], participant_pk=a_pk,
+            title="SuppSettlement", value="80.00", share="50.0", approved=True,
+        )
+        yield {"a": a, "b": b, "a_pk": a_pk, "b_pk": b_pk, "exp_pk": int(exp_pk)}
+        cleanup_user(a["email"])
+        cleanup_user(b["email"])
+
+    def test_no_settlement_email_when_class_disabled(self, driver, w, ctx):
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"FeUser.objects.filter(email='{ctx['b']['email']}')"
+            f".update(notify_settlements=False)"
+        )
+        seen_before = mailpit_seen_ids()
+        _shell(
+            f"from buddies.services.email import BuddyEmailService; "
+            f"from budget.models import Expense; from feusers.models import FeUser; "
+            f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
+            f"b = FeUser.objects.get(email='{ctx['b']['email']}'); "
+            f"exp = Expense.objects.get(pk={ctx['exp_pk']}); "
+            f"BuddyEmailService.send_direct_settlement_confirmation_request(exp, a, b)"
+        )
+        time.sleep(2)
+        import requests
+        from helpers import MAILPIT_API
+        msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])
+        new_for_b = [
+            m for m in msgs
+            if m["ID"] not in seen_before
+            and any(t.get("Address") == ctx["b"]["email"] for t in m.get("To", []))
+        ]
+        assert len(new_for_b) == 0, \
+            "No settlement email expected when notify_settlements=False"
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"FeUser.objects.filter(email='{ctx['b']['email']}')"
+            f".update(notify_settlements=True)"
+        )
