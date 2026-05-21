@@ -62,8 +62,18 @@ def buddy_summary_page(request):
         "buddy_spendings__participant_feuser", "buddy_spendings__participant_dummy"
     )
 
+    direct_expenses = list(direct_expenses_qs)
+    from budget.models import ExpenseDataOverlay
+    overlay_notes = {
+        o.expense_id: o.note
+        for o in ExpenseDataOverlay.objects.filter(
+            expense_id__in=[e.pk for e in direct_expenses],
+            feuser=feuser,
+        )
+    }
+
     direct_expense_data = []
-    for exp in direct_expenses_qs:
+    for exp in direct_expenses:
         if exp.is_dummy and exp.upfront_payee_dummy_id:
             payer_name = exp.upfront_payee_dummy.display_name + " (offline buddy)"
             payer_is_me = False
@@ -85,6 +95,7 @@ def buddy_summary_page(request):
             total_pct += bs.share_percent
             participant_shares.append({"name": name, "is_me": is_me, "amount": amount, "percent": bs.share_percent})
         payer_pct = Decimal("100") - total_pct
+        raw_note = overlay_notes.get(exp.pk)
         direct_expense_data.append({
             "expense": exp,
             "payer_name": payer_name,
@@ -92,6 +103,7 @@ def buddy_summary_page(request):
             "payer_amount": exp.value * payer_pct / 100,
             "payer_percent": payer_pct,
             "participant_shares": participant_shares,
+            "visible_note": raw_note if raw_note is not None else exp.note,
         })
 
     feuser_key = f"f{feuser.pk}"

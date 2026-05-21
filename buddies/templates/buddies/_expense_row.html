@@ -28,7 +28,12 @@
             {% endif %}{% endfor %}
             {% endif %}
             {% if exp.owning_feuser == request.feuser and exp.settlement_can_edit %}
-            <a href="{% url 'budget:expense_edit' exp.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ exp.uid }}" class="btn btn-sm btn-secondary">Edit</a>
+            <a href="{% url 'budget:expense_edit' exp.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ exp.uid }}" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
+            {% endif %}
+            {% if not exp.is_buddies_settlement %}
+            {% for bs in exp.buddy_spendings.all %}{% if bs.participant_feuser == request.feuser %}
+            <a href="{% url 'budget:expense_edit_overlay' exp.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ exp.uid }}" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
+            {% endif %}{% endfor %}
             {% endif %}
             {% if exp.owning_feuser == request.feuser and exp.settlement_can_delete %}
             <form method="post" action="{% url 'budget:expense_delete' exp.uid %}" class="confirm-form" data-confirm="{% if exp.is_buddies_settlement %}Cancel this settlement? This cannot be undone.{% else %}Delete this expense? This cannot be undone.{% endif %}" data-ok="{% if exp.is_buddies_settlement %}Cancel{% else %}Delete{% endif %}">

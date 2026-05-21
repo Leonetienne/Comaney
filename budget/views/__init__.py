@@ -5,7 +5,7 @@ from .dashboard_cards_api import (
 )
 from .expenses import (
     expenses_list, expenses_export,
-    expense_create, expense_edit, expense_delete, expense_clone,
+    expense_create, expense_edit, expense_edit_overlay, expense_delete, expense_clone,
     expense_bulk_action, expense_settle_via_email,
     expense_mute_notifications, mute_all_notifications,
 )
@@ -25,7 +25,7 @@ __all__ = [
     "cards_api", "card_detail_api", "cards_reorder_api",
     "card_resize_api", "card_presets_api", "cards_reset_api",
     "expenses_list", "expenses_export",
-    "expense_create", "expense_edit", "expense_delete", "expense_clone",
+    "expense_create", "expense_edit", "expense_edit_overlay", "expense_delete", "expense_clone",
     "expense_bulk_action", "expense_settle_via_email",
     "expense_mute_notifications", "mute_all_notifications",
     "scheduled_list", "scheduled_create", "scheduled_edit",

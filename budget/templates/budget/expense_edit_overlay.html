@@ -1,0 +1,52 @@
+{% extends "budget_base.html" %}
+
+{% block title %}Comaney – My tags & category{% endblock %}
+
+{% block content %}
+<h1>My tags &amp; category</h1>
+
+<div class="form-wrap">
+    <div class="info-box mb-md">
+        <p>Set your own category and tags for <strong>{{ expense.title }}</strong>. This only affects your personal bookkeeping and does not change the original expense.</p>
+    </div>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% if back_url %}<input type="hidden" name="back" value="{{ back_url }}">{% endif %}
+
+        <label for="{{ form.category.id_for_label }}">Category</label>
+        <div style="display:inline-block;background:color-mix(in srgb,var(--sav-dep-bg) 40%,transparent);color:var(--sav-dep-fg);border-radius:6px;padding:0.35rem 0.75rem;margin-top:0.35rem;margin-bottom:0.5rem;font-size:0.85rem;">
+            <strong>Original:</strong>
+            {% if expense.category %}{{ expense.category }}{% else %}<em>None</em>{% endif %}
+        </div>
+        {{ form.category }}
+        {% for e in form.category.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+
+        <label>{{ form.tags.label }}</label>
+        <div style="display:inline-block;background:color-mix(in srgb,var(--sav-dep-bg) 40%,transparent);color:var(--sav-dep-fg);border-radius:6px;padding:0.35rem 0.75rem;margin-top:0.35rem;margin-bottom:0.5rem;font-size:0.85rem;">
+            <strong>Original:</strong>
+            {% with orig_tags=expense.tags.all %}{% if orig_tags %}{% for t in orig_tags %}{{ t }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}<em>None</em>{% endif %}{% endwith %}
+        </div>
+        {% if form.tags.field.queryset.exists %}
+        <div class="tag-cb-wrap">{{ form.tags }}</div>
+        {% else %}
+        <p class="text-muted">You have no tags yet. <a href="{% url 'budget:categories_tags' %}">Create tags</a> first.</p>
+        {% endif %}
+        {% for e in form.tags.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+
+        <label for="{{ form.note.id_for_label }}">Note</label>
+        <div style="display:inline-block;background:color-mix(in srgb,var(--sav-dep-bg) 40%,transparent);color:var(--sav-dep-fg);border-radius:6px;padding:0.35rem 0.75rem;margin-top:0.35rem;margin-bottom:0.5rem;font-size:0.85rem;">
+            <strong>Original:</strong>
+            {% if expense.note %}{{ expense.note }}{% else %}<em>None</em>{% endif %}
+        </div>
+        {{ form.note }}
+        {% for e in form.note.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+
+        <div class="form-actions mt-lg">
+            <button type="submit" class="btn btn-primary">Save</button>
+            {% if back_url %}
+            <a href="{{ back_url }}" class="btn btn-secondary">Cancel</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

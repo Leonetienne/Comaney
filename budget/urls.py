@@ -24,6 +24,7 @@ urlpatterns = [
     path("expenses/export/", views.expenses_export, name="expenses_export"),
     path("expenses/new/", views.expense_create, name="expense_create"),
     path("expenses/<int:uid>/edit/", views.expense_edit, name="expense_edit"),
+    path("expenses/<int:uid>/edit-overlay/", views.expense_edit_overlay, name="expense_edit_overlay"),
     path("expenses/<int:uid>/clone/", views.expense_clone, name="expense_clone"),
     path("expenses/<int:uid>/delete/", views.expense_delete, name="expense_delete"),
     path("expenses/<int:uid>/settle-via-email/", views.expense_settle_via_email, name="expense_settle_via_email"),

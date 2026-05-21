@@ -56,6 +56,28 @@ class ExpenseForm(forms.ModelForm):
         }
 
 
+class ExpenseOverlayForm(forms.Form):
+    """Lite form — category, tags, and personal note for participant overlay editing."""
+    category = forms.ModelChoiceField(queryset=Category.objects.none(), required=False, empty_label="— no category —")
+    tags = forms.ModelMultipleChoiceField(
+        queryset=Tag.objects.none(), required=False, widget=forms.CheckboxSelectMultiple()
+    )
+    note = forms.CharField(
+        required=False,
+        max_length=1024,
+        widget=forms.Textarea(attrs={"rows": 3, "maxlength": 1024}),
+    )
+
+    def __init__(self, *args, feuser=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if feuser:
+            self.fields["category"].queryset = Category.objects.filter(owning_feuser=feuser)
+            self.fields["tags"].queryset = Tag.objects.filter(owning_feuser=feuser)
+
+    def clean_note(self):
+        return (self.cleaned_data.get("note") or "").replace("\r\n", "\n").replace("\r", "\n")
+
+
 class ScheduledExpenseForm(forms.ModelForm):
     value = CommaDecimalField(min_value=Decimal("0.01"), widget=forms.TextInput(attrs={"inputmode": "decimal"}))
 

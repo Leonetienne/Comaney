@@ -45,7 +45,7 @@ comaney/       Settings, root urls, middleware
 
 **Settlements**: debtor creates with `settled=True, buddy_approved=False`; balance clears only when creditor confirms (`buddy_approved=True`). Settlement expenses must never appear in "Did you pay for this?" (`pending_as_expense_owner` filters `settled=False`).
 
-**Migrations**: `./venv/bin/python3 manage.py makemigrations` then `docker compose restart web` (entrypoint runs `migrate` on start).
+**Migrations**: `./venv/bin/python3 manage.py makemigrations` to generate, then `docker-compose exec web python manage.py migrate` to apply.
 
 **Query parser** (`budget/query_parser.py`): `apply_query(qs, query_str)`. Filters: `type=`, `settled=`, `deactivated=`, `value` (comparisons), `date` (dd.mm.yyyy / mm/dd/yyyy / yyyy-mm-dd, magic: `today`, `cur_week_start`, `cur_week_end`), `cat=`, `tag=`, `payee=`, `project=`, free-text, `||` OR, `()` grouping, `!` NOT.
 

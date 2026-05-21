@@ -12,8 +12,8 @@ from feusers.templatetags.feuser_tags import avatar_color as _avatar_color
 
 from ..date_utils import financial_month_range, financial_year_range
 from ..decorators import feuser_required
-from ..forms import ExpenseForm
-from ..models import Expense, TransactionType
+from ..forms import ExpenseForm, ExpenseOverlayForm
+from ..models import Expense, ExpenseDataOverlay, TransactionType
 from ..notifications import send_settled_notification, set_initial_notification_class
 from ._period import _get_month, _get_period_mode, _get_year, _month_nav_context, _year_nav_context
 
@@ -229,9 +229,19 @@ def expense_create(request):
                 expense.project = buddy.get("group")
                 expense.save()
                 form.save_m2m()
+                # At this point expense.category/tags belong to feuser (creating user).
+                # Save an overlay for the creating feuser, then reconcile the expense
+                # to the owning feuser's matching tags/categories.
+                from budget.services import upsert_overlay, create_participant_overlays
                 from buddies.services import BuddyEmailService, BuddyExpenseService
+                creating_category = expense.category
+                creating_tags = list(expense.tags.all())
+                upsert_overlay(expense, feuser, creating_category, creating_tags)
+                BuddyExpenseService.reconcile_categories_tags(expense, other)
+                expense.save(update_fields=["category"])
                 _apply_solo_spendings(expense, buddy, feuser)
                 BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
+                create_participant_overlays(expense)
                 BuddyEmailService.send_expense_approval_request(expense, feuser)
                 BuddyEmailService.notify_expense_created(expense, feuser)
                 if expense.project:
@@ -251,8 +261,10 @@ def expense_create(request):
                 form.save_m2m()
                 if buddy:
                     from buddies.services import BuddyExpenseService, BuddyEmailService
+                    from budget.services import create_participant_overlays
                     _apply_solo_spendings(expense, buddy, feuser)
                     BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
+                    create_participant_overlays(expense)
                     BuddyEmailService.notify_expense_created(expense, feuser)
                     if expense.project:
                         expense.project.update_lastmod()
@@ -542,3 +554,38 @@ def expense_clone(request, uid):
     original.save()
     original.tags.set(tags)
     return redirect("budget:expense_edit", uid=original.pk)
+
+
+@feuser_required
+def expense_edit_overlay(request, uid):
+    """Lite editor: participants set their own category/tags for a buddy expense."""
+    feuser = request.feuser
+    from buddies.models import BuddySpending
+    spending = get_object_or_404(BuddySpending, expense__uid=uid, participant_feuser=feuser)
+    expense = spending.expense
+
+    overlay = ExpenseDataOverlay.objects.filter(expense=expense, feuser=feuser).first()
+
+    if request.method == "POST":
+        form = ExpenseOverlayForm(request.POST, feuser=feuser)
+        if form.is_valid():
+            category = form.cleaned_data["category"]
+            tags = list(form.cleaned_data["tags"])
+            note = form.cleaned_data["note"]
+            from ..services import upsert_overlay
+            upsert_overlay(expense, feuser, category, tags, note=note)
+            back = _safe_back_url(request.POST.get("back", ""))
+            return HttpResponseRedirect(back) if back else redirect("buddies:buddy_summary")
+    else:
+        initial = {}
+        if overlay:
+            initial["category"] = overlay.category
+            initial["tags"] = list(overlay.tags.all())
+            initial["note"] = overlay.note
+        form = ExpenseOverlayForm(feuser=feuser, initial=initial)
+
+    return render(request, "budget/expense_edit_overlay.html", {
+        "form": form,
+        "expense": expense,
+        "back_url": request.GET.get("back", ""),
+    })

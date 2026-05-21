@@ -1,5 +1,8 @@
 <details class="bexp-collapsible">
     <summary class="bexp-collapsible-summary">Show more info...</summary>
+    {% if e.visible_note %}
+    <p class="bexp-note text-muted" style="margin: 0.5rem 0.75rem 0.75rem;">{{ e.visible_note }}</p>
+    {% endif %}
     <table class="bexp-breakdown-table">
         <thead>
             <tr><th>Person</th><th class="text-right">Share</th><th class="text-right">Amount</th><th>Role</th></tr>

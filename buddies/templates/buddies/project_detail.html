@@ -544,7 +544,10 @@
                 </div>
                 <div class="bexp-breakdown-header-right">
                     {% if e.can_edit %}
-                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23pending-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Edit</a>
+                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23pending-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
+                    {% endif %}
+                    {% if e.can_edit_overlay %}
+                    <a href="{% url 'budget:expense_edit_overlay' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23pending-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
                     {% endif %}
 
                     {% if e.owner_approval_needed %}
@@ -615,7 +618,10 @@
                     {% endif %}{% endfor %}
                     {% endif %}
                     {% if e.can_edit %}
-                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Edit</a>
+                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
+                    {% endif %}
+                    {% if e.can_edit_overlay %}
+                    <a href="{% url 'budget:expense_edit_overlay' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
                     {% endif %}
 
                     {% if e.can_delete %}

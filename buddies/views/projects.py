@@ -94,6 +94,15 @@ def project_detail(request, project_id):
     feuser_key = f"f{feuser.pk}"
     dummy_pks_in_project = {m.dummy_id for m in project.members.all() if m.dummy_id}
 
+    from budget.models import ExpenseDataOverlay
+    overlay_notes = {
+        o.expense_id: o.note
+        for o in ExpenseDataOverlay.objects.filter(
+            expense_id__in=[ed["expense"].pk for ed in breakdown["expenses"]],
+            feuser=feuser,
+        )
+    }
+
     for exp_data in breakdown["expenses"]:
         exp = exp_data["expense"]
         exp_data["creditor_approval_needed"] = False
@@ -150,6 +159,7 @@ def project_detail(request, project_id):
             exp_data["can_delete"] = False
             exp_data["can_unlink"] = False
             exp_data["can_edit"] = False
+            exp_data["can_edit_overlay"] = False
             # Allow confirming/rejecting pending settlements (in-flight)
         else:
             exp_data["can_delete"] = (
@@ -173,6 +183,12 @@ def project_detail(request, project_id):
                 )
             else:
                 exp_data["can_edit"] = is_feuser_direct_owner or (is_admin and is_dummy_exp_in_project)
+            exp_data["can_edit_overlay"] = (
+                exp_data["i_am_participant"]
+                and not exp.is_buddies_settlement
+            )
+        raw_note = overlay_notes.get(exp.pk)
+        exp_data["visible_note"] = raw_note if raw_note is not None else exp.note
 
     raw_flows: dict = {}
     for exp_data in breakdown["expenses"]:

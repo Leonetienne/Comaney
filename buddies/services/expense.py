@@ -118,7 +118,20 @@ class BuddyExpenseService:
             expense.is_dummy = False
             expense.upfront_payee_dummy = None
             expense.buddy_approved = False
-            BuddyExpenseService.reconcile_categories_tags(expense, new_payer_feuser)
+
+            from budget.services import apply_overlay, snapshot_overlay
+            from budget.models import ExpenseDataOverlay
+
+            # Preserve old owner's current tags/category as their overlay
+            snapshot_overlay(expense, old_owner)
+
+            # Apply new owner's pre-saved overlay, or fall back to title-matching
+            try:
+                existing = ExpenseDataOverlay.objects.get(expense=expense, feuser=new_payer_feuser)
+                apply_overlay(existing, expense)
+            except ExpenseDataOverlay.DoesNotExist:
+                BuddyExpenseService.reconcile_categories_tags(expense, new_payer_feuser)
+
             expense.save()
 
         elif new_payer_dummy is not None and new_payer_dummy != old_dummy_payer:
