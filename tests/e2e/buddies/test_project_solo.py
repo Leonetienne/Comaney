@@ -120,3 +120,21 @@ class TestSoloProjectExpenseCreation:
         # Solo project expenses have no buddy spendings (solo-project path)
         participants = exp_data.get("buddy_participants", [])
         assert len(participants) == 0, "Solo project expense must not have buddy_participants"
+
+    def test_edit_form_shows_project_tab_for_solo_expense(self, driver, w, ctx):
+        """Editing a solo-project expense must pre-select the Project tab, not None."""
+        exp_uid = _shell(
+            f"from budget.models import Expense; "
+            f"e = Expense.objects.filter(project_id={ctx['gid']}, title='Solo Repair Cost').first(); "
+            f"print(e.uid if e else 'none')"
+        )
+        if exp_uid == "none":
+            pytest.skip("Expense not found via shell")
+        driver.get(_url(f"/budget/expenses/{exp_uid}/edit/"))
+        time.sleep(1)
+        project_tab = driver.find_element(By.ID, "assign-project")
+        none_tab = driver.find_element(By.ID, "assign-none")
+        assert "assign-tab--active" in project_tab.get_attribute("class"), \
+            "Project tab must be active when editing a solo-project expense"
+        assert "assign-tab--active" not in none_tab.get_attribute("class"), \
+            "None tab must not be active when editing a solo-project expense"
