@@ -101,7 +101,10 @@ def expense_detail(request, feuser, uid):
                     BuddyEmailService.send_settlement_cancelled_notification(
                         exp, bs.participant_feuser
                     )
+            _proj = exp.project
             exp.delete()
+            if _proj:
+                _proj.update_lastmod()
             return JsonResponse({}, status=204)
 
     if request.method == "PATCH":
@@ -118,11 +121,16 @@ def expense_detail(request, feuser, uid):
             return _err(tag_err)
         if not was_settled and exp.settled:
             send_settled_notification(exp)
+        if exp.project:
+            exp.project.update_lastmod()
         exp.refresh_from_db()
         return _ok(_expense_json(exp))
 
     if request.method == "DELETE":
+        _proj = exp.project
         exp.delete()
+        if _proj:
+            _proj.update_lastmod()
         return JsonResponse({}, status=204)
 
     return _err("Method not allowed.", 405)

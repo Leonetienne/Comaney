@@ -335,6 +335,7 @@ def expense_edit(request, uid):
         form = ExpenseForm(request.POST, instance=expense, feuser=form_feuser)
         buddy = _parse_buddy_post(request.POST, feuser)
         if form.is_valid() and (buddy is None or buddy["valid"]):
+            _pre_edit_project = expense.project
             form.save()
             if buddy:
                 new_type = buddy["upfront_type"]
@@ -379,6 +380,8 @@ def expense_edit(request, uid):
                 )
                 if expense.project:
                     expense.project.update_lastmod()
+                if _pre_edit_project and _pre_edit_project != expense.project:
+                    _pre_edit_project.update_lastmod()
             else:
                 # Buddy payment removed: clear all buddy data
                 expense.buddy_spendings.all().delete()
@@ -387,6 +390,8 @@ def expense_edit(request, uid):
                 expense.upfront_payee_dummy = None
                 expense.project = None
                 expense.save(update_fields=["is_dummy", "buddy_approved", "upfront_payee_dummy", "project"])
+                if _pre_edit_project:
+                    _pre_edit_project.update_lastmod()
                 if _old_participants:
                     from buddies.services import BuddyEmailService
                     BuddyEmailService.notify_expense_updated(
@@ -473,7 +478,10 @@ def expense_delete(request, uid):
                 BuddyEmailService.send_settlement_cancelled_notification(
                     expense, bs.participant_feuser
                 )
+    _proj = expense.project
     expense.delete()
+    if _proj:
+        _proj.update_lastmod()
     messages.success(request, "Expense deleted.")
     back = _safe_back_url(request.POST.get("back", ""))
     return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
@@ -504,7 +512,17 @@ def expense_bulk_action(request):
         elif action == "unsettle":
             qs.update(settled=False)
         elif action == "delete":
-            qs.exclude(is_buddies_settlement=True).delete()
+            qs_del = qs.exclude(is_buddies_settlement=True)
+            from buddies.models import Project as _Project
+            affected_project_pks = set(
+                qs_del.filter(project__isnull=False).values_list("project_id", flat=True)
+            )
+            qs_del.delete()
+            for _pk in affected_project_pks:
+                try:
+                    _Project.objects.get(pk=_pk).update_lastmod()
+                except _Project.DoesNotExist:
+                    pass
 
     referer = request.META.get("HTTP_REFERER")
     if referer:

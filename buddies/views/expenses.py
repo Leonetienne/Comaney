@@ -131,8 +131,11 @@ def reject_settlement_as_creditor(request, expense_id):
     debtor = expense.owning_feuser
     creditor = request.feuser
     group_id = expense.project_id
+    _proj = expense.project if expense.project_id else None
     BuddyEmailService.send_settlement_rejection_notification(expense, creditor, debtor)
     expense.delete()
+    if _proj:
+        _proj.update_lastmod()
     django_messages.warning(request, "Settlement rejected. The debtor has been notified.")
     if group_id:
         return redirect("projects:project_detail", project_id=group_id)
