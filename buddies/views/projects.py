@@ -1,4 +1,5 @@
 import json
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -95,13 +96,16 @@ def project_detail(request, project_id):
     dummy_pks_in_project = {m.dummy_id for m in project.members.all() if m.dummy_id}
 
     from budget.models import ExpenseDataOverlay
-    overlay_notes = {
-        o.expense_id: o.note
-        for o in ExpenseDataOverlay.objects.filter(
+    _overlays = list(
+        ExpenseDataOverlay.objects
+        .filter(
             expense_id__in=[ed["expense"].pk for ed in breakdown["expenses"]],
             feuser=feuser,
         )
-    }
+        .prefetch_related("tags")
+    )
+    overlay_notes = {o.expense_id: o.note for o in _overlays}
+    overlay_tags  = {o.expense_id: [t.title for t in o.tags.all()] for o in _overlays}
 
     for exp_data in breakdown["expenses"]:
         exp = exp_data["expense"]
@@ -315,6 +319,101 @@ def project_detail(request, project_id):
         for node in graph_nodes
     ])
 
+    # ── Spending over time (line chart) ──────────────────────────────────────
+    spending_over_time_json = None
+    non_settlement_approved = [
+        ed for ed in approved_expenses if not ed["expense"].is_buddies_settlement
+    ]
+    if non_settlement_approved:
+        dated = []
+        for ed in non_settlement_approved:
+            exp = ed["expense"]
+            d = exp.date_due if exp.date_due else exp.date_created.date()
+            dated.append((d, ed["payer_key"], float(ed["total"])))
+
+        first_date = min(r[0] for r in dated)
+        today_date = date.today()
+        total_days = (today_date - first_date).days   # 0 when single day
+        span       = total_days + 1
+        n_steps    = min(100, span)
+
+        all_keys      = list(breakdown["member_map"].keys())
+        bucket_totals = [0.0] * n_steps
+        bucket_by_key = {k: [0.0] * n_steps for k in all_keys}
+
+        for (d, payer_key, amount) in dated:
+            idx = min(n_steps - 1, (d - first_date).days * n_steps // span)
+            bucket_totals[idx] += amount
+            if payer_key in bucket_by_key:
+                bucket_by_key[payer_key][idx] += amount
+
+        labels = []
+        for i in range(n_steps):
+            end_offset = min(total_days, (i + 1) * span // n_steps - 1)
+            labels.append((first_date + timedelta(days=end_offset)).isoformat())
+
+        line_series = [{"label": "Total", "color": "#888888",
+                        "values": [round(v, 2) for v in bucket_totals]}]
+        for k, info in breakdown["member_map"].items():
+            name = "You" if info["is_me"] else info["name"]
+            line_series.append({"label": name,
+                                 "values": [round(v, 2) for v in bucket_by_key[k]]})
+
+        spending_over_time_json = json.dumps({"labels": labels, "series": line_series})
+
+    # ── Tag distribution (bar chart) ─────────────────────────────────────────
+    # Each expense is bucketed by the feuser's own tags (expense.tags for
+    # expenses they own; overlay tags for expenses they participate in).
+    # The value counted is the full expense amount — not feuser's share —
+    # so it answers "how much did the project spend on X" not "how much did I".
+    # Only expenses where feuser has a tag mapping (owner or participant) are
+    # included; expenses with no mapping go into (untagged).
+    tag_dist_json = None
+    if non_settlement_approved:
+        from budget.models import Expense as _Exp
+        feuser_owned_pks = [
+            ed["expense"].pk for ed in non_settlement_approved
+            if not ed["expense"].is_dummy
+            and ed["expense"].owning_feuser_id == feuser.pk
+        ]
+        expense_tag_map: dict[int, list[str]] = {}
+        for exp_obj in _Exp.objects.filter(pk__in=feuser_owned_pks).prefetch_related("tags"):
+            expense_tag_map[exp_obj.pk] = [t.title for t in exp_obj.tags.all()]
+
+        tag_amounts: dict[str, float] = {}
+        for ed in non_settlement_approved:
+            exp = ed["expense"]
+
+            # Only include expenses where feuser is the owner or a participant.
+            is_owner       = not exp.is_dummy and exp.owning_feuser_id == feuser.pk
+            is_participant = any(s["is_me"] for s in ed["participant_shares"])
+            if not is_owner and not is_participant:
+                continue
+
+            if is_owner:
+                tags = expense_tag_map.get(exp.pk, [])
+            else:
+                tags = overlay_tags.get(exp.pk, [])
+
+            amount = float(ed["total"])
+            if tags:
+                for title in tags:
+                    tag_amounts[title] = tag_amounts.get(title, 0.0) + amount
+            else:
+                tag_amounts["(untagged)"] = tag_amounts.get("(untagged)", 0.0) + amount
+
+        if tag_amounts:
+            tagged   = sorted(
+                ((k, v) for k, v in tag_amounts.items() if k != "(untagged)"),
+                key=lambda x: -x[1],
+            )
+            untagged = [(k, v) for k, v in tag_amounts.items() if k == "(untagged)"]
+            sorted_tags = tagged + untagged
+            tag_dist_json = json.dumps({
+                "labels": [t[0] for t in sorted_tags],
+                "values": [round(t[1], 2) for t in sorted_tags],
+            })
+
     return render(request, "buddies/project_detail.html", {
         "active_nav": "projects",
         "project": project,
@@ -337,6 +436,8 @@ def project_detail(request, project_id):
         "spending_pie_json": spending_pie_json,
         "project_total_spending": project_total_spending,
         "group_total_spending": project_total_spending,  # backward compat
+        "spending_over_time_json": spending_over_time_json,
+        "tag_dist_json": tag_dist_json,
         "has_multiple_members": len(breakdown["member_map"]) > 1,
         "currency": feuser.currency,
     })

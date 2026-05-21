@@ -6,7 +6,8 @@
     "build:js": "esbuild build/js/expenses.js --bundle --minify --target=es2020 --outfile=static/dist/expenses.js",
     "build:dashboard": "esbuild build/js/dashboard.js --bundle --minify --target=es2020 --outfile=static/dist/dashboard.js",
     "build:buddy_expense": "esbuild build/js/buddy_expense.js --bundle --minify --target=es2020 --outfile=static/dist/buddy_expense.js",
-    "build": "npm run build:css && npm run build:js && npm run build:dashboard && npm run build:buddy_expense",
+    "build:project_charts": "esbuild build/js/project_charts.js --bundle --minify --target=es2020 --outfile=static/dist/project_charts.js",
+    "build": "npm run build:css && npm run build:js && npm run build:dashboard && npm run build:buddy_expense && npm run build:project_charts",
     "watch:css": "sass --watch build/scss/main.scss:static/dist/main.css"
   },
   "dependencies": {

@@ -1175,6 +1175,15 @@
   white-space: nowrap;
 }
 
+// ── Project detail: Chart.js canvas wrappers ─────────────────────────────────
+
+.proj-chart-wrap {
+  position: relative;
+  width: 100%;
+
+  canvas { display: block; }
+}
+
 // ── Group detail: individual settle form ─────────────────────────────────────
 
 .settle-form-row {

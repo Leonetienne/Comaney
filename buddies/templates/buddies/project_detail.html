@@ -8,6 +8,7 @@
 
 {% block content %}
 {% load feuser_tags %}
+{% load static %}
 <div class="group-hero{% if project.group_picture %} group-hero--has-bg{% endif %}"{% if project.group_picture %} style="background-image: url('/media/bgpics/{{ project.uid }}.webp')"{% endif %}>
     <div class="page-header">
         <h1>{{ project.name }}</h1>
@@ -49,7 +50,7 @@
 
 {# ── Balances (hidden for solo projects) ────────────────────────────────── #}
 {% if not is_solo %}
-<section class="buddies-section">
+<section class="buddies-section" id="section-balances">
     <h2>Your balances</h2>
 
     {% if my_balances %}
@@ -221,8 +222,10 @@
 
 </section>
 
-{# ── Spending Breakdown Pie Chart ─────────────────────────────────────────── #}
-{% if group_total_spending %}
+{% endif %}{# end not is_solo #}
+
+{# ── Spending Breakdown Pie Chart (non-solo only) ──────────────────────────── #}
+{% if group_total_spending and not is_solo %}
 <section class="buddies-section">
     <h2>Spending breakdown</h2>
     <div class="buddies-section--surface">
@@ -370,6 +373,46 @@
 </section>
 {% endif %}
 
+{# ── Spending over time (all projects) ────────────────────────────────────── #}
+{% if spending_over_time_json %}
+<section class="buddies-section">
+    <h2>Spending over time</h2>
+    <div class="buddies-section--surface">
+    <p class="page-subtitle" style="margin:0 0 0.25rem;">Total: <strong>{{ currency }}{{ project_total_spending|floatformat:2 }}</strong></p>
+    <p class="font-sm text-muted" style="margin:0 0 1rem;">How expenses were added to this project over time. Settlements are not included.</p>
+    <div class="proj-chart-wrap">
+        <canvas id="proj-spending-line"></canvas>
+    </div>
+    </div>
+</section>
+{% endif %}
+
+{# ── Tag distribution (all projects, bucketed by feuser's tags/overlays) ─── #}
+{% if tag_dist_json %}
+<section class="buddies-section">
+    <h2>Project spending by tag</h2>
+    <div class="buddies-section--surface">
+    <p class="font-sm text-muted" style="margin:0 0 1rem;">Project expenses grouped by your tags. For expenses added by others, this uses your personal tag notes.</p>
+    <div class="proj-chart-wrap">
+        <canvas id="proj-tag-bar"></canvas>
+    </div>
+    </div>
+</section>
+{% endif %}
+
+{# ── Chart.js data + bundle ───────────────────────────────────────────────── #}
+{% if spending_over_time_json or tag_dist_json %}
+<script>
+window.PROJECT_CHARTS = {
+    currency: "{{ currency|escapejs }}"
+    {% if spending_over_time_json %},spendingOverTime: {{ spending_over_time_json|safe }}{% endif %}
+    {% if tag_dist_json %},tagDist: {{ tag_dist_json|safe }}{% endif %}
+};
+</script>
+<script src="{% static 'dist/project_charts.js' %}" defer></script>
+{% endif %}
+
+{% if not is_solo %}
 <section class="buddies-section">
     <h2>Clear everything at once</h2>
     <div class="buddies-section--surface">
@@ -412,7 +455,7 @@
     {% endif %}
     </div>
 </section>
-{% endif %}{# end not is_solo #}
+{% endif %}{# end not is_solo for settle #}
 
 {# ── Settle with Group Buddy (Part A, hidden for solo and archived) ───────── #}
 {% if not is_solo and not project.archived %}
