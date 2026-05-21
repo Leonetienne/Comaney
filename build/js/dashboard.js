@@ -274,6 +274,9 @@ function dashboardBoard() {
                 return `hsl(${Math.abs(h) % 360},60%,${dark ? 60 : 45}%)`;
             };
 
+            const tension      = (card.config && card.config.render_type) === 'linear' ? 0 : 0.35;
+            const cfg          = card.config || {};
+
             const datasets = card.data.series.map((s, i) => {
                 const color = s.color || PALETTE[i % PALETTE.length];
                 return {
@@ -284,7 +287,7 @@ function dashboardBoard() {
                     borderWidth:     2,
                     pointRadius:     labels.length > 60 ? 0 : 2,
                     pointHoverRadius: 4,
-                    tension:         0.35,
+                    tension,
                     fill:            false,
                 };
             });
@@ -295,7 +298,7 @@ function dashboardBoard() {
             canvas.style.height = avail + 'px';
 
             const bucketStarts = card.data.bucket_starts || labels;
-            const seriesCfg    = (card.config && card.config.series) || [];
+            const seriesCfg    = cfg.series || [];
 
             const hasAnyLink = seriesCfg.some(s => s.link_template);
 
@@ -339,9 +342,15 @@ function dashboardBoard() {
                             },
                             grid: { display: false },
                         },
-                        y: {
-                            ticks: { font: { size: 11 } },
-                        },
+                        y: (() => {
+                            const s = { ticks: { font: { size: 11 } } };
+                            if (cfg.suggested_min != null) s.suggestedMin = cfg.suggested_min;
+                            if (cfg.suggested_max != null) s.suggestedMax = cfg.suggested_max;
+                            const allVals = datasets.flatMap(d => d.data);
+                            if (cfg.limit_max != null && Math.max(...allVals) > cfg.limit_max) s.max = cfg.limit_max;
+                            if (cfg.limit_min != null && Math.min(...allVals) < cfg.limit_min) s.min = cfg.limit_min;
+                            return s;
+                        })(),
                     },
                 },
             });

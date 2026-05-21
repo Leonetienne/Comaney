@@ -10,6 +10,11 @@ For the fields every card shares (type, title, query, positioning), see [Dashboa
 |---|---|--------------------------------------------------------------------------------------------|
 | `series` | Yes | The list of lines to draw. Each entry is one line on the chart.                            |
 | `method` | No | `cum` (Cumulative) or `base` (Basic). Controls how time buckets are built. Default: `cum`. |
+| `render_type` | No | `smooth` or `linear`. Controls how the line is drawn between points. Default: `smooth`. |
+| `suggested_min` | No | Soft lower bound for the Y axis. Expands further if data goes lower. |
+| `suggested_max` | No | Soft upper bound for the Y axis. Expands further if data goes higher. |
+| `limit_min` | No | Hard lower cut-off. The axis never goes below this, even if data does. |
+| `limit_max` | No | Hard upper cut-off. The axis never goes above this, even if data does. |
 
 ---
 
@@ -23,6 +28,35 @@ This controls how the Y axis is built across time.
 
 - `cum`: cumulative. Each point shows the running total up to that day or week. Good for "how much have I spent up to this point?"
 - `base`: per-bucket. Each point shows only the activity within that time window. Good for "which days did I spend the most?"
+
+---
+
+## `render_type`
+
+```yaml
+render_type: smooth
+```
+
+Controls the shape of the line between data points.
+
+- `smooth`: the line curves gently between points (default).
+- `linear`: the line goes straight from point to point with no curve.
+
+---
+
+## Y-axis bounds
+
+```yaml
+suggested_min: -500
+suggested_max: 1000
+limit_min: -1000
+limit_max: 2000
+```
+
+All four fields are optional and can be combined freely. If none are set, the Y axis scales automatically to fit the data.
+
+- `suggested_min` / `suggested_max`: create headroom. The axis will reach at least this far, but expands beyond it if any data point requires more room.
+- `limit_min` / `limit_max`: hard cut-offs. The axis never goes beyond these values, even if data does.
 
 ---
 

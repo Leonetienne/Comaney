@@ -36,6 +36,11 @@ Card YAML schema:
     show_sum: true/false             # show computed sum row at top; default false
     sum_template: "$VALUE $CURRENCY_SYMBOL"  # template for the sum row
     # line-chart fields:
+    render_type: smooth | linear    # optional; line interpolation; default smooth
+    suggested_min: 0                # optional float; soft lower bound; expands if data goes lower
+    suggested_max: 100              # optional float; soft upper bound; expands if data goes higher
+    limit_min: -50                   # optional float; hard lower cap; clips data below
+    limit_max: 200                   # optional float; hard upper cap; clips data above
     series:                     # required; list of data series
       - label: "Series name"
         query: "..."            # optional; additional filter per series
@@ -147,6 +152,8 @@ def parse_card_config(yaml_str: str) -> dict:
             raise CardConfigError("method for charts must be sum or total")
 
     series = []
+    render_type = 'smooth'
+    ranges = {}
     if card_type == 'line-chart':
         method = cfg.get('method', 'cum')
         if str(method) not in VALID_LINE_METHODS:
@@ -171,6 +178,32 @@ def parse_card_config(yaml_str: str) -> dict:
                 'flip_signs':    bool(s.get('flip_signs', False)),
                 'link_template': str(s.get('link_template', '')),
             })
+
+        render_type = str(cfg.get('render_type', 'smooth'))
+        if render_type not in ('smooth', 'linear'):
+            raise CardConfigError("render_type must be smooth or linear")
+
+        ranges = {}
+        for key in ('suggested_min', 'suggested_max', 'limit_min', 'limit_max'):
+            if cfg.get(key) is not None:
+                try:
+                    ranges[key] = float(cfg[key])
+                except (TypeError, ValueError):
+                    raise CardConfigError(f"{key} must be a number")
+
+        r = ranges
+        if 'suggested_min' in r and 'suggested_max' in r and r['suggested_min'] >= r['suggested_max']:
+            raise CardConfigError("suggested_min must be less than suggested_max")
+        if 'limit_min' in r and 'limit_max' in r and r['limit_min'] >= r['limit_max']:
+            raise CardConfigError("limit_min must be less than limit_max")
+        if 'suggested_max' in r and 'limit_max' in r and r['suggested_max'] > r['limit_max']:
+            raise CardConfigError("suggested_max cannot exceed limit_max")
+        if 'suggested_min' in r and 'limit_min' in r and r['suggested_min'] < r['limit_min']:
+            raise CardConfigError("suggested_min cannot be below limit_min")
+        if 'limit_min' in r and 'suggested_max' in r and r['limit_min'] >= r['suggested_max']:
+            raise CardConfigError("limit_min must be less than suggested_max")
+        if 'suggested_min' in r and 'limit_max' in r and r['suggested_min'] >= r['limit_max']:
+            raise CardConfigError("suggested_min must be less than limit_max")
 
     pos = cfg.get('positioning') or {}
     mobile_pos = pos.get('mobile') if isinstance(pos, dict) else None
@@ -218,6 +251,11 @@ def parse_card_config(yaml_str: str) -> dict:
         'sum_template':  str(cfg.get('sum_template', '')),
         # line-chart fields
         'series':        series,
+        'render_type':   render_type,
+        'suggested_min': ranges.get('suggested_min'),
+        'suggested_max': ranges.get('suggested_max'),
+        'limit_min':      ranges.get('limit_min'),
+        'limit_max':      ranges.get('limit_max'),
         'positioning':   positioning,
     }
 
