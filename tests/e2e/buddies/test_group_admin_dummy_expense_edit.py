@@ -69,8 +69,8 @@ class TestAdminCanEditDummyUpfrontExpense:
         _login_as(driver, ctx)
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
-        links = driver.find_elements(By.CSS_SELECTOR, "a.btn-secondary")
-        edit_links = [l for l in links if "edit" in (l.get_attribute("href") or "")]
+        links = driver.find_elements(By.CSS_SELECTOR, "a.btn-secondary[data-edit='full']")
+        edit_links = [l for l in links if str(ctx["expense_pk"]) in (l.get_attribute("href") or "")]
         assert edit_links, "Admin should see an Edit button for the dummy-upfront expense"
 
     def test_edit_form_loads_for_admin(self, driver, w, ctx):
@@ -83,13 +83,12 @@ class TestAdminCanEditDummyUpfrontExpense:
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)
-        links = driver.find_elements(By.CSS_SELECTOR, "a.btn-secondary")
+        links = driver.find_elements(By.CSS_SELECTOR, "a.btn-secondary[data-edit='full']")
         edit_links = [
             l for l in links
-            if "edit" in (l.get_attribute("href") or "")
-            and str(ctx["expense_pk"]) in (l.get_attribute("href") or "")
+            if str(ctx["expense_pk"]) in (l.get_attribute("href") or "")
         ]
-        assert not edit_links, "Non-admin member must not see Edit for a dummy-upfront expense they do not own"
+        assert not edit_links, "Non-admin member must not see full Edit for a dummy-upfront expense they do not own"
 
     def test_non_admin_member_cannot_access_edit_form(self, driver, w, ctx):
         driver.get(_url(f"/budget/expenses/{ctx['expense_pk']}/edit/"))
