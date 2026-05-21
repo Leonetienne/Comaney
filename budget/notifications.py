@@ -158,6 +158,8 @@ def send_settled_notification(expense) -> bool:
     feuser = expense.owning_feuser
     if not feuser.email_notifications or not expense.notify:
         return False
+    if not feuser.notify_expense_settled:
+        return False
     if expense.last_notification_class_sent == "settled":
         return False
     if send_expense_notification(expense, "settled"):
@@ -191,6 +193,8 @@ def process_due_notifications() -> tuple[int, int]:
     for expense in qs:
         feuser = expense.owning_feuser
         if not feuser.email_notifications:
+            continue
+        if not feuser.notify_expense_reminders:
             continue
         target = _target_class(expense)
         if not target:

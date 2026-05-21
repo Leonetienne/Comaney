@@ -8,15 +8,22 @@ from ..utils import _err, _ok, _parse_body, _require_auth
 def account(request, feuser):
     if request.method == "GET":
         return _ok({
-            "email":                      feuser.email,
-            "first_name":                 feuser.first_name,
-            "last_name":                  feuser.last_name,
-            "currency":                   feuser.currency,
-            "month_start_day":            feuser.month_start_day,
-            "month_start_prev":           feuser.month_start_prev,
-            "unspent_allowance_action":   feuser.unspent_allowance_action,
-            "allowance_transition_month": feuser.allowance_transition_month,
-            "email_notifications":        feuser.email_notifications,
+            "email":                        feuser.email,
+            "first_name":                   feuser.first_name,
+            "last_name":                    feuser.last_name,
+            "currency":                     feuser.currency,
+            "month_start_day":              feuser.month_start_day,
+            "month_start_prev":             feuser.month_start_prev,
+            "unspent_allowance_action":     feuser.unspent_allowance_action,
+            "allowance_transition_month":   feuser.allowance_transition_month,
+            "email_notifications":          feuser.email_notifications,
+            "notify_expense_reminders":     feuser.notify_expense_reminders,
+            "notify_expense_settled":       feuser.notify_expense_settled,
+            "notify_expense_participation": feuser.notify_expense_participation,
+            "notify_expense_assignments":   feuser.notify_expense_assignments,
+            "notify_participant_decisions": feuser.notify_participant_decisions,
+            "notify_settlements":           feuser.notify_settlements,
+            "notify_group_activity":        feuser.notify_group_activity,
         })
 
     if request.method == "PATCH":
@@ -67,18 +74,37 @@ def account(request, feuser):
         if "email_notifications" in data:
             feuser.email_notifications = bool(data["email_notifications"])
             update_fields.append("email_notifications")
+        for field in (
+            "notify_expense_reminders",
+            "notify_expense_settled",
+            "notify_expense_participation",
+            "notify_expense_assignments",
+            "notify_participant_decisions",
+            "notify_settlements",
+            "notify_group_activity",
+        ):
+            if field in data:
+                setattr(feuser, field, bool(data[field]))
+                update_fields.append(field)
         if update_fields:
             feuser.save(update_fields=update_fields)
         return _ok({
-            "email":                      feuser.email,
-            "first_name":                 feuser.first_name,
-            "last_name":                  feuser.last_name,
-            "currency":                   feuser.currency,
-            "month_start_day":            feuser.month_start_day,
-            "month_start_prev":           feuser.month_start_prev,
-            "unspent_allowance_action":   feuser.unspent_allowance_action,
-            "allowance_transition_month": feuser.allowance_transition_month,
-            "email_notifications":        feuser.email_notifications,
+            "email":                        feuser.email,
+            "first_name":                   feuser.first_name,
+            "last_name":                    feuser.last_name,
+            "currency":                     feuser.currency,
+            "month_start_day":              feuser.month_start_day,
+            "month_start_prev":             feuser.month_start_prev,
+            "unspent_allowance_action":     feuser.unspent_allowance_action,
+            "allowance_transition_month":   feuser.allowance_transition_month,
+            "email_notifications":          feuser.email_notifications,
+            "notify_expense_reminders":     feuser.notify_expense_reminders,
+            "notify_expense_settled":       feuser.notify_expense_settled,
+            "notify_expense_participation": feuser.notify_expense_participation,
+            "notify_expense_assignments":   feuser.notify_expense_assignments,
+            "notify_participant_decisions": feuser.notify_participant_decisions,
+            "notify_settlements":           feuser.notify_settlements,
+            "notify_group_activity":        feuser.notify_group_activity,
         })
 
     return _err("Method not allowed.", 405)

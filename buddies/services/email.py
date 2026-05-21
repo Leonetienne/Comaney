@@ -10,18 +10,38 @@ from ..models import BuddyInvite, BuddyGroupInvite, BuddyOnboardingInvite, Dummy
 from ._helpers import _display_name
 
 
+_CLASS_FIELD = {
+    "expense_participation": "notify_expense_participation",
+    "expense_assignments":   "notify_expense_assignments",
+    "participant_decisions":  "notify_participant_decisions",
+    "settlements":            "notify_settlements",
+    "group_activity":         "notify_group_activity",
+}
+
+
 class BuddyEmailService:
     """All buddy-related email sending. Respects DISABLE_EMAILING and email_notifications."""
 
     @staticmethod
-    def _send(subject: str, template: str, ctx: dict, recipient_email: str, respect_prefs: bool = True):
+    def _send(
+        subject: str,
+        template: str,
+        ctx: dict,
+        recipient_email: str,
+        respect_prefs: bool = True,
+        notification_class: str | None = None,
+    ):
         if settings.DISABLE_EMAILING:
             return False
 
         if respect_prefs:
             feuser = ctx.get("feuser_recipient")
-            if feuser and not feuser.email_notifications:
-                return False
+            if feuser:
+                if not feuser.email_notifications:
+                    return False
+                field = _CLASS_FIELD.get(notification_class or "")
+                if field and not getattr(feuser, field, True):
+                    return False
 
         html = render_to_string(template, {**ctx, "site_url": getattr(settings, "SITE_URL", "")})
         try:
@@ -38,8 +58,13 @@ class BuddyEmailService:
 
     @staticmethod
     def send_buddy_invite(invite: BuddyInvite):
+        from feusers.models import FeUser
         site_url = getattr(settings, "SITE_URL", "")
         invite_url = f"{site_url}/buddies/invite/{invite.token}/"
+        try:
+            invitee_feuser = FeUser.objects.get(email=invite.invitee_email)
+        except FeUser.DoesNotExist:
+            invitee_feuser = None
         BuddyEmailService._send(
             subject=f"{_display_name(invite.inviter)} invited you to be spending buddies on Comaney",
             template="emails/buddy_invite.html",
@@ -47,9 +72,11 @@ class BuddyEmailService:
                 "invite": invite,
                 "inviter_name": _display_name(invite.inviter),
                 "invite_url": invite_url,
+                "feuser_recipient": invitee_feuser,
             },
             recipient_email=invite.invitee_email,
-            respect_prefs=False,
+            respect_prefs=invitee_feuser is not None,
+            notification_class="group_activity",
         )
 
     @staticmethod
@@ -67,6 +94,7 @@ class BuddyEmailService:
                 "feuser_recipient": invitee,
             },
             recipient_email=invite.invitee_email,
+            notification_class="group_activity",
         )
 
     @staticmethod
@@ -103,6 +131,7 @@ class BuddyEmailService:
                 "feuser_recipient": expense.owning_feuser,
             },
             recipient_email=expense.owning_feuser.email,
+            notification_class="expense_assignments",
         )
 
     @staticmethod
@@ -118,6 +147,7 @@ class BuddyEmailService:
                 "owner_rejected": owner_rejected,
             },
             recipient_email=notifying_feuser.email,
+            notification_class="expense_participation",
         )
 
     @staticmethod
@@ -144,6 +174,7 @@ class BuddyEmailService:
                 "group_name": group.name if is_group_merge else None,
             },
             recipient_email=invite.invited_feuser.email,
+            notification_class="group_activity",
         )
 
     @staticmethod
@@ -194,6 +225,7 @@ class BuddyEmailService:
                 "feuser_recipient": creditor_feuser,
             },
             recipient_email=creditor_feuser.email,
+            notification_class="settlements",
         )
 
     @staticmethod
@@ -223,6 +255,7 @@ class BuddyEmailService:
                 "feuser_recipient": debtor_feuser,
             },
             recipient_email=debtor_feuser.email,
+            notification_class="settlements",
         )
 
     @staticmethod
@@ -244,6 +277,7 @@ class BuddyEmailService:
                 "feuser_recipient": debtor_feuser,
             },
             recipient_email=debtor_feuser.email,
+            notification_class="settlements",
         )
 
     @staticmethod
@@ -290,6 +324,7 @@ class BuddyEmailService:
                     "admin_name": _display_name(admin_feuser),
                 },
                 recipient_email=info["feuser"].email,
+                notification_class="settlements",
             )
 
         for info in creditor_map.values():
@@ -303,6 +338,7 @@ class BuddyEmailService:
                     "admin_name": _display_name(admin_feuser),
                 },
                 recipient_email=info["feuser"].email,
+                notification_class="settlements",
             )
 
         if dummy_creditor_items:
@@ -330,6 +366,7 @@ class BuddyEmailService:
                 "feuser_recipient": removed_feuser,
             },
             recipient_email=removed_feuser.email,
+            notification_class="group_activity",
         )
 
     @staticmethod
@@ -343,6 +380,7 @@ class BuddyEmailService:
                 "feuser_recipient": invite.inviting_feuser,
             },
             recipient_email=invite.inviting_feuser.email,
+            notification_class="group_activity",
         )
 
     @staticmethod
@@ -356,6 +394,7 @@ class BuddyEmailService:
                 "feuser_recipient": invite.inviting_feuser,
             },
             recipient_email=invite.inviting_feuser.email,
+            notification_class="group_activity",
         )
 
     @staticmethod
@@ -373,6 +412,7 @@ class BuddyEmailService:
                 "feuser_recipient": notify_feuser,
             },
             recipient_email=notify_feuser.email,
+            notification_class="group_activity",
         )
 
     @staticmethod
@@ -400,6 +440,7 @@ class BuddyEmailService:
                 "feuser_recipient": creditor_feuser,
             },
             recipient_email=creditor_feuser.email,
+            notification_class="settlements",
         )
 
     @staticmethod
@@ -427,6 +468,7 @@ class BuddyEmailService:
                 "feuser_recipient": creditor_feuser,
             },
             recipient_email=creditor_feuser.email,
+            notification_class="settlements",
         )
 
     @staticmethod
@@ -440,6 +482,7 @@ class BuddyEmailService:
                 "feuser_recipient": kicked_feuser,
             },
             recipient_email=kicked_feuser.email,
+            notification_class="group_activity",
         )
 
     # ------------------------------------------------------------------
@@ -526,6 +569,7 @@ class BuddyEmailService:
                 "reject_url": reject_url,
             },
             recipient_email=recipient_feuser.email,
+            notification_class="expense_participation",
         )
 
     @staticmethod
@@ -571,6 +615,7 @@ class BuddyEmailService:
                 "APPROVAL_REJECTED": BuddySpending.APPROVAL_REJECTED,
             },
             recipient_email=notify_feuser.email,
+            notification_class="participant_decisions",
         )
 
     @staticmethod
@@ -596,6 +641,7 @@ class BuddyEmailService:
                 "feuser_recipient": recipient_feuser,
             },
             recipient_email=recipient_feuser.email,
+            notification_class="expense_participation",
         )
 
     @staticmethod
@@ -618,6 +664,7 @@ class BuddyEmailService:
                 "feuser_recipient": recipient_feuser,
             },
             recipient_email=recipient_feuser.email,
+            notification_class="expense_participation",
         )
 
     @staticmethod

@@ -110,14 +110,12 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="profile">
             {% for field in profile_form %}
-                {% if field.html_name != "month_start_prev" and field.html_name != "email_notifications" %}
+                {% if field.html_name != "month_start_prev" %}
                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {% endif %}
                 {% if field.html_name == "month_start_prev" %}
                     <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
                     <p class="month-offset-preview" id="month-offset-preview"></p>
-                {% elif field.html_name == "email_notifications" %}
-                    <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
                 {% else %}
                     {{ field }}
                 {% endif %}
@@ -127,6 +125,43 @@
                 <button type="submit" class="btn">Save changes</button>
             </div>
         </form>
+    </div>
+
+    <div class="settings-card" id="section-notifications">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Email notifications</h2>
+        </div>
+        <p class="in-page-tip">Choose which types of emails you want to receive. Invite emails are always sent regardless of these settings.</p>
+        {% if success == "notifications" %}<p class="success-msg">Saved.</p>{% endif %}
+        <form method="post" novalidate id="notifications-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="notifications">
+            {% for field in notifications_form %}
+                {% if field.html_name == "email_notifications" %}
+                    <label class="checkbox-inline notifications-master-toggle">{{ field }} <strong>{{ field.label }}</strong></label>
+                {% else %}
+                    <label class="checkbox-inline notifications-class-toggle">{{ field }} {{ field.label }}</label>
+                {% endif %}
+                {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+            {% endfor %}
+            <div class="form-actions">
+                <button type="submit" class="btn">Save changes</button>
+            </div>
+        </form>
+        <script>
+        (function () {
+            var master = document.getElementById('id_email_notifications');
+            var rows = document.querySelectorAll('#notifications-form .notifications-class-toggle');
+            function sync() {
+                rows.forEach(function (el) {
+                    el.style.opacity = master.checked ? '' : '0.4';
+                    el.style.pointerEvents = master.checked ? '' : 'none';
+                });
+            }
+            master.addEventListener('change', sync);
+            sync();
+        })();
+        </script>
     </div>
 
     <div class="settings-card" id="section-ai">

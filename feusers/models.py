@@ -35,6 +35,13 @@ class FeUser(models.Model):
     email_change_token = models.CharField(max_length=64, blank=True, db_index=True)
     api_key = models.CharField(max_length=64, blank=True, null=True, unique=True, db_index=True)
     email_notifications = models.BooleanField(default=True)
+    notify_expense_reminders = models.BooleanField(default=True)
+    notify_expense_settled = models.BooleanField(default=True)
+    notify_expense_participation = models.BooleanField(default=True)
+    notify_expense_assignments = models.BooleanField(default=True)
+    notify_participant_decisions = models.BooleanField(default=True)
+    notify_settlements = models.BooleanField(default=True)
+    notify_group_activity = models.BooleanField(default=True)
     unspent_allowance_action = models.CharField(
         max_length=20,
         default="do_nothing",

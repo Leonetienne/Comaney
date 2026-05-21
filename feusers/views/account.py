@@ -11,7 +11,7 @@ from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from ..forms import AISettingsForm, ChangeEmailForm, ChangePasswordForm, ProfileForm
+from ..forms import AISettingsForm, ChangeEmailForm, ChangePasswordForm, NotificationPreferencesForm, ProfileForm
 from ..utils import _get_session_feuser
 
 
@@ -25,14 +25,15 @@ def profile(request):
     if not feuser:
         return redirect("login")
 
-    profile_form  = ProfileForm(instance=feuser)
-    ai_form       = AISettingsForm(instance=feuser)
-    email_form    = ChangeEmailForm(feuser=feuser)
-    password_form = ChangePasswordForm(feuser=feuser)
-    success       = request.GET.get("success")
-    email_error    = None
-    picture_error  = None
-    backdrop_error = None
+    profile_form        = ProfileForm(instance=feuser)
+    notifications_form  = NotificationPreferencesForm(instance=feuser)
+    ai_form             = AISettingsForm(instance=feuser)
+    email_form          = ChangeEmailForm(feuser=feuser)
+    password_form       = ChangePasswordForm(feuser=feuser)
+    success             = request.GET.get("success")
+    email_error         = None
+    picture_error       = None
+    backdrop_error      = None
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -123,6 +124,12 @@ def profile(request):
                 profile_form.save()
                 return redirect(f"{request.path}?success=profile")
 
+        elif action == "notifications":
+            notifications_form = NotificationPreferencesForm(request.POST, instance=feuser)
+            if notifications_form.is_valid():
+                notifications_form.save()
+                return redirect(f"{request.path}?success=notifications")
+
         elif action == "ai":
             ai_form = AISettingsForm(request.POST, instance=feuser)
             if ai_form.is_valid():
@@ -171,6 +178,7 @@ def profile(request):
     return render(request, "feusers/profile.html", {
         "active_nav": "profile",
         "profile_form": profile_form,
+        "notifications_form": notifications_form,
         "ai_form": ai_form,
         "email_form": email_form,
         "password_form": password_form,

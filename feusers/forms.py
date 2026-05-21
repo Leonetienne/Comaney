@@ -6,12 +6,11 @@ from .models import FeUser
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = FeUser
-        fields = ["first_name", "last_name", "currency", "month_start_day", "month_start_prev", "unspent_allowance_action", "email_notifications"]
+        fields = ["first_name", "last_name", "currency", "month_start_day", "month_start_prev", "unspent_allowance_action"]
         labels = {
             "month_start_day": "Month starts on day",
             "month_start_prev": "In the previous calendar month",
             "unspent_allowance_action": "At month end, unspent allowance should",
-            "email_notifications": "Send email notifications for upcoming and settled expenses",
         }
         widgets = {
             "month_start_day": forms.NumberInput(attrs={"min": 1, "max": 31}),
@@ -22,6 +21,31 @@ class ProfileForm(forms.ModelForm):
         if day is not None and not (1 <= day <= 31):
             raise forms.ValidationError("Month start day must be between 1 and 31.")
         return day
+
+
+class NotificationPreferencesForm(forms.ModelForm):
+    class Meta:
+        model = FeUser
+        fields = [
+            "email_notifications",
+            "notify_expense_reminders",
+            "notify_expense_settled",
+            "notify_expense_participation",
+            "notify_expense_assignments",
+            "notify_participant_decisions",
+            "notify_settlements",
+            "notify_group_activity",
+        ]
+        labels = {
+            "email_notifications":          "Enable email notifications",
+            "notify_expense_reminders":     "Expense due date reminders (upcoming and overdue)",
+            "notify_expense_settled":       "Expense marked as paid",
+            "notify_expense_participation": "Added to, updated in, or removed from a shared expense",
+            "notify_expense_assignments":   "A shared expense was assigned to you as upfront payer",
+            "notify_participant_decisions": "A participant approved or rejected your shared expense",
+            "notify_settlements":           "Settlement requests and confirmations",
+            "notify_group_activity":        "Group membership changes",
+        }
 
 
 class AISettingsForm(forms.ModelForm):
