@@ -194,12 +194,16 @@ def account_export(request):
     if not feuser:
         return redirect("login")
 
-    from budget.models import Category, DashboardCard, Expense, ScheduledExpense, Tag
+    from django.db.models import Q
+    from budget.models import Category, DashboardCard, Expense, ExpenseDataOverlay, ScheduledExpense, Tag
+    from buddies.models import BuddyLink, BuddySpending, DummyUser, Project, ProjectMember
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
 
-        # profile.csv — dynamic: all concrete fields except internal security tokens
+        # ------------------------------------------------------------------
+        # profile.csv — dynamic: all concrete fields except security tokens
+        # ------------------------------------------------------------------
         _SKIP_FIELDS = {
             "password", "confirmation_token", "password_reset_token",
             "password_reset_expires", "totp_secret", "totp_recovery_hash",
@@ -220,8 +224,11 @@ def account_export(request):
             w.writerow([field.name, value])
         zf.writestr("profile.csv", p.getvalue())
 
+        # ------------------------------------------------------------------
+        # Helper: write a queryset as CSV (all concrete fields minus skip,
+        # plus optional extra=(header, fn) computed columns).
+        # ------------------------------------------------------------------
         def _write_model_csv(p, qs, *, skip=(), extra=()):
-            """All concrete fields (minus skip), plus extra=(col, fn) M2M columns."""
             fields = [f for f in qs.model._meta.concrete_fields if f.name not in skip]
             w = csv.writer(p)
             w.writerow([f.attname for f in fields] + [col for col, _ in extra])
@@ -236,9 +243,11 @@ def account_export(request):
                     row.append(fn(obj))
                 w.writerow(row)
 
-        _TAGS     = ("tags",     lambda obj: "|".join(t.title for t in obj.tags.all()))
-        _CATEGORY = ("category", lambda obj: obj.category.title if obj.category else "")
+        _TAG_IDS = ("tag_ids", lambda obj: ",".join(str(t.uid) for t in obj.tags.all()))
 
+        # ------------------------------------------------------------------
+        # categories.csv / tags.csv
+        # ------------------------------------------------------------------
         p = io.StringIO()
         _write_model_csv(p, Category.objects.filter(owning_feuser=feuser), skip={"owning_feuser"})
         zf.writestr("categories.csv", p.getvalue())
@@ -247,23 +256,60 @@ def account_export(request):
         _write_model_csv(p, Tag.objects.filter(owning_feuser=feuser), skip={"owning_feuser"})
         zf.writestr("tags.csv", p.getvalue())
 
-        p = io.StringIO()
-        _write_model_csv(
-            p,
+        # ------------------------------------------------------------------
+        # expenses.csv — own expenses (identical scheme used for foreign too).
+        # category_id is kept as a raw FK; tag_ids are comma-separated UIDs.
+        # ------------------------------------------------------------------
+        _EXPENSE_SKIP = {"owning_feuser"}
+        own_expenses_qs = (
             Expense.objects.filter(owning_feuser=feuser)
-                .select_related("category").prefetch_related("tags").order_by("date_created"),
-            skip={"owning_feuser", "category"},
-            extra=[_CATEGORY, _TAGS],
+            .prefetch_related("tags")
+            .order_by("date_created")
         )
+        p = io.StringIO()
+        _write_model_csv(p, own_expenses_qs, skip=_EXPENSE_SKIP, extra=[_TAG_IDS])
         zf.writestr("expenses.csv", p.getvalue())
 
+        # ------------------------------------------------------------------
+        # expense_participants.csv — BuddySpending rows for own expenses.
+        # Lists who shared each of the feuser's expenses (feusers and offline
+        # buddies), with their share and approval state.
+        # ------------------------------------------------------------------
+        own_spendings = (
+            BuddySpending.objects
+            .filter(expense__owning_feuser=feuser)
+            .select_related("expense", "participant_feuser", "participant_dummy")
+            .order_by("expense__date_created", "uid")
+        )
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow([
+            "expense_id", "expense_title",
+            "participant_feuser_email", "participant_dummy_id", "participant_dummy_name",
+            "share_percent", "approval_state", "consent_set_at",
+        ])
+        for bs in own_spendings:
+            w.writerow([
+                bs.expense_id,
+                bs.expense.title,
+                bs.participant_feuser.email if bs.participant_feuser_id else "",
+                bs.participant_dummy_id or "",
+                bs.participant_dummy.display_name if bs.participant_dummy_id else "",
+                bs.share_percent,
+                bs.approval_state,
+                bs.consent_set_at.isoformat() if bs.consent_set_at else "",
+            ])
+        zf.writestr("expense_participants.csv", p.getvalue())
+
+        # ------------------------------------------------------------------
+        # scheduled_expenses.csv / dashboard_cards.csv
+        # ------------------------------------------------------------------
         p = io.StringIO()
         _write_model_csv(
             p,
-            ScheduledExpense.objects.filter(owning_feuser=feuser)
-                .select_related("category").prefetch_related("tags"),
-            skip={"owning_feuser", "category"},
-            extra=[_CATEGORY, _TAGS],
+            ScheduledExpense.objects.filter(owning_feuser=feuser).prefetch_related("tags"),
+            skip={"owning_feuser"},
+            extra=[_TAG_IDS],
         )
         zf.writestr("scheduled_expenses.csv", p.getvalue())
 
@@ -274,6 +320,176 @@ def account_export(request):
             skip={"owning_feuser"},
         )
         zf.writestr("dashboard_cards.csv", p.getvalue())
+
+        # ------------------------------------------------------------------
+        # foreign_expenses.csv — expenses owned by other feusers where this
+        # user is a participant. Identical column scheme to expenses.csv.
+        # ------------------------------------------------------------------
+        foreign_expense_ids = (
+            BuddySpending.objects
+            .filter(participant_feuser=feuser)
+            .values_list("expense_id", flat=True)
+        )
+        foreign_expenses_qs = (
+            Expense.objects
+            .filter(uid__in=foreign_expense_ids)
+            .select_related("category", "owning_feuser").prefetch_related("tags")
+            .order_by("date_created")
+        )
+        p = io.StringIO()
+        _write_model_csv(
+            p, foreign_expenses_qs,
+            skip=_EXPENSE_SKIP | {"category"},
+            extra=[("owning_feuser_email", lambda obj: obj.owning_feuser.email)],
+        )
+        zf.writestr("foreign_expenses.csv", p.getvalue())
+
+        # ------------------------------------------------------------------
+        # expense_overlays.csv — feuser's personal category/tags/note on
+        # shared expenses (own or foreign).
+        # category_id and tag_ids use raw IDs, consistent with expenses.csv.
+        # ------------------------------------------------------------------
+        overlays = (
+            ExpenseDataOverlay.objects
+            .filter(feuser=feuser)
+            .select_related("expense")
+            .prefetch_related("tags")
+        )
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["expense_id", "expense_title", "category_id", "tag_ids", "note"])
+        for ov in overlays:
+            w.writerow([
+                ov.expense_id,
+                ov.expense.title,
+                ov.category_id or "",
+                ",".join(str(t.uid) for t in ov.tags.all()),
+                "" if ov.note is None else ov.note,
+            ])
+        zf.writestr("expense_overlays.csv", p.getvalue())
+
+        # ------------------------------------------------------------------
+        # real_user_buddies.csv — confirmed real-user buddy connections.
+        # ------------------------------------------------------------------
+        links = (
+            BuddyLink.objects
+            .filter(Q(user_a=feuser) | Q(user_b=feuser))
+            .select_related("user_a", "user_b")
+        )
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["buddy_email", "buddy_first_name", "buddy_last_name", "linked_since"])
+        for lnk in links:
+            other = lnk.other(feuser)
+            w.writerow([other.email, other.first_name, other.last_name, lnk.created_at.isoformat()])
+        zf.writestr("real_user_buddies.csv", p.getvalue())
+
+        # ------------------------------------------------------------------
+        # project_memberships.csv — all projects feuser is a member of.
+        # ------------------------------------------------------------------
+        memberships = (
+            ProjectMember.objects
+            .filter(feuser=feuser)
+            .select_related("group")
+            .order_by("joined_at")
+        )
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["project_id", "project_name", "is_admin", "joined_at"])
+        for m in memberships:
+            w.writerow([
+                m.group_id,
+                m.group.name,
+                m.group.admin_feuser_id == feuser.pk,
+                m.joined_at.isoformat(),
+            ])
+        zf.writestr("project_memberships.csv", p.getvalue())
+
+        # ------------------------------------------------------------------
+        # administered_projects.csv — full project records for projects where
+        # feuser is admin.
+        # project_offline_members.csv — offline members of those projects.
+        # Media: projects/{uid}/picture.webp and offline member pics.
+        # ------------------------------------------------------------------
+        admin_projects = list(
+            Project.objects.filter(admin_feuser=feuser).order_by("name")
+        )
+        p = io.StringIO()
+        _write_model_csv(
+            p,
+            Project.objects.filter(admin_feuser=feuser).order_by("name"),
+            skip={"admin_feuser"},
+        )
+        zf.writestr("administered_projects.csv", p.getvalue())
+
+        project_offline_members = (
+            DummyUser.objects
+            .filter(owning_group__admin_feuser=feuser)
+            .select_related("owning_group")
+            .order_by("owning_group__name", "display_name")
+        )
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["uid", "project_id", "project_name", "display_name", "is_archive", "has_picture", "created_at"])
+        for d in project_offline_members:
+            w.writerow([
+                d.pk,
+                d.owning_group_id,
+                d.owning_group.name,
+                d.display_name,
+                d.is_archive,
+                d.profile_picture,
+                d.created_at.isoformat(),
+            ])
+        zf.writestr("project_offline_members.csv", p.getvalue())
+
+        for proj in admin_projects:
+            if proj.group_picture:
+                pic = settings.MEDIA_ROOT / "bgpics" / f"{proj.pk}.webp"
+                if pic.exists():
+                    zf.write(pic, f"projects/{proj.pk}/picture.webp")
+
+        for d in project_offline_members:
+            if d.profile_picture:
+                pic = settings.MEDIA_ROOT / "offline-buddy-ppic" / f"{d.pk}.jpg"
+                if pic.exists():
+                    zf.write(pic, f"projects/{d.owning_group_id}/offline_members/{d.pk}.jpg")
+
+        # ------------------------------------------------------------------
+        # offline_buddies.csv — offline (dummy) buddies owned personally by
+        # feuser (owning_feuser=feuser, regardless of project membership).
+        # Includes profile pictures.
+        # ------------------------------------------------------------------
+        personal_dummies = (
+            DummyUser.objects
+            .filter(owning_feuser=feuser)
+            .order_by("display_name")
+        )
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["uid", "display_name", "is_archive", "has_picture", "created_at"])
+        for d in personal_dummies:
+            w.writerow([d.pk, d.display_name, d.is_archive, d.profile_picture, d.created_at.isoformat()])
+        zf.writestr("offline_buddies.csv", p.getvalue())
+
+        for d in personal_dummies:
+            if d.profile_picture:
+                pic = settings.MEDIA_ROOT / "offline-buddy-ppic" / f"{d.pk}.jpg"
+                if pic.exists():
+                    zf.write(pic, f"offline_buddies/{d.pk}.jpg")
+
+        # ------------------------------------------------------------------
+        # Feuser media files.
+        # ------------------------------------------------------------------
+        if feuser.profile_picture:
+            ppic = settings.MEDIA_ROOT / "ppics" / f"{feuser.pk}.jpg"
+            if ppic.exists():
+                zf.write(ppic, "profile_picture.jpg")
+
+        if feuser.custom_backdrop:
+            backdrop = settings.MEDIA_ROOT / "backdrops" / f"{feuser.pk}.png"
+            if backdrop.exists():
+                zf.write(backdrop, "custom_backdrop.png")
 
     filename = f"comaney_export_{timezone.localdate().isoformat()}.zip"
     response = HttpResponse(buf.getvalue(), content_type="application/zip")
