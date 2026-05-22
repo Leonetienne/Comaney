@@ -155,6 +155,18 @@ class TestScheduledFormValidation:
         resp = _form_post(s, "/budget/scheduled/new/", {**BASE_SCHEDULED, "type": "carry_over"})
         assert resp.status_code == 200
 
+    def test_repeat_factor_missing(self, driver, w, ctx):
+        s = _session(driver)
+        data = {k: v for k, v in BASE_SCHEDULED.items() if k != "repeat_every_factor"}
+        resp = _form_post(s, "/budget/scheduled/new/", data)
+        assert resp.status_code == 200
+
+    def test_repeat_unit_missing(self, driver, w, ctx):
+        s = _session(driver)
+        data = {k: v for k, v in BASE_SCHEDULED.items() if k != "repeat_every_unit"}
+        resp = _form_post(s, "/budget/scheduled/new/", data)
+        assert resp.status_code == 200
+
 
 class TestProfileFormValidation:
 
