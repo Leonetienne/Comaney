@@ -79,6 +79,32 @@ _TOTAL_NEGATIVE_TYPES = {'income', 'savings_wit', 'carry_over'}
 
 DEFAULT_POSITIONING = {'position': 0, 'width': 2, 'height': 2}
 
+# ---------------------------------------------------------------------------
+# Allowed-key schemas (used by _check_unknown to reject typos)
+# ---------------------------------------------------------------------------
+
+_COMMON_KEYS = {'type', 'title', 'query', 'positioning'}
+
+ALLOWED_KEYS = {
+    'cell':       _COMMON_KEYS | {'method', 'flip_signs', 'color', 'color_lightmode',
+                                   'color_darkmode', 'color_breakpoints', 'color-breakpoints',
+                                   'link', 'link_template', 'template', 'python'},
+    'bar-chart':  _COMMON_KEYS | {'method', 'group', 'max_groups', 'hide_groups',
+                                   'flip_signs', 'link_template'},
+    'pie-chart':  _COMMON_KEYS | {'method', 'group', 'max_groups', 'hide_groups',
+                                   'flip_signs', 'link_template'},
+    'list':       _COMMON_KEYS | {'method', 'order_by', 'order_dir', 'type_colors',
+                                   'show_sum', 'sum_template'},
+    'line-chart': _COMMON_KEYS | {'method', 'series', 'render_type',
+                                   'suggested_min', 'suggested_max',
+                                   'limit_min', 'limit_max'},
+}
+
+ALLOWED_SERIES_KEYS       = {'label', 'query', 'method', 'color', 'flip_signs', 'link_template'}
+ALLOWED_BREAKPOINT_KEYS   = {'less_than', 'color', 'color_lightmode', 'color_darkmode'}
+ALLOWED_POSITIONING_KEYS  = {'position', 'width', 'height', 'mobile'}
+ALLOWED_MOBILE_KEYS       = {'position', 'width', 'height'}
+
 
 # ---------------------------------------------------------------------------
 # YAML parsing
@@ -86,6 +112,12 @@ DEFAULT_POSITIONING = {'position': 0, 'width': 2, 'height': 2}
 
 class CardConfigError(ValueError):
     pass
+
+
+def _check_unknown(mapping: dict, allowed: set, context: str) -> None:
+    unknown = set(mapping.keys()) - allowed
+    if unknown:
+        raise CardConfigError(f"{context}: unknown field(s): {', '.join(sorted(unknown))}")
 
 
 def parse_card_config(yaml_str: str) -> dict:
@@ -101,6 +133,8 @@ def parse_card_config(yaml_str: str) -> dict:
     card_type = cfg.get('type', '')
     if card_type not in VALID_TYPES:
         raise CardConfigError(f"type must be one of: {', '.join(sorted(VALID_TYPES))}")
+
+    _check_unknown(cfg, ALLOWED_KEYS[card_type], 'card')
 
     if card_type in ('bar-chart', 'pie-chart'):
         group = cfg.get('group', '')
@@ -133,6 +167,7 @@ def parse_card_config(yaml_str: str) -> dict:
         for i, bp in enumerate(raw_bp):
             if not isinstance(bp, dict):
                 raise CardConfigError(f"color_breakpoints[{i}] must be a mapping")
+            _check_unknown(bp, ALLOWED_BREAKPOINT_KEYS, f"color_breakpoints[{i}]")
             if 'less_than' not in bp:
                 raise CardConfigError(f"color_breakpoints[{i}] must have a 'less_than' key")
             try:
@@ -164,6 +199,7 @@ def parse_card_config(yaml_str: str) -> dict:
         for i, s in enumerate(raw_series):
             if not isinstance(s, dict):
                 raise CardConfigError(f"series[{i}] must be a mapping")
+            _check_unknown(s, ALLOWED_SERIES_KEYS, f"series[{i}]")
             label = str(s.get('label', '')).strip()
             if not label:
                 raise CardConfigError(f"series[{i}] must have a label")
@@ -206,9 +242,12 @@ def parse_card_config(yaml_str: str) -> dict:
             raise CardConfigError("suggested_min must be less than limit_max")
 
     pos = cfg.get('positioning') or {}
+    if isinstance(pos, dict):
+        _check_unknown(pos, ALLOWED_POSITIONING_KEYS, 'positioning')
     mobile_pos = pos.get('mobile') if isinstance(pos, dict) else None
     mobile_positioning = {}
     if isinstance(mobile_pos, dict):
+        _check_unknown(mobile_pos, ALLOWED_MOBILE_KEYS, 'positioning.mobile')
         if 'position' in mobile_pos:
             mobile_positioning['position'] = int(mobile_pos['position'])
         if 'width' in mobile_pos:
