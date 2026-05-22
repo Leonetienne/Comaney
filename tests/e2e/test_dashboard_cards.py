@@ -953,3 +953,55 @@ class TestUnknownKeys:
         )
         r = _post_card(sess, csrf, yaml_str)
         assert r.status_code == 400
+
+
+class TestSpacerCard:
+
+    def test_create_spacer_minimal(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf,
+            "type: spacer\npositioning:\n  position: 99\n  width: 2\n  height: 1\n")
+        assert r.status_code == 201, r.text
+        card = r.json()["card"]
+        assert card["config"]["type"] == "spacer"
+        assert card["config"]["hide_on"] == ""
+        _delete_card(sess, csrf, card["id"])
+
+    def test_spacer_hide_on_mobile(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf,
+            "type: spacer\nhide_on: mobile\npositioning:\n  position: 99\n  width: 2\n  height: 1\n")
+        assert r.status_code == 201, r.text
+        card = r.json()["card"]
+        assert card["config"]["hide_on"] == "mobile"
+        _delete_card(sess, csrf, card["id"])
+
+    def test_spacer_hide_on_desktop(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf,
+            "type: spacer\nhide_on: desktop\npositioning:\n  position: 99\n  width: 2\n  height: 1\n")
+        assert r.status_code == 201, r.text
+        card = r.json()["card"]
+        assert card["config"]["hide_on"] == "desktop"
+        _delete_card(sess, csrf, card["id"])
+
+    def test_spacer_invalid_hide_on_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf,
+            "type: spacer\nhide_on: tablet\npositioning:\n  position: 99\n  width: 2\n  height: 1\n")
+        assert r.status_code == 400
+
+    def test_spacer_rejects_unknown_keys(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf,
+            "type: spacer\ntitle: Oops\npositioning:\n  position: 99\n  width: 2\n  height: 1\n")
+        assert r.status_code == 400
+
+    def test_spacer_data_is_empty(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf,
+            "type: spacer\npositioning:\n  position: 99\n  width: 2\n  height: 1\n")
+        assert r.status_code == 201, r.text
+        card = r.json()["card"]
+        assert card["data"] == {}
+        _delete_card(sess, csrf, card["id"])
