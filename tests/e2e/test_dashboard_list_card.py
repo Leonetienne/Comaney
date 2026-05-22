@@ -394,7 +394,7 @@ class TestListCardData:
         csrf = _csrf(sess)
         r = _post_card(sess, csrf, _list_yaml(
             query="FlipList",
-            show_sum=True,
+            show_sum="true",
             method="sum",
             flip_signs=True,
         ))
