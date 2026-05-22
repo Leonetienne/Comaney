@@ -12,7 +12,7 @@ Comaney requires two management commands to run on a schedule inside the web con
 
 **What it does:**
 
-1. **Materialises scheduled expenses.** For each active `ScheduledExpense`, computes upcoming instances (based on the recurrence rule) and creates `Expense` records for them if they don't already exist.
+1. **Materialises recurring expenses.** For each active `ScheduledExpense`, computes upcoming instances (based on the recurrence rule) and creates `Expense` records for them if they don't already exist.
 
 2. **Sends due-date notifications.** Scans all unsettled expenses with `notify=True` and sends email alerts when an expense is in the `soon` (2–4 days away), `tomorrow`, `today`, or `late` (overdue) class, but only if it hasn't already sent that class for this expense.
 
@@ -56,7 +56,7 @@ Replace `comaney` with the system user that owns the docker-compose file, and ad
 
 | Feature | Effect without cron |
 |---|---|
-| Scheduled expenses | Not generated; recurring transactions never appear |
+| Recurring expenses | Not generated; recurring transactions never appear |
 | Due-date notifications | Never sent |
 | Auto-settle | Never fires; expenses stay unsettled indefinitely |
 | End-of-month rollover | Never happens; no carry-over or savings deposit is created |

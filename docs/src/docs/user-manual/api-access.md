@@ -42,7 +42,7 @@ When listing expenses, you can pass these parameters:
 | `month` | Month number 1–12 for a single month. Leave out for the whole year. |
 | `q` | A search filter using the [query language](dashboard/query-language.md). |
 
-### Scheduled expenses
+### Recurring expenses
 
 | Action | Method | Path |
 |---|---|---|

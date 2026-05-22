@@ -48,7 +48,7 @@ nav:
   - User Manual:
     - user-manual/index.md
     - Expenses: user-manual/expenses.md
-    - Scheduled Expenses: user-manual/scheduled-expenses.md
+    - Recurring Expenses: user-manual/scheduled-expenses.md
     - Categories & Tags: user-manual/categories-tags.md
     - Dashboard:
       - Overview: user-manual/dashboard/index.md

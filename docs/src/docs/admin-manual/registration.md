@@ -73,7 +73,7 @@ docker exec -it comaney-web-1 python manage.py delete_user user@example.com
 docker exec -it comaney-web-1 python manage.py delete_user user@example.com --yes
 ```
 
-This deletes the account and all associated expenses, categories, tags, scheduled expenses, and dashboard cards. The operation is irreversible.
+This deletes the account and all associated expenses, categories, tags, recurring expenses, and dashboard cards. The operation is irreversible.
 
 ## Superuser creation
 

@@ -79,7 +79,7 @@ See [REST API Access](api-access.md). From this page you can generate or revoke 
 
 ### Export your data
 
-Click **Export account data** to download a complete copy of your account: all expenses, scheduled expenses, categories, and tags. This is useful as a backup, or if you want to analyse your data in a spreadsheet.
+Click **Export account data** to download a complete copy of your account: all expenses, recurring expenses, categories, and tags. This is useful as a backup, or if you want to analyse your data in a spreadsheet.
 
 ### Delete your account
 

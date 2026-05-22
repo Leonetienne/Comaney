@@ -72,7 +72,7 @@ Exits with an error if no account with that email exists.
 
 ### delete_user
 
-Permanently deletes a user account and all associated data (expenses, categories, tags, scheduled expenses, dashboard cards).
+Permanently deletes a user account and all associated data (expenses, categories, tags, recurring expenses, dashboard cards).
 
 ```
 python manage.py delete_user <email> [--yes]

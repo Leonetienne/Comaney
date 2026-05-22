@@ -9,7 +9,7 @@ You do not need any technical knowledge to use Comaney. If you can fill in a for
 | I want to... | Go here |
 |---|---|
 | Record a payment, expense, or income | [Expenses](expenses.md) |
-| Set up a recurring bill (rent, Netflix, etc.) | [Scheduled Expenses](scheduled-expenses.md) |
+| Set up a recurring bill (rent, Netflix, etc.) | [Recurring Expenses](scheduled-expenses.md) |
 | Organise my expenses into groups | [Categories & Tags](categories-tags.md) |
 | See charts and totals on my home screen | [Dashboard](dashboard/index.md) |
 | Get email reminders before bills are due | [Notifications](notifications.md) |
