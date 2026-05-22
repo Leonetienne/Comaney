@@ -1574,3 +1574,33 @@
 #due-date-wrap    { margin-top: 16px; }
 #buddy-group-select-row { margin-top: 0.5rem; }
 #buddy-payer-notice     { margin-top: 0.75rem; }
+
+// ── Project detail: floating action button ────────────────────────────────────
+
+.fab-new-expense {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 900;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: #c2478a;
+  color: #fff;
+  font-size: 2rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out, background 0.15s;
+
+  &:hover {
+    background: #d4569b;
+    color: #fff;
+    text-decoration: none;
+    transform: scale(1.1) rotate(90deg);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.36);
+  }
+}

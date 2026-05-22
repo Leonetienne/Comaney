@@ -598,7 +598,8 @@
 
         updateParticipantsLabel();
         buildPayerOptions();
-        buildParticipantCheckboxes(false);
+        var preCheckAll = effectiveMode === 'group' && existingGroupId !== null && existingSpendings.length === 0;
+        buildParticipantCheckboxes(preCheckAll);
 
         // Restore payer selection
         var existingVal = existingUpfrontType + ':' + existingUpfrontId;

@@ -280,12 +280,29 @@ def expense_create(request):
                     f'you\'ll find it under <a href="{summary_url}">Buddy Expenses</a>.',
                 )
                 return redirect("buddies:buddy_summary")
-            return redirect("budget:expenses_list")
+            back = _safe_back_url(request.POST.get("back", ""))
+            return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
     else:
         form = ExpenseForm(feuser=feuser, initial={"type": "expense", "settled": True, "notify": True})
+
+    preselect_project_id = ""
+    raw_pid = request.GET.get("project", "")
+    if raw_pid:
+        try:
+            pid = int(raw_pid)
+            from buddies.models import Project
+            if Project.objects.filter(uid=pid, members__feuser=feuser, archived=False).exists():
+                preselect_project_id = pid
+        except (ValueError, TypeError):
+            pass
+
     return render(request, "budget/expense_form.html", {
         "active_nav": "expenses",
         "form": form,
+        "back_url": _safe_back_url(request.GET.get("back", "")),
+        "existing_group_id": preselect_project_id,
+        "is_buddy_expense": bool(preselect_project_id),
+        "existing_mode": "group" if preselect_project_id else "single",
         **_buddy_context(feuser),
     })
 

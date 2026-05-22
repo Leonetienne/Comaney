@@ -35,6 +35,10 @@
     <a href="{% url 'projects:project_settings' project_id=project.uid %}" class="project-tab">Manage</a>
 </nav>
 
+{% if not project.archived %}
+<a href="{% url 'budget:expense_create' %}?project={{ project.uid }}&back={{ request.path|urlencode }}" class="fab-new-expense" title="New expense">+</a>
+{% endif %}
+
 {% if request.GET.achim == "new" %}
 <div id="achim-modal" class="cdialog-backdrop cdialog-visible">
     <div class="cdialog">
