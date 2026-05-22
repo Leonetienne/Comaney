@@ -60,6 +60,7 @@ nav:
         - Pie Chart Cards: user-manual/dashboard/cards/pie-chart.md
         - Line Chart Cards: user-manual/dashboard/cards/line-chart.md
         - List Cards: user-manual/dashboard/cards/list.md
+        - Spacer Cards: user-manual/dashboard/cards/spacer.md
     - Buddies:
       - Overview: user-manual/buddies/index.md
       - Adding Buddies: user-manual/buddies/adding-buddies.md

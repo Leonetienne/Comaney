@@ -13,6 +13,7 @@ When you click **+ Add card** or the pencil icon on an existing card, an editor 
 | `pie-chart` | A pie showing spending proportions across categories or tags. |
 | `line-chart` | One or more lines plotted over time, showing how money moves day by day or week by week. |
 | `list` | A scrollable table listing individual expenses that match a query. |
+| `spacer` | An invisible placeholder that reserves space in the grid. Useful for alignment and visual gaps. |
 
 ## Fields that every card has
 
@@ -22,7 +23,7 @@ When you click **+ Add card** or the pencil icon on an existing card, an editor 
 type: cell
 ```
 
-Sets the card style. Must be one of `cell`, `bar-chart`, `pie-chart`, `list`, or `line-chart`.
+Sets the card style. Must be one of `cell`, `bar-chart`, `pie-chart`, `list`, `line-chart`, or `spacer`.
 
 ---
 
@@ -227,3 +228,4 @@ For all the extra options available to each type, see:
 - [Pie Chart Cards](pie-chart.md)
 - [List Cards](list.md)
 - [Line Chart Cards](line-chart.md)
+- [Spacer Cards](spacer.md)
