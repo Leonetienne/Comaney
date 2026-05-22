@@ -4,6 +4,10 @@ upfront-payer modes, and slider interactivity on re-edit.
 
 Also covers the regression where checking a group-mode participant checkbox had
 no effect when a non-me (dummy) member was selected as the upfront payer.
+
+Also covers the server-side security check: a user who forges the project_id
+POST field to point at a project they are not a member of must not have an
+expense created for that project.
 """
 import time
 
@@ -15,7 +19,7 @@ from helpers import (
     _url, setup_user, cleanup_user, api_get, server_today,
     fetch_email, mailpit_seen_ids,
 )
-from bhelpers import _shell, _create_buddy_link, _get_pk, _create_group
+from bhelpers import _shell, _create_buddy_link, _get_pk, _create_group, _login_as
 
 
 def _select_first_participant(driver):
@@ -602,3 +606,78 @@ class TestDefaultPayerIsMe:
         )
         assert val.startswith("me:"), \
             f"Project mode: default upfront payer must be 'me:...', got: {val!r}"
+
+
+# ---------------------------------------------------------------------------
+# Security: forged project_id in POST must not link the expense to a foreign project
+# ---------------------------------------------------------------------------
+
+class TestForgedProjectIdOnExpenseCreate:
+    """Mallory submits the expense-create form with a project_id that belongs to
+    a project she is not a member of.  The server must reject the buddy payload
+    (valid=False) and not save the expense linked to that project."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        victim = setup_user(driver, w, first_name="Victor", last_name="Victim")
+        mallory = setup_user(driver, w, first_name="Mallory", last_name="Attacker")
+        victim_project_id = int(_create_group(victim["email"], "Victims Secret Project"))
+        # Mallory needs her own project so the buddy section is rendered in the DOM
+        mallory_project_id = int(_create_group(mallory["email"], "Mallorys Own Project"))
+        _shell(
+            f"from buddies.services import BuddyGroupService; "
+            f"from feusers.models import FeUser; from buddies.models import Project; "
+            f"u = FeUser.objects.get(email='{mallory['email']}'); "
+            f"g = Project.objects.get(pk={mallory_project_id}); "
+            f"BuddyGroupService.create_group_dummy(g, u, 'Mallory Dummy')"
+        )
+        mallory_pk = int(_get_pk(mallory["email"]))
+        yield {
+            "victim": victim,
+            "mallory": mallory,
+            "victim_project_id": victim_project_id,
+            "mallory_project_id": mallory_project_id,
+            "mallory_pk": mallory_pk,
+        }
+        cleanup_user(victim["email"])
+        cleanup_user(mallory["email"])
+
+    def test_forged_post_does_not_create_linked_expense(self, driver, w, ctx):
+        _login_as(driver, ctx["mallory"])
+        today = server_today()
+        pid = ctx["victim_project_id"]
+        mpk = ctx["mallory_pk"]
+
+        driver.get(_url("/budget/expenses/new/"))
+        time.sleep(1)
+
+        # Fill required expense fields
+        driver.execute_script(
+            "document.getElementById('id_title').value = 'Forged Expense';"
+            "document.getElementById('id_value').value = '42.00';"
+            f"document.getElementById('id_date_due').value = '{today}';"
+        )
+
+        # Activate project mode via the tab so the hidden inputs are in the DOM,
+        # then overwrite project_id with the victim's project before submitting.
+        driver.find_element(By.ID, "assign-project").click()
+        time.sleep(0.5)
+        driver.execute_script(
+            f"document.getElementById('buddy-group-id-input').value = '{pid}';"
+            f"document.getElementById('buddy-mode-input').value = 'group';"
+            f"document.getElementById('buddy-upfront-type-input').value = 'me';"
+            f"document.getElementById('buddy-upfront-id-input').value = '{mpk}';"
+            f"document.getElementById('buddy-spendings-json').value = "
+            f"  '[{{\"type\":\"feuser\",\"id\":{mpk},\"share_percent\":50}}]';"
+        )
+
+        driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
+        time.sleep(1.5)
+
+        # The expense must not have been linked to the victim's project
+        linked = _shell(
+            f"from budget.models import Expense; "
+            f"print(Expense.objects.filter(project_id={pid}).count())"
+        )
+        assert linked == "0", \
+            f"Expected 0 expenses linked to the victim's project, got {linked}"
