@@ -6,7 +6,7 @@ All searches are case-insensitive: `type=Expense` and `type=expense` mean the sa
 
 ## Just type to search
 
-The simplest thing you can do is type a word. Comaney looks for that word in the title, payee, and note of every expense.
+The simplest thing you can do is type a word. Comaney looks for that word in the title, payee, note, and personal notes of every expense, as well as participant and project names.
 
 | What you type | What it finds |
 |---|---|
@@ -40,44 +40,62 @@ recurring=yes
 recurring=no
 ```
 
-`scheduled=yes` shows only expenses that were generated from a recurring expense (a scheduled expense). `scheduled=no` shows only expenses that were entered manually.
+`recurring=yes` shows only expenses that were generated from a recurring expense. `recurring=no` shows only expenses that were entered manually.
 
 `true`/`false` and `1`/`0` also work as alternatives to `yes`/`no`.
 
 The **Hide recurring** checkbox on the expense list is a shortcut for this filter.
 
-## Filter by buddy or participant
+## Filter by shared expenses
 
 ```
-buddy=yes
-buddy=no
+shared=yes
+shared=no
 ```
 
-`buddy=yes` shows only expenses that have at least one buddy participant. `buddy=no` shows only expenses with no buddy participants.
+`shared=yes` shows only expenses that have at least one shared participant. `shared=no` shows only expenses with no participants — purely personal entries.
+
+`true`/`false` and `1`/`0` also work as alternatives to `yes`/`no`.
+
+## Filter by participant
 
 ```
-buddy=Rainer
-buddy="holiday trip"
+participant=Alice
+participant=me
 ```
 
-When given a name or phrase, `buddy=` matches against:
+Matches expenses where the given person appears as either the expense owner or a participant.
 
-- The project name
-- The name of any participant in the expense
-- The name of any member of the project (including those who are not a participant in that specific expense)
+- A name or phrase is matched partially and case-insensitively against first name, last name, email address, and display name. `participant=ali` would find "Alice".
+- `participant=me` matches only expenses where you are involved — either as the owner or as a participant.
 
-Matching is partial and case-insensitive, so `buddy=rai` would find "Rainer".
+## Filter by payer
 
-Free-text search (typing without a filter prefix) also looks through project names and participant names automatically.
+```
+payer=Alice
+payer=me
+```
+
+Matches the person who paid the expense — the owning user, an offline buddy who paid upfront, or any offline buddy participant.
+
+- `payer=me` shows only expenses you paid.
+- `!payer=me` shows only expenses someone else paid (useful in Shared mode to see what others paid that you are a participant of).
+- A name or phrase does a partial, case-insensitive match against first name, last name, email address, and offline buddy display name.
 
 ## Filter by project
 
 ```
 project=Holiday
 project=none
+project=yes
+project=no
 ```
 
-`project=<name>` shows only expenses linked to a project whose name contains the given phrase (partial match, case-insensitive). Use `project=none` to find expenses with no project assigned.
+- `project=<name>` — expenses linked to a project whose name contains the phrase (partial match, case-insensitive).
+- `project=none` or `project=no` — expenses with no project assigned.
+- `project=yes` — expenses that belong to any project.
+
+`true`/`false` and `1`/`0` also work as alternatives to `yes`/`no`.
 
 ## Filter by category
 
@@ -85,13 +103,13 @@ project=none
 cat=Groceries
 ```
 
-Finds expenses whose category name contains "Groceries" (partial match, so `cat=Groc` would also work).
+Finds expenses whose category name contains "Groceries" (partial match, so `cat=Groc` also works). This includes your personal category override if you have set one for a shared expense.
 
 ```
 cat=none
 ```
 
-Finds expenses with no category at all.
+Finds expenses with no category — neither a direct category on the expense nor a personal override.
 
 ## Filter by tag
 
@@ -99,13 +117,13 @@ Finds expenses with no category at all.
 tag=amazon
 ```
 
-Finds expenses with any tag that contains "amazon".
+Finds expenses with any tag that contains "amazon". This includes your personal tags if you have added them to a shared expense.
 
 ```
 tag=none
 ```
 
-Finds expenses with no tags at all.
+Finds expenses with no tags at all — neither direct tags nor personal ones.
 
 ## Filter by payee
 
@@ -114,6 +132,12 @@ payee=Amazon
 ```
 
 Partial match against the payee field.
+
+```
+payee=none
+```
+
+Finds expenses with no payee set.
 
 ## Filter by amount
 
@@ -219,3 +243,6 @@ Settled expenses, plus all income records.
 | `tag="credit card" settled=no` | Unpaid credit-card expenses |
 | `type=expense !rent` | Expenses with no mention of rent |
 | `type=income \|\| settled=yes` | All income, or anything already paid |
+| `shared=yes payer=me` | Your expenses that have participants |
+| `!payer=me participant=me` | Expenses someone else paid that you are part of |
+| `project=none type=expense` | Personal expenses not linked to any project |
