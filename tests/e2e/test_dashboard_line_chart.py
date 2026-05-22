@@ -226,6 +226,7 @@ class TestLineChartValidation:
         r = _post_card(sess, csrf, _line_yaml(extra_fields="suggested_min: not_a_number"))
         assert r.status_code == 400
 
+
     def test_suggested_min_gte_suggested_max_rejected(self, driver, w, ctx, sess):
         csrf = _csrf(sess)
         r = _post_card(sess, csrf, _line_yaml(extra_fields="suggested_min: 100\nsuggested_max: 100"))

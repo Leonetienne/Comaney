@@ -908,3 +908,48 @@ class TestBrowserSmoke:
         for card in cards:
             _delete_card(sess, csrf, card["id"])
         assert sess.get(CARDS_URL).json()["cards"] == []
+
+
+class TestUnknownKeys:
+    """Unknown YAML keys are rejected for all card types and nested structures."""
+
+    def test_unknown_top_level_key_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        yaml_str = (
+            "type: line-chart\ntitle: T\nmethod: cum\n"
+            "suggsted_max: 1000\n"
+            "series:\n  - label: X\n"
+            "positioning:\n  position: 0\n  width: 4\n  height: 2\n"
+        )
+        r = _post_card(sess, csrf, yaml_str)
+        assert r.status_code == 400
+
+    def test_unknown_series_key_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        yaml_str = (
+            "type: line-chart\ntitle: T\nmethod: cum\n"
+            "series:\n  - label: X\n    colur: '#ff0000'\n"
+            "positioning:\n  position: 0\n  width: 4\n  height: 2\n"
+        )
+        r = _post_card(sess, csrf, yaml_str)
+        assert r.status_code == 400
+
+    def test_unknown_positioning_key_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        yaml_str = (
+            "type: line-chart\ntitle: T\nmethod: cum\n"
+            "series:\n  - label: X\n"
+            "positioning:\n  position: 0\n  width: 4\n  height: 2\n  typo_key: 1\n"
+        )
+        r = _post_card(sess, csrf, yaml_str)
+        assert r.status_code == 400
+
+    def test_unknown_cell_key_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        yaml_str = (
+            "type: cell\ntitle: T\nmethod: sum\n"
+            "colour: '#ff0000'\n"
+            "positioning:\n  position: 0\n  width: 2\n  height: 1\n"
+        )
+        r = _post_card(sess, csrf, yaml_str)
+        assert r.status_code == 400
