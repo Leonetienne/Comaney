@@ -625,8 +625,33 @@ def expense_edit_overlay(request, uid):
             initial["note"] = overlay.note
         form = ExpenseOverlayForm(feuser=feuser, initial=initial)
 
+    currency = expense.owning_feuser.currency
+    if expense.is_dummy and expense.upfront_payee_dummy:
+        upfront_payer = f"{expense.upfront_payee_dummy.display_name} (offline buddy)"
+    else:
+        owner = expense.owning_feuser
+        upfront_payer = f"{owner.first_name} {owner.last_name}".strip() or owner.email
+
+    participant_shares = []
+    for bs in expense.buddy_spendings.select_related("participant_feuser", "participant_dummy").all():
+        if bs.participant_feuser:
+            u = bs.participant_feuser
+            name = f"{u.first_name} {u.last_name}".strip() or u.email
+        else:
+            name = f"{bs.participant_dummy.display_name} (offline member)"
+        amount = (expense.value * bs.share_percent / 100).quantize(expense.value)
+        participant_shares.append({
+            "name": name,
+            "percent": bs.share_percent,
+            "amount": amount,
+            "is_me": bs.participant_feuser == feuser,
+        })
+
     return render(request, "budget/expense_edit_overlay.html", {
         "form": form,
         "expense": expense,
         "back_url": request.GET.get("back", ""),
+        "currency": currency,
+        "upfront_payer": upfront_payer,
+        "participant_shares": participant_shares,
     })

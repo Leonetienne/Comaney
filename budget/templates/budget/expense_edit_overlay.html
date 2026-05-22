@@ -7,8 +7,37 @@
 
 <div class="form-wrap">
     <div class="info-box mb-md">
-        <p>Set your own category and tags for <strong>{{ expense.title }}</strong>. This only affects your personal bookkeeping and does not change the original expense.</p>
+        <p>Set your own category and tags for this expense. This only affects your personal bookkeeping and does not change the original expense.</p>
     </div>
+
+    <div class="bexp-breakdown-card mb-lg" style="margin-bottom:1.25rem;">
+        <div class="bexp-breakdown-header">
+            <div class="bexp-breakdown-header-left">
+                <span class="bexp-title">{{ expense.title }}</span>
+                <span class="bexp-breakdown-meta">
+                    <strong>{{ currency }}{{ expense.value }}</strong>
+                    {% if expense.payee %}&middot; Payee: <strong>{{ expense.payee }}</strong>{% endif %}
+                    &middot; Paid by: <strong>{{ upfront_payer }}</strong>
+                    {% if expense.date_due %}&middot; {{ expense.date_due|date:"N j, Y" }}{% endif %}
+                </span>
+            </div>
+        </div>
+        <table class="bexp-breakdown-table">
+            <thead>
+                <tr><th>Person</th><th class="text-right">Share</th><th class="text-right">Amount</th></tr>
+            </thead>
+            <tbody>
+                {% for s in participant_shares %}
+                <tr{% if s.is_me %} class="bexp-row-me"{% endif %}>
+                    <td>{{ s.name }}</td>
+                    <td class="text-right">{{ s.percent|floatformat:1 }}%</td>
+                    <td class="text-right">{{ currency }}{{ s.amount|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
     <form method="post" novalidate>
         {% csrf_token %}
         {% if back_url %}<input type="hidden" name="back" value="{{ back_url }}">{% endif %}
