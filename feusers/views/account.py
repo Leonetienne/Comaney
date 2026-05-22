@@ -367,7 +367,7 @@ def account_export(request):
         )
         p = io.StringIO()
         w = csv.writer(p)
-        w.writerow(["expense_id", "expense_title", "category_id", "tag_ids", "note"])
+        w.writerow(["expense_id", "expense_title", "category_id", "tag_ids", "note", "last_mod"])
         for ov in overlays:
             w.writerow([
                 ov.expense_id,
@@ -375,6 +375,7 @@ def account_export(request):
                 ov.category_id or "",
                 ",".join(str(t.uid) for t in ov.tags.all()),
                 "" if ov.note is None else ov.note,
+                ov.last_mod.isoformat(),
             ])
         zf.writestr("expense_overlays.csv", p.getvalue())
 
@@ -440,7 +441,7 @@ def account_export(request):
         )
         p = io.StringIO()
         w = csv.writer(p)
-        w.writerow(["uid", "project_id", "project_name", "display_name", "is_archive", "has_picture", "created_at"])
+        w.writerow(["uid", "project_id", "project_name", "display_name", "is_archive", "has_picture", "created_at", "last_mod"])
         for d in project_offline_members:
             w.writerow([
                 d.pk,
@@ -450,6 +451,7 @@ def account_export(request):
                 d.is_archive,
                 d.profile_picture,
                 d.created_at.isoformat(),
+                d.last_mod.isoformat(),
             ])
         zf.writestr("project_offline_members.csv", p.getvalue())
 
@@ -477,9 +479,9 @@ def account_export(request):
         )
         p = io.StringIO()
         w = csv.writer(p)
-        w.writerow(["uid", "display_name", "is_archive", "has_picture", "created_at"])
+        w.writerow(["uid", "display_name", "is_archive", "has_picture", "created_at", "last_mod"])
         for d in personal_dummies:
-            w.writerow([d.pk, d.display_name, d.is_archive, d.profile_picture, d.created_at.isoformat()])
+            w.writerow([d.pk, d.display_name, d.is_archive, d.profile_picture, d.created_at.isoformat(), d.last_mod.isoformat()])
         zf.writestr("offline_buddies.csv", p.getvalue())
 
         for d in personal_dummies:
