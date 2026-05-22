@@ -94,7 +94,7 @@ ALLOWED_KEYS = {
     'pie-chart':  _COMMON_KEYS | {'method', 'group', 'max_groups', 'hide_groups',
                                    'flip_signs', 'link_template'},
     'list':       _COMMON_KEYS | {'method', 'order_by', 'order_dir', 'type_colors',
-                                   'show_sum', 'sum_template'},
+                                   'show_sum', 'sum_template', 'flip_signs'},
     'line-chart': _COMMON_KEYS | {'method', 'series', 'render_type',
                                    'suggested_min', 'suggested_max',
                                    'limit_min', 'limit_max'},
