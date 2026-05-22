@@ -43,3 +43,6 @@ docs/build/site/
 *.swp
 *.swo
 .claude/
+
+# JavaShit doing what it does best (segfaulting)
+core
