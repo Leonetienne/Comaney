@@ -167,6 +167,95 @@ class TestLineChartValidation:
         assert s["color"] == "#ff0000"
         _delete_card(sess, csrf, r.json()["card"]["id"])
 
+    def test_render_type_smooth_accepted(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="render_type: smooth"))
+        assert r.status_code == 201, r.text
+        assert r.json()["card"]["config"]["render_type"] == "smooth"
+        _delete_card(sess, csrf, r.json()["card"]["id"])
+
+    def test_render_type_linear_accepted(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="render_type: linear"))
+        assert r.status_code == 201, r.text
+        assert r.json()["card"]["config"]["render_type"] == "linear"
+        _delete_card(sess, csrf, r.json()["card"]["id"])
+
+    def test_render_type_default_is_smooth(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml())
+        assert r.status_code == 201, r.text
+        assert r.json()["card"]["config"]["render_type"] == "smooth"
+        _delete_card(sess, csrf, r.json()["card"]["id"])
+
+    def test_invalid_render_type_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="render_type: bezier"))
+        assert r.status_code == 400
+
+    def test_suggested_bounds_round_trip(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="suggested_min: -50\nsuggested_max: 200"))
+        assert r.status_code == 201, r.text
+        cfg = r.json()["card"]["config"]
+        assert cfg["suggested_min"] == -50.0
+        assert cfg["suggested_max"] == 200.0
+        _delete_card(sess, csrf, r.json()["card"]["id"])
+
+    def test_hard_bounds_round_trip(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="limit_min: -100\nlimit_max: 1000"))
+        assert r.status_code == 201, r.text
+        cfg = r.json()["card"]["config"]
+        assert cfg["limit_min"] == -100.0
+        assert cfg["limit_max"] == 1000.0
+        _delete_card(sess, csrf, r.json()["card"]["id"])
+
+    def test_only_suggested_min(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="suggested_min: 0"))
+        assert r.status_code == 201, r.text
+        cfg = r.json()["card"]["config"]
+        assert cfg["suggested_min"] == 0.0
+        assert cfg["suggested_max"] is None
+        assert cfg["limit_min"] is None
+        _delete_card(sess, csrf, r.json()["card"]["id"])
+
+    def test_invalid_bound_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="suggested_min: not_a_number"))
+        assert r.status_code == 400
+
+    def test_suggested_min_gte_suggested_max_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="suggested_min: 100\nsuggested_max: 100"))
+        assert r.status_code == 400
+
+    def test_limit_min_gte_limit_max_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="limit_min: 200\nlimit_max: 100"))
+        assert r.status_code == 400
+
+    def test_suggested_max_exceeds_limit_max_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="suggested_max: 500\nlimit_max: 400"))
+        assert r.status_code == 400
+
+    def test_suggested_min_below_limit_min_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="suggested_min: -200\nlimit_min: -100"))
+        assert r.status_code == 400
+
+    def test_limit_min_gte_suggested_max_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="limit_min: 300\nsuggested_max: 200"))
+        assert r.status_code == 400
+
+    def test_suggested_min_gte_limit_max_rejected(self, driver, w, ctx, sess):
+        csrf = _csrf(sess)
+        r = _post_card(sess, csrf, _line_yaml(extra_fields="suggested_min: 500\nlimit_max: 400"))
+        assert r.status_code == 400
+
 
 class TestLineChartData:
 
