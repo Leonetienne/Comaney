@@ -6,8 +6,8 @@
 {% block content %}
 <div class="page-header">
     <h1>Scheduled Expenses</h1>
-    <a href="{% url 'budget:scheduled_create' %}" class="btn">+ New scheduled expense</a>
 </div>
+<a href="{% url 'budget:scheduled_create' %}" class="fab-new-expense" title="New scheduled expense">+</a>
 <div class="desc-surface"><p class="page-tip" style="margin:0;opacity:1;">Register recurring expenses here. Define standard expense data and an interval. At the begin of every financial month, they will create actual, unsettled expenses.</p></div>
 
 {% if scheduled %}
