@@ -140,6 +140,31 @@
   &:hover .dash-card-header .dash-card-edit-btn { opacity: .85; }
 }
 
+// ── Spacer card ────────────────────────────────────────────────────────────
+
+.dash-card--spacer {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  transition: background .2s, border-color .2s;
+
+  .dash-card-header {
+    border-bottom-color: transparent;
+    transition: border-bottom-color .2s;
+
+    .dash-card-title { display: none; }
+  }
+
+  &:hover {
+    background: rgba(128, 128, 128, .05);
+    border-color: rgba(128, 128, 128, .3);
+  }
+
+  &:hover .dash-card-header {
+    border-bottom-color: var(--border-subtle);
+  }
+}
+
 // ── Resize handle ──────────────────────────────────────────────────────────
 
 .dash-card-resize {

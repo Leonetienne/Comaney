@@ -371,6 +371,14 @@ function dashboardBoard() {
         // ── Card style (grid placement) ────────────────────────────────────────
         cardStyle(card) {
             const mob = this._isMobile();
+
+            if (card.config && card.config.type === 'spacer') {
+                const hideOn = card.config.hide_on || '';
+                if ((hideOn === 'mobile' && mob) || (hideOn === 'desktop' && !mob)) {
+                    return 'display:none;';
+                }
+            }
+
             const w   = (mob && card.mobile_width    != null) ? card.mobile_width    : card.width;
             const h   = (mob && card.mobile_height   != null) ? card.mobile_height   : card.height;
             const ord = (mob && card.mobile_position != null) ? card.mobile_position : card.position;

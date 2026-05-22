@@ -43,6 +43,7 @@ window.DASHBOARD_CONFIG = {
                      'dash-card--drag-over': dragOverId === card.id,
                      'dash-card--dragging':  dragId     === card.id,
                      'dash-card--colored':   !!cardColorStyle(card.config, card.data && card.data.value),
+                     'dash-card--spacer':    card.config && card.config.type === 'spacer',
                  }"
                  :style="cardStyle(card) + (cardColorStyle(card.config, card.data && card.data.value) ? ';' + cardColorStyle(card.config, card.data && card.data.value) : '')"
                  draggable="true"
@@ -154,6 +155,11 @@ window.DASHBOARD_CONFIG = {
                             <p class="dash-chart-empty">No data for this period.</p>
                         </template>
                     </div>
+                </template>
+
+                {# ── Spacer card ───────────────────────────────────────── #}
+                <template x-if="card.config && card.config.type === 'spacer'">
+                    <div class="dash-card-body"></div>
                 </template>
 
                 {# ── Unknown type ──────────────────────────────────────── #}

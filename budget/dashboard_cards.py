@@ -2,7 +2,9 @@
 Dashboard card YAML parsing, data computation, and sandboxed Python execution.
 
 Card YAML schema:
-    type: cell | bar-chart | pie-chart | list | line-chart
+    type: cell | bar-chart | pie-chart | list | line-chart | spacer
+    # spacer: invisible placeholder; only positioning + hide_on are meaningful
+    hide_on: mobile | desktop   # optional (spacer only); hides card on that viewport (frees grid space)
     title: "string"
     query: "query string"       # optional; filters the period queryset
     group: tags | categories    # required for bar-chart / pie-chart
@@ -65,7 +67,8 @@ from django.db.models import Case, DecimalField, F, Sum, When
 
 from .query_parser import apply_query
 
-VALID_TYPES = {'cell', 'bar-chart', 'pie-chart', 'list', 'line-chart'}
+VALID_TYPES = {'cell', 'bar-chart', 'pie-chart', 'list', 'line-chart', 'spacer'}
+VALID_HIDE_ON = {'', 'mobile', 'desktop'}
 VALID_GROUPS = {'tags', 'categories'}
 VALID_METHODS = {'sum', 'total', 'count', 'custom'}
 VALID_LIST_METHODS = {'sum', 'total', 'count'}
@@ -98,6 +101,7 @@ ALLOWED_KEYS = {
     'line-chart': _COMMON_KEYS | {'method', 'series', 'render_type',
                                    'suggested_min', 'suggested_max',
                                    'limit_min', 'limit_max'},
+    'spacer':     {'type', 'positioning', 'hide_on'},
 }
 
 ALLOWED_SERIES_KEYS       = {'label', 'query', 'method', 'color', 'flip_signs', 'link_template'}
@@ -158,6 +162,12 @@ def parse_card_config(yaml_str: str) -> dict:
         method = cfg.get('method', 'sum')
         if str(method) not in VALID_LIST_METHODS:
             raise CardConfigError(f"method for list must be one of: {', '.join(sorted(VALID_LIST_METHODS))}")
+
+    hide_on = ''
+    if card_type == 'spacer':
+        hide_on = str(cfg.get('hide_on', ''))
+        if hide_on not in VALID_HIDE_ON:
+            raise CardConfigError("hide_on must be mobile, desktop, or omitted")
 
     color_breakpoints = []
     if card_type == 'cell':
@@ -296,6 +306,7 @@ def parse_card_config(yaml_str: str) -> dict:
         'limit_min':      ranges.get('limit_min'),
         'limit_max':      ranges.get('limit_max'),
         'positioning':   positioning,
+        'hide_on':       hide_on,
     }
 
 
@@ -315,6 +326,8 @@ def compute_card_data(config: dict, period_qs, feuser, period_info: dict = None,
     """
     card_type = config['type']
 
+    if card_type == 'spacer':
+        return {}
     if card_type == 'cell':
         return _compute_cell(config, period_qs, value_field=value_field, feuser=feuser)
     if card_type in ('bar-chart', 'pie-chart'):
