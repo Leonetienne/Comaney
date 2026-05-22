@@ -503,7 +503,10 @@ def account_export(request):
             if backdrop.exists():
                 zf.write(backdrop, "custom_backdrop.png")
 
-    filename = f"comaney_export_{timezone.localdate().isoformat()}.zip"
+    _name_parts = f"{feuser.first_name} {feuser.last_name}".strip()
+    _name_slug = re.sub(r"[^A-Za-z0-9]+", "_", _name_parts).strip("_")
+    _name_part = f"_{_name_slug}" if _name_slug else ""
+    filename = f"comaney_export{_name_part}_{timezone.localdate().isoformat()}.zip"
     response = HttpResponse(buf.getvalue(), content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
