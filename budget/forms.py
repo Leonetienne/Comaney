@@ -91,6 +91,16 @@ class ScheduledExpenseForm(forms.ModelForm):
         if not self.instance.pk:
             self.fields["repeat_base_date"].initial = timezone.localdate()
 
+    def clean(self):
+        cleaned = super().clean()
+        factor = cleaned.get("repeat_every_factor")
+        unit = cleaned.get("repeat_every_unit")
+        if not factor:
+            self.add_error("repeat_every_factor", "A repeat factor is required.")
+        if not unit:
+            self.add_error("repeat_every_unit", "A repeat unit is required.")
+        return cleaned
+
     def clean_note(self):
         return _clean_note(self.cleaned_data.get("note"))
 
