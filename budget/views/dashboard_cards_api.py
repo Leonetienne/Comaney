@@ -42,11 +42,14 @@ def _parse_body(request) -> dict:
         return {}
 
 
+from ._sharing import build_shared_qs, has_buddy_or_multiuser_project
+
+
 def _period_qs(request, feuser):
     """Build the period-scoped base queryset from request params.
 
     Returns (queryset, period_info) where period_info is
-    {'start': date, 'end': date, 'mode': 'month'|'year'}.
+    {'start': date, 'end': date, 'mode': 'month'|'year', 'sharing': str}.
     """
     mode = _get_period_mode(request)
     if mode == 'year':
@@ -56,21 +59,31 @@ def _period_qs(request, feuser):
         year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
         start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
 
-    qs = Expense.objects.filter(
-        owning_feuser=feuser,
-        date_due__gte=start,
-        date_due__lte=end,
-        deactivated=False,
-        is_dummy=False,
-    )
-    return qs, {'start': start, 'end': end, 'mode': mode}
+    sharing = request.GET.get('sharing', '')
+    if sharing == 'shared':
+        qs = build_shared_qs(feuser, start, end)
+        value_field = 'effective_value'
+    else:
+        qs = Expense.objects.filter(
+            owning_feuser=feuser,
+            date_due__gte=start,
+            date_due__lte=end,
+            deactivated=False,
+            is_dummy=False,
+        )
+        value_field = 'value'
+
+    return qs, {'start': start, 'end': end, 'mode': mode, 'sharing': sharing,
+                'value_field': value_field}
 
 
 def _card_to_json(card: DashboardCard, period_qs, feuser, period_info: dict = None) -> dict:
     """Serialise a card including its computed data for the current period."""
+    value_field = (period_info or {}).get('value_field', 'value')
     try:
         config = parse_card_config(card.yaml_config)
-        data = compute_card_data(config, period_qs, feuser, period_info=period_info)
+        data = compute_card_data(config, period_qs, feuser, period_info=period_info,
+                                 value_field=value_field)
         error = None
     except CardConfigError as exc:
         config = {}

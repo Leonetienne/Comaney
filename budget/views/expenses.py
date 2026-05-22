@@ -16,6 +16,7 @@ from ..forms import ExpenseForm, ExpenseOverlayForm
 from ..models import Expense, ExpenseDataOverlay, TransactionType
 from ..notifications import send_settled_notification, set_initial_notification_class
 from ._period import _get_month, _get_period_mode, _get_year, _month_nav_context, _year_nav_context
+from ._sharing import has_buddy_or_multiuser_project
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +165,10 @@ def expenses_list(request):
         year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
         nav_ctx = _month_nav_context(year, month, feuser.month_start_day, feuser.month_start_prev)
 
-    ctx = {"active_nav": "expenses"}
+    ctx = {
+        "active_nav": "expenses",
+        "nav_show_sharing_toggle": has_buddy_or_multiuser_project(feuser),
+    }
     ctx.update(nav_ctx)
     return render(request, "budget/expenses_list.html", ctx)
 

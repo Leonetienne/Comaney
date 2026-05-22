@@ -38,9 +38,10 @@ function dashboardBoard() {
         urlReset:    '',
 
         // Period
-        periodYear:  '',
-        periodMonth: '',
-        periodMode:  '',
+        periodYear:    '',
+        periodMonth:   '',
+        periodMode:    '',
+        sharingMode:   '',
 
         // Edit modal
         editCard:   null,   // full card object being edited
@@ -77,10 +78,15 @@ function dashboardBoard() {
             this.urlReorder = cfg.urlReorder;
             this.urlPresets = cfg.urlPresets;
             this.urlReset  = cfg.urlReset;
-            this.periodYear  = cfg.year;
-            this.periodMonth = cfg.month;
-            this.periodMode  = cfg.mode;
+            this.periodYear   = cfg.year;
+            this.periodMonth  = cfg.month;
+            this.periodMode   = cfg.mode;
+            this.sharingMode  = this.$store.sharing.mode;
             this.csrf = document.querySelector('meta[name="csrf-token"]').content;
+            this.$watch('$store.sharing.mode', mode => {
+                this.sharingMode = mode;
+                this.fetchCards();
+            });
 
             await this.fetchCards();
             this._setupResize();
@@ -115,6 +121,7 @@ function dashboardBoard() {
             const p = new URLSearchParams({ year: this.periodYear });
             if (this.periodMode === 'year') p.set('view', 'year');
             else p.set('month', this.periodMonth);
+            if (this.sharingMode === 'shared') p.set('sharing', 'shared');
             return p.toString();
         },
 
@@ -793,6 +800,13 @@ function dashboardBoard() {
 }
 
 document.addEventListener('alpine:init', () => {
+    Alpine.store('sharing', {
+        mode: localStorage.getItem('sharingMode') || 'personal',
+        set(mode) {
+            this.mode = mode;
+            localStorage.setItem('sharingMode', mode);
+        },
+    });
     Alpine.data('dashboardBoard', dashboardBoard);
 });
 

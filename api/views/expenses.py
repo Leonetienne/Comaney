@@ -7,6 +7,7 @@ from budget.date_utils import financial_month_range, financial_year_range
 from budget.models import Expense, TransactionType
 from budget.query_parser import apply_query
 from budget.notifications import send_settled_notification, set_initial_notification_class
+from budget.views._sharing import build_shared_qs
 from ..serializers import _expense_json, _apply_expense_fields, _set_tags
 from ..utils import _err, _ok, _parse_body, _parse_month, _require_auth
 
@@ -21,10 +22,14 @@ def expenses(request, feuser):
             start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
         else:
             start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+
+        sharing = request.GET.get("sharing", "")
+        shared_mode = sharing == "shared"
+
         _sort_field_map = {
             "title": "title",
             "payee": "payee",
-            "value": "value",
+            "value": "effective_value" if shared_mode else "value",
             "date": "date_due",
         }
         sort_by = request.GET.get("sort_by", "date")
@@ -32,19 +37,38 @@ def expenses(request, feuser):
         sort_field = _sort_field_map.get(sort_by, "date_due")
         if sort_dir == "desc":
             sort_field = "-" + sort_field
-        qs = (
-            Expense.objects
-            .filter(owning_feuser=feuser, date_due__gte=start, date_due__lte=end, is_dummy=False)
-            .select_related("category", "project")
-            .prefetch_related(
-                "tags",
-                "buddy_spendings__participant_feuser",
-                "buddy_spendings__participant_dummy",
+
+        if shared_mode:
+            qs = (
+                build_shared_qs(feuser, start, end)
+                .select_related("category", "project", "owning_feuser", "upfront_payee_dummy")
+                .prefetch_related(
+                    "tags",
+                    "buddy_spendings__participant_feuser",
+                    "buddy_spendings__participant_dummy",
+                )
+                .order_by(sort_field, "date_created")
             )
-            .order_by(sort_field, "date_created")
-        )
-        qs = apply_query(qs, request.GET.get("q", ""))
-        return _ok({"year": year, "month": month, "expenses": [_expense_json(e) for e in qs]})
+        else:
+            qs = (
+                Expense.objects
+                .filter(owning_feuser=feuser, date_due__gte=start, date_due__lte=end, is_dummy=False)
+                .select_related("category", "project")
+                .prefetch_related(
+                    "tags",
+                    "buddy_spendings__participant_feuser",
+                    "buddy_spendings__participant_dummy",
+                )
+                .order_by(sort_field, "date_created")
+            )
+
+        qs = apply_query(qs, request.GET.get("q", ""), feuser=feuser)
+        expenses_json = [
+            _expense_json(e, effective_value=getattr(e, 'effective_value', None),
+                          is_foreign=(e.owning_feuser_id != feuser.pk))
+            for e in qs
+        ]
+        return _ok({"year": year, "month": month, "expenses": expenses_json})
 
     if request.method == "POST":
         data = _parse_body(request)

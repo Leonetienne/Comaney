@@ -19,8 +19,10 @@ function expenseList() {
         periodYear: '',
         periodMonth: '',
         periodMode: '',
+        sharingMode: '',
         currency: '',
         urlEdit: '',
+        urlEditLite: '',
         urlClone: '',
         urlDelete: '',
         urlExpenses: '',
@@ -34,8 +36,14 @@ function expenseList() {
             this.periodYear   = cfg.year;
             this.periodMonth  = cfg.month;
             this.periodMode   = cfg.mode;
+            this.sharingMode  = this.$store.sharing.mode;
             this.currency     = cfg.currency;
+            this.$watch('$store.sharing.mode', mode => {
+                this.sharingMode = mode;
+                this.fetchExpenses();
+            });
             this.urlEdit      = cfg.urlEdit;
+            this.urlEditLite  = cfg.urlEditLite;
             this.urlClone     = cfg.urlClone;
             this.urlDelete    = cfg.urlDelete;
             this.urlExpenses  = cfg.urlExpenses;
@@ -112,6 +120,7 @@ function expenseList() {
                 p.set('month', this.periodMonth);
             }
             if (this.query) p.set('q', this.query);
+            if (this.sharingMode === 'shared') p.set('sharing', 'shared');
             p.set('sort_by', this.sortBy);
             p.set('sort_dir', this.sortDir);
 
@@ -136,10 +145,17 @@ function expenseList() {
             xhr.send();
         },
 
+        expValue(e) {
+            // In shared mode, use effective_value if available.
+            const raw = (this.sharingMode === 'shared' && e.effective_value != null)
+                ? e.effective_value : e.value;
+            return Math.round((parseFloat(raw) || 0) * 100) / 100;
+        },
+
         get visibleSum() {
             if (!this.expenses.length) return '–';
             const total = this.expenses.reduce((acc, e) => {
-                const v = parseFloat(e.value) || 0;
+                const v = this.expValue(e);
                 return acc + ((e.type === 'expense' || e.type === 'savings_dep') ? -v : v);
             }, 0);
             return total.toFixed(2);
@@ -180,9 +196,10 @@ function expenseList() {
             return m[type] || type;
         },
 
-        editUrl(id)   { return this.urlEdit.replace('/1/',   '/' + id + '/'); },
-        cloneUrl(id)  { return this.urlClone.replace('/1/',  '/' + id + '/'); },
-        deleteUrl(id) { return this.urlDelete.replace('/1/', '/' + id + '/'); },
+        editUrl(id)     { return this.urlEdit.replace('/1/',     '/' + id + '/'); },
+        editLiteUrl(id) { return this.urlEditLite.replace('/1/', '/' + id + '/'); },
+        cloneUrl(id)    { return this.urlClone.replace('/1/',    '/' + id + '/'); },
+        deleteUrl(id)   { return this.urlDelete.replace('/1/',   '/' + id + '/'); },
 
         backUrl() {
             return this.periodMode === 'year'
@@ -247,6 +264,13 @@ function expenseList() {
 }
 
 document.addEventListener('alpine:init', () => {
+    Alpine.store('sharing', {
+        mode: localStorage.getItem('sharingMode') || 'personal',
+        set(mode) {
+            this.mode = mode;
+            localStorage.setItem('sharingMode', mode);
+        },
+    });
     Alpine.data('expenseList', expenseList);
 });
 

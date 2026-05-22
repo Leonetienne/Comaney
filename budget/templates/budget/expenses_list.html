@@ -11,9 +11,10 @@ window.EXPENSE_CONFIG = {
     month:         "{{ nav_month }}",
     mode:          "{{ nav_mode }}",
     currency:      "{{ current_feuser.currency|escapejs }}",
-    urlEdit:       "{% url 'budget:expense_edit'   1 %}",
-    urlClone:      "{% url 'budget:expense_clone'  1 %}",
-    urlDelete:     "{% url 'budget:expense_delete' 1 %}",
+    urlEdit:       "{% url 'budget:expense_edit'         1 %}",
+    urlEditLite:   "{% url 'budget:expense_edit_overlay' 1 %}",
+    urlClone:      "{% url 'budget:expense_clone'        1 %}",
+    urlDelete:     "{% url 'budget:expense_delete'       1 %}",
     urlExpenses:   "{% url 'budget:expenses_list' %}",
     urlBulkAction: "{% url 'budget:expense_bulk_action' %}",
     urlExport:     "{% url 'budget:expenses_export' %}",
@@ -98,21 +99,31 @@ window.EXPENSE_CONFIG = {
                  :data-cat="catStr(exp)"
                  :data-tags="tagStr(exp)">
 
-                <div x-show="exp.date_due" class="exp-date-label" x-text="exp.date_due"></div>
+                <div class="exp-date-row">
+                    <label class="exp-checkbox-wrap" title="Select">
+                        <input type="checkbox" class="exp-checkbox"
+                               :checked="!!selected[exp.id]"
+                               @change="toggleSelect(exp.id)">
+                    </label>
+                    <div x-show="exp.date_due" class="exp-date-label" x-text="exp.date_due"></div>
+                </div>
 
                 <div class="exp-row1">
                     <span class="exp-title" x-text="exp.title"></span>
                     <span x-show="exp.payee" class="exp-payee" x-text="exp.payee"></span>
-                    <span class="exp-amount" :class="'type-' + exp.type" x-text="exp.value + ' ' + currency"></span>
+                    <span class="exp-amount" :class="'type-' + exp.type" x-text="expValue(exp) + ' ' + currency"></span>
                 </div>
 
                 <div class="exp-actions">
                     <template x-if="exp.type !== 'carry_over'">
                         <div class="d-contents">
-                            <template x-if="!exp.is_buddies_settlement || exp.can_edit">
+                            <template x-if="!exp.is_foreign && (!exp.is_buddies_settlement || exp.can_edit)">
                                 <a :href="editUrl(exp.id) + '?back=' + encodedBackUrl()" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
                             </template>
-                            <template x-if="!exp.is_buddies_settlement">
+                            <template x-if="exp.is_foreign && !exp.is_buddies_settlement">
+                                <a :href="editLiteUrl(exp.id) + '?back=' + encodedBackUrl()" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
+                            </template>
+                            <template x-if="!exp.is_buddies_settlement && !exp.is_foreign">
                                 <form method="post" :action="cloneUrl(exp.id)">
                                     <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
                                     <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
@@ -146,18 +157,14 @@ window.EXPENSE_CONFIG = {
 
                 <div x-show="exp.note" class="exp-row3" x-text="exp.note"></div>
 
-                <div x-show="exp.buddy_participants && exp.buddy_participants.length"
+                <div x-show="exp.buddy_participants && (sharingMode === 'shared' ? exp.buddy_participants.length > 0 : exp.buddy_participants.length > 1)"
                      class="exp-buddy-shared">
                     <div class="bexp-participants">
                         <div class="avatar-stack" x-html="avatarStack(exp.buddy_participants)"></div>
+                        <span x-show="sharingMode === 'shared' && exp.buddy_participants.length > 0"
+                              class="exp-payer-name">Paid by: <br class="exp-payer-br"><span x-text="exp.buddy_participants[0] ? exp.buddy_participants[0].name : ''"></span></span>
                     </div>
                 </div>
-
-                <label class="exp-checkbox-wrap" title="Select">
-                    <input type="checkbox" class="exp-checkbox"
-                           :checked="!!selected[exp.id]"
-                           @change="toggleSelect(exp.id)">
-                </label>
             </div>
         </template>
 

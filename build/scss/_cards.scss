@@ -24,11 +24,17 @@
   }
 }
 
+.exp-date-row {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .exp-date-label {
   font-size: 0.78rem;
   color: var(--text-muted);
-  grid-column: 1;
-  grid-row: 1;
 }
 
 .exp-row1 {
@@ -109,6 +115,18 @@
 
   .bexp-participants {
     padding-top: 8px;
+    padding-left: 0;
     border-top: 1px solid var(--border);
+
+    .exp-payer-name {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-left: 8px;
+
+      .exp-payer-br { display: none; }
+      @media (max-width: 600px) {
+        .exp-payer-br { display: inline; }
+      }
+    }
   }
 }

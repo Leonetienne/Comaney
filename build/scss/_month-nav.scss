@@ -1,6 +1,7 @@
 .month-nav {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 20px;
 
@@ -8,6 +9,17 @@
     flex-direction: column;
     align-items: stretch;
     width: fit-content;
+    gap: 10px;
+  }
+}
+
+.month-nav__toggles {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  @media (max-width: 600px) {
     gap: 10px;
   }
 }
@@ -45,6 +57,11 @@
     text-decoration: none !important;
     background: var(--bg-surface);
     transition: background .12s, color .12s;
+    // Reset for <button> elements used in JS-driven toggles
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: inherit;
 
     &:hover { color: var(--text); background: var(--bg-elevated); }
     &.active { background: #c2478a; color: #fff; }

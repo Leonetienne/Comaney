@@ -303,62 +303,64 @@ def parse_card_config(yaml_str: str) -> dict:
 # Data computation
 # ---------------------------------------------------------------------------
 
-def compute_card_data(config: dict, period_qs, feuser, period_info: dict = None) -> dict:
+def compute_card_data(config: dict, period_qs, feuser, period_info: dict = None,
+                      value_field: str = 'value') -> dict:
     """
     Compute the display data for a card given a period queryset (already
     scoped to feuser + date range + deactivated=False).
     Returns a dict suitable for JSON serialisation.
     period_info is {'start': date, 'end': date, 'mode': 'month'|'year'};
     required for line-chart cards.
+    value_field: 'value' for personal mode, 'effective_value' for shared mode.
     """
     card_type = config['type']
 
     if card_type == 'cell':
-        return _compute_cell(config, period_qs)
+        return _compute_cell(config, period_qs, value_field=value_field, feuser=feuser)
     if card_type in ('bar-chart', 'pie-chart'):
-        return _compute_chart(config, period_qs)
+        return _compute_chart(config, period_qs, value_field=value_field, feuser=feuser)
     if card_type == 'list':
-        return _compute_list(config, period_qs)
+        return _compute_list(config, period_qs, value_field=value_field, feuser=feuser)
     if card_type == 'line-chart':
         if not period_info:
             return {'labels': [], 'series': []}
-        return _compute_line_chart(config, period_qs, period_info)
+        return _compute_line_chart(config, period_qs, period_info, value_field=value_field, feuser=feuser)
     return {}
 
 
-def _filtered_qs(config: dict, base_qs):
+def _filtered_qs(config: dict, base_qs, feuser=None):
     q = config.get('query', '').strip()
     if q:
-        return apply_query(base_qs, q)
+        return apply_query(base_qs, q, feuser=feuser)
     return base_qs
 
 
-def _signed_sum(qs):
+def _signed_sum(qs, value_field: str = 'value'):
     """Sum values, negating income and savings-withdrawal types (method=total)."""
     return (
         qs.annotate(
             _signed=Case(
-                When(type__in=_TOTAL_NEGATIVE_TYPES, then=-F('value')),
-                default=F('value'),
+                When(type__in=_TOTAL_NEGATIVE_TYPES, then=-F(value_field)),
+                default=F(value_field),
                 output_field=DecimalField(),
             )
         ).aggregate(t=Sum('_signed'))['t'] or Decimal('0')
     )
 
 
-def _compute_cell(config: dict, period_qs) -> dict:
+def _compute_cell(config: dict, period_qs, value_field: str = 'value', feuser=None) -> dict:
     method = config['method']
     invert = config.get('flip_signs', False)
-    qs = _filtered_qs(config, period_qs)
+    qs = _filtered_qs(config, period_qs, feuser=feuser)
 
     if method == 'sum':
-        value = qs.aggregate(t=Sum('value'))['t'] or Decimal('0')
+        value = qs.aggregate(t=Sum(value_field))['t'] or Decimal('0')
     elif method == 'total':
-        value = _signed_sum(qs)
+        value = _signed_sum(qs, value_field=value_field)
     elif method == 'count':
         return {'value': qs.count()}
     elif method == 'custom':
-        fns = _make_query_fns(period_qs)
+        fns = _make_query_fns(period_qs, value_field=value_field)
         value = _run_sandboxed(config['python'], fns)
     else:
         value = Decimal('0')
@@ -368,8 +370,8 @@ def _compute_cell(config: dict, period_qs) -> dict:
     return {'value': float(value)}
 
 
-def _compute_chart(config: dict, period_qs) -> dict:
-    qs = _filtered_qs(config, period_qs)
+def _compute_chart(config: dict, period_qs, value_field: str = 'value', feuser=None) -> dict:
+    qs = _filtered_qs(config, period_qs, feuser=feuser)
     group = config['group']
     method = config.get('method', 'sum')
     invert = config.get('flip_signs', False)
@@ -377,14 +379,14 @@ def _compute_chart(config: dict, period_qs) -> dict:
     if method == 'total':
         qs = qs.annotate(
             _signed=Case(
-                When(type__in=_TOTAL_NEGATIVE_TYPES, then=-F('value')),
-                default=F('value'),
+                When(type__in=_TOTAL_NEGATIVE_TYPES, then=-F(value_field)),
+                default=F(value_field),
                 output_field=DecimalField(),
             )
         )
         agg_field = '_signed'
     else:
-        agg_field = 'value'
+        agg_field = value_field
 
     if group == 'tags':
         rows = (
@@ -429,12 +431,15 @@ def _compute_chart(config: dict, period_qs) -> dict:
 _ORDER_BY_FIELD = {'value': 'value', 'date': 'date_due', 'title': 'title'}
 
 
-def _compute_list(config: dict, period_qs) -> dict:
-    qs = _filtered_qs(config, period_qs)
+def _compute_list(config: dict, period_qs, value_field: str = 'value', feuser=None) -> dict:
+    qs = _filtered_qs(config, period_qs, feuser=feuser)
 
     order_by  = config.get('order_by', 'date')
     order_dir = config.get('order_dir', 'desc')
-    db_field  = _ORDER_BY_FIELD.get(order_by, 'date_due')
+    if order_by == 'value':
+        db_field = value_field
+    else:
+        db_field = _ORDER_BY_FIELD.get(order_by, 'date_due')
     order_field = db_field if order_dir == 'asc' else f'-{db_field}'
     ordered_qs = qs.order_by(order_field)
 
@@ -442,9 +447,9 @@ def _compute_list(config: dict, period_qs) -> dict:
         {
             'type':  row['type'],
             'title': row['title'],
-            'value': float(row['value']),
+            'value': float(row[value_field]),
         }
-        for row in ordered_qs.values('uid', 'date_due', 'type', 'title', 'value')
+        for row in ordered_qs.values('uid', 'date_due', 'type', 'title', value_field)
     ]
 
     result: dict = {'items': items}
@@ -454,9 +459,9 @@ def _compute_list(config: dict, period_qs) -> dict:
         invert = config.get('flip_signs', False)
 
         if method == 'sum':
-            sum_val = qs.aggregate(t=Sum('value'))['t'] or Decimal('0')
+            sum_val = qs.aggregate(t=Sum(value_field))['t'] or Decimal('0')
         elif method == 'total':
-            sum_val = _signed_sum(qs)
+            sum_val = _signed_sum(qs, value_field=value_field)
         elif method == 'count':
             sum_val = Decimal(str(qs.count()))
         else:
@@ -470,7 +475,8 @@ def _compute_list(config: dict, period_qs) -> dict:
     return result
 
 
-def _compute_line_chart(config: dict, period_qs, period_info: dict) -> dict:
+def _compute_line_chart(config: dict, period_qs, period_info: dict,
+                        value_field: str = 'value', feuser=None) -> dict:
     from collections import defaultdict
     from datetime import date, timedelta
 
@@ -504,7 +510,7 @@ def _compute_line_chart(config: dict, period_qs, period_info: dict) -> dict:
     labels        = [b[1].isoformat() for b in buckets]
     bucket_starts = [b[0].isoformat() for b in buckets]
 
-    base_qs = _filtered_qs(config, period_qs)
+    base_qs = _filtered_qs(config, period_qs, feuser=feuser)
 
     result_series = []
     for sc in series_cfg:
@@ -513,21 +519,21 @@ def _compute_line_chart(config: dict, period_qs, period_info: dict) -> dict:
 
         qs = base_qs
         if s_query:
-            qs = apply_query(qs, s_query)
+            qs = apply_query(qs, s_query, feuser=feuser)
 
         if s_method == 'total':
-            rows = list(qs.values('date_due', 'type', 'value'))
-            def _signed(row):
-                v = row['value']
+            rows = list(qs.values('date_due', 'type', value_field))
+            def _signed(row, _vf=value_field):
+                v = row[_vf]
                 return -v if row['type'] in _TOTAL_NEGATIVE_TYPES else v
             by_date: dict = defaultdict(Decimal)
             for row in rows:
                 by_date[row['date_due']] += _signed(row)
         else:
-            rows = list(qs.values('date_due', 'value'))
+            rows = list(qs.values('date_due', value_field))
             by_date = defaultdict(Decimal)
             for row in rows:
-                by_date[row['date_due']] += row['value']
+                by_date[row['date_due']] += row[value_field]
 
         invert = sc.get('flip_signs', False)
         cumulative = Decimal('0')
@@ -568,22 +574,22 @@ _SAFE_BUILTINS = {
 _FORBIDDEN_NODES = (ast.Import, ast.ImportFrom)
 
 
-def _make_query_fns(period_qs) -> dict:
+def _make_query_fns(period_qs, value_field: str = 'value') -> dict:
     def query_sum(q=''):
         qs = apply_query(period_qs, q)
-        return qs.aggregate(t=Sum('value'))['t'] or Decimal('0')
+        return qs.aggregate(t=Sum(value_field))['t'] or Decimal('0')
 
     def query_sum_abs(q=''):
-        vals = list(apply_query(period_qs, q).values_list('value', flat=True))
+        vals = list(apply_query(period_qs, q).values_list(value_field, flat=True))
         return sum(abs(v) for v in vals) if vals else Decimal('0')
 
     def query_sum_gt0(q=''):
-        qs = apply_query(period_qs, q).filter(value__gt=0)
-        return qs.aggregate(t=Sum('value'))['t'] or Decimal('0')
+        qs = apply_query(period_qs, q).filter(**{f'{value_field}__gt': 0})
+        return qs.aggregate(t=Sum(value_field))['t'] or Decimal('0')
 
     def query_sum_lt0(q=''):
-        qs = apply_query(period_qs, q).filter(value__lt=0)
-        return qs.aggregate(t=Sum('value'))['t'] or Decimal('0')
+        qs = apply_query(period_qs, q).filter(**{f'{value_field}__lt': 0})
+        return qs.aggregate(t=Sum(value_field))['t'] or Decimal('0')
 
     return {
         'query_sum':      query_sum,

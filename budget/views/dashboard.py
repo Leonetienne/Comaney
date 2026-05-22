@@ -4,6 +4,7 @@ from django.shortcuts import render
 
 from ..decorators import feuser_required
 from ._period import _get_month, _get_period_mode, _get_year, _month_nav_context, _year_nav_context
+from ._sharing import has_buddy_or_multiuser_project
 
 
 @feuser_required
@@ -18,6 +19,9 @@ def dashboard(request):
         year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
         nav_ctx = _month_nav_context(year, month, feuser.month_start_day, feuser.month_start_prev)
 
-    ctx = {'active_nav': 'dashboard'}
+    ctx = {
+        'active_nav': 'dashboard',
+        'nav_show_sharing_toggle': has_buddy_or_multiuser_project(feuser),
+    }
     ctx.update(nav_ctx)
     return render(request, 'budget/dashboard.html', ctx)

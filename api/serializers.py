@@ -43,8 +43,6 @@ def _buddy_participants(exp) -> list:
                 "approval_state": None,
                 "is_payer": False,
             })
-    if not participants:
-        return []
     if exp.is_dummy and exp.upfront_payee_dummy_id:
         du = exp.upfront_payee_dummy
         initials = du.initials
@@ -75,13 +73,15 @@ def _settlement_can_delete(exp) -> bool:
     return exp.settlement_can_delete
 
 
-def _expense_json(exp):
+def _expense_json(exp, effective_value=None, is_foreign=False):
     return {
         "id":                           exp.uid,
         "title":                        exp.title,
         "payee":                        exp.payee,
         "type":                         exp.type,
         "value":                        str(exp.value),
+        "effective_value":              str(effective_value) if effective_value is not None else None,
+        "is_foreign":                   is_foreign,
         "category":                     {"id": exp.category.uid, "title": exp.category.title} if exp.category else None,
         "tags":                         [{"id": t.uid, "title": t.title} for t in exp.tags.all()],
         "note":                         exp.note,
@@ -94,8 +94,8 @@ def _expense_json(exp):
         "date_created":                 exp.date_created.isoformat(),
         "buddy_participants":           _buddy_participants(exp),
         "is_buddies_settlement":        exp.is_buddies_settlement,
-        "can_delete":                   _settlement_can_delete(exp),
-        "can_edit":                     exp.settlement_can_edit,
+        "can_delete":                   _settlement_can_delete(exp) and not is_foreign,
+        "can_edit":                     exp.settlement_can_edit and not is_foreign,
         "project":                      {"id": exp.project_id, "name": exp.project.name} if exp.project_id else None,
     }
 

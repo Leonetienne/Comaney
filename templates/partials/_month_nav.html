@@ -1,9 +1,23 @@
 <div class="month-nav">
-    <div class="period-toggle">
-        <a href="?year={{ nav_year }}&month={{ nav_month }}"
-           class="period-toggle__opt{% if nav_mode == 'month' %} active{% endif %}">Months</a>
-        <a href="?view=year&year={{ nav_year }}"
-           class="period-toggle__opt{% if nav_mode == 'year' %} active{% endif %}">Years</a>
+    <div class="month-nav__toggles">
+        <div class="period-toggle">
+            <a href="?year={{ nav_year }}&month={{ nav_month }}"
+               class="period-toggle__opt{% if nav_mode == 'month' %} active{% endif %}">Months</a>
+            <a href="?view=year&year={{ nav_year }}"
+               class="period-toggle__opt{% if nav_mode == 'year' %} active{% endif %}">Years</a>
+        </div>
+        {% if nav_show_sharing_toggle %}
+        <div class="period-toggle" x-data>
+            <button type="button"
+                    class="period-toggle__opt"
+                    :class="{ active: $store.sharing.mode !== 'shared' }"
+                    @click="$store.sharing.set('personal')">Personal</button>
+            <button type="button"
+                    class="period-toggle__opt"
+                    :class="{ active: $store.sharing.mode === 'shared' }"
+                    @click="$store.sharing.set('shared')">Shared</button>
+        </div>
+        {% endif %}
     </div>
     <div class="month-nav__controls">
         {% if nav_mode == 'year' %}

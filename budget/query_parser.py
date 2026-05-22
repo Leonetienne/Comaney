@@ -15,17 +15,19 @@ Filters:
     settled=yes|no|true|false|1|0
     deactivated=yes|no|true|false|1|0
     recurring=yes|no|true|false|1|0  (yes/true/1 = only recurring instances; no/false/0 = only non-recurring)
-    buddy=yes|no|true|false|1|0  (yes/true/1 = only buddy expenses; no/false/0 = only non-buddy)
-    buddy=<substring>  (match participant name, project name, or project member name)
-    project=<substring>  (match project name; project=none for expenses without a project)
+    shared=yes|no|true|false|1|0  (yes/true/1 = only buddy/shared expenses; no/false/0 = only non-shared)
+    participant=me|<substring>  (me = feuser is owner or participant; substring matches owner or any participant)
+    payer=me|<substring>  (me requires feuser context; substring matches owning user or offline buddy participant)
     value<N, value<=N, value>N, value>=N, value=N, value==N
     date<dd.mm.yyyy   date>=mm/dd/yyyy  date==yyyy-mm-dd  date>today
         dot delimiter → dd.mm.yyyy  |  slash delimiter → mm/dd/yyyy  |  hyphen → yyyy-mm-dd
         magic words: 'today', 'cur_week_start' (Monday), 'cur_week_end' (Sunday)
-    cat=<substring>   cat=none  (expenses with no category)
-    tag=<substring>   tag=none  (expenses with no tag)
-    payee=<substring>
-    <bare word or "quoted phrase">  →  free-text (title / payee / note / buddy names / project names)
+    cat=<substring>   cat=none  (expenses with no category visible to current user)
+    tag=<substring>   tag=none  (expenses with no tag visible to current user)
+    project=<yes|no|true|false|1|0|none|substring>
+        yes/true/1 → has any project; no/false/0/none → has no project; substring → project name match
+    payee=<none|substring>  none → no payee set
+    <bare word or "quoted phrase">  →  free-text (title / payee / note / overlay note / buddy names / project names)
     !<atom>           →  NOT  (negates the next atom or parenthesised group)
 """
 
@@ -153,23 +155,120 @@ def _buddy_name_q(val: str) -> Q:
     )
 
 
-def _buddy_q(val: str, model=None) -> Q:
+def _shared_q(val: str, model=None) -> Q:
+    """shared=<bool>: expense has (true) or lacks (false) BuddySpending rows."""
     if val in ('true', 'yes', '1'):
         if model is not None:
             return Q(pk__in=model.objects.filter(buddy_spendings__isnull=False).values('pk'))
         return Q(buddy_spendings__isnull=False)
-    if val in ('false', 'no', '0'):
-        return Q(buddy_spendings__isnull=True)
-    # Name/group search via pk__in to avoid JOIN fanout.
+    # false / no / 0
+    return Q(buddy_spendings__isnull=True)
+
+
+def _participant_q(val: str, model=None, feuser=None) -> Q:
+    """participant=<me|substring>: person is owner, upfront payer, or BuddySpending participant."""
+    if val == 'me' and feuser is not None:
+        if model is not None:
+            return Q(pk__in=model.objects.filter(
+                Q(owning_feuser=feuser) | Q(buddy_spendings__participant_feuser=feuser)
+            ).values('pk'))
+        return Q(owning_feuser=feuser) | Q(buddy_spendings__participant_feuser=feuser)
+    # Substring: owner name/email, upfront dummy payer, or BuddySpending participant name
+    name_q = (
+        Q(owning_feuser__first_name__icontains=val)
+        | Q(owning_feuser__last_name__icontains=val)
+        | Q(owning_feuser__email__icontains=val)
+        | Q(upfront_payee_dummy__display_name__icontains=val)
+        | Q(buddy_spendings__participant_feuser__first_name__icontains=val)
+        | Q(buddy_spendings__participant_feuser__last_name__icontains=val)
+        | Q(buddy_spendings__participant_feuser__email__icontains=val)
+        | Q(buddy_spendings__participant_dummy__display_name__icontains=val)
+    )
     if model is not None:
-        return Q(pk__in=model.objects.filter(_buddy_name_q(val)).values('pk'))
-    return _buddy_name_q(val)
+        return Q(pk__in=model.objects.filter(name_q).values('pk'))
+    return name_q
 
 
-def _term_q(val: str, model=None) -> Q:
+def _payer_q(val: str, model=None, feuser=None) -> Q:
+    """payer=<me|substring>: matches owning_feuser or dummy upfront payer (not participants)."""
+    if val == 'me' and feuser is not None:
+        return Q(owning_feuser=feuser)
+    return (
+        Q(owning_feuser__first_name__icontains=val)
+        | Q(owning_feuser__last_name__icontains=val)
+        | Q(owning_feuser__email__icontains=val)
+        | Q(upfront_payee_dummy__display_name__icontains=val)
+    )
+
+
+def _project_q(val: str) -> Q:
+    """project=<bool|none|substring>."""
+    if val in ('false', 'no', '0', 'none'):
+        return Q(project__isnull=True)
+    if val in ('true', 'yes', '1'):
+        return Q(project__isnull=False)
+    return Q(project__name__icontains=val)
+
+
+def _payee_q(val: str) -> Q:
+    if val == 'none':
+        return Q(payee='') | Q(payee__isnull=True)
+    return Q(payee__icontains=val)
+
+
+def _tag_q(val: str, model=None, feuser=None) -> Q:
+    """tag=<none|substring> — also checks overlay tags for feuser."""
+    if val == 'none':
+        # No direct tags AND no overlay tags for feuser
+        q = Q(tags__isnull=True)
+        if feuser is not None and model is not None:
+            q &= ~Q(pk__in=model.objects.filter(
+                data_overlays__feuser=feuser,
+                data_overlays__tags__isnull=False,
+            ).values('pk'))
+        return q
+    # Substring: pk__in to avoid JOIN fanout on M2M tags
+    if model is not None:
+        q = Q(pk__in=model.objects.filter(tags__title__icontains=val).values('pk'))
+        if feuser is not None:
+            q |= Q(pk__in=model.objects.filter(
+                data_overlays__feuser=feuser,
+                data_overlays__tags__title__icontains=val,
+            ).values('pk'))
+        return q
+    return Q(tags__title__icontains=val)
+
+
+def _cat_q(val: str, model=None, feuser=None) -> Q:
+    """cat=<none|substring> — also checks overlay category for feuser."""
+    if val == 'none':
+        q = Q(category__isnull=True)
+        if feuser is not None and model is not None:
+            q &= ~Q(pk__in=model.objects.filter(
+                data_overlays__feuser=feuser,
+                data_overlays__category__isnull=False,
+            ).values('pk'))
+        return q
+    q = Q(category__title__icontains=val)
+    if feuser is not None and model is not None:
+        q |= Q(pk__in=model.objects.filter(
+            data_overlays__feuser=feuser,
+            data_overlays__category__title__icontains=val,
+        ).values('pk'))
+    return q
+
+
+def _term_q(val: str, model=None, feuser=None) -> Q:
     q = Q(title__icontains=val) | Q(payee__icontains=val) | Q(note__icontains=val)
     if model is not None:
         q |= Q(pk__in=model.objects.filter(_buddy_name_q(val)).values('pk'))
+        if feuser is not None:
+            # Overlay note (null means "inherit expense note" — skip those)
+            q |= Q(pk__in=model.objects.filter(
+                data_overlays__feuser=feuser,
+                data_overlays__note__icontains=val,
+                data_overlays__note__isnull=False,
+            ).values('pk'))
     return q
 
 
@@ -184,10 +283,8 @@ _EQUALS: dict = {
     'recurring':   lambda v: Q(source_scheduled__isnull=False) if v in ('true', 'yes', '1') else Q(source_scheduled__isnull=True),
     'value':       lambda v: _value_q('=', float(v)),
     'date':        lambda v: _date_q('=', v),
-    'tag':         lambda v: Q(tags__isnull=True) if v == 'none' else Q(tags__title__icontains=v),
-    'cat':         lambda v: Q(category__isnull=True) if v == 'none' else Q(category__title__icontains=v),
-    'payee':       lambda v: Q(payee__icontains=v),
-    'project':     lambda v: Q(project__isnull=True) if v == 'none' else Q(project__name__icontains=v),
+    'project':     lambda v: _project_q(v),
+    'payee':       lambda v: _payee_q(v),
 }
 
 _CMP: dict = {
@@ -203,7 +300,7 @@ _DATE_CMP: dict = {
 # Recursive-descent compiler
 # ---------------------------------------------------------------------------
 
-def _compile(tokens: list[dict], model=None) -> Q:
+def _compile(tokens: list[dict], model=None, feuser=None) -> Q:
     pos = [0]
 
     def peek():
@@ -256,37 +353,40 @@ def _compile(tokens: list[dict], model=None) -> Q:
             h = _DATE_CMP.get(tok['key'])
             if h:
                 return h(tok['op'], tok['raw'])
-            # Unrecognised key → free-text
-            return _term_q(tok['key'] + tok['op'] + tok['raw'])
+            return _term_q(tok['key'] + tok['op'] + tok['raw'], model, feuser)
         if tok['t'] == 'cmp':
             h = _CMP.get(tok['key'])
             if h:
                 return h(tok['op'], tok['num'])
-            # Unrecognised key → free-text
-            return _term_q(tok['key'] + tok['op'] + str(tok['num']))
+            return _term_q(tok['key'] + tok['op'] + str(tok['num']), model, feuser)
         if tok['t'] == 'kv':
-            # tag=<value> (not 'none') must use a pk-in subquery so that
-            # multiple tag conditions don't collapse onto the same JOIN row.
-            if tok['key'] == 'tag' and tok['val'] != 'none' and model is not None:
-                return Q(pk__in=model.objects.filter(
-                    tags__title__icontains=tok['val']
-                ).values('pk'))
-            if tok['key'] == 'buddy':
-                return _buddy_q(tok['val'], model)
-            h = _EQUALS.get(tok['key'])
+            key = tok['key']
+            val = tok['val']
+            # Feuser-aware and special-cased filters
+            if key == 'tag':
+                return _tag_q(val, model, feuser)
+            if key == 'cat':
+                return _cat_q(val, model, feuser)
+            if key == 'shared':
+                return _shared_q(val, model)
+            if key == 'participant':
+                return _participant_q(val, model, feuser)
+            if key == 'payer':
+                return _payer_q(val, model, feuser)
+            h = _EQUALS.get(key)
             if h:
-                return h(tok['val'])
+                return h(val)
             # Unrecognised key → free-text
-            return _term_q(tok['key'] + '=' + tok['val'])
+            return _term_q(key + '=' + val, model, feuser)
         # str token → free-text search (includes buddy/group name matching)
-        return _term_q(tok.get('val', ''), model)
+        return _term_q(tok.get('val', ''), model, feuser)
 
     return parse_expr()
 
 
-def apply_query(qs, query_str: str):
+def apply_query(qs, query_str: str, feuser=None):
     """Apply a search query string to an Expense queryset and return it filtered."""
     s = (query_str or '').strip()
     if not s:
         return qs
-    return qs.filter(_compile(_tokenize(s.lower()), qs.model)).distinct()
+    return qs.filter(_compile(_tokenize(s.lower()), qs.model, feuser=feuser)).distinct()
