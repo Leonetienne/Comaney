@@ -238,3 +238,66 @@ class TestExpenseSorting:
         sort_dir_sel = Select(driver.find_element(By.ID, "exp-sort-dir"))
         assert sort_by_sel.first_selected_option.get_attribute("value") == "date"
         assert sort_dir_sel.first_selected_option.get_attribute("value") == "desc"
+
+
+class TestDoubleSubmitGuard:
+    """Verify that posting a consumed nonce (back + resubmit) does not create a duplicate.
+
+    Uses a plain requests.Session so the test is independent of browser login state.
+    """
+
+    def test_back_resubmit_creates_only_one_expense(self, ctx):
+        import re as _re
+
+        s = requests.Session()
+        today = server_today()
+        title = "E2E NoDuplicate"
+
+        # --- authenticate ---
+        # GET /login/ to receive the CSRF cookie, then POST credentials.
+        r = s.get(_url("/login/"))
+        assert r.status_code == 200, f"GET /login/ returned {r.status_code}"
+        csrf = s.cookies.get("csrftoken", "")
+        r = s.post(_url("/login/"), data={
+            "csrfmiddlewaretoken": csrf,
+            "email": ctx["email"],
+            "password": ctx["password"],
+        }, allow_redirects=True)
+        assert "/budget/" in r.url, f"Login did not redirect to /budget/; landed at {r.url}"
+
+        # --- load the form and capture the one-time nonce ---
+        r = s.get(_url("/budget/expenses/new/"))
+        assert r.status_code == 200, f"GET /budget/expenses/new/ returned {r.status_code}"
+        m = _re.search(r'name="form_nonce"\s+value="([^"]+)"', r.text)
+        assert m, "form_nonce hidden input not found in expense form HTML"
+        stale_nonce = m.group(1)
+        csrf = s.cookies.get("csrftoken", csrf)
+
+        post_data = {
+            "csrfmiddlewaretoken": csrf,
+            "form_nonce": stale_nonce,
+            "title": title,
+            "value": "9.99",
+            "type": "expense",
+            "date_due": today,
+            "settled": "on",
+        }
+
+        # --- first POST: creates the expense and consumes the nonce ---
+        r = s.post(_url("/budget/expenses/new/"), data=post_data, allow_redirects=False)
+        assert r.status_code in (301, 302), f"First POST returned {r.status_code}"
+
+        # --- second POST: replay the consumed nonce (back + resubmit) ---
+        post_data["title"] = title + " DUPE"
+        r = s.post(_url("/budget/expenses/new/"), data=post_data, allow_redirects=False)
+        assert r.status_code in (301, 302), f"Second POST returned {r.status_code}"
+
+        # --- assert only one expense was created ---
+        resp = api_get("/api/v1/expenses/", ctx, params={"q": "E2E NoDuplicate"})
+        assert resp.status_code == 200
+        matches = resp.json()["expenses"]
+        dupes = [e for e in matches if "DUPE" in e["title"]]
+        assert dupes == [], f"Duplicate expense was created: {dupes}"
+        originals = [e for e in matches if e["title"] == title]
+        assert len(originals) == 1, f"Expected 1 original, found {len(originals)}"
+        api_delete(f"/api/v1/expenses/{originals[0]['id']}/", ctx)
