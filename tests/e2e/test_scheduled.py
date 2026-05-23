@@ -198,6 +198,32 @@ class TestScheduledImmediateGeneration:
             api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
         api_delete(f"/api/v1/scheduled/{sid}/", ctx)
 
+    def test_create_via_gui_generates_expenses_immediately(self, driver, w, ctx):
+        """Saving a new scheduled expense via the browser form generates expenses immediately."""
+        today = server_today()
+        title = "E2E ImmGen GUI Create"
+
+        driver.get(_url("/budget/scheduled/new/"))
+        fill(w, By.ID, "id_title", title)
+        fill(w, By.ID, "id_value", "15.00")
+        Select(driver.find_element(By.ID, "id_type")).select_by_value("expense")
+        fill(w, By.ID, "id_repeat_every_factor", "1")
+        Select(driver.find_element(By.ID, "id_repeat_every_unit")).select_by_value("months")
+        driver.execute_script(f"document.getElementById('id_repeat_base_date').value = '{today}';")
+        submit(w)
+        wait_url(w, "/budget/scheduled/")
+
+        resp = api_get("/api/v1/expenses/", ctx)
+        assert resp.status_code == 200
+        hits = [e for e in resp.json()["expenses"] if e["title"] == title]
+        assert len(hits) >= 1, "Expected at least one generated expense immediately after saving via GUI"
+
+        for e in hits:
+            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        all_sched = api_get("/api/v1/scheduled/", ctx).json()["scheduled"]
+        for s in [s for s in all_sched if s["title"] == title]:
+            api_delete(f"/api/v1/scheduled/{s['id']}/", ctx)
+
     def test_edit_generates_new_expenses_immediately(self, ctx):
         """Editing a scheduled expense (e.g. changing the base date) triggers
         generation immediately; the new occurrence appears without running run_cmd."""
