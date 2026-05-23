@@ -1,3 +1,4 @@
+import secrets
 from datetime import date
 
 from django.shortcuts import get_object_or_404, redirect, render
@@ -25,6 +26,11 @@ def scheduled_list(request):
 @feuser_required
 def scheduled_create(request):
     if request.method == "POST":
+        submitted_nonce = request.POST.get("form_nonce", "")
+        session_nonce = request.session.pop("scheduled_create_nonce", None)
+        if not session_nonce or submitted_nonce != session_nonce:
+            return redirect("budget:scheduled_list")
+
         form = ScheduledExpenseForm(request.POST, feuser=request.feuser)
         if form.is_valid():
             obj = form.save(commit=False)
@@ -37,9 +43,14 @@ def scheduled_create(request):
             feuser=request.feuser,
             initial={"type": "expense", "default_auto_settle_on_due_date": True, "notify": True},
         )
+
+    form_nonce = secrets.token_hex(32)
+    request.session["scheduled_create_nonce"] = form_nonce
+
     return render(request, "budget/scheduled_form.html", {
         "active_nav": "scheduled",
         "form": form,
+        "form_nonce": form_nonce,
     })
 
 

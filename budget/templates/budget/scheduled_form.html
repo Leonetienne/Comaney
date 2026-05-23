@@ -9,6 +9,7 @@
 <div class="form-wrap">
     <form method="post" novalidate>
         {% csrf_token %}
+        {% if form_nonce %}<input type="hidden" name="form_nonce" value="{{ form_nonce }}">{% endif %}
 
         <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
         {{ form.title }}
