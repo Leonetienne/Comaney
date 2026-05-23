@@ -1,26 +1,26 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Comaney - Personal Budget Tracking{% endblock %}
+{% block title %}Comaney - Budgeting that actually fits into your life{% endblock %}
+{% block meta_description %}Track spending, automate recurring bills, split costs with friends, and always know how much you have left this month. Free, no subscriptions, no nonsense.{% endblock %}
 
 {% block layout %}
 <div class="l-landingpage">
 
-  <!-- ── Hero ── -->
+  <!-- ── Hero ───────────────────────────────────────────────── -->
   <section class="lp-hero">
     <div class="lp-hero-copy">
       <span class="lp-eyebrow">
         <span class="lp-eyebrow-dot"></span>
-        Open-source &middot; Self-hostable
+        Free &middot; No subscriptions &middot; No nonsense
       </span>
       <h1 class="lp-hero-title">
         Know <span class="lp-accent">exactly</span><br>
         where your<br>money goes.
       </h1>
       <p class="lp-hero-sub">
-        Log what you spend, let recurring bills manage themselves, and always
-        know exactly how much you have left this month. Simple, self-hosted,
-        no bank sync required.
+        Track spending, automate recurring bills, split costs with friends,
+        and always know how much you have left this month.
       </p>
       {% if registration_enabled %}
       <div class="lp-cta-row">
@@ -35,308 +35,399 @@
     </div>
     <div class="lp-hero-visual">
       <img
-        src="/static/images/landingpage/dashboard-closeup.png"
-        alt="App dashboard screenshot"
+        src="{% static 'images/landingpage/dash-with-themes.png' %}"
+        alt="Comaney dashboard with a custom background theme"
         class="lp-hero-img"
         width="720" height="480"
       >
     </div>
   </section>
 
-  <!-- ── Stats bar ── -->
-  <div class="lp-stats">
-    <div class="lp-stat">
-      <div class="lp-stat-value">100%</div>
-      <div class="lp-stat-label">Self-hosted &amp; open source</div>
+  <!-- ── For who ────────────────────────────────────────────── -->
+  <section class="lp-forwho lp-reveal">
+    <div class="lp-forwho-inner">
+      <p class="lp-section-eyebrow">Built for real life</p>
+      <h2 class="lp-section-title">Whether you're flying solo<br>or splitting the bill</h2>
+      <div class="lp-forwho-cards">
+
+        <div class="lp-forwho-card">
+          <div class="lp-forwho-icon">🧍</div>
+          <h3>Just me</h3>
+          <p>Track your expenses and income, set up recurring bills once, and see a monthly breakdown of exactly where your money went.</p>
+        </div>
+
+        <div class="lp-forwho-card lp-forwho-card--featured">
+          <div class="lp-forwho-icon">👫</div>
+          <h3>Me and one other person</h3>
+          <p>Split a shared flat, go halves on dinner, or track anything with a partner or friend. Comaney shows who owes what and makes settling up easy.</p>
+        </div>
+
+        <div class="lp-forwho-card">
+          <div class="lp-forwho-icon">👥</div>
+          <h3>A whole group</h3>
+          <p>Beach trips, shared houses, group holidays. Add everyone, log who paid for what, and Comaney finds the simplest way to settle everything.</p>
+        </div>
+
+      </div>
     </div>
-    <div class="lp-stat">
-      <div class="lp-stat-value">AI</div>
-      <div class="lp-stat-label">Powered express entry creation</div>
+  </section>
+
+  <!-- ── 01: Expense tracking ───────────────────────────────── -->
+  <div class="lp-feature lp-reveal">
+    <div class="lp-feature-copy">
+      <span class="lp-feature-num">01: Track your spending</span>
+      <h2 class="lp-feature-title">Every euro,<br>accounted for.</h2>
+      <p class="lp-feature-body">
+        Log anything that moves money: what you spent, what you earned, what you put
+        into savings. Assign a category and some tags so at the end of the month you
+        can see at a glance where the money actually went.
+      </p>
+      <ul class="lp-checklist">
+        <li>Expenses, income, and savings in one place</li>
+        <li>Categories and tags on every entry</li>
+        <li>Filter and search your full history instantly</li>
+        <li>Mark things paid or leave them outstanding</li>
+        <li>Download everything as a spreadsheet any time</li>
+      </ul>
     </div>
-    <div class="lp-stat">
-      <div class="lp-stat-value">&infin;</div>
-      <div class="lp-stat-label">Expenses, categories &amp; tags</div>
-    </div>
-    <div class="lp-stat">
-      <div class="lp-stat-value">0</div>
-      <div class="lp-stat-label">Subscriptions, ads, or tracking</div>
+    <div class="lp-feature-visual">
+      <img
+        src="{% static 'images/landingpage/expense-list.png' %}"
+        alt="The Comaney expense list showing expenses with categories and a spending breakdown"
+        class="lp-feature-img"
+        width="640" height="430"
+      >
     </div>
   </div>
 
-  <div class="lp-features">
-
-    <!-- ── Feature 1: Expense tracking ── -->
-    <div class="lp-feature">
+  <!-- ── 02: AI Express Entry ───────────────────────────────── -->
+  <div class="lp-stripe">
+    <div class="lp-feature lp-rev lp-reveal">
       <div class="lp-feature-copy">
-        <span class="lp-feature-num">01 &mdash; Expense tracking</span>
-        <h2 class="lp-feature-title">Every cent,<br>accounted for.</h2>
+        <span class="lp-feature-num">02: AI Express Entry</span>
+        <h2 class="lp-feature-title">Snap a receipt.<br><span class="lp-accent">Done.</span></h2>
         <p class="lp-feature-body">
-          Log income and expenses with a title, value, due date, payee, and a note.
-          Assign categories and tags to each entry and Comaney tells you exactly
-          where your money went at the end of every month.
+          Nobody wants to type out every item on a grocery receipt. Take a photo or just
+          describe what you bought in plain language, and the AI fills in the title,
+          category, tags, payee, and amount for you. You review everything before anything
+          is saved; you're always in control.
+        </p>
+        <div class="lp-example-bubble">
+          <span class="lp-example-label">You type:</span>
+          <em>"Coffee at the airport 4.80, and a sandwich 8.50"</em>
+        </div>
+        <p class="lp-feature-body lp-feature-body--mt">
+          Comaney creates two expenses, assigns categories, adds tags, and lets you confirm
+          in one click. Every new account gets a free monthly budget to try it right away.
         </p>
         <ul class="lp-checklist">
-          <li>Categories and tags on every entry</li>
-          <li>Income and expenses side by side</li>
-          <li>Mark entries settled as you pay them</li>
-          <li>Payee and note fields for full context</li>
+          <li>Type a description or take a photo</li>
+          <li>Handles multiple items at once</li>
+          <li>Learns your categories and tags automatically</li>
+          <li>Free monthly trial budget included for every account</li>
         </ul>
       </div>
       <div class="lp-feature-visual">
         <img
-          src="/static/images/landingpage/barchart.png"
-          alt="A bar chart of expenses"
+          src="{% static 'images/landingpage/ai-gen.png' %}"
+          alt="The AI express entry form showing multiple expenses extracted from a short description"
           class="lp-feature-img"
           width="640" height="430"
         >
       </div>
     </div>
+  </div>
 
-    <!-- ── Feature 2: AI express creation ── -->
-    <div class="lp-stripe">
-      <div class="lp-feature lp-rev">
+  <!-- ── 03: Dashboard (scroll stack) ──────────────────────── -->
+  <div class="lp-dashboard-scroller" id="lp-dashboard-scroller">
+    <div class="lp-dashboard-sticky">
+      <div class="lp-feature lp-reveal">
         <div class="lp-feature-copy">
-          <span class="lp-feature-num">02 &mdash; AI Express Creation</span>
-          <h2 class="lp-feature-title">Describe it.<br><span class="lp-accent">Done.</span></h2>
+          <span class="lp-feature-num">03: Your financial picture</span>
+          <h2 class="lp-feature-title">Always know<br>where you stand.</h2>
           <p class="lp-feature-body">
-            Type what you spent in plain language or snap a picture of your receipt
-            and the AI turns it into
-            properly categorised expense entries. Review the preview, adjust
-            if needed, confirm. No tedious form filling, no manual categorisation.
-            Every new user on the official public instance gets a free monthly budget of ai requests so you
-            can try it within minutes of signing up.
+            The dashboard shows the numbers you actually care about: how much came in, how much
+            went out, how much is still outstanding, and what you have left to spend before the
+            month ends.
+          </p>
+          <p class="lp-feature-body">
+            It follows <em>your</em> pay cycle, not the calendar month, so everything lines up
+            with when your salary actually arrives. Drag cards around, resize them, pick from
+            the built-in library, or build your own from scratch.
           </p>
           <ul class="lp-checklist">
-            <li>Plain language input, no forms to fill</li>
-            <li>Scans your receipt</li>
-            <li>Auto-assigns categories and tags</li>
-            <li>Handles multiple expenses at once</li>
-            <li>Free budget included for every account</li>
-            <li>Use your own API key to remove limits</li>
-            <li>Define default instructions</li>
+            <li>Live remaining budget, always visible</li>
+            <li>Set your own month start to match your pay day</li>
+            <li>Spending breakdown by category and by tag</li>
+            <li>Fully rearrangeable and customisable card grid</li>
           </ul>
         </div>
         <div class="lp-feature-visual">
-          <img
-            src="/static/images/landingpage/ai-gen.png"
-            alt="The Comaney express creator"
-            class="lp-feature-img"
-            width="640" height="430"
-          >
+          <div class="lp-dashboard-stack" id="lp-dashboard-stack">
+            <div class="lp-stack-item lp-stack-item--0">
+              <img src="{% static 'images/landingpage/dashboard-linechart.png' %}" alt="Spending over time line chart">
+            </div>
+            <div class="lp-stack-item lp-stack-item--1">
+              <img src="{% static 'images/landingpage/dashboard-piechart.png' %}" alt="Spending by category pie chart">
+            </div>
+            <div class="lp-stack-item lp-stack-item--2">
+              <img src="{% static 'images/landingpage/dashboard-barchart.png' %}" alt="Spending by tag bar chart">
+            </div>
+            <div class="lp-stack-item lp-stack-item--3">
+              <img src="{% static 'images/landingpage/dashboard-cells.png' %}" alt="Dashboard summary: income, spending, and remaining budget">
+            </div>
+            <div class="lp-stack-item lp-stack-item--4">
+              <img src="{% static 'images/landingpage/dashboard-closeup.png' %}" alt="Full Comaney dashboard overview">
+            </div>
+          </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- ── Feature 3: Scheduled expenses ── -->
-    <div class="lp-feature">
+  <!-- ── 04: Recurring bills ────────────────────────────────── -->
+  <div class="lp-stripe">
+    <div class="lp-feature lp-rev lp-reveal">
       <div class="lp-feature-copy">
-        <span class="lp-feature-num">03 &mdash; Scheduled expenses</span>
-        <h2 class="lp-feature-title">Recurring bills,<br>never forgotten.</h2>
+        <span class="lp-feature-num">04: Recurring bills</span>
+        <h2 class="lp-feature-title">Set it once.<br>Never think about it again.</h2>
         <p class="lp-feature-body">
-          Define rent, subscriptions, and regular bills once. Comaney generates
-          the entries automatically each financial month. Tick auto-settle and
-          they take care of themselves completely. The less you have to touch it,
+          Rent, Netflix, insurance, gym membership. Set up a scheduled expense once and
+          Comaney creates the entries automatically every month. Turn on auto-settle and
+          they mark themselves as paid on the due date. The less you have to touch it,
           the better.
         </p>
         <ul class="lp-checklist">
-          <li>Weekly, monthly, or custom intervals</li>
-          <li>Auto-generated at the start of each period</li>
-          <li>Auto-settle on due date</li>
-          <li>Never log rent or Netflix manually again</li>
+          <li>Weekly, monthly, or any custom interval</li>
+          <li>Generated automatically at the start of each period</li>
+          <li>Auto-settle on the due date, completely hands-free</li>
+          <li>Email reminders when a payment is coming up or overdue</li>
         </ul>
       </div>
       <div class="lp-feature-visual">
         <img
-          src="static/images/landingpage/recurring-list.png"
-          alt="A screenshot of the recurring tasks list"
+          src="{% static 'images/landingpage/recurring-list.png' %}"
+          alt="The scheduled expenses list showing recurring bills"
           class="lp-feature-img"
           width="640" height="430"
         >
       </div>
     </div>
+  </div>
 
-    <!-- ── Feature 4: Dashboard ── -->
-    <div class="lp-stripe">
-      <div class="lp-feature lp-rev">
-        <div class="lp-feature-copy">
-          <span class="lp-feature-num">04 &mdash; Monthly overview</span>
-          <h2 class="lp-feature-title">Always know<br>where you stand.</h2>
-          <p class="lp-feature-body">
-            At any point in the month Comaney tells you: how much came in, how
-            much went out, what is still outstanding, and exactly how much you
-            have left to spend. It works with your actual pay cycle, not the
-            calendar month, so the numbers always reflect reality.
-          </p>
-          <ul class="lp-checklist">
-            <li>Spending budget and remaining balance, live</li>
-            <li>Set your own financial month start day</li>
-            <li>Breakdown by category and tag</li>
-            <li>Settled vs. outstanding at a glance</li>
-          </ul>
+  <!-- ── Split section ──────────────────────────────────────── -->
+  <section class="lp-split-section lp-reveal">
+    <div class="lp-split-inner">
+      <div class="lp-split-copy">
+        <span class="lp-split-eyebrow">05: Splitting costs</span>
+        <h2 class="lp-split-title">No more awkward<br><span class="lp-accent-dark">money conversations.</span></h2>
+        <p class="lp-split-body">
+          Whether it's splitting rent with housemates, settling up after a holiday, or going
+          halves on a takeaway, Comaney handles the maths. Log who paid upfront, choose who
+          participated, and Comaney shows everyone exactly who owes what, plus the
+          minimum number of payments needed to clear it all.
+        </p>
+        <div class="lp-split-modes">
+          <button class="lp-split-mode lp-split-mode--active" data-target="buddy">
+            <div class="lp-split-mode-icon">👫</div>
+            <div class="lp-split-mode-text">
+              <strong>Direct buddies</strong>
+              <span>One-on-one with a friend or partner</span>
+            </div>
+          </button>
+          <button class="lp-split-mode" data-target="project">
+            <div class="lp-split-mode-icon">👥</div>
+            <div class="lp-split-mode-text">
+              <strong>Projects</strong>
+              <span>Groups: trips, shared flats, events</span>
+            </div>
+          </button>
         </div>
-        <div class="lp-feature-visual">
+      </div>
+      <div class="lp-split-visual">
+        <div class="lp-split-img-wrap lp-split-img-wrap--active" id="lp-split-buddy">
           <img
-            src="static/images/landingpage/income-vs-expenses.png"
-            alt="A screenshot of cells on the Comaney dashboard"
-            class="lp-feature-img"
-            width="640" height="430"
+            src="{% static 'images/landingpage/direct-buddies.png' %}"
+            alt="The direct buddy view showing shared expenses and who owes what"
+            class="lp-split-img"
+          >
+        </div>
+        <div class="lp-split-img-wrap" id="lp-split-project">
+          <img
+            src="{% static 'images/landingpage/project-charts.png' %}"
+            alt="A project page showing the debt diagram and spending breakdown for a group"
+            class="lp-split-img"
           >
         </div>
       </div>
     </div>
+  </section>
 
-    <!-- ── Feature 5: Open source ── -->
-    <div class="lp-feature">
-      <div class="lp-feature-copy">
-        <span class="lp-feature-num">05 &mdash; Open source</span>
-        <h2 class="lp-feature-title">Your data stays<br><span class="lp-accent">yours.</span></h2>
-        <p class="lp-feature-body">
-          Comaney can run on your own server. If you host yourself, financial data never touches
-          a third party cloud, never gets sold, and is never used to train
-          anything, unless you use the AI feature which utilizes Anthropics AI services.
-          Export everything as a ZIP of CSVs at any time, and since
-          the code is fully open source, you can read and audit every line of it.
-        </p>
-        <ul class="lp-checklist">
-          <li>100% self-hostable, no cloud required <em>(without ai)</em></li>
-          <li>Full export as ZIP and CSV at any time</li>
-          <li>Open source on <a href="https://github.com/Leonetienne/Comaney" target="_blank">GitHub</a></li>
-          <li>No tracking, no ads, no nonsense</li>
-        </ul>
-      </div>
-      <div class="lp-feature-visual">
-        <div>
-            <img
-              src="static/images/landingpage/docker-compose.png"
-              alt="A screenshot of an examplatory docker compose configuration"
-              class="lp-feature-img"
-              width="640" height="430"
-            >
-            <div class="small-hint-text">This is obviously an imaginary configuration.</div>
+  <!-- ── Themes ─────────────────────────────────────────────── -->
+  <section class="lp-themes-section lp-reveal">
+    <div class="lp-themes-inner">
+      <p class="lp-section-eyebrow">06: Make it yours</p>
+      <h2 class="lp-section-title">Your dashboard, your look.</h2>
+      <p class="lp-themes-body">
+        Upload any image as a backdrop, tune the opacity and position, and
+        switch between light and dark mode. Comaney should feel like yours,
+        not a generic finance tool.
+      </p>
+      <div class="lp-gallery" id="lp-gallery">
+        <button class="lp-gallery-btn lp-gallery-btn--prev" id="lp-gallery-prev" aria-label="Previous">&#8249;</button>
+        <div class="lp-gallery-track" id="lp-gallery-track">
+          <button class="lp-gallery-slide" aria-label="View flowers theme, light mode">
+            <img src="{% static 'images/landingpage/backdrops/flowers-bright.png' %}" alt="Comaney with a flowers backdrop, light mode">
+          </button>
+          <button class="lp-gallery-slide" aria-label="View flowers theme, dark mode">
+            <img src="{% static 'images/landingpage/backdrops/flowers-dark.png' %}" alt="Comaney with a flowers backdrop, dark mode">
+          </button>
+          <button class="lp-gallery-slide" aria-label="View Frankfurt theme, light mode">
+            <img src="{% static 'images/landingpage/backdrops/frankfurt-bright.png' %}" alt="Comaney with a Frankfurt cityscape backdrop, light mode">
+          </button>
+          <button class="lp-gallery-slide" aria-label="View Frankfurt theme, dark mode">
+            <img src="{% static 'images/landingpage/backdrops/frankfurt-dark.png' %}" alt="Comaney with a Frankfurt cityscape backdrop, dark mode">
+          </button>
+          <button class="lp-gallery-slide" aria-label="View Astolfo theme, light mode">
+            <img src="{% static 'images/landingpage/backdrops/astolfo-bright.png' %}" alt="Comaney with an anime character backdrop, light mode">
+          </button>
+          <button class="lp-gallery-slide" aria-label="View Astolfo theme, dark mode">
+            <img src="{% static 'images/landingpage/backdrops/astolfo-dark.png' %}" alt="Comaney with an anime character backdrop, dark mode">
+          </button>
         </div>
+        <button class="lp-gallery-btn lp-gallery-btn--next" id="lp-gallery-next" aria-label="Next">&#8250;</button>
       </div>
     </div>
+  </section>
 
-  </div><!-- /lp-features -->
+  <!-- ── Pillars ────────────────────────────────────────────── -->
+  <section class="lp-pillars">
+    <div class="lp-pillars-inner">
 
-  <!-- ── FAQ ── -->
+      <div class="lp-pillar">
+        <div class="lp-pillar-icon">💸</div>
+        <div class="lp-pillar-body-wrap">
+          <h3 class="lp-pillar-title">Always free</h3>
+          <p class="lp-pillar-body">No subscriptions, no ads, no hidden costs. If that ever changes, existing accounts are grandfathered in.</p>
+        </div>
+      </div>
+
+      <div class="lp-pillar">
+        <div class="lp-pillar-icon">🔒</div>
+        <div class="lp-pillar-body-wrap">
+          <h3 class="lp-pillar-title">Your data stays yours</h3>
+          <p class="lp-pillar-body">Your financial data never leaves our server and is never sold. The only exception is AI Express Entry, which sends receipt details to Anthropic for processing.</p>
+        </div>
+      </div>
+
+      <div class="lp-pillar">
+        <div class="lp-pillar-icon">📤</div>
+        <div class="lp-pillar-body-wrap">
+          <h3 class="lp-pillar-title">Export any time</h3>
+          <p class="lp-pillar-body">Download a full export of your account as a ZIP of CSV files that opens in any spreadsheet app. Your data is never locked in.</p>
+        </div>
+      </div>
+
+      <div class="lp-pillar">
+        <div class="lp-pillar-icon">🔓</div>
+        <div class="lp-pillar-body-wrap">
+          <h3 class="lp-pillar-title">Open source</h3>
+          <p class="lp-pillar-body">Every line of code is public on <a href="https://github.com/Leonetienne/Comaney" target="_blank" rel="noopener">GitHub</a>. You can read it, audit it, or run it yourself on your own server.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── FAQ ────────────────────────────────────────────────── -->
   <section class="lp-faq-section">
     <div class="lp-faq-inner">
       <h2 class="lp-faq-title">Frequently asked questions</h2>
-
       <div class="lp-faq-list">
 
         <details class="lp-faq-item">
           <summary class="lp-faq-q">Is Comaney really free?</summary>
           <p class="lp-faq-a">
-            Yes, Comaney is free for everyone. If that ever changes, existing accounts will be grandfathered in; only new sign-ups would be affected.
-            You can also self-host your own instance at any time for complete control.
-            The AI Express Creation feature can incur costs if you supply your own Anthropic API key, but nothing happens by accident, you have to explicitly configure it.
-            As long as you're on the built-in AI trial, it's completely free.
+            Yes, completely free. If that ever changes, existing accounts will be grandfathered in and only new sign-ups would be affected.
+            The AI Express Entry feature can incur costs if you supply your own Anthropic API key, but nothing happens by accident;
+            you have to explicitly set it up. The built-in trial budget is free.
           </p>
         </details>
 
         <details class="lp-faq-item">
-          <summary class="lp-faq-q">What is Express Creation and how does it work?</summary>
+          <summary class="lp-faq-q">How does AI Express Entry work?</summary>
           <p class="lp-faq-a">
-            Filling in expense forms is almost as painful as spending money in the first place.
-            With Express Creation, you snap a photo of your receipt or just describe what you bought in plain language, and the AI fills in the title, payee, category, tags, and amount for you.
-            You always get to review and adjust everything before anything is saved.
+            You snap a photo of a receipt or type what you bought in plain language. The AI reads it and fills in the title, payee,
+            category, tags, and amount for you. You always get to review and change everything before anything is saved.
+            Every new account gets a small free monthly budget so you can try it straight away, no setup needed.
           </p>
         </details>
 
         <details class="lp-faq-item">
-          <summary class="lp-faq-q">Is my financial data private and secure?</summary>
+          <summary class="lp-faq-q">Is my financial data private?</summary>
           <p class="lp-faq-a">
-            Your data is never sold or shared with third parties.
-            The one exception worth knowing about: if you use Express Creation, the details of that entry are sent to Anthropic to power the AI analysis.
-            That's a technical requirement of the feature. If you don't use Express Creation, your data never leaves the server.
+            Your data is never sold or shared with third parties. The one exception: if you use AI Express Entry, the details of that
+            entry are sent to Anthropic to power the AI analysis. If you don't use Express Entry, your data never leaves the server.
           </p>
         </details>
 
         <details class="lp-faq-item">
-          <summary class="lp-faq-q">What insights does the dashboard give me?</summary>
+          <summary class="lp-faq-q">How does splitting costs work?</summary>
           <p class="lp-faq-a">
-            The dashboard summarises your month (or year) at a glance: total income, total savings, what you've already paid, and what's still outstanding.
-            The most useful number is your <em>available balance</em>, income minus everything paid and outstanding, so you always know what you can safely spend without surprises at the end of the month.
-            A category pie chart and a tag bar chart let you see exactly where your money is going.
+            You can split costs one-on-one using Buddies, or with a whole group using Projects. When you log an expense you set
+            who paid upfront, who participated, and how the cost is divided (equal shares or custom percentages). Comaney works
+            out the simplest way to settle everything. If three people owe each other in different directions, it calculates
+            the minimum number of payments to clear it all. Connected users get a notification and must confirm receipt before the
+            balance clears.
           </p>
         </details>
 
         <details class="lp-faq-item">
-          <summary class="lp-faq-q">How do expenses work?</summary>
+          <summary class="lp-faq-q">What does the dashboard show me?</summary>
           <p class="lp-faq-a">
-            An expense records any movement of money. There are four types:
-            <br><br>
-            <strong>Expense</strong>, money leaving your account<br>
-            <strong>Income</strong>, money coming in<br>
-            <strong>Savings deposit</strong>, money set aside into savings<br>
-            <strong>Savings withdrawal</strong>, money taken back out of savings
-            <br><br>
-            Each entry can have a payee, a category, and any number of tags.
-            Categories are mutually exclusive, an expense belongs to exactly one (e.g. <em>Housing</em> or <em>Food</em>).
-            Tags can overlap freely, a dinner shop could be both <em>Groceries</em> and <em>Date night</em>.
-            <br><br>
-            Expenses can be <strong>settled</strong> (paid) or <strong>unsettled</strong> (still outstanding), with an optional due date.
-            Enable auto-settle and Comaney will mark the expense as paid automatically when the due date arrives.
+            The dashboard shows your month at a glance: total income, total spending, what you've already paid, what's still
+            outstanding, and your available balance (income minus everything paid and outstanding), so you always know what you
+            can safely spend. A spending breakdown by category and tag shows where the money is going. You can rearrange and
+            resize any card, pick from the built-in library, or build your own from scratch.
           </p>
         </details>
 
         <details class="lp-faq-item">
-          <summary class="lp-faq-q">How do scheduled expenses work?</summary>
+          <summary class="lp-faq-q">Can I set my own start of month?</summary>
           <p class="lp-faq-a">
-            Scheduled expenses are templates that generate real expenses on a repeating interval, daily, weekly, monthly, or yearly.
-            Set up a "Rent" schedule starting 01 January and Comaney will create all twelve rent entries for the year automatically, a few minutes after you save.
-            You can optionally set an end date, which is handy for instalment payments that run for a fixed number of months.
-            <br><br>
-            Keep in mind: editing a schedule doesn't retroactively update already-generated expenses. To apply changes to existing entries, either edit them individually or delete and regenerate them.
-          </p>
-        </details>
-
-        <details class="lp-faq-item">
-          <summary class="lp-faq-q">What is a financial month, and can I customise it?</summary>
-          <p class="lp-faq-a">
-            By default, a financial month follows the calendar month (1st to 31st).
-            But if your salary lands on the 25th, it makes more sense for your "month" to run from the 25th to the 24th, so income and expenses line up naturally.
-            <br><br>
-            In your profile settings you can set any day (1 to 31) as your month start.
-            You can also shift the start into the <em>previous</em> calendar month, which is useful when your cycle crosses a month boundary (e.g. a start day of 25 that should mean the 25th of last month to the 24th of this one).
-            The dashboard and all totals respect your custom cycle automatically.
+            Yes. If your salary arrives on the 25th, set your financial month to run from the 25th to the 24th so income and
+            spending always line up naturally. The dashboard and all totals follow your custom cycle automatically.
           </p>
         </details>
 
         <details class="lp-faq-item">
           <summary class="lp-faq-q">Can I export my data?</summary>
           <p class="lp-faq-a">
-            Yes. From your profile page you can download a full export of your account as a ZIP archive containing CSV files. One each for expenses, scheduled expenses, categories, and tags, plus a profile summary.
-            The files open in any spreadsheet app and are straightforward to process programmatically.
-            <br><br>
-            A REST API is also available if you want to read or write your data from external tools or scripts.
+            Yes. From your profile page you can download a full export as a ZIP archive containing CSV files: one each for
+            expenses, scheduled expenses, categories, and tags. The files open in any spreadsheet app.
+            A REST API is also available if you want to connect external tools or scripts.
           </p>
         </details>
 
         <details class="lp-faq-item">
-          <summary class="lp-faq-q">Can I import data from my bank or another app?</summary>
-          <p class="lp-faq-a">Not yet, but it's on the roadmap.</p>
-        </details>
-
-        <details class="lp-faq-item">
-          <summary class="lp-faq-q">Do I need my own server to use Comaney?</summary>
-          <p class="lp-faq-a">No, you can use the official hosted instance without any setup. Self-hosting is available if you want full control over your data and infrastructure.</p>
+          <summary class="lp-faq-q">Do I need my own server?</summary>
+          <p class="lp-faq-a">
+            No. You can use this instance without any setup. If you prefer to run Comaney on your own server for
+            complete control over your data, it's available as a Docker container.
+            <a href="https://github.com/Leonetienne/Comaney" target="_blank" rel="noopener">The code is on GitHub.</a>
+          </p>
         </details>
 
       </div>
     </div>
   </section>
 
-  <!-- ── Bottom CTA ── -->
+  <!-- ── Bottom CTA ────────────────────────────────────────── -->
   {% if registration_enabled %}
   <section class="lp-cta-section">
     <div class="lp-cta-inner">
       <h2 class="lp-cta-title">Ready to take control<br>of your finances?</h2>
-      <p class="lp-cta-sub">
-        Sign up in seconds. No credit card, no subscriptions, no nonsense.
-      </p>
+      <p class="lp-cta-sub">Sign up in seconds. No credit card, no subscription, no nonsense.</p>
       <div class="lp-cta-row lp-cta-row--center">
         <a href="{% url 'register' %}" class="lp-btn lp-btn-primary lp-btn-primary--lg">
           Get started for free
@@ -346,5 +437,149 @@
   </section>
   {% endif %}
 
-</div><!-- /lp -->
+  <!-- ── Lightbox ───────────────────────────────────────────── -->
+  <div class="lp-lightbox" id="lp-lightbox" role="dialog" aria-modal="true" aria-hidden="true">
+    <button class="lp-lightbox-close" id="lp-lightbox-close" aria-label="Close">&times;</button>
+    <button class="lp-lightbox-nav lp-lightbox-nav--prev" id="lp-lightbox-prev" aria-label="Previous image">&#8249;</button>
+    <img class="lp-lightbox-img" id="lp-lightbox-img" src="" alt="">
+    <button class="lp-lightbox-nav lp-lightbox-nav--next" id="lp-lightbox-next" aria-label="Next image">&#8250;</button>
+  </div>
+
+</div><!-- /l-landingpage -->
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ── Scroll reveal ───────────────────────────────────────────────
+(function () {
+  var els = document.querySelectorAll('.lp-reveal');
+  if (!('IntersectionObserver' in window)) {
+    els.forEach(function (el) { el.classList.add('lp-revealed'); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('lp-revealed'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.07 });
+  els.forEach(function (el) { io.observe(el); });
+})();
+
+// ── Split section tab switcher ──────────────────────────────────
+(function () {
+  var tabs   = document.querySelectorAll('.lp-split-mode');
+  var panels = { buddy: document.getElementById('lp-split-buddy'), project: document.getElementById('lp-split-project') };
+  if (!tabs.length) return;
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var target = tab.dataset.target;
+      tabs.forEach(function (t) { t.classList.remove('lp-split-mode--active'); });
+      tab.classList.add('lp-split-mode--active');
+      Object.keys(panels).forEach(function (key) {
+        if (!panels[key]) return;
+        panels[key].classList.toggle('lp-split-img-wrap--active', key === target);
+      });
+    });
+  });
+})();
+
+// ── Dashboard scroll stack ──────────────────────────────────────
+(function () {
+  var scroller = document.getElementById('lp-dashboard-scroller');
+  var items    = Array.from(document.querySelectorAll('.lp-stack-item'));
+  if (!scroller || !items.length) return;
+
+  // Front-to-back: front card (0) appears first, back card (4) last.
+  // Scrolling up reverses the sequence cleanly.
+  var ORDER = [0, 1, 2, 3, 4];
+  var SCROLL_PER_CARD = 260; // px of sticky scroll per card
+
+  // Expand scroller so the sticky section has scroll room while cards build
+  function setHeight() {
+    var stickyH = scroller.querySelector('.lp-dashboard-sticky').offsetHeight;
+    scroller.style.minHeight = (Math.max(window.innerHeight, stickyH) + items.length * SCROLL_PER_CARD) + 'px';
+  }
+  setHeight();
+  window.addEventListener('resize', setHeight);
+
+  // Toggle each card based on progress — works for both scroll-down and scroll-up
+  function update() {
+    var progress = -scroller.getBoundingClientRect().top;
+    ORDER.forEach(function (idx, step) {
+      items[idx].classList.toggle('lp-stack-item--in', progress >= step * SCROLL_PER_CARD);
+    });
+  }
+  window.addEventListener('scroll', update, { passive: true });
+  update();
+})();
+
+// ── Gallery slider ──────────────────────────────────────────────
+(function () {
+  var track = document.getElementById('lp-gallery-track');
+  var prev  = document.getElementById('lp-gallery-prev');
+  var next  = document.getElementById('lp-gallery-next');
+  if (!track) return;
+
+  function slideStep() {
+    var slide = track.querySelector('.lp-gallery-slide');
+    return slide ? slide.offsetWidth + parseInt(getComputedStyle(track).gap || '20') : 440;
+  }
+
+  if (prev) prev.addEventListener('click', function () { track.scrollBy({ left: -slideStep(), behavior: 'smooth' }); });
+  if (next) next.addEventListener('click', function () { track.scrollBy({ left:  slideStep(), behavior: 'smooth' }); });
+})();
+
+// ── Lightbox ────────────────────────────────────────────────────
+(function () {
+  var lightbox = document.getElementById('lp-lightbox');
+  var lbImg    = document.getElementById('lp-lightbox-img');
+  var closeBtn = document.getElementById('lp-lightbox-close');
+  var prevBtn  = document.getElementById('lp-lightbox-prev');
+  var nextBtn  = document.getElementById('lp-lightbox-next');
+  if (!lightbox) return;
+
+  var slides  = Array.from(document.querySelectorAll('.lp-gallery-slide'));
+  var current = 0;
+
+  function open(idx) {
+    current = idx;
+    lbImg.src = slides[current].querySelector('img').src;
+    lbImg.alt = slides[current].querySelector('img').alt;
+    lightbox.classList.add('lp-lightbox--open');
+    lightbox.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    closeBtn.focus();
+  }
+
+  function close() {
+    lightbox.classList.remove('lp-lightbox--open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  function navigate(dir) {
+    current = (current + dir + slides.length) % slides.length;
+    lbImg.src = slides[current].querySelector('img').src;
+    lbImg.alt = slides[current].querySelector('img').alt;
+  }
+
+  slides.forEach(function (slide, i) {
+    slide.addEventListener('click', function () { open(i); });
+    slide.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(i); } });
+  });
+
+  closeBtn.addEventListener('click', close);
+  prevBtn.addEventListener('click',  function () { navigate(-1); });
+  nextBtn.addEventListener('click',  function () { navigate( 1); });
+
+  lightbox.addEventListener('click', function (e) { if (e.target === lightbox) close(); });
+
+  document.addEventListener('keydown', function (e) {
+    if (!lightbox.classList.contains('lp-lightbox--open')) return;
+    if (e.key === 'Escape')     close();
+    if (e.key === 'ArrowLeft')  navigate(-1);
+    if (e.key === 'ArrowRight') navigate( 1);
+  });
+})();
+</script>
 {% endblock %}
