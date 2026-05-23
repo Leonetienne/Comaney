@@ -45,12 +45,9 @@ class TestGroupPicture:
             "document.getElementById('project-pic-input').style.display = 'block';"
         )
         driver.find_element(By.ID, "project-pic-input").send_keys(ASSET)
-        time.sleep(0.3)
-        # Fallback submit in case the change-event auto-upload did not fire
-        driver.execute_script(
-            "var f = document.getElementById('project-pic-upload-form'); if (f) f.submit();"
-        )
-        time.sleep(2)
+        time.sleep(1)   # wait for cropper modal to open
+        driver.find_element(By.ID, "img-cropper-done").click()
+        time.sleep(3)   # allow fetch + DOM update to complete
 
     # ── group detail page ────────────────────────────────────────────────────
 
@@ -107,8 +104,10 @@ class TestGroupPicture:
         time.sleep(1)
         assert f"/media/bgpics/{gid}.webp" not in driver.page_source, \
             "bgpics URL should be gone from group detail after removal"
-        assert "Remove picture" not in driver.page_source, \
-            "Remove button should be gone after removal"
+        assert not driver.execute_script(
+            "var b = document.getElementById('btn-delete-project-pic');"
+            "return b && b.offsetParent !== null;"
+        ), "Remove button should be hidden after removal"
 
     def test_summary_card_bg_image_gone_after_remove(self, driver, w, ctx):
         gid = ctx["admin"]["group_id"]
