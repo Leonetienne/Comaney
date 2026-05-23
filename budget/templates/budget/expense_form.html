@@ -41,6 +41,7 @@ window.BUDDY_EXPENSE_CONFIG = {
 <div class="add-buddy-panel">
     <form method="post" novalidate>
         {% csrf_token %}
+        {% if form_nonce %}<input type="hidden" name="form_nonce" value="{{ form_nonce }}">{% endif %}
         {% if back_url %}<input type="hidden" name="back" value="{{ back_url }}">{% endif %}
 
         <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>

@@ -1,5 +1,6 @@
 import csv
 import json
+import secrets
 import urllib.parse
 from datetime import date
 
@@ -224,6 +225,13 @@ def expenses_export(request):
 def expense_create(request):
     feuser = request.feuser
     if request.method == "POST":
+        submitted_nonce = request.POST.get("form_nonce", "")
+        session_nonce = request.session.pop("expense_create_nonce", None)
+        if not session_nonce or submitted_nonce != session_nonce:
+            # Duplicate submission (back + resubmit); redirect without creating
+            back = _safe_back_url(request.POST.get("back", ""))
+            return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
+
         form = ExpenseForm(request.POST, feuser=feuser)
         buddy = _parse_buddy_post(request.POST, feuser)
         if form.is_valid() and (buddy is None or buddy["valid"]):
@@ -296,6 +304,9 @@ def expense_create(request):
     else:
         form = ExpenseForm(feuser=feuser, initial={"type": "expense", "settled": True, "notify": True})
 
+    form_nonce = secrets.token_hex(32)
+    request.session["expense_create_nonce"] = form_nonce
+
     preselect_project_id = ""
     raw_pid = request.GET.get("project", "")
     if raw_pid:
@@ -310,6 +321,7 @@ def expense_create(request):
     return render(request, "budget/expense_form.html", {
         "active_nav": "expenses",
         "form": form,
+        "form_nonce": form_nonce,
         "back_url": _safe_back_url(request.GET.get("back", "")),
         "existing_group_id": preselect_project_id,
         "is_buddy_expense": bool(preselect_project_id),
