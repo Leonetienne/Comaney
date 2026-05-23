@@ -725,7 +725,7 @@ function initCardBuddy(cardEl) {
     return {
         validate: function() {
             if (currentTab === 'none') return true;
-            if (isSolo) return true;
+            if (isSolo || currentTab === 'project') return true;
             if (!parts.length) { if (noPartErr) noPartErr.style.display = 'block'; return false; }
             if (noPartErr) noPartErr.style.display = 'none';
             return true;
@@ -734,7 +734,7 @@ function initCardBuddy(cardEl) {
             if (currentTab === 'none') {
                 return { buddy_payment: false, project_uid: null };
             }
-            if (currentTab === 'project' && isSolo) {
+            if (currentTab === 'project' && (isSolo || !parts.length)) {
                 return { buddy_payment: false, project_uid: groupId };
             }
             var pp = payerSel ? payerSel.value.split(':') : ['me', ME_PK];

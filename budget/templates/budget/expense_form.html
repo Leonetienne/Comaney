@@ -297,8 +297,9 @@ window.BUDDY_EXPENSE_CONFIG = {
         var frm = cb ? cb.closest('form') : null;
         if (!frm) return;
         frm.addEventListener('submit', function (e) {
-            if (frm.dataset.soloProject === '1' && cb && cb.checked) {
-                // Solo project: skip the participants check; server handles it
+            var projectTabActive = !!document.querySelector('#assign-tab-group .assign-tab--active[data-assign="project"]');
+            if ((frm.dataset.soloProject === '1' || projectTabActive) && cb && cb.checked) {
+                // Project expense: participants are optional; server handles it
                 e.stopImmediatePropagation();
                 var errEl = document.getElementById('buddy-no-participants-error');
                 if (errEl) errEl.style.display = 'none';

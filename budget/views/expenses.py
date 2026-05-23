@@ -120,7 +120,9 @@ def _parse_buddy_post(post, feuser):
     is_solo_project = (mode == "group" and result["group"] and
                        result["group"].members.filter(feuser__isnull=False).count() == 1 and
                        not result["group"].members.filter(dummy__isnull=False).exists())
-    if not result["spendings"] and not is_solo_project:
+    # Any project expense may have zero participants (payer covers the cost alone).
+    is_project_expense = mode == "group" and bool(result.get("group"))
+    if not result["spendings"] and not is_solo_project and not is_project_expense:
         result["valid"] = False
 
     # Single-buddy mode: enforce max 1 participant
