@@ -68,10 +68,21 @@ def _post_expense_with_dummy_payer(driver, project_id: int, dummy_pk: int,
     """POST to the expense-create view as the currently logged-in Selenium user.
     Returns the uid of the created expense."""
     import json as _json
+    import re as _re
     today = server_today()
     cookie_dict = {c["name"]: c["value"] for c in driver.get_cookies()}
     csrftoken = cookie_dict.get("csrftoken", "")
     sessionid = cookie_dict.get("sessionid", "")
+    session_cookies = {"csrftoken": csrftoken, "sessionid": sessionid}
+
+    # Fetch the form to get the one-time nonce
+    get_r = req.get(
+        _url("/budget/expenses/new/"),
+        cookies=session_cookies,
+        timeout=10,
+    )
+    m = _re.search(r'name="form_nonce"\s+value="([^"]+)"', get_r.text)
+    form_nonce = m.group(1) if m else ""
 
     spendings_json = _json.dumps([
         {"type": "feuser", "id": member_pk, "share_percent": "100"}
@@ -88,12 +99,13 @@ def _post_expense_with_dummy_payer(driver, project_id: int, dummy_pk: int,
         "buddy_upfront_id": str(dummy_pk),
         "project_id": str(project_id),
         "buddy_spendings_json": spendings_json,
+        "form_nonce": form_nonce,
     }
     req.post(
         _url("/budget/expenses/new/"),
         data=data,
         headers={"X-CSRFToken": csrftoken, "Referer": _url("/budget/expenses/new/")},
-        cookies={"csrftoken": csrftoken, "sessionid": sessionid},
+        cookies=session_cookies,
         timeout=10,
         allow_redirects=True,
     )

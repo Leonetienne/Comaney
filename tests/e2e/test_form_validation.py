@@ -37,10 +37,17 @@ def _csrf(s):
 
 
 def _form_post(s, path, data):
+    import re as _re
     csrf = _csrf(s)
+    r = s.get(BASE_URL + path)
+    m = _re.search(r'name="form_nonce"\s+value="([^"]+)"', r.text)
+    nonce = m.group(1) if m else ""
+    post_data = {"csrfmiddlewaretoken": csrf, **data}
+    if nonce:
+        post_data["form_nonce"] = nonce
     return s.post(
         BASE_URL + path,
-        data={"csrfmiddlewaretoken": csrf, **data},
+        data=post_data,
         headers={"Referer": BASE_URL + "/"},
         allow_redirects=False,
     )

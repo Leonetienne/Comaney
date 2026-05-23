@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from helpers import (
     _url, fill, submit, wait_url, wait_text, server_today,
-    api_get, api_delete,
+    api_get, api_post, api_delete,
     setup_user, cleanup_user,
 )
 
@@ -168,3 +168,86 @@ class TestScheduledDoubleSubmitGuard:
         originals = [e for e in all_scheduled if e["title"] == title]
         assert len(originals) == 1, f"Expected 1 original, found {len(originals)}"
         api_delete(f"/api/v1/scheduled/{originals[0]['id']}/", ctx)
+
+
+class TestScheduledImmediateGeneration:
+    """Creating or editing a scheduled expense must generate expenses immediately,
+    without waiting for the next cron run."""
+
+    def test_create_generates_expenses_immediately(self, ctx):
+        """Saving a new scheduled expense triggers generate_scheduled_expenses for
+        this user right away; expenses appear in the API without running run_cmd."""
+        today = server_today()
+        title = "E2E ImmGen Create"
+
+        sid = api_post("/api/v1/scheduled/", ctx, json={
+            "title": title,
+            "type": "expense",
+            "value": "42.00",
+            "repeat_every_factor": 1,
+            "repeat_every_unit": "months",
+            "repeat_base_date": today,
+        }).json()["id"]
+
+        resp = api_get("/api/v1/expenses/", ctx)
+        assert resp.status_code == 200
+        hits = [e for e in resp.json()["expenses"] if e["title"] == title]
+        assert len(hits) >= 1, "Expected at least one generated expense immediately after saving scheduled"
+
+        for e in hits:
+            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+
+    def test_edit_generates_new_expenses_immediately(self, ctx):
+        """Editing a scheduled expense (e.g. changing the base date) triggers
+        generation immediately; the new occurrence appears without running run_cmd."""
+        today = server_today()
+        title = "E2E ImmGen Edit"
+
+        # Create with a far-future base date so no expenses are generated yet
+        sid = api_post("/api/v1/scheduled/", ctx, json={
+            "title": title,
+            "type": "expense",
+            "value": "7.00",
+            "repeat_every_factor": 1,
+            "repeat_every_unit": "years",
+            "repeat_base_date": "2099-01-01",
+        }).json()["id"]
+
+        hits_before = [e for e in api_get("/api/v1/expenses/", ctx).json()["expenses"]
+                       if e["title"] == title]
+        assert hits_before == [], "Should be no expenses before edit"
+
+        # Edit: move base date to today so it falls inside the current financial year
+        s = requests.Session()
+        r = s.get(_url("/login/"))
+        csrf = s.cookies.get("csrftoken", "")
+        s.post(_url("/login/"), data={
+            "csrfmiddlewaretoken": csrf,
+            "email": ctx["email"],
+            "password": ctx["password"],
+        }, allow_redirects=True)
+
+        r = s.get(_url(f"/budget/scheduled/{sid}/edit/"))
+        csrf = s.cookies.get("csrftoken", csrf)
+        m = re.search(r'name="csrfmiddlewaretoken"\s+value="([^"]+)"', r.text)
+        if m:
+            csrf = m.group(1)
+
+        s.post(_url(f"/budget/scheduled/{sid}/edit/"), data={
+            "csrfmiddlewaretoken": csrf,
+            "title": title,
+            "type": "expense",
+            "value": "7.00",
+            "repeat_every_factor": "1",
+            "repeat_every_unit": "years",
+            "repeat_base_date": today,
+        }, allow_redirects=False)
+
+        hits_after = [e for e in api_get("/api/v1/expenses/", ctx).json()["expenses"]
+                      if e["title"] == title]
+        assert len(hits_after) >= 1, "Expected at least one generated expense immediately after editing scheduled"
+
+        for e in hits_after:
+            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v1/scheduled/{sid}/", ctx)

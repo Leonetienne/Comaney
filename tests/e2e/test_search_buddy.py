@@ -1,14 +1,12 @@
 """
-Search: buddy= filter and buddy name free-text.
+Search: shared= filter and buddy name free-text.
 
 Covers:
-  - buddy=true / buddy=yes / buddy=1   -> only buddy expenses
-  - buddy=false / buddy=no / buddy=0   -> only non-buddy expenses
-  - buddy=<dummy_name>                 -> match by participant display name
-  - buddy=<group_name>                 -> match by group name
-  - buddy=<group_member_name>          -> match by group member name
-  - free-text <dummy_name>             -> free-text hits participant name
-  - free-text <group_name>             -> free-text hits group name
+  - shared=true / shared=yes   -> only buddy expenses
+  - shared=false / shared=no   -> only non-buddy expenses
+  - free-text <dummy_name>     -> match by participant display name
+  - free-text <group_name>     -> match by group name
+  - free-text <group_member>   -> match by group member name
 
 All test expenses carry the unique keyword "BuddySrch" so other data never
 interferes.  Setup is done via django shell commands (docker exec) because
@@ -147,24 +145,24 @@ def setup_data(ctx):
 class TestBuddyBooleanFilter:
 
     def test_buddy_true_returns_buddy_expenses(self, driver, w, ctx):
-        titles = _api_titles(ctx, "BuddySrch buddy=true")
+        titles = _api_titles(ctx, "BuddySrch shared=true")
         assert "BuddySrch WithDummy" in titles
         assert "BuddySrch WithGroup" not in titles  # group expense has no BuddySpending row
         assert "BuddySrch Plain" not in titles
 
     def test_buddy_yes_alias(self, driver, w, ctx):
-        titles = _api_titles(ctx, "BuddySrch buddy=yes")
+        titles = _api_titles(ctx, "BuddySrch shared=yes")
         assert "BuddySrch WithDummy" in titles
         assert "BuddySrch Plain" not in titles
 
     def test_buddy_false_returns_non_buddy_expenses(self, driver, w, ctx):
-        titles = _api_titles(ctx, "BuddySrch buddy=false")
+        titles = _api_titles(ctx, "BuddySrch shared=false")
         assert "BuddySrch Plain" in titles
         assert "BuddySrch WithGroup" in titles  # no BuddySpending row
         assert "BuddySrch WithDummy" not in titles
 
     def test_buddy_no_alias(self, driver, w, ctx):
-        titles = _api_titles(ctx, "BuddySrch buddy=no")
+        titles = _api_titles(ctx, "BuddySrch shared=no")
         assert "BuddySrch Plain" in titles
         assert "BuddySrch WithDummy" not in titles
 
@@ -172,27 +170,27 @@ class TestBuddyBooleanFilter:
 class TestBuddyNameFilter:
 
     def test_buddy_dummy_name(self, driver, w, ctx):
-        titles = _api_titles(ctx, f"BuddySrch buddy={DUMMY_NAME}")
+        titles = _api_titles(ctx, f"BuddySrch {DUMMY_NAME}")
         assert "BuddySrch WithDummy" in titles
         assert "BuddySrch Plain" not in titles
         assert "BuddySrch WithGroup" not in titles
 
     def test_buddy_group_name(self, driver, w, ctx):
-        titles = _api_titles(ctx, f"BuddySrch buddy={GROUP_NAME}")
+        titles = _api_titles(ctx, f"BuddySrch {GROUP_NAME}")
         assert "BuddySrch WithGroup" in titles
         assert "BuddySrch Plain" not in titles
         assert "BuddySrch WithDummy" not in titles
 
     def test_buddy_group_member_name(self, driver, w, ctx):
-        titles = _api_titles(ctx, f"BuddySrch buddy={MEMBER_NAME}")
+        titles = _api_titles(ctx, f"BuddySrch {MEMBER_NAME}")
         assert "BuddySrch WithGroup" in titles
         assert "BuddySrch Plain" not in titles
         assert "BuddySrch WithDummy" not in titles
 
     def test_buddy_name_partial_match(self, driver, w, ctx):
-        # Partial substring of DUMMY_NAME
-        partial = DUMMY_NAME[:8]
-        titles = _api_titles(ctx, f"buddy={partial}")
+        # Partial suffix of DUMMY_NAME unique enough not to appear in any title
+        partial = DUMMY_NAME[9:]  # "Dummy" — not in any expense title
+        titles = _api_titles(ctx, partial)
         assert "BuddySrch WithDummy" in titles
 
 

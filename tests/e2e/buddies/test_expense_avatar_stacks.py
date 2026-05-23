@@ -335,10 +335,10 @@ class TestExpenseAvatarStacks:
         assert len(texts) == len(set(texts)), f"Duplicate avatars: {texts}"
 
     def test_expense_list_case5_non_buddy_no_stack(self, driver, w, ctx):
-        """Case 5: non-buddy expense → no avatar stack in the expense list row."""
+        """Case 5: non-buddy expense → only the payer avatar in the expense list row."""
         _search_expense_list(driver, "AvatarTest Non Buddy")
         count = _avatars_in_list_row(driver, "AvatarTest Non Buddy")
-        assert count == 0, f"Expected 0 avatars for Case 5 (non-buddy), got {count}"
+        assert count == 1, f"Expected 1 avatar (payer) for Case 5 (non-buddy), got {count}"
 
     # ── /buddies/summary/ — "One-on-one expenses" ──────────────────────────────
 

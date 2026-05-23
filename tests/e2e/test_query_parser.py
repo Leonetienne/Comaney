@@ -561,29 +561,29 @@ class TestBuddyFilter:
         return [e["title"] for e in resp.json()["expenses"]]
 
     def test_buddy_yes_includes_buddy_expense(self, driver, w, ctx):
-        assert "QP BuddyExpense" in self._titles(ctx, "buddy=yes")
+        assert "QP BuddyExpense" in self._titles(ctx, "shared=yes")
 
     def test_buddy_yes_excludes_non_buddy(self, driver, w, ctx):
-        assert "QP NoBuddy" not in self._titles(ctx, "buddy=yes")
+        assert "QP NoBuddy" not in self._titles(ctx, "shared=yes")
 
     def test_buddy_no_includes_non_buddy(self, driver, w, ctx):
-        assert "QP NoBuddy" in self._titles(ctx, "buddy=no")
+        assert "QP NoBuddy" in self._titles(ctx, "shared=no")
 
     def test_buddy_no_excludes_buddy_expense(self, driver, w, ctx):
-        assert "QP BuddyExpense" not in self._titles(ctx, "buddy=no")
+        assert "QP BuddyExpense" not in self._titles(ctx, "shared=no")
 
     def test_buddy_group_name_match(self, driver, w, ctx):
-        assert "QP BuddyExpense" in self._titles(ctx, "buddy=QPBuddyGroup")
+        assert "QP BuddyExpense" in self._titles(ctx, "QPBuddyGroup")
 
     def test_buddy_participant_name_match(self, driver, w, ctx):
-        assert "QP BuddyExpense" in self._titles(ctx, "buddy=QPParticipant")
+        assert "QP BuddyExpense" in self._titles(ctx, "QPParticipant")
 
     def test_buddy_group_member_only_name_match(self, driver, w, ctx):
         # QPMemberOnly is in the group but not a BuddySpending participant
-        assert "QP BuddyExpense" in self._titles(ctx, "buddy=QPMemberOnly")
+        assert "QP BuddyExpense" in self._titles(ctx, "QPMemberOnly")
 
     def test_buddy_name_excludes_non_buddy(self, driver, w, ctx):
-        assert "QP NoBuddy" not in self._titles(ctx, "buddy=QPBuddyGroup")
+        assert "QP NoBuddy" not in self._titles(ctx, "QPBuddyGroup")
 
     def test_freetext_participant_name(self, driver, w, ctx):
         assert "QP BuddyExpense" in self._titles(ctx, "QPParticipant")

@@ -131,6 +131,7 @@ class TestAddExpenseUpdatesProjectLastmod:
         cleanup_user(user["email"])
 
     def test_add_expense_updates_lastmod(self, driver, w, ctx):
+        import re as _re
         group_id = ctx["group_id"]
         today = date.today().isoformat()
         time.sleep(1)
@@ -138,6 +139,12 @@ class TestAddExpenseUpdatesProjectLastmod:
 
         # POST a new group expense (upfront_type=me, mode=group)
         s = _session_for(ctx["user"])
+
+        # Fetch the form to get the one-time nonce
+        get_r = s.get(_url("/budget/expenses/new/"))
+        m = _re.search(r'name="form_nonce"\s+value="([^"]+)"', get_r.text)
+        form_nonce = m.group(1) if m else ""
+
         s.post(
             _url("/budget/expenses/new/"),
             data={
@@ -153,6 +160,7 @@ class TestAddExpenseUpdatesProjectLastmod:
                 "buddy_upfront_type": "me",
                 "project_id": str(group_id),
                 "spendings_json": "[]",
+                "form_nonce": form_nonce,
             },
             allow_redirects=True,
         )

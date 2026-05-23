@@ -117,9 +117,10 @@ class TestSoloProjectExpenseCreation:
         exp_data = result.json()
         assert exp_data.get("project") is not None
         assert exp_data["project"]["id"] == ctx["gid"]
-        # Solo project expenses have no buddy spendings (solo-project path)
+        # Solo project expenses have no buddy spendings; buddy_participants contains only the payer
         participants = exp_data.get("buddy_participants", [])
-        assert len(participants) == 0, "Solo project expense must not have buddy_participants"
+        non_payers = [p for p in participants if not p.get("is_payer")]
+        assert len(non_payers) == 0, "Solo project expense must not have buddy spending participants"
 
     def test_edit_form_shows_project_tab_for_solo_expense(self, driver, w, ctx):
         """Editing a solo-project expense must pre-select the Project tab, not None."""
