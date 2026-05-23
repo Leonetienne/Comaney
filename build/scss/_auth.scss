@@ -137,6 +137,8 @@ main.page-centered { text-align: center; }
 .pw-eye {
   position: absolute;
   right: 8px;
+  top: 50%;
+  transform: translateY(-40%);
   background: none;
   border: none;
   cursor: pointer;
