@@ -21,9 +21,6 @@ staticfiles/
 Deployment/.env.example
 !Deployment/.env.example
 
-# Docker
-.dockerignore
-
 # OS
 .DS_Store
 Thumbs.db
