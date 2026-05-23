@@ -745,38 +745,17 @@ function dashboardBoard() {
             return '';
         },
 
-        // Hex → [h°, s%, l%]
-        _hexToHsl(hex) {
-            const n = parseInt(hex.replace('#', ''), 16);
-            let r = ((n >> 16) & 255) / 255;
-            let g = ((n >>  8) & 255) / 255;
-            let b = ( n        & 255) / 255;
-            const max = Math.max(r, g, b), min = Math.min(r, g, b);
-            let h = 0, s = 0;
-            const l = (max + min) / 2;
-            if (max !== min) {
-                const d = max - min;
-                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                switch (max) {
-                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-                    case g: h = ((b - r) / d + 2) / 6; break;
-                    case b: h = ((r - g) / d + 4) / 6; break;
-                }
-            }
-            return [h * 360, s * 100, l * 100];
-        },
-
         // Return inline style string for a coloured cell card.
-        // Text is the same hue/saturation as the background but shifted:
-        //   dark mode  → much lighter  (+55 L, clamped to 95)
-        //   light mode → much darker   (−40 L, clamped to  5)
+        // Text defaults to white in dark mode and black in light mode.
+        // Overridden by text_color / text_color_lightmode / text_color_darkmode on the config.
         // color_breakpoints: evaluated in order; last matching (value < less_than) wins.
         cardColorStyle(cfg, value) {
-            const dark  = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             let color = dark
                 ? (cfg.color_darkmode  || cfg.color)
                 : (cfg.color_lightmode || cfg.color);
 
+            let bpTextColor = '';
             const bps = cfg && cfg.color_breakpoints;
             if (bps && bps.length && value !== null && value !== undefined) {
                 const num = parseFloat(value);
@@ -787,22 +766,23 @@ function dashboardBoard() {
                                 ? (bp.color_darkmode  || bp.color)
                                 : (bp.color_lightmode || bp.color);
                             if (bpColor) color = bpColor;
+                            const tc = dark
+                                ? (bp.text_color_darkmode  || bp.text_color)
+                                : (bp.text_color_lightmode || bp.text_color);
+                            if (tc) bpTextColor = tc;
                         }
                     }
                 }
             }
 
             if (!color) return '';
-            try {
-                const [h, s, l] = this._hexToHsl(color);
-                const textL = dark
-                    ? Math.min(95, l + 55)
-                    : Math.max( 5, l - 40);
-                const fmt = v => v.toFixed(1);
-                return `background:${color};color:hsl(${fmt(h)},${fmt(s)}%,${fmt(textL)}%)`;
-            } catch (_) {
-                return `background:${color}`;
-            }
+
+            const textColor = bpTextColor
+                || (dark
+                    ? (cfg.text_color_darkmode  || cfg.text_color || 'white')
+                    : (cfg.text_color_lightmode || cfg.text_color || 'black'));
+
+            return `background:${color};color:${textColor}`;
         },
     };
 }

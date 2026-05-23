@@ -19,6 +19,9 @@ Card YAML schema:
     color: "#hex"               # optional; cell background color (both modes)
     color_lightmode: "#hex"    # optional; overrides color in light mode
     color_darkmode: "#hex"     # optional; overrides color in dark mode
+    text_color: "#hex"         # optional (cell only); text color (both modes); default white/black
+    text_color_lightmode: "#hex"  # optional; overrides text_color in light mode
+    text_color_darkmode: "#hex"   # optional; overrides text_color in dark mode
     color_breakpoints:          # optional (cell only); override color by computed value
       - less_than: 100          # applies when value < 100
         color: "#ffff00"
@@ -91,6 +94,7 @@ _COMMON_KEYS = {'type', 'title', 'query', 'positioning'}
 ALLOWED_KEYS = {
     'cell':       _COMMON_KEYS | {'method', 'flip_signs', 'color', 'color_lightmode',
                                    'color_darkmode', 'color_breakpoints', 'color-breakpoints',
+                                   'text_color', 'text_color_lightmode', 'text_color_darkmode',
                                    'link', 'link_template', 'template', 'python'},
     'bar-chart':  _COMMON_KEYS | {'method', 'group', 'max_groups', 'hide_groups',
                                    'flip_signs', 'link_template'},
@@ -105,7 +109,8 @@ ALLOWED_KEYS = {
 }
 
 ALLOWED_SERIES_KEYS       = {'label', 'query', 'method', 'color', 'flip_signs', 'link_template'}
-ALLOWED_BREAKPOINT_KEYS   = {'less_than', 'color', 'color_lightmode', 'color_darkmode'}
+ALLOWED_BREAKPOINT_KEYS   = {'less_than', 'color', 'color_lightmode', 'color_darkmode',
+                             'text_color', 'text_color_lightmode', 'text_color_darkmode'}
 ALLOWED_POSITIONING_KEYS  = {'position', 'width', 'height', 'mobile'}
 ALLOWED_MOBILE_KEYS       = {'position', 'width', 'height'}
 
@@ -185,10 +190,13 @@ def parse_card_config(yaml_str: str) -> dict:
             except (TypeError, ValueError):
                 raise CardConfigError(f"color_breakpoints[{i}].less_than must be a number")
             color_breakpoints.append({
-                'less_than':       less_than,
-                'color':           str(bp.get('color', '')),
-                'color_lightmode': str(bp.get('color_lightmode', '')),
-                'color_darkmode':  str(bp.get('color_darkmode', '')),
+                'less_than':            less_than,
+                'color':                str(bp.get('color', '')),
+                'color_lightmode':      str(bp.get('color_lightmode', '')),
+                'color_darkmode':       str(bp.get('color_darkmode', '')),
+                'text_color':           str(bp.get('text_color', '')),
+                'text_color_lightmode': str(bp.get('text_color_lightmode', '')),
+                'text_color_darkmode':  str(bp.get('text_color_darkmode', '')),
             })
 
     if card_type in ('bar-chart', 'pie-chart'):
@@ -284,10 +292,13 @@ def parse_card_config(yaml_str: str) -> dict:
         ),
         'method':        str(cfg.get('method', 'sum')),
         'flip_signs':    bool(cfg.get('flip_signs', False)),
-        'color':             str(cfg.get('color', '')),
-        'color_lightmode':   str(cfg.get('color_lightmode', '')),
-        'color_darkmode':    str(cfg.get('color_darkmode', '')),
-        'color_breakpoints': color_breakpoints,
+        'color':               str(cfg.get('color', '')),
+        'color_lightmode':     str(cfg.get('color_lightmode', '')),
+        'color_darkmode':      str(cfg.get('color_darkmode', '')),
+        'text_color':          str(cfg.get('text_color', '')),
+        'text_color_lightmode': str(cfg.get('text_color_lightmode', '')),
+        'text_color_darkmode':  str(cfg.get('text_color_darkmode', '')),
+        'color_breakpoints':   color_breakpoints,
         'link':             str(cfg.get('link', '')),
         'link_template':    str(cfg.get('link_template', '')),
         'template':         str(cfg.get('template', '')),
