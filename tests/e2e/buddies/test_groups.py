@@ -115,6 +115,8 @@ class TestGroupInviteAccept:
         assert f"/projects/{ctx['group_id']}/" in driver.current_url
 
     def test_c_in_member_list_after_accept(self, driver, w, ctx):
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+        time.sleep(1)
         assert ctx["c"]["email"] in driver.page_source
 
     def test_buddy_link_created_between_a_and_c(self, driver, w, ctx):
@@ -307,7 +309,7 @@ class TestGroupRemoveMember:
         cleanup_user(c["email"])
 
     def test_c_in_member_list(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
         assert ctx["c"]["email"] in driver.page_source
 
@@ -330,7 +332,8 @@ class TestGroupRemoveMember:
         assert ctx["c"]["email"] not in driver.page_source
 
     def test_ghost_dummy_appears(self, driver, w, ctx):
-        # Ghost dummy has C's display name and "Offline" pill
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+        time.sleep(1)
         assert "Cian Removeable" in driver.page_source, \
             "Ghost dummy with removed member's name must appear"
         assert "Offline" in driver.page_source

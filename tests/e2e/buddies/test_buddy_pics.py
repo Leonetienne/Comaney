@@ -153,7 +153,7 @@ class TestGroupDummyPicture:
         cleanup_user(a["email"])
 
     def test_initials_shown_for_group_dummy(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['a']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['a']['group_id']}/settings/"))
         time.sleep(1)
         assert _avatar_tag(driver, ctx["a"]["dummy_id"]) == "span", \
             "Before upload the group dummy avatar should be an initials span"
@@ -176,7 +176,7 @@ class TestGroupDummyPicture:
         assert resp.headers.get("Content-Type", "").startswith("image/")
 
     def test_group_dummy_pic_persists_after_reload(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['a']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['a']['group_id']}/settings/"))
         time.sleep(1)
         assert _avatar_tag(driver, ctx["a"]["dummy_id"]) == "img", \
             "After reload the group dummy avatar should still be <img>"
@@ -190,7 +190,7 @@ class TestGroupDummyPicture:
             "After removal the group dummy avatar should revert to initials span"
 
     def test_group_dummy_initials_restored_after_reload(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['a']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['a']['group_id']}/settings/"))
         time.sleep(1)
         assert _avatar_tag(driver, ctx["a"]["dummy_id"]) == "span", \
             "After reload post-removal the group dummy avatar should be initials span"
@@ -240,7 +240,7 @@ class TestFeuserPicInBuddyLists:
 
     def test_you_card_shows_initials_before_upload(self, driver, w, ctx):
         # The admin has no ppic yet; their "You" card should show initials.
-        driver.get(_url(f"/projects/{ctx['admin']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['admin']['group_id']}/settings/"))
         time.sleep(1)
         assert "user-avatar--initials" in driver.page_source
         # "Frank Admin" -> "FA"
@@ -248,7 +248,7 @@ class TestFeuserPicInBuddyLists:
 
     def test_member_ppic_shown_in_group_member_card(self, driver, w, ctx):
         # Mary Member has a ppic; her card should contain an <img> with her ppic URL.
-        driver.get(_url(f"/projects/{ctx['admin']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['admin']['group_id']}/settings/"))
         time.sleep(1)
         assert _ppic_url_in_page(
             driver, ctx["admin"]["member_pk"], subdir="ppics"
@@ -269,7 +269,7 @@ class TestFeuserPicInBuddyLists:
 
     def test_you_card_shows_img_after_upload(self, driver, w, ctx):
         admin_pk = _get_pk(ctx["admin"]["email"])
-        driver.get(_url(f"/projects/{ctx['admin']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['admin']['group_id']}/settings/"))
         time.sleep(1)
         assert _ppic_url_in_page(driver, admin_pk, subdir="ppics"), \
             "After upload the admin's You card should contain their ppic URL"
@@ -326,11 +326,11 @@ class TestGroupDummyPicWithExpense:
         cleanup_user(a["email"])
 
     def test_multiple_dummy_avatar_elements_exist(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['a']['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['a']['group_id']}/settings/"))
         time.sleep(1)
         tags = _all_dummy_avatar_tags(driver, ctx["a"]["dummy_id"])
-        assert len(tags) >= 2, (
-            "Expected at least 2 data-dummy-avatar elements (expense row + member card)"
+        assert len(tags) >= 1, (
+            "Expected at least 1 data-dummy-avatar element (member card)"
         )
         assert all(t == "span" for t in tags), \
             "All dummy avatar elements should be initials spans before upload"

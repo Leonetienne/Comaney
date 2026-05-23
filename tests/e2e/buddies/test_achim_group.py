@@ -60,7 +60,7 @@ class TestAchimGroupCreated:
         cleanup_user(a["email"])
 
     def test_group_dummy_visible_before_removal(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
         assert "Offline Otto" in driver.page_source
 
@@ -93,6 +93,8 @@ class TestAchimGroupCreated:
         # merge_dummy_into_archive ("Original participant was: Offline Otto") is
         # rendered in a collapsed DOM section, so page_source always contains the
         # name; what matters is that no member card still lists Otto.
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+        time.sleep(1)
         member_names = [
             el.text for el in driver.find_elements(By.CSS_SELECTOR, ".buddy-card-dummy .buddy-name")
         ]
@@ -159,7 +161,7 @@ class TestAchimGroupWipe:
         cleanup_user(a["email"])
 
     def test_achim_visible_in_group_members(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
         assert "Achim Archive" in driver.page_source
 
@@ -188,7 +190,7 @@ class TestAchimGroupWipe:
                "Achim Archive" in driver.page_source
 
     def test_achim_gone_from_group_members(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
         assert "Achim Archive" not in driver.page_source, \
             "Achim Archive must be gone from group members after wipe"
@@ -258,6 +260,8 @@ class TestAchimGroupSelfDebtCancels:
     def test_achim_is_only_dummy_member(self, driver, w, ctx):
         # Check member cards only — archived notes in collapsed DOM sections
         # contain "DummyA"/"DummyB" as audit trail text, so page_source is not reliable.
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+        time.sleep(1)
         member_names = [
             el.text for el in driver.find_elements(By.CSS_SELECTOR, ".buddy-card-dummy .buddy-name")
         ]
@@ -269,6 +273,8 @@ class TestAchimGroupSelfDebtCancels:
             f"DummyB must not appear in the member list, got: {member_names}"
 
     def test_no_simplified_links_in_page(self, driver, w, ctx):
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        time.sleep(1.5)
         src = driver.page_source
         assert '"links": []' in src or '"links":[]' in src, \
             "simplified_graph_json must contain no links after both dummies merged into Achim"

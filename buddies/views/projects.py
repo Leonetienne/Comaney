@@ -544,12 +544,14 @@ def project_settings(request, project_id):
     feuser_members = [
         m for m in project.members.all() if m.feuser_id and m.feuser_id != feuser.pk
     ]
+    dummy_members = [m for m in project.members.all() if m.dummy_id]
     return render(request, "buddies/project_settings.html", {
         "active_nav": "projects",
         "project": project,
         "group": project,
         "is_admin": is_admin,
         "feuser_members": feuser_members,
+        "dummy_members": dummy_members,
         "pending_invites": pending_invites,
         "currency": feuser.currency,
     })
@@ -729,7 +731,7 @@ def project_add_dummy(request, project_id):
     name = request.POST.get("display_name", "").strip()
     if name:
         ProjectService.create_group_dummy(project, feuser, name)
-    return redirect("projects:project_detail", project_id=project_id)
+    return redirect("projects:project_settings", project_id=project_id)
 
 
 @feuser_required
