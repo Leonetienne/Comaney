@@ -4,13 +4,20 @@
 
 {% block content %}
 {% load feuser_tags %}
-<div class="group-hero{% if project.group_picture %} group-hero--has-bg{% endif %}"{% if project.group_picture %} style="background-image: url('/media/bgpics/{{ project.uid }}.webp')"{% endif %}>
-    <div class="page-header">
-        <h1>{{ project.name }}</h1>
-        {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
-        {% if project.archived %}<span class="pill pill--faded">Archived</span>{% endif %}
+<div class="group-hero{% if project.group_picture %} group-hero--has-bg{% endif %}">
+    <div class="group-hero-content">
+        <div class="page-header">
+            <h1>{{ project.name }}</h1>
+            {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
+            {% if project.archived %}<span class="pill pill--faded">Archived</span>{% endif %}
+        </div>
+        {% if project.description %}<p class="group-description">{{ project.description }}</p>{% endif %}
     </div>
-    {% if project.description %}<p class="group-description">{{ project.description }}</p>{% endif %}
+    {% if project.group_picture %}
+    <div class="group-hero-image" id="group-hero-image" style="background-image: url('/media/bgpics/{{ project.uid }}.webp')"></div>
+    {% else %}
+    <div class="group-hero-image" id="group-hero-image" style="display:none;"></div>
+    {% endif %}
 </div>
 
 {% if messages %}
@@ -113,37 +120,103 @@
 
         <div class="settings-row">
             <p class="settings-row__title">Project picture</p>
-            <p class="settings-row__desc">Shown as a background on the project card. Recommended: landscape, at least 800 px wide.</p>
+            <p class="settings-row__desc">Shown as a background on the project card.</p>
             <div class="project-pic-row">
-                {% if project.group_picture %}
-                <img src="/media/bgpics/{{ project.uid }}.webp" class="project-pic-thumb" alt="">
-                {% else %}
-                <div class="project-pic-thumb project-pic-thumb--placeholder">No picture</div>
-                {% endif %}
-                <div class="project-pic-controls">
-                    <form method="post" action="{% url 'projects:project_picture' project_id=project.uid %}" enctype="multipart/form-data" id="project-pic-upload-form">
-                        {% csrf_token %}
-                        <input type="file" name="group_picture" accept="image/*" id="project-pic-input" style="display:none;">
-                        <button type="submit" id="btn-upload-project-pic" style="display:none;" aria-hidden="true"></button>
-                        <label for="project-pic-input" class="btn btn-secondary btn-sm" style="cursor:pointer;font-weight:normal;">Choose image</label>
-                    </form>
+                <div id="project-pic-thumb-wrap">
                     {% if project.group_picture %}
-                    <form method="post" action="{% url 'projects:project_picture' project_id=project.uid %}">
+                    <img src="/media/bgpics/{{ project.uid }}.webp" class="project-pic-thumb" id="project-pic-thumb" alt="">
+                    {% else %}
+                    <div class="project-pic-thumb project-pic-thumb--placeholder" id="project-pic-thumb">No picture</div>
+                    {% endif %}
+                </div>
+                <div class="project-pic-controls">
+                    <input type="file" name="group_picture" accept="image/*" id="project-pic-input" style="display:none;">
+                    <label for="project-pic-input" class="btn btn-secondary btn-sm" style="cursor:pointer;font-weight:normal;">Choose image</label>
+                    <form method="post" action="{% url 'projects:project_picture' project_id=project.uid %}" id="project-pic-delete-form">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="delete">
-                        <button type="submit" id="btn-delete-project-pic" class="btn btn-secondary btn-sm" style="font-weight:normal;">Remove picture</button>
+                        <button type="submit" id="btn-delete-project-pic" class="btn btn-secondary btn-sm" style="font-weight:normal;{% if not project.group_picture %}display:none;{% endif %}">Remove picture</button>
                     </form>
-                    {% endif %}
+                    <p id="project-pic-error" class="error-msg" style="display:none;margin:0;"></p>
                 </div>
             </div>
             <script>
-            (function() {
-                document.getElementById('project-pic-input').addEventListener('change', function() {
-                    if (this.files && this.files[0]) {
-                        document.getElementById('project-pic-upload-form').submit();
-                    }
+            (function () {
+                var input      = document.getElementById('project-pic-input');
+                var thumbWrap  = document.getElementById('project-pic-thumb-wrap');
+                var deleteBtn  = document.getElementById('btn-delete-project-pic');
+                var errorEl    = document.getElementById('project-pic-error');
+                var heroImg    = document.getElementById('group-hero-image');
+                var heroWrap   = heroImg ? heroImg.closest('.group-hero') : null;
+                var uploadUrl  = "{% url 'projects:project_picture' project_id=project.uid %}";
+
+                function getCsrf() {
+                    var m = document.cookie.match(/csrftoken=([^;]+)/);
+                    return m ? m[1] : '';
+                }
+
+                input.addEventListener('change', function () {
+                    var file = input.files[0];
+                    if (!file) return;
+                    input.value = '';
+
+                    window.ImageCropper.open(file, function (blob) {
+                        errorEl.style.display = 'none';
+
+                        var form = new FormData();
+                        form.append('csrfmiddlewaretoken', getCsrf());
+                        form.append('group_picture', blob, 'project.jpg');
+
+                        fetch(uploadUrl, {
+                            method: 'POST',
+                            body: form,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        })
+                        .then(function (resp) {
+                            return resp.json().then(function (data) {
+                                return { ok: resp.ok, data: data };
+                            });
+                        })
+                        .then(function (result) {
+                            if (result.ok) {
+                                var blobUrl = URL.createObjectURL(blob);
+
+                                /* update settings thumbnail */
+                                var existing = thumbWrap.querySelector('img.project-pic-thumb');
+                                if (existing) {
+                                    existing.src = blobUrl;
+                                } else {
+                                    var newImg = document.createElement('img');
+                                    newImg.className = 'project-pic-thumb';
+                                    newImg.id = 'project-pic-thumb';
+                                    newImg.alt = '';
+                                    newImg.src = blobUrl;
+                                    thumbWrap.innerHTML = '';
+                                    thumbWrap.appendChild(newImg);
+                                }
+
+                                /* update hero banner */
+                                if (heroImg) {
+                                    heroImg.style.backgroundImage = 'url(' + blobUrl + ')';
+                                    heroImg.style.display = '';
+                                }
+                                if (heroWrap) {
+                                    heroWrap.classList.add('group-hero--has-bg');
+                                }
+
+                                deleteBtn.style.display = '';
+                            } else {
+                                errorEl.textContent = (result.data && result.data.error) || 'Upload failed.';
+                                errorEl.style.display = '';
+                            }
+                        })
+                        .catch(function () {
+                            errorEl.textContent = 'Upload failed. Please try again.';
+                            errorEl.style.display = '';
+                        });
+                    }, { shape: 'rect', aspectRatio: 3, cropH: 140 });
                 });
-            })();
+            }());
             </script>
         </div>
 
@@ -235,5 +308,7 @@
 <div class="mt-1">
     <a href="{% url 'projects:projects_list' %}" class="btn btn-secondary btn-sm">&larr; Back to Projects</a>
 </div>
+
+{% include "partials/_image_cropper.html" %}
 
 {% endblock %}

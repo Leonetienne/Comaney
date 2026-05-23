@@ -13,29 +13,56 @@
 (function () {
     'use strict';
 
-    var CANVAS_SIZE = 300;
-    var CIRCLE_R    = 120;
-    var CX          = CANVAS_SIZE / 2;
-    var CY          = CANVAS_SIZE / 2;
-
     var modal     = document.getElementById('img-cropper-modal');
     var canvas    = document.getElementById('img-cropper-canvas');
     var ctx       = canvas.getContext('2d');
     var cancelBtn = document.getElementById('img-cropper-cancel');
     var doneBtn   = document.getElementById('img-cropper-done');
 
-    var img       = null;
-    var scale     = 1;
-    var offsetX   = CX;
-    var offsetY   = CY;
-    var dragging  = false;
-    var lastX     = 0;
-    var lastY     = 0;
+    /* ── per-open state ─────────────────────────────────────────── */
+
+    var img          = null;
+    var scale        = 1;
+    var offsetX      = 0;
+    var offsetY      = 0;
+    var dragging     = false;
+    var lastX        = 0;
+    var lastY        = 0;
     var doneCallback = null;
+
+    /* ── current-mode config (set in setup()) ───────────────────── */
+
+    var mode = 'circle';   // 'circle' | 'rect'
+    var CX, CY;
+    var CIRCLE_R;           // circle mode
+    var CROP_W, CROP_H;     // rect mode
+
+    function setup(opts) {
+        opts = opts || {};
+        mode = (opts.shape === 'rect') ? 'rect' : 'circle';
+
+        if (mode === 'rect') {
+            var ratio  = opts.aspectRatio || 3;
+            CROP_H     = opts.cropH || 140;
+            CROP_W     = Math.round(CROP_H * ratio);
+            canvas.width  = CROP_W + 60;
+            canvas.height = CROP_H + 60;
+        } else {
+            canvas.width  = 300;
+            canvas.height = 300;
+            CIRCLE_R      = 120;
+        }
+
+        CX = canvas.width  / 2;
+        CY = canvas.height / 2;
+    }
 
     /* ── helpers ────────────────────────────────────────────────── */
 
     function minScale() {
+        if (mode === 'rect') {
+            return Math.max(CROP_W / img.naturalWidth, CROP_H / img.naturalHeight);
+        }
         return Math.max((CIRCLE_R * 2) / img.naturalWidth,
                         (CIRCLE_R * 2) / img.naturalHeight);
     }
@@ -43,34 +70,44 @@
     function clamp() {
         var hw = img.naturalWidth  * scale / 2;
         var hh = img.naturalHeight * scale / 2;
-        offsetX = Math.max(CX + CIRCLE_R - hw, Math.min(CX - CIRCLE_R + hw, offsetX));
-        offsetY = Math.max(CY + CIRCLE_R - hh, Math.min(CY - CIRCLE_R + hh, offsetY));
+        var halfW = (mode === 'rect') ? CROP_W / 2 : CIRCLE_R;
+        var halfH = (mode === 'rect') ? CROP_H / 2 : CIRCLE_R;
+        offsetX = Math.max(CX + halfW - hw, Math.min(CX - halfW + hw, offsetX));
+        offsetY = Math.max(CY + halfH - hh, Math.min(CY - halfH + hh, offsetY));
     }
 
     function draw() {
         var w = img.naturalWidth  * scale;
         var h = img.naturalHeight * scale;
 
-        ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         /* image */
         ctx.drawImage(img, offsetX - w / 2, offsetY - h / 2, w, h);
 
-        /* dark scrim outside the circle, clear inside */
+        /* scrim outside crop region */
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.55)';
         ctx.beginPath();
-        ctx.rect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-        ctx.arc(CX, CY, CIRCLE_R, 0, Math.PI * 2);
+        ctx.rect(0, 0, canvas.width, canvas.height);
+        if (mode === 'rect') {
+            ctx.rect(CX - CROP_W / 2, CY - CROP_H / 2, CROP_W, CROP_H);
+        } else {
+            ctx.arc(CX, CY, CIRCLE_R, 0, Math.PI * 2);
+        }
         ctx.fill('evenodd');
         ctx.restore();
 
-        /* circle border */
+        /* crop region border */
         ctx.save();
         ctx.strokeStyle = 'rgba(255,255,255,0.8)';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(CX, CY, CIRCLE_R, 0, Math.PI * 2);
+        if (mode === 'rect') {
+            ctx.rect(CX - CROP_W / 2, CY - CROP_H / 2, CROP_W, CROP_H);
+        } else {
+            ctx.arc(CX, CY, CIRCLE_R, 0, Math.PI * 2);
+        }
         ctx.stroke();
         ctx.restore();
     }
@@ -78,6 +115,7 @@
     function applyZoom(newScale) {
         newScale = Math.max(minScale(), Math.min(6, newScale));
         var ratio = newScale / scale;
+        /* always zoom into the center of the crop viewport */
         offsetX = CX - (CX - offsetX) * ratio;
         offsetY = CY - (CY - offsetY) * ratio;
         scale   = newScale;
@@ -86,8 +124,8 @@
     }
 
     function initImage(imageEl) {
-        img    = imageEl;
-        scale  = minScale();
+        img     = imageEl;
+        scale   = minScale();
         offsetX = CX;
         offsetY = CY;
         clamp();
@@ -185,23 +223,31 @@
     cancelBtn.addEventListener('click', close);
 
     doneBtn.addEventListener('click', function () {
-        /* render the crop region to an output canvas */
         var out    = document.createElement('canvas');
-        var outSize = CIRCLE_R * 2;
-        out.width  = outSize;
-        out.height = outSize;
         var outCtx = out.getContext('2d');
-
         var w      = img.naturalWidth  * scale;
         var h      = img.naturalHeight * scale;
         var imgLeft = offsetX - w / 2;
         var imgTop  = offsetY - h / 2;
-        var srcX   = (CX - CIRCLE_R - imgLeft) / scale;
-        var srcY   = (CY - CIRCLE_R - imgTop)  / scale;
-        var srcW   = (CIRCLE_R * 2) / scale;
-        var srcH   = (CIRCLE_R * 2) / scale;
 
-        outCtx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outSize, outSize);
+        if (mode === 'rect') {
+            out.width  = CROP_W;
+            out.height = CROP_H;
+            var srcX = (CX - CROP_W / 2 - imgLeft) / scale;
+            var srcY = (CY - CROP_H / 2 - imgTop)  / scale;
+            var srcW = CROP_W / scale;
+            var srcH = CROP_H / scale;
+            outCtx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, CROP_W, CROP_H);
+        } else {
+            var outSize = CIRCLE_R * 2;
+            out.width  = outSize;
+            out.height = outSize;
+            var srcX = (CX - CIRCLE_R - imgLeft) / scale;
+            var srcY = (CY - CIRCLE_R - imgTop)  / scale;
+            var srcW = (CIRCLE_R * 2) / scale;
+            var srcH = (CIRCLE_R * 2) / scale;
+            outCtx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outSize, outSize);
+        }
 
         out.toBlob(function (blob) {
             if (doneCallback) doneCallback(blob);
@@ -216,10 +262,12 @@
 
     window.ImageCropper = {
         /**
-         * Open the cropper for the given File object.
-         * callback(blob) is called when the user clicks Done.
+         * Open the cropper for the given File.
+         * opts (optional): { shape: 'rect', aspectRatio: 3, cropH: 140 }
+         *   Defaults to circle mode (profile picture behaviour).
          */
-        open: function (file, callback) {
+        open: function (file, callback, opts) {
+            setup(opts);
             doneCallback = callback;
             var reader = new FileReader();
             reader.onload = function (e) {

@@ -951,6 +951,7 @@ def project_picture(request, project_id):
             project.save(update_fields=["group_picture"])
             project.update_lastmod()
         else:
+            is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
             upload = request.FILES.get("group_picture")
             if upload:
                 try:
@@ -965,7 +966,11 @@ def project_picture(request, project_id):
                     project.group_picture = True
                     project.save(update_fields=["group_picture"])
                     project.update_lastmod()
+                    if is_ajax:
+                        return JsonResponse({"ok": True})
                 except Exception:
+                    if is_ajax:
+                        return JsonResponse({"ok": False, "error": "Could not process the image."}, status=400)
                     django_messages.error(request, "Could not process the image.")
 
     return redirect("projects:project_settings", project_id=project.uid)
