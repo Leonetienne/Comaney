@@ -3,13 +3,14 @@ import re
 import time
 
 import pytest
+import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 
 from helpers import (
     _url, fill, submit, wait_url, wait_text, server_today,
-    api_delete,
+    api_get, api_delete,
     setup_user, cleanup_user,
 )
 
@@ -107,3 +108,63 @@ class TestScheduledAllFields:
         assert Select(driver.find_element(By.ID, "id_type")).first_selected_option.get_attribute("value") == "income"
         assert Select(driver.find_element(By.ID, "id_repeat_every_unit")).first_selected_option.get_attribute("value") == "weeks"
         api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+
+
+class TestScheduledDoubleSubmitGuard:
+    """Verify that posting a consumed nonce does not create a duplicate scheduled expense."""
+
+    def test_back_resubmit_creates_only_one_scheduled(self, ctx):
+        import re as _re
+
+        s = requests.Session()
+        today = server_today()
+        title = "E2E NoDupScheduled"
+
+        # --- authenticate ---
+        r = s.get(_url("/login/"))
+        assert r.status_code == 200
+        csrf = s.cookies.get("csrftoken", "")
+        r = s.post(_url("/login/"), data={
+            "csrfmiddlewaretoken": csrf,
+            "email": ctx["email"],
+            "password": ctx["password"],
+        }, allow_redirects=True)
+        assert "/budget/" in r.url, f"Login did not redirect to /budget/; landed at {r.url}"
+
+        # --- load the form and capture the one-time nonce ---
+        r = s.get(_url("/budget/scheduled/new/"))
+        assert r.status_code == 200
+        m = _re.search(r'name="form_nonce"\s+value="([^"]+)"', r.text)
+        assert m, "form_nonce hidden input not found in scheduled form HTML"
+        stale_nonce = m.group(1)
+        csrf = s.cookies.get("csrftoken", csrf)
+
+        post_data = {
+            "csrfmiddlewaretoken": csrf,
+            "form_nonce": stale_nonce,
+            "title": title,
+            "value": "5.00",
+            "type": "expense",
+            "repeat_every_factor": "1",
+            "repeat_every_unit": "months",
+            "repeat_base_date": today,
+        }
+
+        # --- first POST: creates the scheduled expense and consumes the nonce ---
+        r = s.post(_url("/budget/scheduled/new/"), data=post_data, allow_redirects=False)
+        assert r.status_code in (301, 302), f"First POST returned {r.status_code}"
+
+        # --- second POST: replay the consumed nonce (back + resubmit) ---
+        post_data["title"] = title + " DUPE"
+        r = s.post(_url("/budget/scheduled/new/"), data=post_data, allow_redirects=False)
+        assert r.status_code in (301, 302), f"Second POST returned {r.status_code}"
+
+        # --- assert only one scheduled expense was created ---
+        resp = api_get("/api/v1/scheduled/", ctx)
+        assert resp.status_code == 200
+        all_scheduled = resp.json()["scheduled"]
+        dupes = [e for e in all_scheduled if "DUPE" in e["title"]]
+        assert dupes == [], f"Duplicate scheduled expense was created: {dupes}"
+        originals = [e for e in all_scheduled if e["title"] == title]
+        assert len(originals) == 1, f"Expected 1 original, found {len(originals)}"
+        api_delete(f"/api/v1/scheduled/{originals[0]['id']}/", ctx)
