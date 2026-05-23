@@ -34,46 +34,49 @@
     <div class="bgs-cards" id="projects-sortable">
         {% for ps in project_summaries %}{% with project=ps.project %}
         <a href="{% url 'projects:project_detail' project_id=project.uid %}"
-           class="bgs-card bgs-card-{{ ps.net_state }}{% if project.group_picture %} bgs-card--has-bg{% endif %}{% if project.archived %} bgs-card--archived{% endif %}"
-           {% if project.group_picture %}style="background-image: url('/media/bgpics/{{ project.uid }}.webp')"{% endif %}
+           class="bgs-card bgs-card-{{ ps.net_state }}{% if project.archived %} bgs-card--archived{% endif %}"
            data-project-id="{{ project.uid }}">
-            <div class="bgs-card-top">
-                <span class="bgs-name">{{ project.name }}</span>
-                <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
-                    {% if ps.is_admin %}<span class="pill pill--accent">Admin</span>{% endif %}
-                    {% if project.archived %}<span class="pill" style="opacity:0.7;">Archived</span>{% endif %}
+            <div class="bgs-card-header">
+                <div class="bgs-card-top">
+                    <span class="bgs-name">{{ project.name }}</span>
+                    <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+                        {% if ps.is_admin %}<span class="pill pill--accent">Admin</span>{% endif %}
+                        {% if project.archived %}<span class="pill" style="opacity:0.7;">Archived</span>{% endif %}
+                    </div>
                 </div>
-            </div>
-            <div class="bgs-card-stats">
-                {% if ps.has_multiple_members and ps.net_state != 'settled' %}
-                <div class="bgs-stat bgs-stat--{{ ps.net_state }}">
-                    <span class="bgs-stat-label">Your balance</span>
-                    <span class="bgs-stat-value">
-                        {% if ps.net_state == "positive" %}+{{ currency }}{{ ps.net|floatformat:2 }}
-                        {% else %}-{{ currency }}{{ ps.net_abs|floatformat:2 }}
-                        {% endif %}
-                    </span>
+                <div class="bgs-card-stats">
+                    {% if ps.has_multiple_members and ps.net_state != 'settled' %}
+                    <div class="bgs-stat bgs-stat--{{ ps.net_state }}">
+                        <span class="bgs-stat-label">Your balance</span>
+                        <span class="bgs-stat-value">
+                            {% if ps.net_state == "positive" %}+{{ currency }}{{ ps.net|floatformat:2 }}
+                            {% else %}-{{ currency }}{{ ps.net_abs|floatformat:2 }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if ps.group_total_spending %}
+                    <div class="bgs-stat">
+                        <span class="bgs-stat-label">Total spending</span>
+                        <span class="bgs-stat-value">{{ currency }}{{ ps.group_total_spending|floatformat:2 }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if project.description %}
+                <p class="bgs-description">{{ project.description_inline }}</p>
+                {% else %}
+                <div class="bgs-members">
+                    {% with members=project.members.all %}
+                    {% for m in members|slice:":4" %}
+                    <span class="pill pill--rounded">{% if m.feuser %}{{ m.feuser.first_name|default:m.feuser.email }}{% else %}{{ m.dummy.display_name }}{% endif %}</span>
+                    {% endfor %}
+                    {% if members|length > 4 %}<span class="pill pill--rounded pill--muted">+{{ members|length|add:"-4" }} more</span>{% endif %}
+                    {% endwith %}
                 </div>
                 {% endif %}
-                {% if ps.group_total_spending %}
-                <div class="bgs-stat">
-                    <span class="bgs-stat-label">Total spending</span>
-                    <span class="bgs-stat-value">{{ currency }}{{ ps.group_total_spending|floatformat:2 }}</span>
-                </div>
-                {% endif %}
             </div>
-            {% if project.description %}
-            <p class="bgs-description">{{ project.description_inline }}</p>
-            {% else %}
-            <div class="bgs-members">
-                {% with members=project.members.all %}
-                {% for m in members|slice:":4" %}
-                <span class="pill pill--rounded">{% if m.feuser %}{{ m.feuser.first_name|default:m.feuser.email }}{% else %}{{ m.dummy.display_name }}{% endif %}</span>
-                {% endfor %}
-                {% if members|length > 4 %}<span class="pill pill--rounded pill--muted">+{{ members|length|add:"-4" }} more</span>{% endif %}
-                {% endwith %}
-            </div>
-            {% endif %}
+            <div class="bgs-card-image-area{% if not project.group_picture %} bgs-card-image-area--placeholder{% endif %}"
+                 {% if project.group_picture %}style="background-image: url('/media/bgpics/{{ project.uid }}.webp')"{% endif %}></div>
         </a>
         {% endwith %}{% endfor %}
     </div>

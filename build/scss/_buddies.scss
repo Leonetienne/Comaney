@@ -430,38 +430,13 @@
 // Hero image that bleeds to the top and sides of .buddy-payment-section
 .buddy-project-header-hero {
   display: block;
-  height: 110px;
+  height: 130px;
   width: 100%;
   background-size: cover;
   background-position: center;
   background-color: var(--bg-elevated);
   border-radius: 7px 7px 0 0;
-  position: relative;
-  overflow: hidden;
   transition: background-image 0.18s ease;
-
-  // Gradient overlay: light mode → fade to white at bottom
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.0) 0%,
-      rgba(255, 255, 255, 0.55) 100%
-    );
-    border-radius: 7px 7px 0 0;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    &::after {
-      background: linear-gradient(
-        to bottom,
-        rgba(0, 0, 0, 0.0) 0%,
-        rgba(0, 0, 0, 0.65) 100%
-      );
-    }
-  }
 }
 
 // ── Project tab navigation (Reitermenü) ──────────────────────────────────────
@@ -854,19 +829,14 @@
 .bgs-card {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 0.6rem;
   text-decoration: none;
   color: var(--text);
-  padding: 1.1rem 1.4rem 1rem;
-  background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  min-height: 130px;
+  min-height: 160px;
   position: relative;
   overflow: hidden;
-  transition: box-shadow 0.22s ease, transform 0.22s ease,
-              border-color 0.22s ease, background 0.22s ease;
+  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
 
   &::before {
     content: '';
@@ -876,6 +846,7 @@
     border-radius: 12px 12px 0 0;
     background: var(--border);
     transition: background 0.22s ease;
+    z-index: 1;
   }
 
   &.bgs-card-positive::before { background: #2da44e; }
@@ -884,67 +855,34 @@
   &:hover {
     box-shadow: 0 10px 36px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
     transform: translateY(-5px) scale(1.015);
-    background: var(--bg-elevated);
     border-color: var(--accent);
     text-decoration: none;
     z-index: 1;
+
+    .bgs-card-header {
+      background: var(--bg-elevated);
+    }
   }
 
   &.bgs-card-positive:hover { border-color: #2da44e; }
   &.bgs-card-negative:hover { border-color: #cf222e; }
+}
 
-  &.bgs-card--has-bg {
-    background-size: cover;
-    background-position: center;
+.bgs-card-header {
+  padding: 0.9rem 1.2rem 0.8rem;
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  transition: background 0.22s ease;
+}
 
-    &::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.72) 0%,
-        rgba(255, 255, 255, 0.5) 100%
-      );
-      border-radius: 12px;
-      z-index: 0;
-    }
-
-    .bgs-card-top,
-    .bgs-card-stats,
-    .bgs-members,
-    .bgs-description {
-      position: relative;
-      z-index: 1;
-    }
-
-    .bgs-name { color: #111; }
-    .bgs-stat-label { color: rgba(0, 0, 0, 0.55); }
-    .bgs-stat-value { color: #111; }
-    .bgs-stat--positive .bgs-stat-value { color: #1a7f36; }
-    .bgs-stat--negative .bgs-stat-value { color: #a8001a; }
-    .bgs-stat--settled  .bgs-stat-value { color: rgba(0, 0, 0, 0.5); }
-    .bgs-description { color: rgba(0, 0, 0, 0.65); }
-    .pill { background: rgba(0, 0, 0, 0.10); color: #111; border-color: transparent; }
-
-    @media (prefers-color-scheme: dark) {
-      &::after {
-        background: linear-gradient(
-          to bottom,
-          rgba(0, 0, 0, 0.55) 0%,
-          rgba(0, 0, 0, 0.75) 100%
-        );
-      }
-      .bgs-name { color: #fff; }
-      .bgs-stat-label { color: rgba(255, 255, 255, 0.55); }
-      .bgs-stat-value { color: #fff; }
-      .bgs-stat--positive .bgs-stat-value { color: #4cd870; }
-      .bgs-stat--negative .bgs-stat-value { color: #ff6b6b; }
-      .bgs-stat--settled  .bgs-stat-value { color: rgba(255, 255, 255, 0.45); }
-      .bgs-description { color: rgba(255, 255, 255, 0.65); }
-      .pill { background: rgba(255, 255, 255, 0.18); color: #fff; border-color: transparent; }
-    }
-  }
+.bgs-card-image-area {
+  height: 130px;
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg-elevated);
 }
 
 .bgs-card-top {

@@ -9,13 +9,18 @@
 {% block content %}
 {% load feuser_tags %}
 {% load static %}
-<div class="group-hero{% if project.group_picture %} group-hero--has-bg{% endif %}"{% if project.group_picture %} style="background-image: url('/media/bgpics/{{ project.uid }}.webp')"{% endif %}>
-    <div class="page-header">
-        <h1>{{ project.name }}</h1>
-        {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
-        {% if project.archived %}<span class="pill pill--faded">Archived</span>{% endif %}
+<div class="group-hero{% if project.group_picture %} group-hero--has-bg{% endif %}">
+    <div class="group-hero-content">
+        <div class="page-header">
+            <h1>{{ project.name }}</h1>
+            {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
+            {% if project.archived %}<span class="pill pill--faded">Archived</span>{% endif %}
+        </div>
+        {% if project.description %}<p class="group-description">{{ project.description }}</p>{% endif %}
     </div>
-    {% if project.description %}<p class="group-description">{{ project.description }}</p>{% endif %}
+    {% if project.group_picture %}
+    <div class="group-hero-image" style="background-image: url('/media/bgpics/{{ project.uid }}.webp')"></div>
+    {% endif %}
 </div>
 
 {% if messages %}
