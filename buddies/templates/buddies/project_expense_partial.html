@@ -75,7 +75,7 @@
                 </div>
                 <div class="bexp-breakdown-header-right">
                     {% if e.i_am_participant and not e.expense.is_buddies_settlement %}
-                    {% for s in e.participant_shares %}{% if s.is_me and not s.consent_locked %}
+                    {% for s in e.participant_shares %}{% if s.is_me and s.can_change_consent %}
                     <div class="consent-btns">
                         <form method="post" action="{% url 'buddies:participant_approve' e.expense.uid %}">
                             {% csrf_token %}

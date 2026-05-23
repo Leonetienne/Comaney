@@ -249,7 +249,7 @@ def _participant_set_approval(request, expense_id, new_state):
     if not bs:
         return redirect("buddies:buddy_summary")
 
-    if bs.consent_locked:
+    if not bs.can_change_consent:
         return HttpResponseForbidden("Decision is locked after 24 hours.")
 
     if bs.approval_state != new_state:

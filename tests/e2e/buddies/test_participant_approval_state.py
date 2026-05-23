@@ -514,6 +514,82 @@ class TestConsentLockAfter24h:
             "State must remain 1 (approved) after all blocked requests"
 
 
+class TestRejectedStateBypassesLock:
+    """A rejected direct-buddy decision is always changeable, even after 25 h."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Vera", last_name="Payer")
+        b = setup_user(None, None, first_name="Walt", last_name="Rejector")
+        _create_buddy_link(a["email"], b["email"])
+        b_pk = int(_get_pk(b["email"]))
+        exp_pk = int(_create_personal_expense_with_buddy(
+            owner_email=a["email"], participant_pk=b_pk, title="Rejected Bypass Expense",
+        ))
+        _set_approval_state(exp_pk, b["email"], 2)
+        _set_consent_set_at(exp_pk, b["email"], hours_ago=25)
+        yield {"a": a, "b": b, "exp_pk": exp_pk}
+        cleanup_user(a["email"])
+        cleanup_user(b["email"])
+
+    def test_consent_buttons_still_visible_when_rejected(self, driver, w, ctx):
+        _login_as(driver, ctx["b"])
+        driver.get(_url("/buddies/summary/"))
+        time.sleep(1)
+        btns = driver.find_elements(By.CSS_SELECTOR, "button.btn-consent")
+        assert len(btns) > 0, \
+            "Consent buttons must remain visible when state is rejected, regardless of 24-hour window"
+
+    def test_approve_endpoint_succeeds_from_rejected(self, driver, w, ctx):
+        _approve_via_url(driver, ctx["exp_pk"])
+        assert not _is_403(driver), \
+            "Approve endpoint must not return 403 when current state is rejected"
+
+    def test_state_changed_to_approved(self, driver, w, ctx):
+        assert _get_approval_state(ctx["exp_pk"], ctx["b"]["email"]) == "1", \
+            "State must have changed to approved (1) after approve from rejected state"
+
+
+class TestProjectRejectedStateBypassesLock:
+    """A rejected project-expense decision is always changeable, even after 25 h."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Xena", last_name="Admin")
+        b = setup_user(None, None, first_name="Yuri", last_name="Rejector")
+        _create_buddy_link(a["email"], b["email"])
+        b_pk = int(_get_pk(b["email"]))
+        group_pk = int(_create_group(a["email"], "Rejected Bypass Project"))
+        _add_group_member(group_pk, b["email"])
+        exp_pk = int(_create_group_expense(
+            admin_email=a["email"], participant_email=b["email"],
+            group_id=group_pk, title="Project Rejected Bypass Expense",
+            value="80.00", share="50.0",
+        ))
+        _set_approval_state(exp_pk, b["email"], 2)
+        _set_consent_set_at(exp_pk, b["email"], hours_ago=25)
+        yield {"a": a, "b": b, "exp_pk": exp_pk, "group_pk": group_pk}
+        cleanup_user(a["email"])
+        cleanup_user(b["email"])
+
+    def test_consent_buttons_still_visible_on_project_page(self, driver, w, ctx):
+        _login_as(driver, ctx["b"])
+        driver.get(_url(f"/projects/{ctx['group_pk']}/"))
+        time.sleep(1)
+        btns = driver.find_elements(By.CSS_SELECTOR, "button.btn-consent")
+        assert len(btns) > 0, \
+            "Consent buttons must remain visible on project page when state is rejected, regardless of 24-hour window"
+
+    def test_approve_endpoint_succeeds_from_rejected(self, driver, w, ctx):
+        _approve_via_url(driver, ctx["exp_pk"])
+        assert not _is_403(driver), \
+            "Approve endpoint must not return 403 for project expense when current state is rejected"
+
+    def test_state_changed_to_approved(self, driver, w, ctx):
+        assert _get_approval_state(ctx["exp_pk"], ctx["b"]["email"]) == "1", \
+            "State must have changed to approved (1) after approve from rejected state on project expense"
+
+
 class TestConsentStillUnlockedWithin24h:
     """Within the 24-hour window changes are still allowed."""
 

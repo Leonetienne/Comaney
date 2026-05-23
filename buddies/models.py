@@ -321,6 +321,17 @@ class BuddySpending(models.Model):
         from datetime import timedelta
         return timezone.now() > self.consent_set_at + timedelta(hours=24)
 
+    @property
+    def can_change_consent(self) -> bool:
+        """True when the participant may still change their decision.
+
+        A rejected state is always changeable; only revoking an approval is
+        time-restricted to 24 h after the first decision.
+        """
+        if self.approval_state == self.APPROVAL_REJECTED:
+            return True
+        return not self.consent_locked
+
     class Meta:
         ordering = ["uid"]
 

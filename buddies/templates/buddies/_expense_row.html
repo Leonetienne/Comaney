@@ -14,7 +14,7 @@
             <a href="{% url 'buddies:review_expense_as_owner' exp.uid %}" id="btn-review-exp-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>
             {% endif %}
             {% if not exp.is_buddies_settlement %}
-            {% for bs in exp.buddy_spendings.all %}{% if bs.participant_feuser == request.feuser and not bs.consent_locked %}
+            {% for bs in exp.buddy_spendings.all %}{% if bs.participant_feuser == request.feuser and bs.can_change_consent %}
             <div class="consent-btns">
                 <form method="post" action="{% url 'buddies:participant_approve' exp.uid %}">
                     {% csrf_token %}

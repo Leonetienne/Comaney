@@ -410,6 +410,7 @@ class BuddyQueryService:
                     "percent": bs.share_percent,
                     "approval_state": bs.approval_state if bs.participant_feuser_id else None,
                     "consent_locked": bs.consent_locked if bs.participant_feuser_id else True,
+                    "can_change_consent": bs.can_change_consent if bs.participant_feuser_id else False,
                 })
                 if exp.buddy_approved and pk in balances:
                     balances[pk] -= amount
