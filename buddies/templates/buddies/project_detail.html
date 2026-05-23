@@ -81,7 +81,7 @@
     {% endif %}
 
     {% if breakdown.simplified or raw_graph_json != '{"nodes": [], "links": []}' %}
-    <div class="group-debt-graphs">
+    <div class="group-debt-graphs"{% if member_count == 2 %} style="grid-template-columns:1fr"{% endif %}>
 
         <div class="group-debt-graph-panel">
             <h3>Expense flows</h3>
@@ -90,12 +90,14 @@
             <p id="raw-debt-graph-total" class="graph-total"></p>
         </div>
 
+        {% if member_count != 2 %}
         <div class="group-debt-graph-panel">
             <h3>Quickest way to settle</h3>
             <p>The fewest payments needed to bring everyone to zero.</p>
             <div id="simplified-debt-graph" class="buddy-debt-graph"></div>
             <p id="simplified-debt-graph-total" class="graph-total"></p>
         </div>
+        {% endif %}
 
     </div>
 

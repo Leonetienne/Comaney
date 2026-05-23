@@ -451,6 +451,7 @@ def project_detail(request, project_id):
         "group_total_spending": project_total_spending,  # backward compat
         "spending_over_time_json": spending_over_time_json,
         "tag_dist_json": tag_dist_json,
+        "member_count": len(breakdown["member_map"]),
         "has_multiple_members": len(breakdown["member_map"]) > 1,
         "currency": feuser.currency,
         "project_url": project_url,
