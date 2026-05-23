@@ -2,36 +2,31 @@
 # Edit freely — order doesn't matter, duplicates are ignored.
 
 DEFAULT_CATEGORIES = [
-    "Housing",
-    "Groceries",
-    "Snacks",
-    "Dining & Bars",
-    "Transport",
-    "Health & Pharmacy",
-    "Fitness & Sports",
-    "Shopping & Clothing",
-    "Electronics",
-    "Entertainment",
-    "Travel & Holidays",
-    "Education",
-    "Subscriptions",
-    "Insurance",
-    "Personal Care",
-    "Gifts & Donations",
+    # Expense kinds
+    "Must-have",
+    "Nice-to-have",
+    "Regular bill",
+    "One-off",
+    "Investment",
+    # Income kinds
+    "Salary",
+    "Gifts",
+    "Sales",
     "Miscellaneous",
 ]
 
 DEFAULT_TAGS = [
-    "Essential",
-    "Recurring",
-    "One-time",
-    "Work",
-    "Family",
-    "Fun",
-    "Online",
-    "Cash",
-    "Reimbursable",
-    "Tax-deductible",
+    "Food",
+    "Housing",
+    "Transport",
+    "Health",
+    "Clothing",
+    "Entertainment",
+    "Travel",
+    "Tech",
+    "Education",
+    "Personal care",
+    "Social",
 ]
 
 
