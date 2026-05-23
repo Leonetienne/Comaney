@@ -12,6 +12,9 @@ For the fields every card shares (type, title, query, positioning), see [Dashboa
 | `color` | Background colour of the card (works in both light and dark mode). |
 | `color_lightmode` | Overrides `color` when the browser is in light mode. |
 | `color_darkmode` | Overrides `color` when the browser is in dark mode. |
+| `text_color` | Text colour on a coloured card (both modes). Default: black in light mode, white in dark mode. |
+| `text_color_lightmode` | Overrides `text_color` in light mode. |
+| `text_color_darkmode` | Overrides `text_color` in dark mode. |
 | `color_breakpoints` | Changes the card colour automatically based on the value. |
 | `link` | A URL to navigate to when someone clicks the card body. |
 | `template` | Controls how the number is displayed (for example: "€ 142.50 left"). |
@@ -46,6 +49,28 @@ If you only set `color`, it applies to both modes. If you set `color` and `color
 
 ---
 
+## Text colour
+
+When a card has a background colour, the text defaults to black in light mode and white in dark mode. Use the `text_color` fields to override this.
+
+```yaml
+color: '#1a3326'
+text_color: 'white'
+```
+
+Use separate values for each mode if needed:
+
+```yaml
+color_lightmode: '#bbf7d0'
+color_darkmode: '#1a3326'
+text_color_lightmode: '#14532d'
+text_color_darkmode: '#bbf7d0'
+```
+
+You can use any CSS colour value: a hex code, `rgb()`, or a named colour like `white`.
+
+---
+
 ## Colour breakpoints: cards that change colour automatically
 
 Breakpoints let the card change colour based on its current value. For example, a "money left" card can turn amber when funds are running low, and red when you are in the negative.
@@ -68,7 +93,7 @@ In the example above:
 - Value is 150: the first breakpoint matches (150 < 200), so amber is used.
 - Value is -20: both breakpoints match (-20 < 200, -20 < 0), but the last match wins, so red is used.
 
-Each breakpoint supports the same colour fields as the card root: `color`, `color_lightmode`, `color_darkmode`.
+Each breakpoint supports the same colour and text colour fields as the card root: `color`, `color_lightmode`, `color_darkmode`, `text_color`, `text_color_lightmode`, `text_color_darkmode`. A breakpoint text colour overrides the card-level text colour when that breakpoint is active.
 
 ---
 
