@@ -11,6 +11,7 @@ urlpatterns = [
 
     # Project detail
     path("<int:project_id>/", views.project_detail, name="project_detail"),
+    path("<int:project_id>/expenses/partial/", views.project_expense_list_partial, name="project_expense_list_partial"),
     path("<int:project_id>/settings/", views.project_settings, name="project_settings"),
     path("<int:project_id>/rename/", views.project_rename, name="project_rename"),
     path("<int:project_id>/picture/", views.project_picture, name="project_picture"),

@@ -569,129 +569,103 @@ window.PROJECT_CHARTS = {
 {% endif %}{# end not is_solo #}
 
 
-{# ── Waiting for Approval ─────────────────────────────────────────────────── #}
-{% if pending_expenses %}
-<section class="buddies-section">
-    <h2>Waiting for approval</h2>
-    <div class="desc-surface"><p class="page-subtitle" style="margin:0;">These expenses are not yet confirmed and do not count toward the current balances.</p></div>
-    <div class="bexp-breakdown-list">
-        {% for e in pending_expenses %}
-        <div id="pending-{{ e.expense.uid }}" class="bexp-breakdown-card {% if e.payer_is_me %}bexp-card-i-paid{% elif e.i_am_participant %}bexp-card-other-paid{% else %}bexp-card-neutral{% endif %} bexp-card-pending{% if e.creditor_approval_needed or e.admin_approval_needed %} bexp-card-approvable{% endif %}">
-            <div class="bexp-breakdown-header">
-                <div class="bexp-breakdown-header-left">
-                    <span class="bexp-title">
-                        {{ e.expense.title }}
-                        <span class="pill pill--warn pill--ml">Pending</span>
-                    </span>
-                    <span class="bexp-breakdown-meta">
-                        {% if e.expense.date_due %}{{ e.expense.date_due|date:"N j, Y" }} &middot; {% endif %}
-                        Total: <strong>{{ currency }}{{ e.total|floatformat:2 }}</strong> &middot;
-                        Paid by: <strong>{{ e.payer_name }}</strong>
-                    </span>
-                </div>
-                <div class="bexp-breakdown-header-right">
-                    {% if e.can_edit %}
-                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23pending-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
-                    {% endif %}
-                    {% if e.can_edit_overlay %}
-                    <a href="{% url 'budget:expense_edit_overlay' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23pending-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
-                    {% endif %}
-
-                    {% if e.owner_approval_needed %}
-                    <a href="{% url 'buddies:review_expense_as_owner' expense_id=e.expense.uid %}" id="btn-review-expense-{{ e.expense.uid }}" class="btn btn-sm btn-success">Review</a>
-                    {% endif %}
-                    {% if e.creditor_approval_needed %}
-                    <a href="{% url 'buddies:approve_settlement_as_creditor' expense_id=e.expense.uid %}" id="btn-review-settlement-{{ e.expense.uid }}" class="btn btn-sm btn-success">Review</a>
-                    {% endif %}
-                    {% if e.admin_approval_needed %}
-                    <a href="{% url 'projects:admin_approve_dummy_settlement' group_id=group.uid expense_id=e.expense.uid %}" id="btn-review-dummy-{{ e.expense.uid }}" class="btn btn-sm btn-success">Review</a>
-                    {% endif %}
-
-                    {% if e.can_delete %}
-                    <form method="post" action="{% url 'projects:group_expense_delete' group_id=group.uid expense_id=e.expense.uid %}" class="confirm-form" data-confirm="Delete this expense permanently? This affects all group members." data-ok="Delete">
-                        {% csrf_token %}
-                        <button type="submit" id="btn-delete-{{ e.expense.uid }}" class="btn btn-sm btn-danger-subtle">Delete</button>
-                    </form>
-                    {% endif %}
-                    {% if e.can_unlink %}
-                    <form method="post" action="{% url 'projects:group_expense_unlink' group_id=group.uid expense_id=e.expense.uid %}" class="confirm-form" data-confirm="Unlink this expense from the group? It will be removed from the group breakdown but remain in the owner's expense list." data-ok="Unlink">
-                        {% csrf_token %}
-                        <button type="submit" id="btn-unlink-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Unlink</button>
-                    </form>
-                    {% endif %}
-                </div>
-            </div>
-            {% include 'partials/_expense_avatars.html' with exp=e.expense payer_obj=e.payer_obj payer_name=e.payer_name %}
-            {% include 'partials/_bexp_breakdown_collapsible.html' %}
-        </div>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
-
-{# ── Expense Breakdown ────────────────────────────────────────────────────── #}
-{% if approved_expenses %}
+{# ── Expense List (filters + list are one visual section) ────────────────── #}
 <section class="buddies-section">
     <h2>Expense Breakdown</h2>
-    <div class="desc-surface"><p class="page-subtitle" style="margin:0;">Each expense and how the shares were calculated.</p></div>
-
-    <div class="bexp-breakdown-list">
-        {% for e in approved_expenses %}
-        <div id="expense-{{ e.expense.uid }}" class="bexp-breakdown-card {% if e.payer_is_me %}bexp-card-i-paid{% elif e.i_am_participant %}bexp-card-other-paid{% else %}bexp-card-neutral{% endif %}">
-            <div class="bexp-breakdown-header">
-                <div class="bexp-breakdown-header-left">
-                    <span class="bexp-title">{{ e.expense.title }}</span>
-                    <span class="bexp-breakdown-meta">
-                        {% if e.expense.date_due %}{{ e.expense.date_due|date:"N j, Y" }} &middot; {% endif %}
-                        Total: <strong>{{ currency }}{{ e.total|floatformat:2 }}</strong> &middot;
-                        Paid by: <strong>{{ e.payer_name }}</strong>
-                    </span>
-                </div>
-                <div class="bexp-breakdown-header-right">
-                    {% if e.i_am_participant and not e.expense.is_buddies_settlement %}
-                    {% for s in e.participant_shares %}{% if s.is_me and not s.consent_locked %}
-                    <div class="consent-btns">
-                        <form method="post" action="{% url 'buddies:participant_approve' e.expense.uid %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="back" value="{{ request.get_full_path }}#expense-{{ e.expense.uid }}">
-                            <button type="submit" class="btn-consent{% if s.approval_state == 1 %} btn-consent--approved{% endif %}" title="Approve">✓</button>
-                        </form>
-                        <form method="post" action="{% url 'buddies:participant_reject' e.expense.uid %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="back" value="{{ request.get_full_path }}#expense-{{ e.expense.uid }}">
-                            <button type="submit" class="btn-consent{% if s.approval_state == 2 %} btn-consent--rejected{% endif %}" title="Reject">✗</button>
-                        </form>
-                    </div>
-                    {% endif %}{% endfor %}
-                    {% endif %}
-                    {% if e.can_edit %}
-                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
-                    {% endif %}
-                    {% if e.can_edit_overlay %}
-                    <a href="{% url 'budget:expense_edit_overlay' e.expense.uid %}?back={{ request.get_full_path|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
-                    {% endif %}
-
-                    {% if e.can_delete %}
-                    <form method="post" action="{% url 'projects:group_expense_delete' group_id=group.uid expense_id=e.expense.uid %}" class="confirm-form" data-confirm="Delete this expense permanently? This affects all group members." data-ok="Delete">
-                        {% csrf_token %}
-                        <button type="submit" id="btn-delete-{{ e.expense.uid }}" class="btn btn-sm btn-danger-subtle">Delete</button>
-                    </form>
-                    {% endif %}
-                    {% if e.can_unlink %}
-                    <form method="post" action="{% url 'projects:group_expense_unlink' group_id=group.uid expense_id=e.expense.uid %}" class="confirm-form" data-confirm="Unlink this expense from the group? It will be removed from the group breakdown but remain in the owner's expense list." data-ok="Unlink">
-                        {% csrf_token %}
-                        <button type="submit" id="btn-unlink-{{ e.expense.uid }}" class="btn btn-sm btn-secondary">Unlink</button>
-                    </form>
-                    {% endif %}
-                </div>
-            </div>
-            {% include 'partials/_expense_avatars.html' with exp=e.expense payer_obj=e.payer_obj payer_name=e.payer_name %}
-            {% include 'partials/_bexp_breakdown_collapsible.html' %}
+    <div class="add-buddy-panel" style="margin-bottom:1.25rem;">
+        <div class="exp-controls">
+            <input type="text" id="proj-exp-search" class="exp-search"
+                   placeholder="Search… groceries  type=expense  value&lt;100  settled=yes"
+                   autocomplete="off">
         </div>
-        {% endfor %}
+        <div class="exp-toolbar">
+            <div class="exp-toolbar-left">
+                <label class="exp-filter-checkbox">
+                    <input type="checkbox" id="proj-exp-hide-recurring">
+                    Hide recurring
+                </label>
+                <label class="exp-filter-checkbox">
+                    <input type="checkbox" id="proj-exp-i-paid">
+                    Only show what I paid
+                </label>
+            </div>
+            <div class="exp-toolbar-right">
+                <label class="exp-sort-label">Sort by</label>
+                <select id="proj-exp-sort-by" class="expense-toolbar-dropdown">
+                    <option value="date">Date</option>
+                    <option value="title">Title</option>
+                    <option value="value">Value</option>
+                </select>
+                <select id="proj-exp-sort-dir" class="expense-toolbar-dropdown">
+                    <option value="desc">Desc</option>
+                    <option value="asc">Asc</option>
+                </select>
+            </div>
+        </div>
+        <a href="https://github.com/Leonetienne/Comaney#advanced-search-filters" target="_blank" rel="noopener" class="search-hint-link">Advanced search filters</a>
+    </div>
+
+    <div id="proj-exp-list-container"
+         data-partial-url="{% url 'projects:project_expense_list_partial' project_id=project.uid %}">
+        {% include "buddies/project_expense_partial.html" %}
     </div>
 </section>
-{% endif %}
+
+<style>
+#proj-exp-list-container[data-loading] { opacity: 0.5; pointer-events: none; transition: opacity 0.12s; }
+</style>
+
+<script>
+(function () {
+    var container   = document.getElementById('proj-exp-list-container');
+    var partialUrl  = container.dataset.partialUrl;
+    var searchEl    = document.getElementById('proj-exp-search');
+    var hideRecEl   = document.getElementById('proj-exp-hide-recurring');
+    var iPaidEl     = document.getElementById('proj-exp-i-paid');
+    var sortByEl    = document.getElementById('proj-exp-sort-by');
+    var sortDirEl   = document.getElementById('proj-exp-sort-dir');
+    if (!searchEl) return;  // filters section not rendered (empty project)
+
+    var debounceTimer = null;
+    var currentXhr    = null;
+
+    function fetchList() {
+        if (currentXhr) { currentXhr.abort(); }
+        var params = new URLSearchParams({
+            q:             searchEl.value,
+            hide_recurring: hideRecEl.checked ? '1' : '0',
+            i_paid:        iPaidEl.checked ? '1' : '0',
+            sort_by:       sortByEl.value,
+            sort_dir:      sortDirEl.value,
+        });
+        container.setAttribute('data-loading', '');
+        var xhr = new XMLHttpRequest();
+        currentXhr = xhr;
+        xhr.open('GET', partialUrl + '?' + params.toString(), true);
+        xhr.onload = function () {
+            currentXhr = null;
+            if (xhr.status === 200) {
+                container.innerHTML = xhr.responseText;
+            }
+            container.removeAttribute('data-loading');
+        };
+        xhr.onerror = function () { currentXhr = null; container.removeAttribute('data-loading'); };
+        xhr.onabort = function () { currentXhr = null; };
+        xhr.send();
+    }
+
+    function onInput() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(fetchList, 200);
+    }
+
+    searchEl.addEventListener('input', onInput);
+    hideRecEl.addEventListener('change', fetchList);
+    iPaidEl.addEventListener('change', fetchList);
+    sortByEl.addEventListener('change', fetchList);
+    sortDirEl.addEventListener('change', fetchList);
+})();
+</script>
 
 {# ── Members ──────────────────────────────────────────────────────────────── #}
 <section class="buddies-section">

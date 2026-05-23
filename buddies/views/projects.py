@@ -11,9 +11,118 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
+from budget.models import Expense
+from budget.query_parser import apply_query
 from feusers.models import FeUser
 from ..models import Project, ProjectInvite, ProjectMember, BuddySpending, DummyUser
 from ..services import BuddyArchiveService, ProjectService, BuddyQueryService, _display_name
+
+
+def _fetch_overlay_notes(feuser, breakdown):
+    """Fetch ExpenseDataOverlay notes for all expenses in breakdown. Returns {expense_pk: note}."""
+    from budget.models import ExpenseDataOverlay
+    pks = [ed["expense"].pk for ed in breakdown["expenses"]]
+    overlays = (
+        ExpenseDataOverlay.objects
+        .filter(expense_id__in=pks, feuser=feuser)
+        .prefetch_related("tags")
+    )
+    notes = {}
+    tags = {}
+    for o in overlays:
+        notes[o.expense_id] = o.note
+        tags[o.expense_id] = [t.title for t in o.tags.all()]
+    return notes, tags
+
+
+def _annotate_expense_permissions(feuser, project, breakdown, is_admin, overlay_notes):
+    """
+    Annotate each expense_data dict in breakdown["expenses"] with permission flags
+    and visible_note. Modifies dicts in-place.
+    """
+    feuser_key = f"f{feuser.pk}"
+    dummy_pks_in_project = {m.dummy_id for m in project.members.all() if m.dummy_id}
+
+    for exp_data in breakdown["expenses"]:
+        exp = exp_data["expense"]
+        exp_data["creditor_approval_needed"] = False
+        exp_data["admin_approval_needed"] = False
+        exp_data["owner_approval_needed"] = False
+
+        if not exp.buddy_approved:
+            if not exp.is_dummy and not exp.is_buddies_settlement and exp.owning_feuser_id == feuser.pk:
+                exp_data["owner_approval_needed"] = True
+            elif exp.is_buddies_settlement:
+                for share in exp_data["participant_shares"]:
+                    if share["key"] == feuser_key:
+                        exp_data["creditor_approval_needed"] = True
+                        break
+            if is_admin and not exp_data["creditor_approval_needed"]:
+                if exp.is_dummy and exp.upfront_payee_dummy_id and not exp.is_buddies_settlement:
+                    exp_data["admin_approval_needed"] = True
+                elif exp.is_buddies_settlement:
+                    has_dummy_creditor = any(
+                        share["key"].startswith("d")
+                        and int(share["key"][1:]) in dummy_pks_in_project
+                        for share in exp_data["participant_shares"]
+                    )
+                    if has_dummy_creditor:
+                        exp_data["admin_approval_needed"] = True
+
+        is_feuser_direct_owner = exp.owning_feuser_id == feuser.pk and not exp.is_dummy
+        is_dummy_exp_in_project = (
+            exp.is_dummy
+            and exp.upfront_payee_dummy_id
+            and exp.upfront_payee_dummy_id in dummy_pks_in_project
+        )
+        is_settlement_to_project_dummy = (
+            exp.is_buddies_settlement
+            and is_admin
+            and is_feuser_direct_owner
+            and any(
+                share["key"].startswith("d") and int(share["key"][1:]) in dummy_pks_in_project
+                for share in exp_data["participant_shares"]
+            )
+        )
+        no_feuser_creditor = not any(
+            not share["key"].startswith("d")
+            for share in exp_data["participant_shares"]
+        )
+
+        if project.archived:
+            exp_data["can_delete"] = False
+            exp_data["can_unlink"] = False
+            exp_data["can_edit"] = False
+            exp_data["can_edit_overlay"] = False
+        else:
+            exp_data["can_delete"] = (
+                is_feuser_direct_owner
+                or (is_admin and is_dummy_exp_in_project)
+                or is_settlement_to_project_dummy
+            )
+            if exp.is_buddies_settlement and exp.buddy_approved:
+                can_delete_approved = (
+                    is_settlement_to_project_dummy
+                    or (is_admin and is_dummy_exp_in_project and no_feuser_creditor)
+                )
+                if not can_delete_approved:
+                    exp_data["can_delete"] = False
+            exp_data["can_unlink"] = is_feuser_direct_owner or is_admin
+            if exp.is_buddies_settlement:
+                exp_data["can_edit"] = (
+                    is_settlement_to_project_dummy
+                    or (is_feuser_direct_owner and not exp.buddy_approved)
+                    or (is_admin and is_dummy_exp_in_project and (not exp.buddy_approved or no_feuser_creditor))
+                )
+            else:
+                exp_data["can_edit"] = is_feuser_direct_owner or (is_admin and is_dummy_exp_in_project)
+            exp_data["can_edit_overlay"] = (
+                exp_data["i_am_participant"]
+                and not exp.is_buddies_settlement
+                and not exp_data["can_edit"]
+            )
+        raw_note = overlay_notes.get(exp.pk)
+        exp_data["visible_note"] = raw_note if raw_note is not None else exp.note
 
 
 def _is_solo(project):
@@ -94,107 +203,8 @@ def project_detail(request, project_id):
     breakdown = BuddyQueryService.get_group_full_breakdown(feuser, project)
 
     feuser_key = f"f{feuser.pk}"
-    dummy_pks_in_project = {m.dummy_id for m in project.members.all() if m.dummy_id}
-
-    from budget.models import ExpenseDataOverlay
-    _overlays = list(
-        ExpenseDataOverlay.objects
-        .filter(
-            expense_id__in=[ed["expense"].pk for ed in breakdown["expenses"]],
-            feuser=feuser,
-        )
-        .prefetch_related("tags")
-    )
-    overlay_notes = {o.expense_id: o.note for o in _overlays}
-    overlay_tags  = {o.expense_id: [t.title for t in o.tags.all()] for o in _overlays}
-
-    for exp_data in breakdown["expenses"]:
-        exp = exp_data["expense"]
-        exp_data["creditor_approval_needed"] = False
-        exp_data["admin_approval_needed"] = False
-        exp_data["owner_approval_needed"] = False
-
-        if not exp.buddy_approved:
-            # Feuser paid upfront (real-user, not dummy, not settlement): only they confirm.
-            if not exp.is_dummy and not exp.is_buddies_settlement and exp.owning_feuser_id == feuser.pk:
-                exp_data["owner_approval_needed"] = True
-            # Settlement creditor: current feuser is a participant in a settlement expense.
-            elif exp.is_buddies_settlement:
-                for share in exp_data["participant_shares"]:
-                    if share["key"] == feuser_key:
-                        exp_data["creditor_approval_needed"] = True
-                        break
-            if is_admin and not exp_data["creditor_approval_needed"]:
-                # Dummy paid upfront for a regular expense: admin confirms the dummy actually paid.
-                # Excluded: dummy-debtor settlements — the feuser creditor handles those themselves.
-                if exp.is_dummy and exp.upfront_payee_dummy_id and not exp.is_buddies_settlement:
-                    exp_data["admin_approval_needed"] = True
-                # Settlement with dummy creditor: admin confirms dummy received payment.
-                elif exp.is_buddies_settlement:
-                    has_dummy_creditor = any(
-                        share["key"].startswith("d")
-                        and int(share["key"][1:]) in dummy_pks_in_project
-                        for share in exp_data["participant_shares"]
-                    )
-                    if has_dummy_creditor:
-                        exp_data["admin_approval_needed"] = True
-
-        is_feuser_direct_owner = exp.owning_feuser_id == feuser.pk and not exp.is_dummy
-        is_dummy_exp_in_project = (
-            exp.is_dummy
-            and exp.upfront_payee_dummy_id
-            and exp.upfront_payee_dummy_id in dummy_pks_in_project
-        )
-        is_settlement_to_project_dummy = (
-            exp.is_buddies_settlement
-            and is_admin
-            and is_feuser_direct_owner
-            and any(
-                share["key"].startswith("d") and int(share["key"][1:]) in dummy_pks_in_project
-                for share in exp_data["participant_shares"]
-            )
-        )
-        no_feuser_creditor = not any(
-            not share["key"].startswith("d")
-            for share in exp_data["participant_shares"]
-        )
-
-        # Archived project: block destructive actions except confirming in-flight settlements
-        if project.archived:
-            exp_data["can_delete"] = False
-            exp_data["can_unlink"] = False
-            exp_data["can_edit"] = False
-            exp_data["can_edit_overlay"] = False
-            # Allow confirming/rejecting pending settlements (in-flight)
-        else:
-            exp_data["can_delete"] = (
-                is_feuser_direct_owner
-                or (is_admin and is_dummy_exp_in_project)
-                or is_settlement_to_project_dummy
-            )
-            if exp.is_buddies_settlement and exp.buddy_approved:
-                can_delete_approved = (
-                    is_settlement_to_project_dummy
-                    or (is_admin and is_dummy_exp_in_project and no_feuser_creditor)
-                )
-                if not can_delete_approved:
-                    exp_data["can_delete"] = False
-            exp_data["can_unlink"] = is_feuser_direct_owner or is_admin
-            if exp.is_buddies_settlement:
-                exp_data["can_edit"] = (
-                    is_settlement_to_project_dummy
-                    or (is_feuser_direct_owner and not exp.buddy_approved)
-                    or (is_admin and is_dummy_exp_in_project and (not exp.buddy_approved or no_feuser_creditor))
-                )
-            else:
-                exp_data["can_edit"] = is_feuser_direct_owner or (is_admin and is_dummy_exp_in_project)
-            exp_data["can_edit_overlay"] = (
-                exp_data["i_am_participant"]
-                and not exp.is_buddies_settlement
-                and not exp_data["can_edit"]
-            )
-        raw_note = overlay_notes.get(exp.pk)
-        exp_data["visible_note"] = raw_note if raw_note is not None else exp.note
+    overlay_notes, overlay_tags = _fetch_overlay_notes(feuser, breakdown)
+    _annotate_expense_permissions(feuser, project, breakdown, is_admin, overlay_notes)
 
     raw_flows: dict = {}
     for exp_data in breakdown["expenses"]:
@@ -416,6 +426,7 @@ def project_detail(request, project_id):
                 "values": [round(t[1], 2) for t in sorted_tags],
             })
 
+    project_url = reverse("projects:project_detail", args=[project.uid])
     return render(request, "buddies/project_detail.html", {
         "active_nav": "projects",
         "project": project,
@@ -442,6 +453,81 @@ def project_detail(request, project_id):
         "tag_dist_json": tag_dist_json,
         "has_multiple_members": len(breakdown["member_map"]) > 1,
         "currency": feuser.currency,
+        "project_url": project_url,
+    })
+
+
+_SORT_FIELD_MAP = {
+    "date":  lambda ed: (ed["expense"].date_due or date.min),
+    "title": lambda ed: ed["expense"].title.lower(),
+    "value": lambda ed: ed["expense"].value,
+}
+
+
+@feuser_required
+def project_expense_list_partial(request, project_id):
+    """
+    Returns an HTML fragment with the filtered expense list sections
+    (pending + approved) for a project. Used by the filter controls
+    on the project detail page via XHR.
+    """
+    feuser = request.feuser
+    project = get_object_or_404(
+        Project.objects.prefetch_related("members__feuser", "members__dummy"),
+        uid=project_id,
+        members__feuser=feuser,
+    )
+    is_admin = project.admin_feuser_id == feuser.pk
+
+    q = request.GET.get("q", "").strip()
+    hide_recurring = request.GET.get("hide_recurring") == "1"
+    i_paid = request.GET.get("i_paid") == "1"
+    sort_by = request.GET.get("sort_by", "date")
+    sort_dir = request.GET.get("sort_dir", "desc")
+
+    # Build effective query string including hide_recurring toggle
+    effective_q = q
+    if hide_recurring:
+        effective_q = (effective_q + " recurring=no").strip() if effective_q else "recurring=no"
+
+    # Determine which expense PKs match the query
+    if effective_q:
+        base_qs = (
+            Expense.objects.filter(project=project)
+            .select_related("category", "project")
+            .prefetch_related("tags", "buddy_spendings__participant_feuser", "buddy_spendings__participant_dummy")
+        )
+        matching_pks = set(apply_query(base_qs, effective_q, feuser=feuser).values_list("pk", flat=True))
+    else:
+        matching_pks = None  # no filter: include everything
+
+    breakdown = BuddyQueryService.get_group_full_breakdown(feuser, project)
+    overlay_notes, _ = _fetch_overlay_notes(feuser, breakdown)
+    _annotate_expense_permissions(feuser, project, breakdown, is_admin, overlay_notes)
+
+    expenses_data = breakdown["expenses"]
+
+    if matching_pks is not None:
+        expenses_data = [ed for ed in expenses_data if ed["expense"].pk in matching_pks]
+    if i_paid:
+        expenses_data = [ed for ed in expenses_data if ed["payer_is_me"]]
+
+    sort_key = _SORT_FIELD_MAP.get(sort_by, _SORT_FIELD_MAP["date"])
+    reverse_sort = sort_dir == "desc"
+    expenses_data = sorted(expenses_data, key=sort_key, reverse=reverse_sort)
+
+    pending_expenses = [ed for ed in expenses_data if not ed["expense"].buddy_approved]
+    approved_expenses = [ed for ed in expenses_data if ed["expense"].buddy_approved]
+
+    project_url = reverse("projects:project_detail", args=[project.uid])
+    return render(request, "buddies/project_expense_partial.html", {
+        "project": project,
+        "group": project,
+        "is_admin": is_admin,
+        "pending_expenses": pending_expenses,
+        "approved_expenses": approved_expenses,
+        "currency": feuser.currency,
+        "project_url": project_url,
     })
 
 
