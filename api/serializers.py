@@ -73,7 +73,14 @@ def _settlement_can_delete(exp) -> bool:
     return exp.settlement_can_delete
 
 
-def _expense_json(exp, effective_value=None, is_foreign=False):
+def _expense_json(exp, effective_value=None, is_foreign=False, overlay=None):
+    if is_foreign:
+        _cat  = overlay.category if overlay else None
+        _tags = list(overlay.tags.all()) if overlay else []
+    else:
+        _cat  = exp.category
+        _tags = list(exp.tags.all())
+
     return {
         "id":                           exp.uid,
         "title":                        exp.title,
@@ -82,8 +89,8 @@ def _expense_json(exp, effective_value=None, is_foreign=False):
         "value":                        str(exp.value),
         "effective_value":              str(effective_value) if effective_value is not None else None,
         "is_foreign":                   is_foreign,
-        "category":                     {"id": exp.category.uid, "title": exp.category.title} if exp.category else None,
-        "tags":                         [{"id": t.uid, "title": t.title} for t in exp.tags.all()],
+        "category":                     {"id": _cat.uid, "title": _cat.title} if _cat else None,
+        "tags":                         [{"id": t.uid, "title": t.title} for t in _tags],
         "note":                         exp.note,
         "date_due":                     exp.date_due.isoformat() if exp.date_due else None,
         "settled":                      exp.settled,

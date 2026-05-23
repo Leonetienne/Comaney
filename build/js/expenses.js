@@ -11,6 +11,10 @@ function expenseList() {
         fetching: false,
         selected: {},
         bulkAction: '',
+        bulkTagId: '',
+        bulkCategoryId: '',
+        tags: [],
+        categories: [],
         csrf: '',
         _debounceTimer: null,
         _xhr: null,
@@ -49,6 +53,8 @@ function expenseList() {
             this.urlExpenses  = cfg.urlExpenses;
             this.urlBulkAction = cfg.urlBulkAction;
             this.urlExport    = cfg.urlExport;
+            this.tags         = cfg.tags || [];
+            this.categories   = cfg.categories || [];
             this.csrf = document.querySelector('meta[name="csrf-token"]').content;
             this.exportHref = this.periodMode === 'year'
                 ? this.urlExport + '?view=year&year=' + this.periodYear
@@ -214,13 +220,37 @@ function expenseList() {
 
         submitBulk() {
             const action = this.bulkAction;
-            if (!action) { alert('Bitte eine Aktion auswählen.'); return; }
+            if (!action) { alert('Please select an action.'); return; }
             const ids = this.selectedIds;
-            if (!ids.length) { alert('Keine Einträge ausgewählt.'); return; }
-            const labels = { settle: 'Settle', unsettle: 'Unsettle', delete: 'Delete' };
-            const label = labels[action] || action;
+            if (!ids.length) { alert('No expenses selected.'); return; }
+
+            let extraName = null, extraValue = null, confirmMsg = '';
             const count = ids.length;
-            window.confirmDialog(label + ' ' + count + ' expense' + (count !== 1 ? 's' : '') + '?', label)
+            const noun = count === 1 ? 'expense' : 'expenses';
+
+            if (action === 'add-tag' || action === 'remove-tag') {
+                if (!this.bulkTagId) { alert('Please select a tag.'); return; }
+                const tag = this.tags.find(t => String(t.uid) === String(this.bulkTagId));
+                const tagName = tag ? tag.title : '';
+                extraName = 'tag_uid';
+                extraValue = this.bulkTagId;
+                confirmMsg = action === 'add-tag'
+                    ? `Add tag "${tagName}" to ${count} ${noun}?`
+                    : `Remove tag "${tagName}" from ${count} ${noun}?`;
+            } else if (action === 'set-category') {
+                const cat = this.categories.find(c => String(c.uid) === String(this.bulkCategoryId));
+                extraName = 'category_uid';
+                extraValue = this.bulkCategoryId;
+                confirmMsg = cat
+                    ? `Set category "${cat.title}" on ${count} ${noun}?`
+                    : `Remove category from ${count} ${noun}?`;
+            } else {
+                const labels = { settle: 'Settle', unsettle: 'Unsettle', delete: 'Delete' };
+                const label = labels[action] || action;
+                confirmMsg = `${label} ${count} ${noun}?`;
+            }
+
+            window.confirmDialog(confirmMsg, action === 'delete' ? 'Delete' : 'Apply')
                 .then(() => {
                     const form = document.createElement('form');
                     form.method = 'POST';
@@ -231,6 +261,11 @@ function expenseList() {
                     const actionInp = document.createElement('input');
                     actionInp.type = 'hidden'; actionInp.name = 'action'; actionInp.value = action;
                     form.appendChild(actionInp);
+                    if (extraName !== null) {
+                        const extra = document.createElement('input');
+                        extra.type = 'hidden'; extra.name = extraName; extra.value = extraValue;
+                        form.appendChild(extra);
+                    }
                     ids.forEach(id => {
                         const inp = document.createElement('input');
                         inp.type = 'hidden'; inp.name = 'uid'; inp.value = id;

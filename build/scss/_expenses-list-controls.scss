@@ -76,6 +76,13 @@
   color: var(--text-muted);
 }
 
+.exp-bulk-secondary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
 .exp-toolbar-meta {
   margin-top: 4px;
   font-size: 0.88rem;

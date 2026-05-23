@@ -15,7 +15,7 @@ from feusers.templatetags.feuser_tags import avatar_color as _avatar_color
 from ..date_utils import financial_month_range, financial_year_range
 from ..decorators import feuser_required
 from ..forms import ExpenseForm, ExpenseOverlayForm
-from ..models import Expense, ExpenseDataOverlay, TransactionType
+from ..models import Category, Expense, ExpenseDataOverlay, Tag, TransactionType
 from ..notifications import send_settled_notification, set_initial_notification_class
 from ._period import _get_month, _get_period_mode, _get_year, _month_nav_context, _year_nav_context
 from ._sharing import has_buddy_or_multiuser_project
@@ -169,9 +169,17 @@ def expenses_list(request):
         year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
         nav_ctx = _month_nav_context(year, month, feuser.month_start_day, feuser.month_start_prev)
 
+    categories = list(
+        Category.objects.filter(owning_feuser=feuser).order_by("title").values("uid", "title")
+    )
+    tags = list(
+        Tag.objects.filter(owning_feuser=feuser).order_by("title").values("uid", "title")
+    )
     ctx = {
         "active_nav": "expenses",
         "nav_show_sharing_toggle": has_buddy_or_multiuser_project(feuser),
+        "categories_json": mark_safe(json.dumps(categories)),
+        "tags_json": mark_safe(json.dumps(tags)),
     }
     ctx.update(nav_ctx)
     return render(request, "budget/expenses_list.html", ctx)
@@ -527,6 +535,48 @@ def expense_delete(request, uid):
     return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
 
 
+def _bulk_overlay_add_tag(expense, feuser, tag):
+    """Add tag to feuser's personal overlay on a foreign expense."""
+    from ..services import upsert_overlay
+    overlay = ExpenseDataOverlay.objects.filter(expense=expense, feuser=feuser).first()
+    current_tags = list(overlay.tags.all()) if overlay else []
+    current_category = overlay.category if overlay else None
+    current_note = overlay.note if overlay else None
+    if tag not in current_tags:
+        current_tags.append(tag)
+    upsert_overlay(expense, feuser, current_category, current_tags, note=current_note)
+
+
+def _bulk_overlay_remove_tag(expense, feuser, tag):
+    """Remove tag from feuser's personal overlay on a foreign expense."""
+    from ..services import upsert_overlay
+    overlay = ExpenseDataOverlay.objects.filter(expense=expense, feuser=feuser).first()
+    if not overlay:
+        return
+    current_tags = [t for t in overlay.tags.all() if t.pk != tag.pk]
+    upsert_overlay(expense, feuser, overlay.category, current_tags, note=overlay.note)
+
+
+def _bulk_overlay_set_category(expense, feuser, category):
+    """Set (or clear) category on feuser's personal overlay for a foreign expense."""
+    from ..services import upsert_overlay
+    overlay = ExpenseDataOverlay.objects.filter(expense=expense, feuser=feuser).first()
+    current_tags = list(overlay.tags.all()) if overlay else []
+    current_note = overlay.note if overlay else None
+    upsert_overlay(expense, feuser, category, current_tags, note=current_note)
+
+
+def _accessible_foreign_expenses(foreign_uids, feuser):
+    """Return expenses from foreign_uids where feuser is a BuddySpending participant."""
+    return list(
+        Expense.objects.filter(
+            uid__in=foreign_uids,
+            is_dummy=False,
+            buddy_spendings__participant_feuser=feuser,
+        ).distinct()
+    )
+
+
 @feuser_required
 @require_POST
 def expense_bulk_action(request):
@@ -538,8 +588,14 @@ def expense_bulk_action(request):
     except (ValueError, TypeError):
         uids = []
 
-    if uids and action in ("settle", "unsettle", "delete"):
+    valid_actions = ("settle", "unsettle", "delete", "add-tag", "remove-tag", "set-category")
+    if uids and action in valid_actions:
         qs = Expense.objects.filter(owning_feuser=feuser, uid__in=uids, is_dummy=False)
+
+        own_ids = set(qs.values_list("uid", flat=True))
+        foreign_uids = [u for u in uids if u not in own_ids]
+        n_via_overlay = 0
+
         if action == "settle":
             if len(uids) == 1:
                 single = qs.filter(settled=False).select_related("owning_feuser").first()
@@ -563,6 +619,62 @@ def expense_bulk_action(request):
                     _Project.objects.get(pk=_pk).update_lastmod()
                 except _Project.DoesNotExist:
                     pass
+        elif action in ("add-tag", "remove-tag"):
+            tag_uid = request.POST.get("tag_uid", "")
+            try:
+                tag = Tag.objects.get(uid=int(tag_uid), owning_feuser=feuser)
+            except (Tag.DoesNotExist, ValueError, TypeError):
+                tag = None
+            if tag:
+                expense_ids = list(own_ids)
+                if action == "add-tag":
+                    Expense.tags.through.objects.bulk_create(
+                        [Expense.tags.through(expense_id=eid, tag_id=tag.pk) for eid in expense_ids],
+                        ignore_conflicts=True,
+                    )
+                else:
+                    Expense.tags.through.objects.filter(
+                        expense_id__in=expense_ids, tag_id=tag.pk
+                    ).delete()
+                if foreign_uids:
+                    accessible = _accessible_foreign_expenses(foreign_uids, feuser)
+                    for exp in accessible:
+                        if action == "add-tag":
+                            _bulk_overlay_add_tag(exp, feuser, tag)
+                        else:
+                            _bulk_overlay_remove_tag(exp, feuser, tag)
+                    n_via_overlay = len(accessible)
+        elif action == "set-category":
+            category_uid = request.POST.get("category_uid", "")
+            category = None
+            skip = False
+            if category_uid:
+                try:
+                    category = Category.objects.get(uid=int(category_uid), owning_feuser=feuser)
+                except (Category.DoesNotExist, ValueError, TypeError):
+                    skip = True
+            if not skip:
+                qs.update(category=category)
+                if foreign_uids:
+                    accessible = _accessible_foreign_expenses(foreign_uids, feuser)
+                    for exp in accessible:
+                        _bulk_overlay_set_category(exp, feuser, category)
+                    n_via_overlay = len(accessible)
+
+        if foreign_uids:
+            n = len(foreign_uids)
+            s = "s" if n != 1 else ""
+            if action in ("settle", "unsettle", "delete"):
+                messages.warning(
+                    request,
+                    f"{n} expense{s} could not be updated — they do not belong to you.",
+                )
+            elif n_via_overlay:
+                s = "s" if n_via_overlay != 1 else ""
+                messages.info(
+                    request,
+                    f"{n_via_overlay} expense{s} were updated in your personal view only — they do not belong to you.",
+                )
 
     referer = request.META.get("HTTP_REFERER")
     if referer:

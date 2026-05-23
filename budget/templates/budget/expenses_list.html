@@ -18,6 +18,8 @@ window.EXPENSE_CONFIG = {
     urlExpenses:   "{% url 'budget:expenses_list' %}",
     urlBulkAction: "{% url 'budget:expense_bulk_action' %}",
     urlExport:     "{% url 'budget:expenses_export' %}",
+    categories:    {{ categories_json }},
+    tags:          {{ tags_json }},
 };
 </script>
 <script src="{% static 'dist/expenses.js' %}" defer></script>
@@ -29,6 +31,9 @@ window.EXPENSE_CONFIG = {
     <h1>Expenses</h1>
 </div>
 <a href="{% url 'budget:expense_create' %}" class="fab-new-expense" title="New expense">+</a>
+{% for message in messages %}
+<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
+{% endfor %}
 <div class="desc-surface"><p class="page-tip" style="margin:0;opacity:1;">Expenses are items that describe transactions. A transaction is you getting paid, receiving money, paying money, depositing savings or withdrawing from savings.</p></div>
 <div x-data="expenseList">
     <div class="add-buddy-panel" style="margin-bottom:1.25rem;">
@@ -51,6 +56,9 @@ window.EXPENSE_CONFIG = {
                     <option value="settle">Settle</option>
                     <option value="unsettle">Unsettle</option>
                     <option value="delete">Delete</option>
+                    <option value="add-tag">Add tag</option>
+                    <option value="remove-tag">Remove tag</option>
+                    <option value="set-category">Set category</option>
                 </select>
                 <button type="button" id="exp-bulk-go" class="btn btn-sm btn-secondary" @click="submitBulk()">Go</button>
             </div>
@@ -73,6 +81,26 @@ window.EXPENSE_CONFIG = {
                 <option value="asc">Asc</option>
             </select>
         </div>
+    </div>
+    <div class="exp-bulk-secondary"
+         x-show="bulkAction === 'add-tag' || bulkAction === 'remove-tag' || bulkAction === 'set-category'"
+         style="display:none">
+        <select id="exp-bulk-tag" x-model="bulkTagId"
+                x-show="bulkAction === 'add-tag' || bulkAction === 'remove-tag'"
+                class="expense-toolbar-dropdown" style="display:none">
+            <option value="">— Select tag —</option>
+            <template x-for="tag in tags" :key="tag.uid">
+                <option :value="tag.uid" x-text="tag.title"></option>
+            </template>
+        </select>
+        <select id="exp-bulk-category" x-model="bulkCategoryId"
+                x-show="bulkAction === 'set-category'"
+                class="expense-toolbar-dropdown" style="display:none">
+            <option value="">— No category —</option>
+            <template x-for="cat in categories" :key="cat.uid">
+                <option :value="cat.uid" x-text="cat.title"></option>
+            </template>
+        </select>
     </div>
     <div class="exp-toolbar-meta">
         Visible total: <span id="exp-sum-value" x-text="visibleSum"></span> {{ current_feuser.currency }}

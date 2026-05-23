@@ -63,10 +63,28 @@ def expenses(request, feuser):
             )
 
         qs = apply_query(qs, request.GET.get("q", ""), feuser=feuser)
+        expenses = list(qs)
+
+        overlays = {}
+        if shared_mode:
+            foreign_ids = [e.uid for e in expenses if e.owning_feuser_id != feuser.pk]
+            if foreign_ids:
+                from budget.models import ExpenseDataOverlay
+                overlays = {
+                    ov.expense_id: ov
+                    for ov in ExpenseDataOverlay.objects.filter(
+                        expense_id__in=foreign_ids, feuser=feuser,
+                    ).select_related("category").prefetch_related("tags")
+                }
+
         expenses_json = [
-            _expense_json(e, effective_value=getattr(e, 'effective_value', None),
-                          is_foreign=(e.owning_feuser_id != feuser.pk))
-            for e in qs
+            _expense_json(
+                e,
+                effective_value=getattr(e, 'effective_value', None),
+                is_foreign=(e.owning_feuser_id != feuser.pk),
+                overlay=overlays.get(e.uid),
+            )
+            for e in expenses
         ]
         return _ok({"year": year, "month": month, "expenses": expenses_json})
 
