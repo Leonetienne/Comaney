@@ -223,7 +223,7 @@
     function updatePayerNotice() {
         if (!payerNotice) return;
         var payerType = payerSel.value.split(':')[0];
-        if (payerType === 'dummy') {
+        if (payerType === 'dummy' && currentMode !== 'group') {
             var name = esc(payerSel.options[payerSel.selectedIndex].text);
             payerNotice.className = 'info-box';
             payerNotice.innerHTML = '<p>Since <strong>' + name + '</strong> paid upfront, this expense won\'t appear in your regular expense list. You\'ll find it under <a href="' + buddySummaryUrl + '">Buddy Expenses</a> instead.</p>';

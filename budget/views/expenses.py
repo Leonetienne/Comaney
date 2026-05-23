@@ -4,6 +4,7 @@ import urllib.parse
 from datetime import date
 
 from django.contrib import messages
+from django.utils.safestring import mark_safe
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -276,16 +277,20 @@ def expense_create(request):
                         expense.project.update_lastmod()
             set_initial_notification_class(expense)
             if buddy and buddy["upfront_type"] == "dummy" and buddy.get("upfront_dummy"):
-                from django.urls import reverse
-                dummy_name = buddy["upfront_dummy"].display_name + " (offline member)"
-                summary_url = reverse("buddies:buddy_summary")
-                messages.info(
-                    request,
-                    f'"{expense.title}" was saved. Since <strong>{dummy_name}</strong> paid upfront, '
-                    f'this expense won\'t appear in your regular expense list — '
-                    f'you\'ll find it under <a href="{summary_url}">Buddy Expenses</a>.',
-                )
-                return redirect("buddies:buddy_summary")
+                back = _safe_back_url(request.POST.get("back", ""))
+                if not back:
+                    from django.urls import reverse
+                    dummy_name = buddy["upfront_dummy"].display_name + " (offline member)"
+                    summary_url = reverse("buddies:buddy_summary")
+                    messages.info(
+                        request,
+                        mark_safe(
+                            f'"{expense.title}" was saved. Since <strong>{dummy_name}</strong> paid upfront, '
+                            f'this expense won\'t appear in your regular expense list'
+                            f' — you\'ll find it under <a href="{summary_url}">Buddy Expenses</a>.'
+                        ),
+                    )
+                return HttpResponseRedirect(back) if back else redirect("buddies:buddy_summary")
             back = _safe_back_url(request.POST.get("back", ""))
             return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
     else:
