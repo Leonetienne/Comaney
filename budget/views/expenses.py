@@ -721,10 +721,27 @@ def expense_clone(request, uid):
     if original.is_buddies_settlement:
         return redirect("budget:expenses_list")
     tags = list(original.tags.all())
+    spendings = list(original.buddy_spendings.all())
+    project = original.project
     original.pk = None
     original.title = f"CLONE - {original.title}"
     original.save()
     original.tags.set(tags)
+    if spendings:
+        from buddies.models import BuddySpending
+        from buddies.services import BuddyEmailService
+        BuddySpending.objects.bulk_create([
+            BuddySpending(
+                expense=original,
+                participant_feuser=bs.participant_feuser,
+                participant_dummy=bs.participant_dummy,
+                share_percent=bs.share_percent,
+            )
+            for bs in spendings
+        ])
+        BuddyEmailService.notify_expense_created(original, request.feuser)
+        if project:
+            project.update_lastmod()
     return redirect("budget:expense_edit", uid=original.pk)
 
 
