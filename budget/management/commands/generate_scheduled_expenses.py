@@ -59,14 +59,20 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--year", type=int, default=None, help="Override financial year (applies to all users)")
+        parser.add_argument("--user", type=str, default=None, help="Limit to a single user by email")
 
     def handle(self, *args, **options):
         override_year = options["year"]
+        user_email = options.get("user")
 
         self.stdout.write("Generating scheduled expenses…")
         created = skipped = 0
 
-        for scheduled in ScheduledExpense.objects.select_related("owning_feuser", "category").prefetch_related("tags"):
+        qs = ScheduledExpense.objects.select_related("owning_feuser", "category").prefetch_related("tags")
+        if user_email:
+            qs = qs.filter(owning_feuser__email=user_email)
+
+        for scheduled in qs:
             if scheduled.deactivated:
                 continue
 

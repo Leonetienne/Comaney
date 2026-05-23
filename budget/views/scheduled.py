@@ -1,6 +1,7 @@
 import secrets
 from datetime import date
 
+from django.core.management import call_command
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -37,6 +38,7 @@ def scheduled_create(request):
             obj.owning_feuser = request.feuser
             obj.save()
             form.save_m2m()
+            call_command("generate_scheduled_expenses", user=request.feuser.email)
             return redirect("budget:scheduled_list")
     else:
         form = ScheduledExpenseForm(
@@ -61,6 +63,7 @@ def scheduled_edit(request, uid):
         form = ScheduledExpenseForm(request.POST, instance=obj, feuser=request.feuser)
         if form.is_valid():
             form.save()
+            call_command("generate_scheduled_expenses", user=request.feuser.email)
             return redirect("budget:scheduled_list")
     else:
         form = ScheduledExpenseForm(instance=obj, feuser=request.feuser)

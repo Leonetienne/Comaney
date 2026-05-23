@@ -1,3 +1,4 @@
+from django.core.management import call_command
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -31,6 +32,7 @@ def scheduled(request, feuser):
         tag_err = _set_tags(s, data, feuser)
         if tag_err:
             return _err(tag_err)
+        call_command("generate_scheduled_expenses", user=feuser.email)
         return _ok(_scheduled_json(s), 201)
 
     return _err("Method not allowed.", 405)
@@ -63,6 +65,7 @@ def scheduled_detail(request, feuser, uid):
         tag_err = _set_tags(s, data, feuser)
         if tag_err:
             return _err(tag_err)
+        call_command("generate_scheduled_expenses", user=feuser.email)
         s.refresh_from_db()
         return _ok(_scheduled_json(s))
 
