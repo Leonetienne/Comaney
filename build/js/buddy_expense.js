@@ -203,7 +203,7 @@
                 if (item.is_me) lbl.dataset.isMe = '1';
                 var inp = document.createElement('input');
                 inp.type = 'checkbox';
-                if (preCheckAll) inp.checked = true;
+                if (preCheckAll && !item.is_archive) inp.checked = true;
                 inp.addEventListener('change', function () {
                     syncParticipantsFromCheckboxes();
                     rebuildSliders();

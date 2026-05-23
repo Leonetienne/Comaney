@@ -413,23 +413,51 @@ def _compute_chart(config: dict, period_qs, value_field: str = 'value', feuser=N
         agg_field = value_field
 
     if group == 'tags':
-        rows = (
-            qs.filter(tags__isnull=False)
-            .values('tags__title')
-            .annotate(total=Sum(agg_field))
-            .order_by('-total')
-        )
-        labels = [r['tags__title'] or '' for r in rows]
-        values = [float(r['total']) for r in rows]
+        totals: dict[str, Decimal] = {}
+        # Own expenses: tags on the expense belong to feuser
+        for row in (qs.filter(owning_feuser=feuser, tags__isnull=False)
+                       .values('tags__title')
+                       .annotate(total=Sum(agg_field))):
+            t = row['tags__title'] or ''
+            totals[t] = totals.get(t, Decimal('0')) + (row['total'] or Decimal('0'))
+        # Foreign expenses: use the viewer's overlay tags instead
+        for row in (qs.exclude(owning_feuser=feuser)
+                       .filter(data_overlays__feuser=feuser,
+                               data_overlays__tags__isnull=False)
+                       .values('data_overlays__tags__title')
+                       .annotate(total=Sum(agg_field))):
+            t = row['data_overlays__tags__title'] or ''
+            totals[t] = totals.get(t, Decimal('0')) + (row['total'] or Decimal('0'))
+        pairs = sorted(totals.items(), key=lambda x: -x[1])
+        labels = [p[0] for p in pairs]
+        values = [float(p[1]) for p in pairs]
 
     elif group == 'categories':
-        rows = (
-            qs.values('category__title')
-            .annotate(total=Sum(agg_field))
-            .order_by('-total')
+        totals_cat: dict[str | None, Decimal] = {}
+        # Own expenses: category on the expense belongs to feuser
+        for row in (qs.filter(owning_feuser=feuser)
+                       .values('category__title')
+                       .annotate(total=Sum(agg_field))):
+            t = row['category__title']
+            totals_cat[t] = totals_cat.get(t, Decimal('0')) + (row['total'] or Decimal('0'))
+        # Foreign expenses with overlay: use overlay category (may be None → Uncategorized)
+        for row in (qs.exclude(owning_feuser=feuser)
+                       .filter(data_overlays__feuser=feuser)
+                       .values('data_overlays__category__title')
+                       .annotate(total=Sum(agg_field))):
+            t = row['data_overlays__category__title']
+            totals_cat[t] = totals_cat.get(t, Decimal('0')) + (row['total'] or Decimal('0'))
+        # Foreign expenses with no overlay at all → Uncategorized
+        no_overlay = (
+            qs.exclude(owning_feuser=feuser)
+            .exclude(data_overlays__feuser=feuser)
+            .aggregate(total=Sum(agg_field))['total']
         )
-        labels = [r['category__title'] if r['category__title'] else 'Uncategorized' for r in rows]
-        values = [float(r['total']) for r in rows]
+        if no_overlay:
+            totals_cat[None] = totals_cat.get(None, Decimal('0')) + no_overlay
+        pairs_cat = sorted(totals_cat.items(), key=lambda x: -x[1])
+        labels = [p[0] if p[0] is not None else 'Uncategorized' for p in pairs_cat]
+        values = [float(p[1]) for p in pairs_cat]
 
     else:
         return {'labels': [], 'values': []}

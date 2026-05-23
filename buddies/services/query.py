@@ -188,6 +188,7 @@ class BuddyQueryService:
                         "id": m.dummy_id,
                         "name": m.dummy.display_name + " (offline member)",
                         "is_me": False,
+                        "is_archive": m.dummy.is_archive,
                         "ppicUrl": m.dummy.ppic_url if m.dummy.profile_picture else "",
                         "initials": m.dummy.initials,
                         "avatarColor": _avatar_color(m.dummy.initials),
