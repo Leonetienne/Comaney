@@ -28,7 +28,7 @@
     {% block extra_head %}{% endblock %}
     <script>var AVATAR_COLORS = {% avatar_colors_json %};</script>
 </head>
-<body>
+<body{% if current_feuser and current_feuser.custom_backdrop %} class="has-backdrop"{% endif %}>
     {% if current_feuser and current_feuser.custom_backdrop %}<img class="custom-backdrop" src="{{ current_feuser.backdrop_url }}" alt="" style="object-fit:{{ current_feuser.backdrop_mode }};opacity:{{ current_feuser.backdrop_opacity_decimal }};">{% if current_feuser.backdrop_css or current_feuser.backdrop_css_mobile %}<style id="backdrop-css-saved">{% if current_feuser.backdrop_css %}.custom-backdrop{ {{ current_feuser.backdrop_css|safe }} }{% endif %}{% if current_feuser.backdrop_css_mobile %}@media(max-width:768px){ .custom-backdrop{ {{ current_feuser.backdrop_css_mobile|safe }} } }{% endif %}</style>{% endif %}{% endif %}
     {% include "partials/_header.html" %}
     <div class="sidebar-overlay" id="sidebar-overlay"></div>

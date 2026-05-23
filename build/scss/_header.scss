@@ -203,6 +203,18 @@ header {
   }
 }
 
+body.has-backdrop header {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+@media (prefers-color-scheme: dark) {
+  body.has-backdrop header {
+    background: rgba(20, 20, 20, 0.78);
+  }
+}
+
 body.nav-open .hamburger {
   span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
   span:nth-child(2) { opacity: 0; }

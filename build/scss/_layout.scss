@@ -55,6 +55,18 @@
   }
 }
 
+body.has-backdrop .sidebar {
+  background: rgba(237, 232, 249, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+@media (prefers-color-scheme: dark) {
+  body.has-backdrop .sidebar {
+    background: rgba(15, 15, 26, 0.78);
+  }
+}
+
 .sidebar-section-label {
   display: block;
   padding: 16px 24px 4px;
