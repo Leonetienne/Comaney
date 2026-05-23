@@ -32,13 +32,13 @@ window.BUDDY_EXPENSE_CONFIG = {
 {% block content %}
 <h1>{% if expense %}Edit expense{% else %}New expense{% endif %}</h1>
 
+<div class="form-wrap">
 {% if expense and expense.is_dummy %}
 <div class="info-box mb-md">
     <p>This expense is managed on your account, but <strong>{{ expense.upfront_payee_dummy.display_name }} (offline member)</strong> paid upfront. It won't appear in your regular expense list; you can always find it under <a href="{% url 'buddies:buddy_summary' %}">Buddy Expenses</a>.</p>
 </div>
 {% endif %}
-
-<div class="form-wrap add-buddy-panel">
+<div class="add-buddy-panel">
     <form method="post" novalidate>
         {% csrf_token %}
         {% if back_url %}<input type="hidden" name="back" value="{{ back_url }}">{% endif %}
@@ -171,6 +171,7 @@ window.BUDDY_EXPENSE_CONFIG = {
         </div>
         <p id="buddy-no-participants-error" class="error-msg" style="display:none">A buddy payment requires at least one participant.</p>
     </form>
+</div>
 </div>
 <script>
 (function () {
