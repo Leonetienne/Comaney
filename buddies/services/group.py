@@ -68,7 +68,10 @@ class ProjectService:
             if invitee:
                 if not BuddyLink.between(admin_feuser, invitee):
                     _create_link(admin_feuser, invitee)
-                member, _ = BuddyGroupMember.objects.get_or_create(group=group, feuser=invitee)
+                member, created = BuddyGroupMember.objects.get_or_create(group=group, feuser=invitee)
+                if created:
+                    from budget.scheduled_assignment import reset_project_assignment_to_equal_shares
+                    reset_project_assignment_to_equal_shares(group)
                 return ("member", member)
             if not settings.ENABLE_REGISTRATION:
                 return ("registration_disabled", None)
@@ -123,6 +126,10 @@ class ProjectService:
         BuddyGroupMember.objects.get_or_create(group=group, feuser=accepting_feuser)
         group.update_lastmod()
 
+        # Roster changed: reset equal-share spendings on scheduled expenses for this project
+        from budget.scheduled_assignment import reset_project_assignment_to_equal_shares
+        reset_project_assignment_to_equal_shares(group)
+
         BuddyEmailService.send_group_invite_accepted(invite, _display_name(accepting_feuser))
         invite.delete()
         return group
@@ -164,7 +171,6 @@ class ProjectService:
             owning_group=group,
             display_name=_display_name(removed_feuser),
         )
-        BuddyGroupMember.objects.create(group=group, dummy=ghost_dummy)
 
         BuddySpending.objects.filter(
             participant_feuser=removed_feuser,
@@ -173,6 +179,24 @@ class ProjectService:
 
         target_member.delete()
         group.update_lastmod()
+
+        # Reset equal shares for remaining members' scheduled expenses.
+        # Ghost dummy is not yet in BuddyGroupMember, so the roster seen here
+        # is exactly the real members who remain — equal shares are computed correctly.
+        from budget.models import ScheduledExpense
+        from budget.scheduled_assignment import (
+            reset_project_assignment_to_equal_shares,
+            clear_scheduled_assignments,
+        )
+        reset_project_assignment_to_equal_shares(group)
+        # The removed user is no longer part of the group; clear their assignment entirely.
+        clear_scheduled_assignments(ScheduledExpense.objects.filter(
+            assign_project=group, owning_feuser=removed_feuser
+        ))
+
+        # Add ghost dummy to the roster after the scheduled-expense reset so it
+        # doesn't skew the equal-shares calculation above.
+        BuddyGroupMember.objects.create(group=group, dummy=ghost_dummy)
 
         if notify:
             BuddyEmailService.send_group_removed_notification(
@@ -192,6 +216,9 @@ class ProjectService:
         )
         BuddyGroupMember.objects.create(group=group, dummy=dummy)
         group.update_lastmod()
+        # Roster changed: reset equal-share spendings on scheduled expenses for this project
+        from budget.scheduled_assignment import reset_project_assignment_to_equal_shares
+        reset_project_assignment_to_equal_shares(group)
         return dummy
 
     @staticmethod
@@ -224,6 +251,11 @@ class ProjectService:
             BuddyArchiveService.merge_dummy_into_archive(dummy, archive)
         else:
             created = False
+
+        # Clear all scheduled assignments for this project — roster is now stale
+        from budget.models import ScheduledExpense
+        from budget.scheduled_assignment import clear_scheduled_assignments
+        clear_scheduled_assignments(ScheduledExpense.objects.filter(assign_project=group))
 
         dummy.delete()
         return created
@@ -324,6 +356,9 @@ class ProjectService:
             if dummy_member:
                 dummy_member.delete()
             BuddyGroupMember.objects.get_or_create(group=group, feuser=accepting_feuser)
+            # Roster changed (dummy became real feuser): reset scheduled spendings
+            from budget.scheduled_assignment import reset_project_assignment_to_equal_shares
+            reset_project_assignment_to_equal_shares(group)
 
         dummy.delete()
         invite.delete()
@@ -363,6 +398,12 @@ class ProjectService:
             owning_group=None,
             owning_feuser=admin_feuser,
         )
+
+        # Clear scheduled expense assignments referencing this project before deletion
+        from budget.models import ScheduledExpense
+        from budget.scheduled_assignment import clear_scheduled_assignments
+        clear_scheduled_assignments(ScheduledExpense.objects.filter(assign_project=group))
+
         group.delete()
 
 

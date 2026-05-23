@@ -152,6 +152,18 @@ class BuddyLifecycleService:
         else:
             created = False
 
+        # Reset any scheduled expense assignments that reference this dummy before deletion
+        from django.db.models import Q
+        from budget.models import ScheduledExpense
+        from budget.scheduled_assignment import clear_scheduled_assignments
+        clear_scheduled_assignments(
+            ScheduledExpense.objects.filter(owning_feuser=feuser).filter(
+                Q(assign_upfront_dummy=dummy) |
+                Q(assign_buddy_mode__in=['single', 'group'],
+                  assign_spendings_json__contains=f'"id": {dummy.uid}')
+            )
+        )
+
         dummy.delete()
         return {"kicked": True, "archive_created": created}
 
@@ -192,6 +204,18 @@ class BuddyLifecycleService:
             expense__project__isnull=True,
         ).update(participant_feuser=None, participant_dummy=kicker_dummy_for_other)
 
+        # Clear feuser's scheduled expense assignments that reference other_feuser
+        from django.db.models import Q
+        from budget.models import ScheduledExpense
+        from budget.scheduled_assignment import clear_scheduled_assignments
+        clear_scheduled_assignments(
+            ScheduledExpense.objects.filter(owning_feuser=feuser).filter(
+                Q(assign_upfront_feuser=other_feuser) |
+                Q(assign_buddy_mode__in=['single', 'group'],
+                  assign_spendings_json__contains=f'"id": {other_feuser.pk}')
+            )
+        )
+
         link.delete()
         BuddyEmailService.send_kicked_notification(
             kicked_feuser=other_feuser,
@@ -231,6 +255,10 @@ class BuddyLifecycleService:
             ).distinct()
             for exp in feuser_exps:
                 BuddyExpenseService.clone_expense_for_feuser(exp, other, ghost_dummy)
+
+            # Update other's scheduled expenses that reference the deleting feuser
+            from budget.scheduled_assignment import replace_feuser_with_dummy_in_scheduled
+            replace_feuser_with_dummy_in_scheduled(other, feuser, ghost_dummy)
 
         BuddyLink.for_user(feuser).delete()
 
@@ -376,10 +404,15 @@ class BuddyLifecycleService:
                     dummy_member.delete()
                 BuddyGroupMember.objects.get_or_create(group=group, feuser=new_feuser)
                 dummy.delete()
+                from budget.scheduled_assignment import reset_project_assignment_to_equal_shares
+                reset_project_assignment_to_equal_shares(group)
 
             elif invite.group_id:
                 _create_link(invite.inviting_feuser, new_feuser)
-                BuddyGroupMember.objects.get_or_create(group=invite.group, feuser=new_feuser)
+                _, member_created = BuddyGroupMember.objects.get_or_create(group=invite.group, feuser=new_feuser)
+                if member_created:
+                    from budget.scheduled_assignment import reset_project_assignment_to_equal_shares
+                    reset_project_assignment_to_equal_shares(invite.group)
 
             elif invite.dummy_id:
                 dummy = invite.dummy

@@ -167,6 +167,22 @@ class ScheduledExpense(OwnedModel):
     notify = models.BooleanField(default=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_mod = models.DateTimeField(default=timezone.now)
+    # Expense assignment (mirrors the buddy fields on Expense)
+    assign_buddy_mode = models.CharField(max_length=10, blank=True, default='')  # '' | 'single' | 'group'
+    assign_upfront_type = models.CharField(max_length=10, blank=True, default='me')  # 'me' | 'feuser' | 'dummy'
+    assign_upfront_feuser = models.ForeignKey(
+        FeUser, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='scheduled_assign_upfront',
+    )
+    assign_upfront_dummy = models.ForeignKey(
+        'buddies.DummyUser', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='scheduled_assign_upfront_dummy',
+    )
+    assign_project = models.ForeignKey(
+        'buddies.Project', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='scheduled_expenses',
+    )
+    assign_spendings_json = models.TextField(blank=True, default='[]')
 
     class Meta:
         ordering = ["title"]

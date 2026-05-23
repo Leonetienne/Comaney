@@ -1,4 +1,5 @@
 import calendar
+import json
 from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand
@@ -54,6 +55,118 @@ def occurrences_in_range(scheduled: ScheduledExpense, start: date, end: date) ->
     return results
 
 
+def _apply_solo_spendings(expense, project, creator_feuser):
+    """For solo projects with no participants, auto-create a 100% row for the creator."""
+    if not project:
+        return
+    feuser_count = project.members.filter(feuser__isnull=False).count()
+    dummy_count = project.members.filter(dummy__isnull=False).count()
+    if feuser_count == 1 and dummy_count == 0:
+        from buddies.models import BuddySpending
+        BuddySpending.objects.filter(expense=expense).delete()
+        BuddySpending.objects.create(
+            expense=expense,
+            participant_feuser=creator_feuser,
+            share_percent=100,
+        )
+
+
+def _generate_with_assignment(scheduled: ScheduledExpense, feuser, occurrence: date) -> Expense:
+    """Create an expense with buddy assignment applied from the scheduled template."""
+    from buddies.services import BuddyExpenseService
+    from budget.services import upsert_overlay, create_participant_overlays
+
+    mode = scheduled.assign_buddy_mode
+    upfront_type = scheduled.assign_upfront_type
+    upfront_feuser = scheduled.assign_upfront_feuser
+    upfront_dummy = scheduled.assign_upfront_dummy
+    project = scheduled.assign_project if mode == 'group' else None
+    spendings = json.loads(scheduled.assign_spendings_json or '[]')
+
+    # Guard: if the referenced project/dummy was NULLed, fall back to plain expense
+    if mode == 'group' and project is None:
+        return _generate_plain(scheduled, feuser, occurrence)
+    if mode == 'single' and upfront_type == 'dummy' and upfront_dummy is None:
+        return _generate_plain(scheduled, feuser, occurrence)
+    if mode == 'single' and upfront_type == 'feuser' and upfront_feuser is None:
+        return _generate_plain(scheduled, feuser, occurrence)
+
+    if upfront_type == 'feuser' and upfront_feuser:
+        # Expense is owned by the other feuser, with feuser as initiator
+        expense = create_expense(
+            owning_feuser=upfront_feuser,
+            title=scheduled.title,
+            type=scheduled.type,
+            value=scheduled.value,
+            payee=scheduled.payee,
+            note=scheduled.note,
+            category=scheduled.category,
+            tags=list(scheduled.tags.all()),
+            date_due=occurrence,
+            settled=False,
+            auto_settle_on_due_date=scheduled.default_auto_settle_on_due_date,
+            notify=scheduled.notify,
+            source_scheduled=scheduled,
+            buddy_approved=False,
+            project=project,
+        )
+        upsert_overlay(expense, feuser, scheduled.category, list(scheduled.tags.all()))
+        BuddyExpenseService.reconcile_categories_tags(expense, upfront_feuser)
+        expense.save(update_fields=["category"])
+        if not spendings and project:
+            _apply_solo_spendings(expense, project, feuser)
+        BuddyExpenseService.set_buddy_spendings(expense, spendings)
+        create_participant_overlays(expense)
+        if project:
+            project.update_lastmod()
+    else:
+        is_dummy = upfront_type == 'dummy'
+        expense = create_expense(
+            owning_feuser=feuser,
+            title=scheduled.title,
+            type=scheduled.type,
+            value=scheduled.value,
+            payee=scheduled.payee,
+            note=scheduled.note,
+            category=scheduled.category,
+            tags=list(scheduled.tags.all()),
+            date_due=occurrence,
+            settled=False,
+            auto_settle_on_due_date=scheduled.default_auto_settle_on_due_date,
+            notify=scheduled.notify,
+            source_scheduled=scheduled,
+            is_dummy=is_dummy,
+            upfront_payee_dummy=upfront_dummy if is_dummy else None,
+            project=project,
+        )
+        if not spendings and project:
+            _apply_solo_spendings(expense, project, feuser)
+        BuddyExpenseService.set_buddy_spendings(expense, spendings)
+        create_participant_overlays(expense)
+        if project:
+            project.update_lastmod()
+
+    return expense
+
+
+def _generate_plain(scheduled: ScheduledExpense, feuser, occurrence: date) -> Expense:
+    return create_expense(
+        owning_feuser=feuser,
+        title=scheduled.title,
+        type=scheduled.type,
+        value=scheduled.value,
+        payee=scheduled.payee,
+        note=scheduled.note,
+        category=scheduled.category,
+        tags=list(scheduled.tags.all()),
+        date_due=occurrence,
+        settled=False,
+        auto_settle_on_due_date=scheduled.default_auto_settle_on_due_date,
+        notify=scheduled.notify,
+        source_scheduled=scheduled,
+    )
+
+
 class Command(BaseCommand):
     help = "Generate expenses from scheduled expenses for each user's current financial year."
 
@@ -68,7 +181,14 @@ class Command(BaseCommand):
         self.stdout.write("Generating scheduled expenses…")
         created = skipped = 0
 
-        qs = ScheduledExpense.objects.select_related("owning_feuser", "category").prefetch_related("tags")
+        qs = (
+            ScheduledExpense.objects
+            .select_related(
+                "owning_feuser", "category",
+                "assign_upfront_feuser", "assign_upfront_dummy", "assign_project",
+            )
+            .prefetch_related("tags")
+        )
         if user_email:
             qs = qs.filter(owning_feuser__email=user_email)
 
@@ -104,21 +224,11 @@ class Command(BaseCommand):
                     skipped += 1
                     continue
 
-                expense = create_expense(
-                    owning_feuser=feuser,
-                    title=scheduled.title,
-                    type=scheduled.type,
-                    value=scheduled.value,
-                    payee=scheduled.payee,
-                    note=scheduled.note,
-                    category=scheduled.category,
-                    tags=list(scheduled.tags.all()),
-                    date_due=occurrence,
-                    settled=False,
-                    auto_settle_on_due_date=scheduled.default_auto_settle_on_due_date,
-                    notify=scheduled.notify,
-                    source_scheduled=scheduled,
-                )
+                if scheduled.assign_buddy_mode:
+                    expense = _generate_with_assignment(scheduled, feuser, occurrence)
+                else:
+                    expense = _generate_plain(scheduled, feuser, occurrence)
+
                 from budget.notifications import set_initial_notification_class
                 set_initial_notification_class(expense)
                 created += 1
