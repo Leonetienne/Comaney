@@ -230,7 +230,11 @@ class Command(BaseCommand):
                     expense = _generate_plain(scheduled, feuser, occurrence)
 
                 from budget.notifications import set_initial_notification_class
+                from buddies.services.email import BuddyEmailService
                 set_initial_notification_class(expense)
+                if not expense.buddy_approved:
+                    BuddyEmailService.send_expense_approval_request(expense, feuser)
+                BuddyEmailService.notify_expense_created(expense, feuser)
                 created += 1
                 self.stdout.write(f"  + [{feuser.email}] {scheduled.title} on {occurrence}")
 

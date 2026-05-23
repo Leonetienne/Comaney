@@ -35,5 +35,6 @@ urlpatterns = [
     path("scheduled/<int:uid>/edit/", views.scheduled_edit, name="scheduled_edit"),
     path("scheduled/<int:uid>/clone/", views.scheduled_clone, name="scheduled_clone"),
     path("scheduled/<int:uid>/delete/", views.scheduled_delete, name="scheduled_delete"),
+    path("scheduled/<int:uid>/update-expenses/", views.scheduled_update_expenses_api, name="scheduled_update_expenses"),
     path("ai/express-creation/", views.express_creation, name="express_creation"),
 ]

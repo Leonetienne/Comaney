@@ -34,6 +34,10 @@
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
             </form>
+            <button type="button" class="btn btn-sm btn-secondary"
+                    data-update-expenses-url="{% url 'budget:scheduled_update_expenses' s.uid %}"
+                    data-scheduled-title="{{ s.title|escapejs }}"
+                    onclick="openUpdateExpensesModal(this)">Update expenses</button>
             <form method="post" action="{% url 'budget:scheduled_delete' s.uid %}" class="delete-form" data-title="{{ s.title }}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>
@@ -61,4 +65,200 @@
 {% else %}
 <p class="empty">No scheduled expenses yet. <a href="{% url 'budget:scheduled_create' %}">Add one.</a></p>
 {% endif %}
+
+{# Update Expenses Modal #}
+<div class="cdialog-backdrop" id="update-exp-modal" aria-hidden="true">
+    <div class="cdialog" style="max-width:560px;width:calc(100% - 40px);">
+        <p class="cdialog-title" id="update-exp-title"></p>
+        <p class="cdialog-body" id="update-exp-status"></p>
+        <div id="update-exp-list" style="display:none;">
+            <div style="margin-bottom:8px;">
+                <a href="#" id="update-exp-select-all" style="font-size:0.85rem;">Select all</a>
+                <span style="margin:0 6px;color:var(--text-muted);">·</span>
+                <a href="#" id="update-exp-deselect-all" style="font-size:0.85rem;">Deselect all</a>
+            </div>
+            <div id="update-exp-items" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:4px 0;"></div>
+        </div>
+        <p id="update-exp-result" style="display:none;margin:12px 0 0;font-size:0.9rem;color:var(--text-muted);"></p>
+        <div class="cdialog-actions" style="margin-top:16px;">
+            <button type="button" class="btn btn-primary" id="update-exp-ok" disabled>Update selected</button>
+            <button type="button" class="btn btn-secondary" id="update-exp-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var modal    = document.getElementById('update-exp-modal');
+    var titleEl  = document.getElementById('update-exp-title');
+    var statusEl = document.getElementById('update-exp-status');
+    var listWrap = document.getElementById('update-exp-list');
+    var itemsEl  = document.getElementById('update-exp-items');
+    var resultEl = document.getElementById('update-exp-result');
+    var okBtn    = document.getElementById('update-exp-ok');
+    var cancelBtn = document.getElementById('update-exp-cancel');
+    var selectAllLink   = document.getElementById('update-exp-select-all');
+    var deselectAllLink = document.getElementById('update-exp-deselect-all');
+
+    var currentUrl = null;
+
+    function getCsrf() {
+        var m = document.cookie.match(/csrftoken=([^;]+)/);
+        return m ? m[1] : '';
+    }
+
+    function closeModal() {
+        modal.classList.remove('cdialog-visible');
+        modal.setAttribute('aria-hidden', 'true');
+        currentUrl = null;
+    }
+
+    function setLoading() {
+        statusEl.textContent = 'Loading expenses…';
+        statusEl.style.display = '';
+        listWrap.style.display = 'none';
+        resultEl.style.display = 'none';
+        okBtn.disabled = true;
+    }
+
+    var currentCurrency = '';
+
+    function showExpenses(expenses, currency) {
+        currentCurrency = currency || '';
+        statusEl.style.display = 'none';
+        resultEl.style.display = 'none';
+
+        if (expenses.length === 0) {
+            statusEl.textContent = 'No expenses found for the current financial year.';
+            statusEl.style.display = '';
+            okBtn.disabled = true;
+            return;
+        }
+
+        itemsEl.innerHTML = '';
+        expenses.forEach(function (e) {
+            var valueLabel = currentCurrency
+                ? e.value + ' ' + currentCurrency
+                : e.value;
+            var row = document.createElement('label');
+            row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);';
+            row.innerHTML =
+                '<input type="checkbox" checked data-expense-id="' + e.id + '" style="flex-shrink:0;">' +
+                '<span style="min-width:88px;font-variant-numeric:tabular-nums;">' + (e.date_due || '—') + '</span>' +
+                '<span style="min-width:96px;text-align:right;font-variant-numeric:tabular-nums;">' + valueLabel + '</span>' +
+                '<span style="color:var(--text-muted);font-size:0.875rem;flex:1;">' + e.assignment + '</span>';
+            row.querySelector('input').addEventListener('change', syncOkButton);
+            itemsEl.appendChild(row);
+        });
+        // Remove bottom border from last row
+        var rows = itemsEl.querySelectorAll('label');
+        if (rows.length) rows[rows.length - 1].style.borderBottom = 'none';
+
+        listWrap.style.display = '';
+        syncOkButton();
+    }
+
+    function syncOkButton() {
+        var any = itemsEl.querySelectorAll('input[type=checkbox]:checked').length > 0;
+        okBtn.disabled = !any;
+    }
+
+    selectAllLink.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        itemsEl.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = true; });
+        syncOkButton();
+    });
+
+    deselectAllLink.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        itemsEl.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = false; });
+        syncOkButton();
+    });
+
+    window.openUpdateExpensesModal = function (btn) {
+        currentUrl = btn.dataset.updateExpensesUrl;
+        titleEl.textContent = 'Update expenses: ' + btn.dataset.scheduledTitle;
+        modal.classList.add('cdialog-visible');
+        modal.setAttribute('aria-hidden', 'false');
+        setLoading();
+
+        fetch(currentUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) { showExpenses(data.expenses || [], data.currency || ''); })
+            .catch(function () {
+                statusEl.textContent = 'Could not load expenses. Please try again.';
+                statusEl.style.display = '';
+            });
+    };
+
+    okBtn.addEventListener('click', function () {
+        var ids = [];
+        itemsEl.querySelectorAll('input[type=checkbox]:checked').forEach(function (cb) {
+            ids.push(parseInt(cb.dataset.expenseId, 10));
+        });
+        if (!ids.length || !currentUrl) return;
+
+        okBtn.disabled = true;
+        okBtn.textContent = 'Updating…';
+
+        fetch(currentUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrf(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ expense_ids: ids }),
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.ok) {
+                    resultEl.textContent = data.updated + ' expense' + (data.updated === 1 ? '' : 's') + ' updated.';
+                    resultEl.style.display = '';
+                    listWrap.style.display = 'none';
+                    okBtn.style.display = 'none';
+                    cancelBtn.textContent = 'Close';
+                } else {
+                    resultEl.textContent = 'Update failed. Please try again.';
+                    resultEl.style.display = '';
+                    okBtn.disabled = false;
+                    okBtn.textContent = 'Update selected';
+                }
+            })
+            .catch(function () {
+                resultEl.textContent = 'Update failed. Please try again.';
+                resultEl.style.display = '';
+                okBtn.disabled = false;
+                okBtn.textContent = 'Update selected';
+            });
+    });
+
+    cancelBtn.addEventListener('click', function () {
+        closeModal();
+        okBtn.textContent = 'Update selected';
+        okBtn.style.display = '';
+        cancelBtn.textContent = 'Cancel';
+    });
+
+    modal.addEventListener('click', function (ev) {
+        if (ev.target === modal) {
+            closeModal();
+            okBtn.textContent = 'Update selected';
+            okBtn.style.display = '';
+            cancelBtn.textContent = 'Cancel';
+        }
+    });
+
+    document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' && modal.classList.contains('cdialog-visible')) {
+            closeModal();
+            okBtn.textContent = 'Update selected';
+            okBtn.style.display = '';
+            cancelBtn.textContent = 'Cancel';
+        }
+    });
+}());
+</script>
 {% endblock %}

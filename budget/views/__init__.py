@@ -11,7 +11,7 @@ from .expenses import (
 )
 from .scheduled import (
     scheduled_list, scheduled_create, scheduled_edit,
-    scheduled_delete, scheduled_clone,
+    scheduled_delete, scheduled_clone, scheduled_update_expenses_api,
 )
 from .categories_tags import (
     categories_tags,
@@ -29,7 +29,7 @@ __all__ = [
     "expense_bulk_action", "expense_settle_via_email",
     "expense_mute_notifications", "mute_all_notifications",
     "scheduled_list", "scheduled_create", "scheduled_edit",
-    "scheduled_delete", "scheduled_clone",
+    "scheduled_delete", "scheduled_clone", "scheduled_update_expenses_api",
     "categories_tags",
     "category_create", "category_delete", "category_rename",
     "tag_create", "tag_delete", "tag_rename",
