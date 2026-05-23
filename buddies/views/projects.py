@@ -191,7 +191,7 @@ def project_detail(request, project_id):
             exp_data["can_edit_overlay"] = (
                 exp_data["i_am_participant"]
                 and not exp.is_buddies_settlement
-                and not is_feuser_direct_owner
+                and not exp_data["can_edit"]
             )
         raw_note = overlay_notes.get(exp.pk)
         exp_data["visible_note"] = raw_note if raw_note is not None else exp.note
