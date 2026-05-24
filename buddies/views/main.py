@@ -1,10 +1,20 @@
 import json
+from datetime import date
 from decimal import Decimal
 
 from django.shortcuts import redirect, render
 
 from budget.decorators import feuser_required
+from budget.query_parser import apply_query
+from budget.views._period import _date_range_presets_context
 from ..services import BuddyQueryService
+
+
+_SORT_FIELD_MAP = {
+    "date":  lambda ed: (ed["expense"].date_due or date.min),
+    "title": lambda ed: ed["expense"].title.lower(),
+    "value": lambda ed: ed["expense"].value,
+}
 
 
 def _debts_to_json(unified_debts) -> str:
@@ -48,13 +58,8 @@ def my_buddies_page(request):
     })
 
 
-@feuser_required
-def buddy_summary_page(request):
-    from budget.models import Expense
-    from ..models import Project
-
-    feuser = request.feuser
-    unified_debts = BuddyQueryService.get_all_debts_unified(feuser)
+def _compute_direct_expenses(feuser, start_date, end_date):
+    from budget.models import Expense, ExpenseDataOverlay
     all_shared = BuddyQueryService.shared_expenses(feuser)
     direct_expenses_qs = all_shared.filter(project__isnull=True).select_related(
         "owning_feuser", "upfront_payee_dummy"
@@ -62,8 +67,17 @@ def buddy_summary_page(request):
         "buddy_spendings__participant_feuser", "buddy_spendings__participant_dummy"
     )
 
+    if start_date and end_date:
+        direct_expenses_qs = direct_expenses_qs.filter(
+            date_due__isnull=False, date_due__gte=start_date, date_due__lte=end_date
+        ) | all_shared.filter(
+            project__isnull=True, date_due__isnull=True,
+            date_created__date__gte=start_date, date_created__date__lte=end_date,
+        ).select_related("owning_feuser", "upfront_payee_dummy").prefetch_related(
+            "buddy_spendings__participant_feuser", "buddy_spendings__participant_dummy"
+        )
+
     direct_expenses = list(direct_expenses_qs)
-    from budget.models import ExpenseDataOverlay
     overlay_notes = {
         o.expense_id: o.note
         for o in ExpenseDataOverlay.objects.filter(
@@ -105,6 +119,60 @@ def buddy_summary_page(request):
             "participant_shares": participant_shares,
             "visible_note": raw_note if raw_note is not None else exp.note,
         })
+    return direct_expense_data
+
+
+@feuser_required
+def direct_expense_list_partial(request):
+    from budget.models import Expense
+    feuser = request.feuser
+
+    start_date = None
+    end_date   = None
+    date_from_raw = request.GET.get("date_from", "").strip()
+    date_to_raw   = request.GET.get("date_to", "").strip()
+    if date_from_raw and date_to_raw:
+        try:
+            start_date = date.fromisoformat(date_from_raw)
+            end_date   = date.fromisoformat(date_to_raw)
+        except ValueError:
+            pass
+
+    q = request.GET.get("q", "").strip()
+    hide_recurring = request.GET.get("hide_recurring") == "1"
+    sort_by  = request.GET.get("sort_by", "date")
+    sort_dir = request.GET.get("sort_dir", "desc")
+
+    effective_q = q
+    if hide_recurring:
+        effective_q = (effective_q + " recurring=no").strip() if effective_q else "recurring=no"
+
+    matching_pks = None
+    if effective_q:
+        base_qs = BuddyQueryService.shared_expenses(feuser).filter(project__isnull=True)
+        matching_pks = set(apply_query(base_qs, effective_q, feuser=feuser).values_list("pk", flat=True))
+
+    direct_expense_data = _compute_direct_expenses(feuser, start_date, end_date)
+
+    if matching_pks is not None:
+        direct_expense_data = [ed for ed in direct_expense_data if ed["expense"].pk in matching_pks]
+
+    sort_key = _SORT_FIELD_MAP.get(sort_by, _SORT_FIELD_MAP["date"])
+    direct_expense_data = sorted(direct_expense_data, key=sort_key, reverse=(sort_dir == "desc"))
+
+    return render(request, "buddies/direct_expense_partial.html", {
+        "direct_expense_data": direct_expense_data,
+        "currency": feuser.currency,
+    })
+
+
+@feuser_required
+def buddy_summary_page(request):
+    from budget.models import Expense
+    from ..models import Project
+
+    feuser = request.feuser
+    unified_debts = BuddyQueryService.get_all_debts_unified(feuser)
 
     feuser_key = f"f{feuser.pk}"
     direct_settle_members = []
@@ -199,9 +267,8 @@ def buddy_summary_page(request):
         "initials": feuser.initials,
     })
 
-    return render(request, "buddies/buddy_summary.html", {
+    ctx = {
         "active_nav": "buddy_summary",
-        "direct_expense_data": direct_expense_data,
         "currency": feuser.currency,
         "debts_json": _debts_to_json(unified_debts),
         "me_avatar_json": me_avatar_json,
@@ -209,4 +276,8 @@ def buddy_summary_page(request):
         "direct_settle_members_json": json.dumps(direct_settle_members),
         "settle_debts_json": json.dumps(settle_debts),
         "pending_approvals": pending_approvals,
-    })
+        "initial_date_from": request.GET.get("date_from", ""),
+        "initial_date_to":   request.GET.get("date_to", ""),
+    }
+    ctx.update(_date_range_presets_context(feuser))
+    return render(request, "buddies/buddy_summary.html", ctx)

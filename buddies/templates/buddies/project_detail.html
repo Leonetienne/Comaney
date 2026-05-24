@@ -40,6 +40,8 @@
     <a href="{% url 'projects:project_settings' project_id=project.uid %}" class="project-tab">Manage</a>
 </nav>
 
+{% include "partials/_date_range_nav.html" %}
+
 {% if not project.archived %}
 <a href="{% url 'budget:expense_create' %}?project={{ project.uid }}&back={{ request.path|urlencode }}" class="fab-new-expense" title="New expense">+</a>
 {% endif %}
@@ -235,12 +237,12 @@
 
 {% endif %}{# end not is_solo #}
 
-{# ── Spending Breakdown Pie Chart (non-solo only) ──────────────────────────── #}
-{% if group_total_spending and not is_solo %}
-<section class="buddies-section">
+{# ── Charts (loaded via AJAX, filtered by date range) ─────────────────────── #}
+{% if not is_solo %}
+<section class="buddies-section" id="section-spending-breakdown" style="display:none">
     <h2>Spending breakdown</h2>
     <div class="buddies-section--surface">
-    <p class="page-subtitle" style="margin:0 0 0.25rem;">Total group spending: <strong>{{ currency }}{{ group_total_spending|floatformat:2 }}</strong></p>
+    <p class="page-subtitle" style="margin:0 0 0.25rem;">Total group spending: <strong id="proj-total-label"></strong></p>
     <p class="font-sm text-muted" style="margin:0 0 1rem;">Each slice shows how much of the total each person paid upfront. This is not the same as debt: it does not account for who owes whom or who has already settled.</p>
     <div class="group-spending-wrap">
         <div id="group-spending-pie" class="group-spending-chart"></div>
@@ -248,14 +250,14 @@
     </div>
     <div id="group-pie-tooltip" class="group-pie-tooltip" style="display:none;pointer-events:none;"></div>
     <script>
-    (function() {
-        var PIE_DATA = {{ spending_pie_json|safe }};
+    window._renderPie = function(pieData) {
         var CURRENCY = "{{ currency|escapejs }}";
-        var data = PIE_DATA.filter(function(d) { return d.spent > 0.005; });
-        if (!data.length) return;
-
         var container = document.getElementById('group-spending-pie');
-        if (!container) return;
+        var legendEl  = document.getElementById('group-spending-legend');
+        if (container) container.innerHTML = '';
+        if (legendEl)  legendEl.innerHTML  = '';
+        var data = (pieData || []).filter(function(d) { return d.spent > 0.005; });
+        if (!data.length || !container) return;
 
         var SIZE = 240;
         var R = SIZE / 2 - 6;
@@ -352,7 +354,6 @@
             })(member, d, pct, fillPath, borderPath, clipPathShape);
         });
 
-        var legend = document.getElementById('group-spending-legend');
         data.forEach(function(member) {
             var pct = totalSpent > 0 ? (member.spent / totalSpent * 100).toFixed(1) : '0.0';
             var row = document.createElement('div');
@@ -376,31 +377,24 @@
 
             row.appendChild(dot);
             row.appendChild(text);
-            legend.appendChild(row);
+            legendEl.appendChild(row);
         });
-    })();
+    };
     </script>
     </div>
 </section>
-{% endif %}
 
-{# ── Spending over time (all projects) ────────────────────────────────────── #}
-{% if spending_over_time_json %}
-<section class="buddies-section">
+<section class="buddies-section" id="section-spending-time" style="display:none">
     <h2>Spending over time</h2>
     <div class="buddies-section--surface">
-    <p class="page-subtitle" style="margin:0 0 0.25rem;">Total: <strong>{{ currency }}{{ project_total_spending|floatformat:2 }}</strong></p>
     <p class="font-sm text-muted" style="margin:0 0 1rem;">How expenses were added to this project over time. Settlements are not included.</p>
     <div class="proj-chart-wrap">
         <canvas id="proj-spending-line"></canvas>
     </div>
     </div>
 </section>
-{% endif %}
 
-{# ── Tag distribution (all projects, bucketed by feuser's tags/overlays) ─── #}
-{% if tag_dist_json %}
-<section class="buddies-section">
+<section class="buddies-section" id="section-tag-dist" style="display:none">
     <h2>Project spending by tag</h2>
     <div class="buddies-section--surface">
     <p class="font-sm text-muted" style="margin:0 0 1rem;">Project expenses grouped by your tags. For expenses added by others, this uses your personal tag notes.</p>
@@ -409,19 +403,75 @@
     </div>
     </div>
 </section>
+
+<script>
+(function() {
+    var CHARTS_URL = "{% url 'projects:project_charts_data' project_id=project.uid %}";
+    var CURRENCY = "{{ currency|escapejs }}";
+    var _xhr = null;
+
+    function fetchCharts(from, to) {
+        if (_xhr) _xhr.abort();
+        var params = new URLSearchParams({ date_from: from, date_to: to });
+        var xhr = new XMLHttpRequest();
+        _xhr = xhr;
+        xhr.open('GET', CHARTS_URL + '?' + params.toString(), true);
+        xhr.onload = function() {
+            _xhr = null;
+            if (xhr.status === 200) {
+                try { renderCharts(JSON.parse(xhr.responseText)); } catch(e) {}
+            }
+        };
+        xhr.onerror = function() { _xhr = null; };
+        xhr.onabort = function() { _xhr = null; };
+        xhr.send();
+    }
+
+    function renderCharts(data) {
+        var total = parseFloat(data.group_total_spending || '0');
+
+        var pieSect = document.getElementById('section-spending-breakdown');
+        if (pieSect) {
+            if (total > 0.005) {
+                pieSect.style.display = '';
+                var lbl = document.getElementById('proj-total-label');
+                if (lbl) lbl.textContent = CURRENCY + total.toFixed(2);
+                if (window._renderPie) window._renderPie(data.spending_pie);
+            } else {
+                pieSect.style.display = 'none';
+            }
+        }
+
+        var timeSect = document.getElementById('section-spending-time');
+        if (timeSect) timeSect.style.display = data.spending_over_time ? '' : 'none';
+
+        var tagSect = document.getElementById('section-tag-dist');
+        if (tagSect) tagSect.style.display = data.tag_dist ? '' : 'none';
+
+        window.PROJECT_CHARTS = {
+            currency: CURRENCY,
+            spendingOverTime: data.spending_over_time || null,
+            tagDist: data.tag_dist || null,
+        };
+        if (window.renderProjectCharts) window.renderProjectCharts();
+    }
+
+    window.addEventListener('daterangechange', function(e) {
+        fetchCharts(e.detail.from, e.detail.to);
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window._dateRange) {
+            var cur = window._dateRange.get();
+            fetchCharts(cur.from, cur.to);
+        }
+    });
+})();
+</script>
 {% endif %}
 
-{# ── Chart.js data + bundle ───────────────────────────────────────────────── #}
-{% if spending_over_time_json or tag_dist_json %}
-<script>
-window.PROJECT_CHARTS = {
-    currency: "{{ currency|escapejs }}"
-    {% if spending_over_time_json %},spendingOverTime: {{ spending_over_time_json|safe }}{% endif %}
-    {% if tag_dist_json %},tagDist: {{ tag_dist_json|safe }}{% endif %}
-};
-</script>
+<script src="{% static 'dist/project_detail.js' %}" defer></script>
 <script src="{% static 'dist/project_charts.js' %}" defer></script>
-{% endif %}
 
 {% if not is_solo %}
 <section class="buddies-section">
@@ -579,7 +629,7 @@ window.PROJECT_CHARTS = {
 {# ── Expense List (filters + list are one visual section) ────────────────── #}
 <section class="buddies-section">
     <h2>Expense Breakdown</h2>
-    <div class="add-buddy-panel" style="margin-bottom:1.25rem;">
+    <div class="exp-filter-panel" style="margin-bottom:1.25rem;">
         <div class="exp-controls">
             <input type="text" id="proj-exp-search" class="exp-search"
                    placeholder="Search… groceries  type=expense  value&lt;100  settled=yes"
@@ -638,12 +688,15 @@ window.PROJECT_CHARTS = {
 
     function fetchList() {
         if (currentXhr) { currentXhr.abort(); }
+        var dr = window._dateRange ? window._dateRange.get() : { from: '', to: '' };
         var params = new URLSearchParams({
             q:             searchEl.value,
             hide_recurring: hideRecEl.checked ? '1' : '0',
             i_paid:        iPaidEl.checked ? '1' : '0',
             sort_by:       sortByEl.value,
             sort_dir:      sortDirEl.value,
+            date_from:     dr.from,
+            date_to:       dr.to,
         });
         container.setAttribute('data-loading', '');
         var xhr = new XMLHttpRequest();
@@ -671,6 +724,11 @@ window.PROJECT_CHARTS = {
     iPaidEl.addEventListener('change', fetchList);
     sortByEl.addEventListener('change', fetchList);
     sortDirEl.addEventListener('change', fetchList);
+    window.addEventListener('daterangechange', fetchList);
+
+    // Initial fetch so the list reflects the active date range (localStorage or URL)
+    // from the very first page load — the server renders all expenses without filtering.
+    document.addEventListener('DOMContentLoaded', fetchList);
 })();
 </script>
 

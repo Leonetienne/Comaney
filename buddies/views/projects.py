@@ -12,7 +12,8 @@ from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
 from budget.models import Expense
-from budget.query_parser import apply_query
+from budget.query_parser import apply_query, has_date_filter
+from budget.views._period import _date_range_presets_context
 from feusers.models import FeUser
 from ..models import Project, ProjectInvite, ProjectMember, BuddySpending, DummyUser
 from ..services import BuddyArchiveService, ProjectService, BuddyQueryService, _display_name
@@ -358,129 +359,11 @@ def project_detail(request, project_id):
     pending_expenses = [e for e in breakdown["expenses"] if not e["expense"].buddy_approved]
     approved_expenses = [e for e in breakdown["expenses"] if e["expense"].buddy_approved]
 
-
-    member_spending: dict[str, Decimal] = {}
-    project_total_spending = Decimal("0")
-    for exp_data in approved_expenses:
-        if exp_data["expense"].is_buddies_settlement:
-            continue
-        project_total_spending += exp_data["total"]
-        pk = exp_data["payer_key"]
-        member_spending[pk] = member_spending.get(pk, Decimal("0")) + exp_data["total"]
-
-    spending_pie_json = json.dumps([
-        {
-            "key": node["key"],
-            "name": node["name"],
-            "is_me": node["is_me"],
-            "spent": float(member_spending.get(node["key"], Decimal("0"))),
-            "has_pic": node["has_pic"],
-            "avatar_url": node["avatar_url"],
-            "initials": node["initials"],
-        }
-        for node in graph_nodes
-    ])
-
-    # ── Spending over time (line chart) ──────────────────────────────────────
-    spending_over_time_json = None
-    non_settlement_approved = [
-        ed for ed in approved_expenses if not ed["expense"].is_buddies_settlement
-    ]
-    if non_settlement_approved:
-        dated = []
-        for ed in non_settlement_approved:
-            exp = ed["expense"]
-            d = exp.date_due if exp.date_due else exp.date_created.date()
-            dated.append((d, ed["payer_key"], float(ed["total"])))
-
-        first_date = min(r[0] for r in dated)
-        today_date = date.today()
-        total_days = (today_date - first_date).days   # 0 when single day
-        span       = total_days + 1
-        n_steps    = min(100, span)
-
-        all_keys      = list(breakdown["member_map"].keys())
-        bucket_totals = [0.0] * n_steps
-        bucket_by_key = {k: [0.0] * n_steps for k in all_keys}
-
-        for (d, payer_key, amount) in dated:
-            idx = min(n_steps - 1, (d - first_date).days * n_steps // span)
-            bucket_totals[idx] += amount
-            if payer_key in bucket_by_key:
-                bucket_by_key[payer_key][idx] += amount
-
-        labels = []
-        for i in range(n_steps):
-            end_offset = min(total_days, (i + 1) * span // n_steps - 1)
-            labels.append((first_date + timedelta(days=end_offset)).isoformat())
-
-        line_series = [{"label": "Total", "color": "#888888",
-                        "values": [round(v, 2) for v in bucket_totals]}]
-        for k, info in breakdown["member_map"].items():
-            name = "You" if info["is_me"] else info["name"]
-            line_series.append({"label": name,
-                                 "values": [round(v, 2) for v in bucket_by_key[k]]})
-
-        spending_over_time_json = json.dumps({"labels": labels, "series": line_series})
-
-    # ── Tag distribution (bar chart) ─────────────────────────────────────────
-    # Each expense is bucketed by the feuser's own tags (expense.tags for
-    # expenses they own; overlay tags for expenses they participate in).
-    # The value counted is the full expense amount — not feuser's share —
-    # so it answers "how much did the project spend on X" not "how much did I".
-    # Only expenses where feuser has a tag mapping (owner or participant) are
-    # included; expenses with no mapping go into (untagged).
-    tag_dist_json = None
-    if non_settlement_approved:
-        from budget.models import Expense as _Exp
-        feuser_owned_pks = [
-            ed["expense"].pk for ed in non_settlement_approved
-            if not ed["expense"].is_dummy
-            and ed["expense"].owning_feuser_id == feuser.pk
-        ]
-        expense_tag_map: dict[int, list[str]] = {}
-        for exp_obj in _Exp.objects.filter(pk__in=feuser_owned_pks).prefetch_related("tags"):
-            expense_tag_map[exp_obj.pk] = [t.title for t in exp_obj.tags.all()]
-
-        tag_amounts: dict[str, float] = {}
-        for ed in non_settlement_approved:
-            exp = ed["expense"]
-
-            # Only include expenses where feuser is the owner or a participant.
-            is_owner       = not exp.is_dummy and exp.owning_feuser_id == feuser.pk
-            is_participant = any(s["is_me"] for s in ed["participant_shares"])
-            if not is_owner and not is_participant:
-                continue
-
-            if is_owner:
-                tags = expense_tag_map.get(exp.pk, [])
-            else:
-                tags = overlay_tags.get(exp.pk, [])
-
-            amount = float(ed["total"])
-            if tags:
-                for title in tags:
-                    tag_amounts[title] = tag_amounts.get(title, 0.0) + amount
-            else:
-                tag_amounts["(untagged)"] = tag_amounts.get("(untagged)", 0.0) + amount
-
-        if tag_amounts:
-            tagged   = sorted(
-                ((k, v) for k, v in tag_amounts.items() if k != "(untagged)"),
-                key=lambda x: -x[1],
-            )
-            untagged = [(k, v) for k, v in tag_amounts.items() if k == "(untagged)"]
-            sorted_tags = tagged + untagged
-            tag_dist_json = json.dumps({
-                "labels": [t[0] for t in sorted_tags],
-                "values": [round(t[1], 2) for t in sorted_tags],
-            })
-
     project_url = reverse("projects:project_detail", args=[project.uid])
-    return render(request, "buddies/project_detail.html", {
+    ctx = {
         "active_nav": "projects",
         "project": project,
-        "group": project,  # backward compat for template snippets
+        "group": project,
         "is_admin": is_admin,
         "is_solo": solo,
         "feuser_key": feuser_key,
@@ -496,16 +379,184 @@ def project_detail(request, project_id):
         "raw_debts_json": raw_debts_json,
         "all_members_json": all_members_json,
         "settle_all_pairs_json": settle_all_pairs_json,
-        "spending_pie_json": spending_pie_json,
-        "project_total_spending": project_total_spending,
-        "group_total_spending": project_total_spending,  # backward compat
-        "spending_over_time_json": spending_over_time_json,
-        "tag_dist_json": tag_dist_json,
         "member_count": len(breakdown["member_map"]),
         "has_multiple_members": len(breakdown["member_map"]) > 1,
         "currency": feuser.currency,
         "project_url": project_url,
-    })
+        "initial_date_from": request.GET.get("date_from", ""),
+        "initial_date_to":   request.GET.get("date_to", ""),
+    }
+    ctx.update(_date_range_presets_context(feuser))
+    return render(request, "buddies/project_detail.html", ctx)
+
+def _compute_project_charts(feuser, project, start_date, end_date):
+    """
+    Compute spending pie, spending-over-time, and tag-dist for a project.
+    If start_date/end_date are provided, only approved expenses in that range
+    are included. Returns a dict ready for JSON serialization.
+    """
+    breakdown = BuddyQueryService.get_group_full_breakdown(feuser, project)
+    overlay_notes, overlay_tags = _fetch_overlay_notes(feuser, breakdown)
+
+    approved_expenses = [e for e in breakdown["expenses"] if e["expense"].buddy_approved]
+
+    # Apply date filter to approved expenses
+    if start_date and end_date:
+        def _in_range(ed):
+            exp = ed["expense"]
+            d = exp.date_due if exp.date_due else exp.date_created.date()
+            return start_date <= d <= end_date
+        approved_expenses = [ed for ed in approved_expenses if _in_range(ed)]
+
+    # Pie chart: member spending
+    graph_nodes = []
+    for k, v in breakdown["member_map"].items():
+        obj = v.get("user_obj")
+        has_pic = bool(obj and obj.profile_picture)
+        graph_nodes.append({
+            "key": k,
+            "name": v["name"],
+            "is_me": v["is_me"],
+            "has_pic": has_pic,
+            "avatar_url": obj.ppic_url if has_pic else None,
+            "initials": obj.initials if obj else "?",
+        })
+
+    member_spending: dict = {}
+    project_total = Decimal("0")
+    for ed in approved_expenses:
+        if ed["expense"].is_buddies_settlement:
+            continue
+        project_total += ed["total"]
+        pk = ed["payer_key"]
+        member_spending[pk] = member_spending.get(pk, Decimal("0")) + ed["total"]
+
+    spending_pie = [
+        {
+            "key": node["key"],
+            "name": node["name"],
+            "is_me": node["is_me"],
+            "spent": float(member_spending.get(node["key"], Decimal("0"))),
+            "has_pic": node["has_pic"],
+            "avatar_url": node["avatar_url"],
+            "initials": node["initials"],
+        }
+        for node in graph_nodes
+    ]
+
+    # Spending over time (line chart)
+    spending_over_time = None
+    non_settlement = [ed for ed in approved_expenses if not ed["expense"].is_buddies_settlement]
+    if non_settlement:
+        dated = []
+        for ed in non_settlement:
+            exp = ed["expense"]
+            d = exp.date_due if exp.date_due else exp.date_created.date()
+            dated.append((d, ed["payer_key"], float(ed["total"])))
+
+        first_dt = min(r[0] for r in dated)
+        today_dt = date.today()
+        total_days = (today_dt - first_dt).days
+        span = total_days + 1
+        n_steps = min(100, span)
+
+        all_keys = list(breakdown["member_map"].keys())
+        bucket_totals = [0.0] * n_steps
+        bucket_by_key = {k: [0.0] * n_steps for k in all_keys}
+
+        for (d, payer_key, amount) in dated:
+            idx = min(n_steps - 1, (d - first_dt).days * n_steps // span)
+            bucket_totals[idx] += amount
+            if payer_key in bucket_by_key:
+                bucket_by_key[payer_key][idx] += amount
+
+        labels = []
+        for i in range(n_steps):
+            end_offset = min(total_days, (i + 1) * span // n_steps - 1)
+            labels.append((first_dt + timedelta(days=end_offset)).isoformat())
+
+        line_series = [{"label": "Total", "color": "#888888",
+                        "values": [round(v, 2) for v in bucket_totals]}]
+        for k, info in breakdown["member_map"].items():
+            name = "You" if info["is_me"] else info["name"]
+            line_series.append({"label": name,
+                                 "values": [round(v, 2) for v in bucket_by_key[k]]})
+        spending_over_time = {"labels": labels, "series": line_series}
+
+    # Tag distribution (bar chart)
+    tag_dist = None
+    if non_settlement:
+        from budget.models import Expense as _Exp
+        feuser_owned_pks = [
+            ed["expense"].pk for ed in non_settlement
+            if not ed["expense"].is_dummy and ed["expense"].owning_feuser_id == feuser.pk
+        ]
+        expense_tag_map: dict = {}
+        for exp_obj in _Exp.objects.filter(pk__in=feuser_owned_pks).prefetch_related("tags"):
+            expense_tag_map[exp_obj.pk] = [t.title for t in exp_obj.tags.all()]
+
+        tag_amounts: dict = {}
+        for ed in non_settlement:
+            exp = ed["expense"]
+            is_owner = not exp.is_dummy and exp.owning_feuser_id == feuser.pk
+            is_participant = any(s["is_me"] for s in ed["participant_shares"])
+            if not is_owner and not is_participant:
+                continue
+            if is_owner:
+                tags = expense_tag_map.get(exp.pk, [])
+            else:
+                tags = overlay_tags.get(exp.pk, [])
+            amount = float(ed["total"])
+            if tags:
+                for title in tags:
+                    tag_amounts[title] = tag_amounts.get(title, 0.0) + amount
+            else:
+                tag_amounts["(untagged)"] = tag_amounts.get("(untagged)", 0.0) + amount
+
+        if tag_amounts:
+            tagged = sorted(
+                ((k, v) for k, v in tag_amounts.items() if k != "(untagged)"),
+                key=lambda x: -x[1],
+            )
+            untagged = [(k, v) for k, v in tag_amounts.items() if k == "(untagged)"]
+            sorted_tags = tagged + untagged
+            tag_dist = {
+                "labels": [t[0] for t in sorted_tags],
+                "values": [round(t[1], 2) for t in sorted_tags],
+            }
+
+    return {
+        "spending_pie": spending_pie,
+        "spending_over_time": spending_over_time,
+        "tag_dist": tag_dist,
+        "group_total_spending": str(project_total.quantize(Decimal("0.01"))),
+    }
+
+
+@feuser_required
+def project_charts_data(request, project_id):
+    """AJAX endpoint: returns chart data for a project, filtered by date range."""
+    feuser = request.feuser
+    project = get_object_or_404(
+        Project.objects.prefetch_related("members__feuser", "members__dummy"),
+        uid=project_id,
+        members__feuser=feuser,
+    )
+
+    start_date = None
+    end_date = None
+    date_from_raw = request.GET.get("date_from")
+    date_to_raw   = request.GET.get("date_to")
+    if date_from_raw and date_to_raw:
+        try:
+            from datetime import date as _date_cls
+            start_date = _date_cls.fromisoformat(date_from_raw)
+            end_date   = _date_cls.fromisoformat(date_to_raw)
+        except ValueError:
+            pass
+
+    data = _compute_project_charts(feuser, project, start_date, end_date)
+    return JsonResponse(data)
 
 
 _SORT_FIELD_MAP = {
@@ -536,6 +587,17 @@ def project_expense_list_partial(request, project_id):
     sort_by = request.GET.get("sort_by", "date")
     sort_dir = request.GET.get("sort_dir", "desc")
 
+    start_date = None
+    end_date   = None
+    date_from_raw = request.GET.get("date_from", "").strip()
+    date_to_raw   = request.GET.get("date_to", "").strip()
+    if date_from_raw and date_to_raw:
+        try:
+            start_date = date.fromisoformat(date_from_raw)
+            end_date   = date.fromisoformat(date_to_raw)
+        except ValueError:
+            pass
+
     # Build effective query string including hide_recurring toggle
     effective_q = q
     if hide_recurring:
@@ -560,6 +622,12 @@ def project_expense_list_partial(request, project_id):
 
     if matching_pks is not None:
         expenses_data = [ed for ed in expenses_data if ed["expense"].pk in matching_pks]
+    if start_date and end_date:
+        def _in_range(ed):
+            exp = ed["expense"]
+            d = exp.date_due if exp.date_due else exp.date_created.date()
+            return start_date <= d <= end_date
+        expenses_data = [ed for ed in expenses_data if _in_range(ed)]
     if i_paid:
         expenses_data = [ed for ed in expenses_data if ed["payer_is_me"]]
 

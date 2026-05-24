@@ -62,15 +62,16 @@ def build_shared_qs(feuser, start, end):
         output_field=DecimalField(),
     )
 
+    base_filter = (
+        (Q(owning_feuser=feuser) | Q(buddy_spendings__participant_feuser=feuser))
+        & Q(deactivated=False, is_buddies_settlement=False)
+    )
+    if start is not None and end is not None:
+        base_filter &= Q(date_due__gte=start, date_due__lte=end)
+
     return (
         Expense.objects
-        .filter(
-            Q(owning_feuser=feuser) | Q(buddy_spendings__participant_feuser=feuser),
-            date_due__gte=start,
-            date_due__lte=end,
-            deactivated=False,
-            is_buddies_settlement=False,
-        )
+        .filter(base_filter)
         .distinct()
         .annotate(_my_share=my_share_subq, _has_any=has_any_subq, _total_shared_pct=total_shared_pct_subq)
         .annotate(

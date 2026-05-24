@@ -1,0 +1,11 @@
+{% if direct_expense_data %}
+<div class="buddy-expense-list">
+    {% for e in direct_expense_data %}
+    {% include "buddies/_expense_row.html" with exp=e.expense e=e bexp_color_class=e.payer_is_me|yesno:"bexp-card-i-paid,bexp-card-other-paid" %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No direct shared expenses in this period. Add a buddy on <a href="{% url 'buddies:my_buddies' %}">My Buddies</a>, then check "This is a buddy payment" when creating an expense.</p>
+</div>
+{% endif %}

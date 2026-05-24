@@ -17,7 +17,7 @@ from ..decorators import feuser_required
 from ..forms import ExpenseForm, ExpenseOverlayForm
 from ..models import Category, Expense, ExpenseDataOverlay, Tag, TransactionType
 from ..notifications import send_settled_notification, set_initial_notification_class
-from ._period import _get_month, _get_period_mode, _get_year, _month_nav_context, _year_nav_context
+from ._period import _get_month, _get_period_mode, _get_year, _date_range_presets_context
 from ._sharing import has_buddy_or_multiuser_project
 
 
@@ -160,15 +160,6 @@ def _safe_back_url(url):
 @feuser_required
 def expenses_list(request):
     feuser = request.feuser
-    mode = _get_period_mode(request)
-
-    if mode == "year":
-        year = _get_year(request, feuser.month_start_day, feuser.month_start_prev)
-        nav_ctx = _year_nav_context(year, feuser.month_start_day, feuser.month_start_prev)
-    else:
-        year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
-        nav_ctx = _month_nav_context(year, month, feuser.month_start_day, feuser.month_start_prev)
-
     categories = list(
         Category.objects.filter(owning_feuser=feuser).order_by("title").values("uid", "title")
     )
@@ -180,24 +171,37 @@ def expenses_list(request):
         "nav_show_sharing_toggle": has_buddy_or_multiuser_project(feuser),
         "categories_json": mark_safe(json.dumps(categories)),
         "tags_json": mark_safe(json.dumps(tags)),
+        "initial_date_from": request.GET.get("date_from", ""),
+        "initial_date_to": request.GET.get("date_to", ""),
     }
-    ctx.update(nav_ctx)
+    ctx.update(_date_range_presets_context(feuser))
     return render(request, "budget/expenses_list.html", ctx)
 
 
 @feuser_required
 def expenses_export(request):
     feuser = request.feuser
-    mode = _get_period_mode(request)
+    date_from_raw = request.GET.get("date_from")
+    date_to_raw   = request.GET.get("date_to")
 
-    if mode == "year":
-        year = _get_year(request, feuser.month_start_day, feuser.month_start_prev)
-        start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
-        label = str(year)
-    else:
-        year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
-        start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
-        label = date(year, month, 1).strftime("%B_%Y")
+    if date_from_raw and date_to_raw:
+        try:
+            start = date.fromisoformat(date_from_raw)
+            end   = date.fromisoformat(date_to_raw)
+            label = f"{start.isoformat()}_to_{end.isoformat()}"
+        except ValueError:
+            date_from_raw = None
+
+    if not date_from_raw or not date_to_raw:
+        mode = _get_period_mode(request)
+        if mode == "year":
+            year = _get_year(request, feuser.month_start_day, feuser.month_start_prev)
+            start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
+            label = str(year)
+        else:
+            year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
+            start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+            label = date(year, month, 1).strftime("%B_%Y")
 
     expenses = (
         Expense.objects.filter(

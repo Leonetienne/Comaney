@@ -11,14 +11,11 @@
 
 {% block content %}
 <h1 class="mb-1">Dashboard</h1>
-{% include "partials/_month_nav.html" %}
+{% include "partials/_date_range_nav.html" %}
 
 <script>
 window.DASHBOARD_CONFIG = {
     currency:             "{{ current_feuser.currency|escapejs }}",
-    year:                 "{{ nav_year }}",
-    month:                "{{ nav_month|default:'' }}",
-    mode:                 "{{ nav_mode }}",
     urlCards:             "{% url 'budget:dashboard_cards' %}?dashboard_id={{ current_dashboard.pk }}",
     urlReorder:           "{% url 'budget:dashboard_cards_reorder' %}",
     urlPresets:           "{% url 'budget:dashboard_card_presets' %}",

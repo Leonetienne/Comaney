@@ -68,7 +68,7 @@ from decimal import Decimal, InvalidOperation
 import yaml
 from django.db.models import Case, DecimalField, F, Sum, When
 
-from .query_parser import apply_query
+from .query_parser import apply_query, has_date_filter
 
 VALID_TYPES = {'cell', 'bar-chart', 'pie-chart', 'list', 'line-chart', 'spacer'}
 VALID_HIDE_ON = {'', 'mobile', 'desktop'}
@@ -335,6 +335,19 @@ def compute_card_data(config: dict, period_qs, feuser, period_info: dict = None,
     required for line-chart cards.
     value_field: 'value' for personal mode, 'effective_value' for shared mode.
     """
+    # If the card's own query contains date operators, use an unfiltered queryset
+    # so the card's date range overrides the UI date range.
+    if has_date_filter(config.get('query', '')):
+        if value_field == 'effective_value':
+            from .views._sharing import build_shared_qs
+            period_qs = build_shared_qs(feuser, None, None)
+        else:
+            period_qs = period_qs.model.objects.filter(
+                owning_feuser=feuser,
+                deactivated=False,
+                is_dummy=False,
+            )
+
     card_type = config['type']
 
     if card_type == 'spacer':

@@ -1,5 +1,9 @@
 import Alpine from 'alpinejs';
 import Chart from 'chart.js/auto';
+import dateRange from './date-range.js';
+
+// Expose singleton for the date-range-nav partial inline script
+window._dateRange = dateRange;
 import { EditorView, basicSetup } from 'codemirror';
 import { Compartment, EditorState } from '@codemirror/state';
 import { yaml } from '@codemirror/lang-yaml';
@@ -47,11 +51,10 @@ function dashboardBoard() {
         isFirstDashboard: false,
         dashboards:       [],   // [{id, title, sorting, url}]
 
-        // Period
-        periodYear:    '',
-        periodMonth:   '',
-        periodMode:    '',
-        sharingMode:   '',
+        // Date range
+        dateFrom:    '',
+        dateTo:      '',
+        sharingMode: '',
 
         // Edit modal
         editCard:   null,
@@ -121,13 +124,21 @@ function dashboardBoard() {
             this.dashboardId       = cfg.dashboardId;
             this.isFirstDashboard  = cfg.isFirstDashboard;
             this.dashboards        = cfg.dashboards || [];
-            this.periodYear        = cfg.year;
-            this.periodMonth       = cfg.month;
-            this.periodMode        = cfg.mode;
             this.sharingMode       = this.$store.sharing.mode;
             this.csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+            const cur = dateRange.get();
+            this.dateFrom = cur.from;
+            this.dateTo   = cur.to;
+
             this.$watch('$store.sharing.mode', mode => {
                 this.sharingMode = mode;
+                this.fetchCards();
+            });
+
+            window.addEventListener('daterangechange', (e) => {
+                this.dateFrom = e.detail.from;
+                this.dateTo   = e.detail.to;
                 this.fetchCards();
             });
 
@@ -157,16 +168,16 @@ function dashboardBoard() {
             dashGrid.style.setProperty('--dash-row-h', ROW_H + 'px');
         },
 
-        // ── Period query params ────────────────────────────────────────────────
+        // ── Date range query params ────────────────────────────────────────────
         get _periodParams() {
-            const p = new URLSearchParams({ year: this.periodYear });
-            if (this.periodMode === 'year') p.set('view', 'year');
-            else p.set('month', this.periodMonth);
+            const p = new URLSearchParams();
+            p.set('date_from', this.dateFrom);
+            p.set('date_to',   this.dateTo);
             if (this.sharingMode === 'shared') p.set('sharing', 'shared');
             return p.toString();
         },
 
-        // Build the URL for a tab, preserving current period params
+        // Build the URL for a tab, preserving current date range params
         _tabUrl(tab) {
             const qs = this._periodParams;
             return tab.url + (qs ? '?' + qs : '');
@@ -175,9 +186,6 @@ function dashboardBoard() {
         // ── Navigation helper ─────────────────────────────────────────────────
         _navTo(url) {
             if (!url) return;
-            if (this.periodMode === 'year') {
-                url += (url.includes('?') ? '&' : '?') + 'view=year';
-            }
             window.location.href = url;
         },
 

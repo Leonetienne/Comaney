@@ -137,6 +137,7 @@ function renderProjectCharts() {
     _renderBar(cfg.tagDist, cfg.currency);
 }
 
+window.renderProjectCharts = renderProjectCharts;
 document.addEventListener('DOMContentLoaded', renderProjectCharts);
 
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {

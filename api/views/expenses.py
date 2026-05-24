@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from budget.date_utils import financial_month_range, financial_year_range
 from budget.models import Expense, TransactionType
-from budget.query_parser import apply_query
+from budget.query_parser import apply_query, has_date_filter
 from budget.notifications import send_settled_notification, set_initial_notification_class
 from budget.views._sharing import build_shared_qs
 from ..serializers import _expense_json, _apply_expense_fields, _set_tags
@@ -16,12 +16,23 @@ from ..utils import _err, _ok, _parse_body, _parse_month, _require_auth
 @_require_auth
 def expenses(request, feuser):
     if request.method == "GET":
-        year, month = _parse_month(request, feuser)
-        view = request.GET.get("view")
-        if view == "year":
-            start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
+        date_from_raw = request.GET.get("date_from")
+        date_to_raw   = request.GET.get("date_to")
+        q_str = request.GET.get("q", "")
+
+        if date_from_raw and date_to_raw:
+            try:
+                start = date.fromisoformat(date_from_raw)
+                end   = date.fromisoformat(date_to_raw)
+            except ValueError:
+                return _err("Invalid date_from or date_to.")
         else:
-            start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+            year, month = _parse_month(request, feuser)
+            view = request.GET.get("view")
+            if view == "year":
+                start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
+            else:
+                start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
 
         sharing = request.GET.get("sharing", "")
         shared_mode = sharing == "shared"
@@ -38,9 +49,13 @@ def expenses(request, feuser):
         if sort_dir == "desc":
             sort_field = "-" + sort_field
 
+        date_filtered_by_query = has_date_filter(q_str)
+        eff_start = None if date_filtered_by_query else start
+        eff_end   = None if date_filtered_by_query else end
+
         if shared_mode:
             qs = (
-                build_shared_qs(feuser, start, end)
+                build_shared_qs(feuser, eff_start, eff_end)
                 .select_related("category", "project", "owning_feuser", "upfront_payee_dummy")
                 .prefetch_related(
                     "tags",
@@ -50,9 +65,10 @@ def expenses(request, feuser):
                 .order_by(sort_field, "date_created")
             )
         else:
+            date_filter = {} if date_filtered_by_query else {"date_due__gte": start, "date_due__lte": end}
             qs = (
                 Expense.objects
-                .filter(owning_feuser=feuser, date_due__gte=start, date_due__lte=end, is_dummy=False)
+                .filter(owning_feuser=feuser, is_dummy=False, **date_filter)
                 .select_related("category", "project")
                 .prefetch_related(
                     "tags",
@@ -62,7 +78,7 @@ def expenses(request, feuser):
                 .order_by(sort_field, "date_created")
             )
 
-        qs = apply_query(qs, request.GET.get("q", ""), feuser=feuser)
+        qs = apply_query(qs, q_str, feuser=feuser)
         expenses = list(qs)
 
         overlays = {}
@@ -86,7 +102,7 @@ def expenses(request, feuser):
             )
             for e in expenses
         ]
-        return _ok({"year": year, "month": month, "expenses": expenses_json})
+        return _ok({"expenses": expenses_json})
 
     if request.method == "POST":
         data = _parse_body(request)

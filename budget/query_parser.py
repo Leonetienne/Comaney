@@ -390,3 +390,8 @@ def apply_query(qs, query_str: str, feuser=None):
     if not s:
         return qs
     return qs.filter(_compile(_tokenize(s.lower()), qs.model, feuser=feuser)).distinct()
+
+
+def has_date_filter(query_str: str) -> bool:
+    """Return True if the query contains any date comparison operator."""
+    return bool(re.search(r'\bdate\s*(?:==|[<>]=?)', query_str or ''))

@@ -52,13 +52,24 @@ def _period_qs(request, feuser):
     Returns (queryset, period_info) where period_info is
     {'start': date, 'end': date, 'mode': 'month'|'year', 'sharing': str}.
     """
-    mode = _get_period_mode(request)
-    if mode == 'year':
-        year = _get_year(request, feuser.month_start_day, feuser.month_start_prev)
-        start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
-    else:
-        year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
-        start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
+    from datetime import date as _date
+    date_from_raw = request.GET.get('date_from')
+    date_to_raw   = request.GET.get('date_to')
+    if date_from_raw and date_to_raw:
+        try:
+            start = _date.fromisoformat(date_from_raw)
+            end   = _date.fromisoformat(date_to_raw)
+            mode  = 'month'  # treat as month-resolution for line-chart buckets
+        except ValueError:
+            date_from_raw = None  # fall through to old logic
+    if not date_from_raw or not date_to_raw:
+        mode = _get_period_mode(request)
+        if mode == 'year':
+            year = _get_year(request, feuser.month_start_day, feuser.month_start_prev)
+            start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
+        else:
+            year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
+            start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
 
     sharing = request.GET.get('sharing', '')
     if sharing == 'shared':

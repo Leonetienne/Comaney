@@ -1,4 +1,8 @@
 import Alpine from 'alpinejs';
+import dateRange from './date-range.js';
+
+// Expose singleton for the date-range-nav partial inline script
+window._dateRange = dateRange;
 
 function expenseList() {
     return {
@@ -20,9 +24,8 @@ function expenseList() {
         _xhr: null,
 
         apiUrl: '',
-        periodYear: '',
-        periodMonth: '',
-        periodMode: '',
+        dateFrom: '',
+        dateTo: '',
         sharingMode: '',
         currency: '',
         urlEdit: '',
@@ -37,9 +40,6 @@ function expenseList() {
         init() {
             const cfg = window.EXPENSE_CONFIG;
             this.apiUrl       = cfg.apiUrl;
-            this.periodYear   = cfg.year;
-            this.periodMonth  = cfg.month;
-            this.periodMode   = cfg.mode;
             this.sharingMode  = this.$store.sharing.mode;
             this.currency     = cfg.currency;
             this.$watch('$store.sharing.mode', mode => {
@@ -56,9 +56,18 @@ function expenseList() {
             this.tags         = cfg.tags || [];
             this.categories   = cfg.categories || [];
             this.csrf = document.querySelector('meta[name="csrf-token"]').content;
-            this.exportHref = this.periodMode === 'year'
-                ? this.urlExport + '?view=year&year=' + this.periodYear
-                : this.urlExport + '?year=' + this.periodYear + '&month=' + this.periodMonth;
+
+            const cur = dateRange.get();
+            this.dateFrom = cur.from;
+            this.dateTo   = cur.to;
+            this._updateExportHref();
+
+            window.addEventListener('daterangechange', (e) => {
+                this.dateFrom = e.detail.from;
+                this.dateTo   = e.detail.to;
+                this._updateExportHref();
+                this.fetchExpenses();
+            });
 
             const urlSearch = new URLSearchParams(window.location.search).get('search');
             if (urlSearch !== null) {
@@ -116,15 +125,18 @@ function expenseList() {
             }, 200);
         },
 
+        _updateExportHref() {
+            this.exportHref = this.urlExport
+                + '?date_from=' + encodeURIComponent(this.dateFrom)
+                + '&date_to='   + encodeURIComponent(this.dateTo);
+        },
+
         fetchExpenses() {
             if (this._xhr) { this._xhr.abort(); }
             this.fetching = true;
-            const p = new URLSearchParams({ year: this.periodYear });
-            if (this.periodMode === 'year') {
-                p.set('view', 'year');
-            } else {
-                p.set('month', this.periodMonth);
-            }
+            const p = new URLSearchParams();
+            p.set('date_from', this.dateFrom);
+            p.set('date_to',   this.dateTo);
             if (this.query) p.set('q', this.query);
             if (this.sharingMode === 'shared') p.set('sharing', 'shared');
             p.set('sort_by', this.sortBy);
@@ -208,9 +220,9 @@ function expenseList() {
         deleteUrl(id)   { return this.urlDelete.replace('/1/',   '/' + id + '/'); },
 
         backUrl() {
-            return this.periodMode === 'year'
-                ? this.urlExpenses + '?year=' + this.periodYear + '&view=year'
-                : this.urlExpenses + '?year=' + this.periodYear + '&month=' + this.periodMonth;
+            return this.urlExpenses
+                + '?date_from=' + encodeURIComponent(this.dateFrom)
+                + '&date_to='   + encodeURIComponent(this.dateTo);
         },
 
         encodedBackUrl() { return encodeURIComponent(this.backUrl()); },

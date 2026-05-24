@@ -1,0 +1,273 @@
+<script>
+window.DATE_RANGE_CONFIG = {
+    presets:     {{ date_range_presets_json }},
+    defaultFrom: "{{ date_range_default_from }}",
+    defaultTo:   "{{ date_range_default_to }}",
+};
+</script>
+
+<div class="date-range-nav" id="date-range-nav">
+    <div class="date-range-nav__main">
+
+        {# ── Left col: preset dropdown + date inputs ────────────────────── #}
+        <div class="date-range-nav__left">
+            <div class="date-range-nav__preset-wrap">
+                <label class="date-range-nav__label" for="date-range-preset">Preset</label>
+                <div class="date-range-nav__select-wrap">
+                    <button type="button" class="date-range-nav__arrow-btn" id="date-range-prev" disabled>&#8249;</button>
+                    <select id="date-range-preset" class="date-range-nav__preset-select">
+                        <option value="">Custom</option>
+                        <option value="prev_fin_month"></option>
+                        <option value="cur_fin_month"></option>
+                        <option value="next_fin_month"></option>
+                        <option value="prev_year"></option>
+                        <option value="cur_year"></option>
+                        <option value="next_year"></option>
+                        <option value="q1">Q1</option>
+                        <option value="q2">Q2</option>
+                        <option value="q3">Q3</option>
+                        <option value="q4">Q4</option>
+                    </select>
+                    <button type="button" class="date-range-nav__arrow-btn" id="date-range-next" disabled>&#8250;</button>
+                </div>
+            </div>
+
+            <div class="date-range-nav__inputs">
+                <div class="date-range-nav__input-group">
+                    <label class="date-range-nav__label" for="date-range-from">Start</label>
+                    <input type="date" id="date-range-from" class="date-range-nav__input"
+                           value="{{ initial_date_from }}">
+                </div>
+                <div class="date-range-nav__input-group">
+                    <label class="date-range-nav__label" for="date-range-to">End</label>
+                    <input type="date" id="date-range-to" class="date-range-nav__input"
+                           value="{{ initial_date_to }}">
+                </div>
+                <button type="button" class="date-range-nav__clear-btn" id="date-range-clear">Reset</button>
+            </div>
+        </div>
+
+        {# ── Right col: display mode (dashboard only) ───────────────────── #}
+        {% if nav_show_sharing_toggle %}
+        <div class="date-range-nav__right">
+            <span class="date-range-nav__label"
+                  title="Personal: only your own expenses. Shared: combined view including expenses shared with buddies.">Display mode</span>
+            <div class="date-range-nav__sharing" x-data>
+                <div class="period-toggle">
+                    <button type="button"
+                            class="period-toggle__opt"
+                            :class="{ active: $store.sharing.mode !== 'shared' }"
+                            @click="$store.sharing.set('personal')">Personal</button>
+                    <button type="button"
+                            class="period-toggle__opt"
+                            :class="{ active: $store.sharing.mode === 'shared' }"
+                            @click="$store.sharing.set('shared')">Shared</button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<script>
+(function() {
+    var cfg     = window.DATE_RANGE_CONFIG;
+    var presets = cfg.presets;
+
+    var presetSelect = document.getElementById('date-range-preset');
+    var fromInput    = document.getElementById('date-range-from');
+    var toInput      = document.getElementById('date-range-to');
+    var clearBtn     = document.getElementById('date-range-clear');
+    var prevBtn      = document.getElementById('date-range-prev');
+    var nextBtn      = document.getElementById('date-range-next');
+
+    // Persistent navigation mode: 'fin_month' | 'cal_year' | 'quarter' | null
+    // Survives trips into custom date territory AND page reloads.
+    // Only reset to null when the user explicitly picks Custom or edits dates manually.
+    var _currentMode = null;
+
+    // Prevents the daterangechange listener from clobbering _currentMode when
+    // the event was dispatched by our own _apply (dispatchEvent is synchronous).
+    var _selfChange = false;
+
+    var _MODE_KEY = 'comaney_nav_mode';
+
+    function _saveMode(mode) {
+        try {
+            if (mode) localStorage.setItem(_MODE_KEY, mode);
+            else      localStorage.removeItem(_MODE_KEY);
+        } catch (_) {}
+    }
+
+    function _readMode() {
+        try { return localStorage.getItem(_MODE_KEY) || null; } catch (_) { return null; }
+    }
+
+    // Fill option labels from server-generated preset data
+    if (presetSelect) {
+        presetSelect.querySelectorAll('option[value]').forEach(function(opt) {
+            var k = opt.value;
+            if (k && presets[k]) opt.textContent = presets[k].label;
+        });
+    }
+
+    function _activePreset(from, to) {
+        for (var key in presets) {
+            if (presets[key].from === from && presets[key].to === to) return key;
+        }
+        return null;
+    }
+
+    function _presetMode(key) {
+        if (!key) return null;
+        if (key === 'prev_fin_month' || key === 'cur_fin_month' || key === 'next_fin_month') return 'fin_month';
+        if (key === 'prev_year'      || key === 'cur_year'      || key === 'next_year')      return 'cal_year';
+        if (key === 'q1' || key === 'q2' || key === 'q3' || key === 'q4')                   return 'quarter';
+        return null;
+    }
+
+    function _addMonths(dateStr, n) {
+        var d = new Date(dateStr + 'T12:00:00');
+        d.setMonth(d.getMonth() + n);
+        return d.toISOString().slice(0, 10);
+    }
+
+    function _addYears(dateStr, n) {
+        var d = new Date(dateStr + 'T12:00:00');
+        d.setFullYear(d.getFullYear() + n);
+        return d.toISOString().slice(0, 10);
+    }
+
+    // Last day of the period starting at fromStr spanning n months
+    function _endFromStart(fromStr, n) {
+        var d = new Date(fromStr + 'T12:00:00');
+        d.setMonth(d.getMonth() + n);
+        d.setDate(d.getDate() - 1);
+        return d.toISOString().slice(0, 10);
+    }
+
+    // Shift date range by dir (-1 or +1) using the persistent _currentMode
+    function _shiftRange(from, to, dir) {
+        if (!_currentMode) return null;
+        var newFrom, newTo;
+        if (_currentMode === 'fin_month') {
+            newFrom = _addMonths(from, dir);
+            newTo   = _endFromStart(newFrom, 1);
+        } else if (_currentMode === 'cal_year') {
+            newFrom = _addYears(from, dir);
+            newTo   = _addYears(to, dir);
+        } else if (_currentMode === 'quarter') {
+            newFrom = _addMonths(from, dir * 3);
+            newTo   = _endFromStart(newFrom, 3);
+        }
+        return { from: newFrom, to: newTo };
+    }
+
+    function _updateSelect(from, to) {
+        if (!presetSelect) return;
+        presetSelect.value = _activePreset(from, to) || '';
+    }
+
+    function _updateInputs(from, to) {
+        if (fromInput && fromInput.value !== from) fromInput.value = from;
+        if (toInput   && toInput.value   !== to)   toInput.value   = to;
+    }
+
+    function _updateArrows() {
+        var on = !!_currentMode;
+        if (prevBtn) prevBtn.disabled = !on;
+        if (nextBtn) nextBtn.disabled = !on;
+    }
+
+    function _apply(from, to) {
+        _selfChange = true;
+        window._dateRange.set(from, to);
+        _selfChange = false;
+        _updateSelect(from, to);
+        _updateInputs(from, to);
+        _updateArrows();
+    }
+
+    // Preset dropdown — sets mode from the chosen preset key; Custom clears it
+    if (presetSelect) {
+        presetSelect.addEventListener('change', function() {
+            var k = presetSelect.value;
+            if (k && presets[k]) {
+                _currentMode = _presetMode(k);
+                _saveMode(_currentMode);
+                _apply(presets[k].from, presets[k].to);
+            } else {
+                _currentMode = null;
+                _saveMode(null);
+                _updateArrows();
+            }
+        });
+    }
+
+    // Arrow buttons — navigate using _currentMode; mode stays unchanged
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function() {
+            var cur     = window._dateRange.get();
+            var shifted = _shiftRange(cur.from, cur.to, -1);
+            if (shifted) _apply(shifted.from, shifted.to);
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function() {
+            var cur     = window._dateRange.get();
+            var shifted = _shiftRange(cur.from, cur.to, 1);
+            if (shifted) _apply(shifted.from, shifted.to);
+        });
+    }
+
+    // Manual date inputs — user is going custom; clear mode
+    function _onInput() {
+        var f = fromInput ? fromInput.value : '';
+        var t = toInput   ? toInput.value   : '';
+        if (f && t) {
+            _currentMode = null;
+            _saveMode(null);
+            _apply(f, t);
+        }
+    }
+    if (fromInput) fromInput.addEventListener('change', _onInput);
+    if (toInput)   toInput.addEventListener('change', _onInput);
+
+    // Reset button — restore default and re-detect mode from the resulting range
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            window._dateRange.clear();
+            var cur = window._dateRange.get();
+            _currentMode = _presetMode(_activePreset(cur.from, cur.to));
+            _saveMode(_currentMode);
+            _updateSelect(cur.from, cur.to);
+            _updateInputs(cur.from, cur.to);
+            _updateArrows();
+        });
+    }
+
+    // External changes (another component on the same page) — re-detect mode.
+    // Skip events we fired ourselves; _selfChange is true during _apply().
+    window.addEventListener('daterangechange', function(e) {
+        if (_selfChange) return;
+        _currentMode = _presetMode(_activePreset(e.detail.from, e.detail.to));
+        _saveMode(_currentMode);
+        _updateSelect(e.detail.from, e.detail.to);
+        _updateInputs(e.detail.from, e.detail.to);
+        _updateArrows();
+    });
+
+    // Init on load — prefer detected preset; fall back to persisted mode so
+    // arrows survive page reloads while in custom territory.
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window._dateRange) {
+            var cur = window._dateRange.get();
+            _currentMode = _presetMode(_activePreset(cur.from, cur.to)) || _readMode();
+            _updateSelect(cur.from, cur.to);
+            _updateInputs(cur.from, cur.to);
+            _updateArrows();
+        }
+    });
+})();
+</script>

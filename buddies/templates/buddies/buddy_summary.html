@@ -12,6 +12,10 @@
 </div>
 <div class="desc-surface"><p class="page-subtitle" style="margin:0;">All expenses involving you and a buddy. This does not cover expenses in projects!</p></div>
 
+{% load static %}
+<script src="{% static 'dist/project_detail.js' %}" defer></script>
+{% include "partials/_date_range_nav.html" %}
+
 {% if messages %}
 {% for message in messages %}
 <div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message|safe }}</div>
@@ -422,22 +426,84 @@
 <section class="buddies-section">
     <h2>One-on-one expenses</h2>
     <p class="bgs-section-note">Only expenses shared directly between you and one other person appear here. Project expenses live on each projects page.</p>
-    {% if direct_expense_data %}
-    <div class="buddy-expense-list">
-        {% for e in direct_expense_data %}
-        {% include "buddies/_expense_row.html" with exp=e.expense e=e bexp_color_class=e.payer_is_me|yesno:"bexp-card-i-paid,bexp-card-other-paid" %}
-        {% endfor %}
+    <div class="exp-filter-panel" style="margin-bottom:1.25rem;">
+        <div class="exp-controls">
+            <input type="text" id="buddy-exp-search" class="exp-search"
+                   placeholder="Search… groceries  type=expense  value&lt;100  settled=yes"
+                   autocomplete="off">
+        </div>
+        <div class="exp-toolbar">
+            <div class="exp-toolbar-left">
+                <label class="exp-filter-checkbox">
+                    <input type="checkbox" id="buddy-exp-hide-recurring">
+                    Hide recurring
+                </label>
+            </div>
+            <div class="exp-toolbar-right">
+                <label class="exp-sort-label">Sort by</label>
+                <select id="buddy-exp-sort-by" class="expense-toolbar-dropdown">
+                    <option value="date">Date</option>
+                    <option value="title">Title</option>
+                    <option value="value">Value</option>
+                </select>
+                <select id="buddy-exp-sort-dir" class="expense-toolbar-dropdown">
+                    <option value="desc">Desc</option>
+                    <option value="asc">Asc</option>
+                </select>
+            </div>
+        </div>
+        <a href="https://github.com/Leonetienne/Comaney#advanced-search-filters" target="_blank" rel="noopener" class="search-hint-link">Advanced search filters</a>
     </div>
-    {% else %}
-    <div class="empty-state">
-        <p>No direct shared expenses yet. Add a buddy on <a href="{% url 'buddies:my_buddies' %}">My Buddies</a>, then check "This is a buddy payment" when creating an expense.</p>
-    </div>
-    {% endif %}
+    <div id="buddy-direct-exp-container"></div>
 </section>
 
-{% if not my_groups_summary and not direct_expense_data %}
-<div class="buddies-onboarding-hint">
-    <strong>No shared expenses yet.</strong> Add a buddy on <a href="{% url 'buddies:my_buddies' %}">My Buddies</a>, then check "This is a buddy payment" when creating an expense.
-</div>
-{% endif %}
+<script>
+(function() {
+    var PARTIAL_URL = "{% url 'buddies:direct_expense_list_partial' %}";
+    var container  = document.getElementById('buddy-direct-exp-container');
+    var searchEl   = document.getElementById('buddy-exp-search');
+    var hideRecEl  = document.getElementById('buddy-exp-hide-recurring');
+    var sortByEl   = document.getElementById('buddy-exp-sort-by');
+    var sortDirEl  = document.getElementById('buddy-exp-sort-dir');
+    var _xhr = null;
+    var _debounce = null;
+
+    function fetchList() {
+        if (_xhr) _xhr.abort();
+        var dr = window._dateRange ? window._dateRange.get() : { from: '', to: '' };
+        var params = new URLSearchParams({
+            date_from:     dr.from,
+            date_to:       dr.to,
+            q:             searchEl.value,
+            hide_recurring: hideRecEl.checked ? '1' : '0',
+            sort_by:       sortByEl.value,
+            sort_dir:      sortDirEl.value,
+        });
+        var xhr = new XMLHttpRequest();
+        _xhr = xhr;
+        container.style.opacity = '0.5';
+        xhr.open('GET', PARTIAL_URL + '?' + params.toString(), true);
+        xhr.onload = function() {
+            _xhr = null;
+            container.style.opacity = '';
+            if (xhr.status === 200) container.innerHTML = xhr.responseText;
+        };
+        xhr.onerror = function() { _xhr = null; container.style.opacity = ''; };
+        xhr.onabort = function() { _xhr = null; container.style.opacity = ''; };
+        xhr.send();
+    }
+
+    function debouncedFetch() {
+        clearTimeout(_debounce);
+        _debounce = setTimeout(fetchList, 250);
+    }
+
+    searchEl.addEventListener('input', debouncedFetch);
+    hideRecEl.addEventListener('change', fetchList);
+    sortByEl.addEventListener('change', fetchList);
+    sortDirEl.addEventListener('change', fetchList);
+    window.addEventListener('daterangechange', fetchList);
+    document.addEventListener('DOMContentLoaded', fetchList);
+})();
+</script>
 {% endblock %}
