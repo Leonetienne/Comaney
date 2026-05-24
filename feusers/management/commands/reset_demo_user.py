@@ -26,20 +26,23 @@ class Command(BaseCommand):
 
         demo_users = FeUser.objects.filter(is_demo=True)
 
-        # Check condition on any demo user: last_seen not null and older than one week.
-        cutoff = timezone.now() - timedelta(weeks=1)
-        seen_recently = demo_users.filter(last_seen__isnull=False, last_seen__gt=cutoff)
-        never_seen = demo_users.filter(last_seen__isnull=True)
-        triggered = demo_users.filter(last_seen__isnull=False, last_seen__lte=cutoff)
+        if not demo_users.exists():
+            self.stdout.write("No demo user found — creating one.")
+        else:
+            # Only reset once the last active demo user has been inactive for a week.
+            cutoff = timezone.now() - timedelta(weeks=1)
+            seen_recently = demo_users.filter(last_seen__isnull=False, last_seen__gt=cutoff)
+            never_seen = demo_users.filter(last_seen__isnull=True)
+            triggered = demo_users.filter(last_seen__isnull=False, last_seen__lte=cutoff)
 
-        if not triggered.exists():
-            if never_seen.exists() and not seen_recently.exists():
-                self.stdout.write("Demo user exists but has never been seen — skipping reset.")
-            else:
-                self.stdout.write("No demo user due for reset yet — skipping.")
-            return
+            if not triggered.exists():
+                if never_seen.exists() and not seen_recently.exists():
+                    self.stdout.write("Demo user exists but has never been seen — skipping reset.")
+                else:
+                    self.stdout.write("No demo user due for reset yet — skipping.")
+                return
 
-        self.stdout.write("Condition met — resetting all demo users.")
+            self.stdout.write("Condition met — resetting all demo users.")
         count, _ = demo_users.delete()
         self.stdout.write(f"Deleted {count} demo user(s).")
 
