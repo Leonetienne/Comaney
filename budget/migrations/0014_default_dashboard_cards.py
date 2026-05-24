@@ -1,9 +1,217 @@
 from django.db import migrations
 
+# Frozen snapshot of the default cards as they existed when this migration was
+# written. Deliberately NOT imported from budget.fixtures: migrations must not
+# depend on current app code, since fixtures.py's contents will keep changing
+# long after this one-time backfill has already run everywhere it needs to.
+_DEFAULT_DASHBOARD_CARDS_SNAPSHOT = [
+    {
+        "yaml": (
+            "# Shows the sum of all income entries in the selected period.\n"
+            "type: cell\n"
+            "title: Income\n"
+            "query: type=income\n"
+            "method: sum\n"
+            "color: '#1a3326e0'\n"
+            "color_lightmode: '#bbf7d0e0'\n"
+            "link: /budget/expenses/?search=type%3Dincome\n"
+            "positioning:\n"
+            "  position: 1\n"
+            "  width: 2\n"
+            "  height: 1\n"
+            "  mobile:\n"
+            "    position: 1\n"
+            "    width: 3\n"
+            "    height: 1\n"
+        ),
+    },
+    {
+        "yaml": (
+            "# Shows net savings: deposits minus withdrawals in the selected period.\n"
+            "type: cell\n"
+            "title: Savings\n"
+            "method: total\n"
+            "query: 'query: type=\"Savings deposit\" || type=\"Savings withdrawal\"'\n"
+            "color: '#0d2a4ae0'\n"
+            "color_lightmode: '#bfdbfee0'\n"
+            "link: /budget/expenses/?search=type%3D%22savings+deposit%22+%7C%7C+type%3D%22savings+withdrawal%22\n"
+            "positioning:\n"
+            "  position: 2\n"
+            "  width: 2\n"
+            "  height: 1\n"
+            "  mobile:\n"
+            "    position: 3\n"
+            "    width: 3\n"
+            "    height: 1\n"
+        ),
+    },
+    {
+        "yaml": (
+            "# Shows the sum of all settled (paid) expenses in the selected period.\n"
+            "type: cell\n"
+            "title: Paid expenses\n"
+            "query: type=expense settled=yes\n"
+            "method: sum\n"
+            "color: '#331a1de0'\n"
+            "color_lightmode: '#fecacae0'\n"
+            "link: /budget/expenses/?search=type%3Dexpense+settled%3Dyes\n"
+            "positioning:\n"
+            "  position: 3\n"
+            "  width: 2\n"
+            "  height: 1\n"
+            "  mobile:\n"
+            "    position: 2\n"
+            "    width: 3\n"
+            "    height: 1\n"
+        ),
+    },
+    {
+        "yaml": (
+            "# Shows the sum of all unsettled (unpaid) expenses in the selected period.\n"
+            "type: cell\n"
+            "title: Outstanding\n"
+            "query: type=expense settled=no\n"
+            "method: sum\n"
+            "color: '#2b1a1c'\n"
+            "color_lightmode: '#fed7aa'\n"
+            "link: /budget/expenses/?search=type%3Dexpense+settled%3Dno\n"
+            "positioning:\n"
+            "  position: 4\n"
+            "  width: 2\n"
+            "  height: 1\n"
+            "  mobile:\n"
+            "    position: 4\n"
+            "    width: 3\n"
+            "    height: 1\n"
+        ),
+    },
+    {
+        "yaml": (
+            "# Shows disposable budget: income minus expenses and net savings.\n"
+            "type: cell\n"
+            "title: Left to spend\n"
+            "method: total\n"
+            "flip_signs: true\n"
+            "color: '#1a3326e0'\n"
+            "color_lightmode: '#a7f3d0e0'\n"
+            "color_breakpoints:\n"
+            "  - less_than: 100\n"
+            "    color: '#3b2e00e0'\n"
+            "    color_lightmode: '#fef08ae0'\n"
+            "  - less_than: 10\n"
+            "    color: '#3b0a0ae0'\n"
+            "    color_lightmode: '#fecacae0'\n"
+            "positioning:\n"
+            "  position: 5\n"
+            "  width: 4\n"
+            "  height: 1\n"
+            "  mobile:\n"
+            "    position: 5\n"
+            "    width: 6\n"
+            "    height: 1\n"
+        ),
+    },
+    {
+        "yaml": (
+            "# Pie chart breaking down expenses by category in the selected period.\n"
+            "type: pie-chart\n"
+            "title: Expenses by category\n"
+            "group: categories\n"
+            "method: total\n"
+            "query: type=expense\n"
+            "link_template: /budget/expenses/?search=type%3Dexpense+cat%3D\"$GROUP_NAME\"\n"
+            "positioning:\n"
+            "  position: 6\n"
+            "  width: 6\n"
+            "  height: 4\n"
+            "  mobile:\n"
+            "    position: 6\n"
+        ),
+    },
+    {
+        "yaml": (
+            "# Horizontal bar chart showing the top 10 tags by total expense amount.\n"
+            "type: bar-chart\n"
+            "title: Expenses by tag\n"
+            "query: type=expense\n"
+            "method: total\n"
+            "group: tags\n"
+            "max_groups: 10\n"
+            "link_template: /budget/expenses/?search=type%3Dexpense+tag%3D\"$GROUP_NAME\"\n"
+            "positioning:\n"
+            "  position: 7\n"
+            "  width: 6\n"
+            "  height: 4\n"
+            "  mobile:\n"
+            "    position: 7\n"
+        ),
+    },
+    {
+        "yaml": (
+            "# Lists unsettled expenses that are due this week\n"
+            "title: Bills due this week\n"
+            "type: list\n"
+            "method: sum\n"
+            "query: type=expense settled=no date >= cur_week_start date <= cur_week_end\n"
+            "show_sum: true\n"
+            "order_by: value\n"
+            "order_dir: desc\n"
+            "positioning:\n"
+            "  height: 3\n"
+            "  position: 10\n"
+            "  width: 4\n"
+            "  mobile:\n"
+            "    height: 3\n"
+            "    position: 10\n"
+            "    width: 6\n"
+        ),
+    },
+    {
+        "yaml": (
+            "type: line-chart\n"
+            "title: Left to spend\n"
+            "method: cum\n"
+            "series:\n"
+            "- color: '#2887f3'\n"
+            "  flip_signs: true\n"
+            "  label: Left to spend\n"
+            "  link_template: /budget/expenses/?search=date>=$START_DATE+date<=$END_DATE\n"
+            "  method: total\n"
+            "positioning:\n"
+            "  height: 3\n"
+            "  mobile:\n"
+            "    height: 3\n"
+            "    position: 9\n"
+            "    width: 6\n"
+            "  position: 9\n"
+            "  width: 4\n"
+        ),
+    },
+    {
+        "yaml": (
+            "type: line-chart\n"
+            "title: Expenses per day\n"
+            "method: base\n"
+            "series:\n"
+            "- color: '#c45'\n"
+            "  label: Money spent\n"
+            "  link_template: /budget/expenses/?search=type%3Dexpense+date>=$START_DATE+date<=$END_DATE\n"
+            "  method: total\n"
+            "  query: type=expense\n"
+            "positioning:\n"
+            "  height: 3\n"
+            "  mobile:\n"
+            "    height: 3\n"
+            "    position: 9\n"
+            "    width: 6\n"
+            "  position: 9\n"
+            "  width: 4\n"
+        ),
+    },
+]
+
 
 def create_default_cards(apps, schema_editor):
-    from budget.fixtures import DEFAULT_DASHBOARD_CARDS
-
     DashboardCard = apps.get_model('budget', 'DashboardCard')
     FeUser = apps.get_model('feusers', 'FeUser')
 
@@ -11,7 +219,7 @@ def create_default_cards(apps, schema_editor):
         if not DashboardCard.objects.filter(owning_feuser=feuser).exists():
             DashboardCard.objects.bulk_create([
                 DashboardCard(owning_feuser=feuser, yaml_config=entry['yaml'])
-                for entry in DEFAULT_DASHBOARD_CARDS
+                for entry in _DEFAULT_DASHBOARD_CARDS_SNAPSHOT
             ])
 
 

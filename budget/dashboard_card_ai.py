@@ -29,6 +29,7 @@ _DOC_FILES = [
     ("cards/pie-chart.md", "cards/pie-chart"),
     ("cards/list.md", "cards/list"),
     ("cards/line-chart.md", "cards/line-chart"),
+    ("cards/gauge.md", "cards/gauge"),
     ("cards/spacer.md", "cards/spacer"),
     ("query-language.md", "query-language"),
 ]

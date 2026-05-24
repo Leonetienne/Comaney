@@ -400,7 +400,7 @@ def card_ai_api(request):
 @feuser_required
 @require_http_methods(['POST'])
 def cards_reset_api(request):
-    from ..fixtures import DEFAULT_DASHBOARD_CARDS
+    from ..fixtures import DEFAULT_USER_DASHBOARDS, PREDEFINED_DASHBOARD_CARDS
     feuser = request.feuser
 
     body = _parse_body(request)
@@ -413,10 +413,14 @@ def cards_reset_api(request):
     if first is None or dash.pk != first.pk:
         return _err('Reset is only allowed on the first dashboard', 409)
 
+    # The first dashboard's default card set, by definition the first entry
+    # in DEFAULT_USER_DASHBOARDS (same one create_defaults() seeds on signup).
+    default_card_keys = next(iter(DEFAULT_USER_DASHBOARDS.values()))['cards']
     DashboardCard.objects.filter(owning_feuser=feuser, dashboard=dash).delete()
     DashboardCard.objects.bulk_create([
-        DashboardCard(owning_feuser=feuser, dashboard=dash, yaml_config=entry['yaml'])
-        for entry in DEFAULT_DASHBOARD_CARDS
+        DashboardCard(owning_feuser=feuser, dashboard=dash,
+                      yaml_config=PREDEFINED_DASHBOARD_CARDS[card_key]['yaml'])
+        for card_key in default_card_keys
     ])
     period_qs, period_info = _period_qs(request, feuser)
     cards = DashboardCard.objects.filter(owning_feuser=feuser, dashboard=dash)

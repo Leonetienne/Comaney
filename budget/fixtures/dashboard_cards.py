@@ -1,37 +1,14 @@
-# Default categories and tags created for every new user on account activation.
-# Edit freely — order doesn't matter, duplicates are ignored.
+# Full catalog of predefined dashboard cards.
+#
+# This is the complete set offered as presets in the "new card" dialog
+# (see budget/dashboard_cards.py:_build_presets). It is a superset of what
+# any new user actually gets on signup -- see DEFAULT_USER_DASHBOARDS in
+# dashboards.py for which of these keys are auto-assigned to a default
+# dashboard. A card can exist here purely as a preset, browsable in the
+# dialog, without ever being created for new users automatically.
 
-DEFAULT_CATEGORIES = [
-    # Expense kinds
-    "Must-have",
-    "Nice-to-have",
-    "Regular bill",
-    "One-off",
-    "Investment",
-    # Income kinds
-    "Salary",
-    "Gifted Money",
-    "Sales",
-    "Miscellaneous",
-]
-
-DEFAULT_TAGS = [
-    "Food",
-    "Housing",
-    "Transport",
-    "Health",
-    "Clothing",
-    "Entertainment",
-    "Travel",
-    "Tech",
-    "Education",
-    "Personal care",
-    "Social",
-]
-
-
-DEFAULT_DASHBOARD_CARDS = [
-    {
+PREDEFINED_DASHBOARD_CARDS = {
+    "income": {
         "yaml": (
             "# Shows the sum of all income entries in the selected period.\n"
             "type: cell\n"
@@ -51,7 +28,7 @@ DEFAULT_DASHBOARD_CARDS = [
             "    height: 1\n"
         ),
     },
-    {
+    "savings": {
         "yaml": (
             "# Shows net savings: deposits minus withdrawals in the selected period.\n"
             "type: cell\n"
@@ -71,7 +48,7 @@ DEFAULT_DASHBOARD_CARDS = [
             "    height: 1\n"
         ),
     },
-    {
+    "paid_expenses": {
         "yaml": (
             "# Shows the sum of all settled (paid) expenses in the selected period.\n"
             "type: cell\n"
@@ -91,7 +68,7 @@ DEFAULT_DASHBOARD_CARDS = [
             "    height: 1\n"
         ),
     },
-    {
+    "outstanding": {
         "yaml": (
             "# Shows the sum of all unsettled (unpaid) expenses in the selected period.\n"
             "type: cell\n"
@@ -111,7 +88,7 @@ DEFAULT_DASHBOARD_CARDS = [
             "    height: 1\n"
         ),
     },
-    {
+    "left_to_spend": {
         "yaml": (
             "# Shows disposable budget: income minus expenses and net savings.\n"
             "type: cell\n"
@@ -137,7 +114,7 @@ DEFAULT_DASHBOARD_CARDS = [
             "    height: 1\n"
         ),
     },
-    {
+    "expenses_by_category": {
         "yaml": (
             "# Pie chart breaking down expenses by category in the selected period.\n"
             "type: pie-chart\n"
@@ -154,7 +131,7 @@ DEFAULT_DASHBOARD_CARDS = [
             "    position: 6\n"
         ),
     },
-    {
+    "expenses_by_tag": {
         "yaml": (
             "# Horizontal bar chart showing the top 10 tags by total expense amount.\n"
             "type: bar-chart\n"
@@ -172,7 +149,7 @@ DEFAULT_DASHBOARD_CARDS = [
             "    position: 7\n"
         ),
     },
-    {
+    "bills_due_this_week": {
         "yaml": (
             "# Lists unsettled expenses that are due this week\n"
             "title: Bills due this week\n"
@@ -192,7 +169,7 @@ DEFAULT_DASHBOARD_CARDS = [
             "    width: 6\n"
         ),
     },
-    {
+    "left_to_spend_line_chart": {
         "yaml": (
             "type: line-chart\n"
             "title: Left to spend\n"
@@ -213,7 +190,7 @@ DEFAULT_DASHBOARD_CARDS = [
             "  width: 4\n"
         ),
     },
-    {
+    "expenses_per_day": {
         "yaml": (
             "type: line-chart\n"
             "title: Expenses per day\n"
@@ -234,33 +211,38 @@ DEFAULT_DASHBOARD_CARDS = [
             "  width: 4\n"
         ),
     },
-]
-
-
-def create_defaults(feuser) -> None:
-    from .models import Category, Dashboard, DashboardCard, Tag
-
-    existing_cats = set(Category.objects.filter(owning_feuser=feuser).values_list("title", flat=True))
-    Category.objects.bulk_create([
-        Category(owning_feuser=feuser, title=t)
-        for t in DEFAULT_CATEGORIES
-        if t not in existing_cats
-    ])
-
-    existing_tags = set(Tag.objects.filter(owning_feuser=feuser).values_list("title", flat=True))
-    Tag.objects.bulk_create([
-        Tag(owning_feuser=feuser, title=t)
-        for t in DEFAULT_TAGS
-        if t not in existing_tags
-    ])
-
-    if not DashboardCard.objects.filter(owning_feuser=feuser).exists():
-        dashboard, _ = Dashboard.objects.get_or_create(
-            owning_feuser=feuser,
-            sorting=0,
-            defaults={"title": "Dashboard"},
-        )
-        DashboardCard.objects.bulk_create([
-            DashboardCard(owning_feuser=feuser, dashboard=dashboard, yaml_config=entry["yaml"])
-            for entry in DEFAULT_DASHBOARD_CARDS
-        ])
+    # Catalog-only example: not part of DEFAULT_USER_DASHBOARDS, so it shows up
+    # as a preset in the "new card" dialog without being given to new users.
+    # Shows how much of all income was spent, with a dynamic (income-based) max
+    # and color_breakpoints inverted so the gauge gets redder the more is spent.
+    "income_spent_gauge": {
+        "yaml": (
+            "color_breakpoints:\n"
+            "- color: '#ffc800'\n"
+            "  color_lightmode: '#ffc800'\n"
+            "  less_than: 100\n"
+            "- color: '#57a87e'\n"
+            "  color_lightmode: '#57a87e'\n"
+            "  less_than: 10\n"
+            "gauge_color: '#da2525'\n"
+            "gauge_color_lightmode: '#da2525'\n"
+            "link: /budget/expenses/\n"
+            "max_value_method: sum\n"
+            "max_value_query: type=income | type=savings\n"
+            "method: sum\n"
+            "positioning:\n"
+            "  height: 2\n"
+            "  mobile:\n"
+            "    height: 2\n"
+            "    position: 11\n"
+            "    width: 6\n"
+            "  position: 11\n"
+            "  width: 3\n"
+            "query: type=expense\n"
+            "show_percent: true\n"
+            "show_raw_values: true\n"
+            "title: Income spent\n"
+            "type: gauge\n"
+        ),
+    },
+}

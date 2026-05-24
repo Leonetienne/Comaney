@@ -713,9 +713,9 @@ def _compute_line_chart(config: dict, period_qs, period_info: dict,
 # ---------------------------------------------------------------------------
 
 def _build_presets():
-    from .fixtures import DEFAULT_DASHBOARD_CARDS
+    from .fixtures import PREDEFINED_DASHBOARD_CARDS
     result = []
-    for entry in DEFAULT_DASHBOARD_CARDS:
+    for entry in PREDEFINED_DASHBOARD_CARDS.values():
         try:
             name = (yaml.safe_load(entry['yaml']) or {}).get('title', 'Card')
         except Exception:

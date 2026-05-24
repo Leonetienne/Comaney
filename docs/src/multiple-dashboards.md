@@ -153,12 +153,12 @@ Users with no cards and no dashboard get their first dashboard created by `creat
 
 ---
 
-## Fixtures (`budget/fixtures.py`)
+## Fixtures (`budget/fixtures/`)
 
-`create_defaults(feuser)` now:
+`create_defaults(feuser)` (in `budget/fixtures/__init__.py`) now:
 
-1. Creates (or gets) a `Dashboard(owning_feuser=feuser, title="Dashboard", sorting=0)`.
-2. Creates all `DEFAULT_DASHBOARD_CARDS` with `dashboard=dashboard`.
+1. For each entry in `DEFAULT_USER_DASHBOARDS` (`budget/fixtures/dashboards.py`), creates (or gets) a `Dashboard(owning_feuser=feuser, title=..., sorting=<iteration index>)`. Today there is one entry, `"main"`, equivalent to the old hardcoded `Dashboard(title="Dashboard", sorting=0)`.
+2. For that dashboard, creates the cards listed in its `cards` key, resolved against `PREDEFINED_DASHBOARD_CARDS` (`budget/fixtures/dashboard_cards.py`) -- a card-key allowlist, not the full preset catalog. Cards not listed there can still exist as presets without being given to new users.
 
 Because the FK is required, `bulk_create` receives the dashboard instance directly. This is the first case of an FK relation between initial user records created in a single `create_defaults` call.
 
@@ -201,6 +201,6 @@ No additional restrictions. Creating, renaming, and deleting dashboards is a dis
 - [ ] Card drag-onto-tab (desktop)
 - [ ] Mobile swipe navigation + expandable selector
 - [ ] Mobile edge-drag card move between dashboards
-- [ ] Update `create_defaults()` in `fixtures.py`
+- [ ] Update `create_defaults()` in `fixtures/`
 - [ ] Update account ZIP export (`dashboards.csv`, `dashboard_id` in `dashboard_cards.csv`)
 - [ ] Tests: unit tests for model/API; E2E test for tab creation + card move
