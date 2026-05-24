@@ -280,33 +280,31 @@ class TestExpressCreation:
             assert r.returncode == 0, f"shell failed:\n{r.stderr}"
             return r.stdout.strip()
 
-        limit_raw = _shell(
-            "from django.conf import settings; print(settings.AI_TRIAL_USAGE_LIMIT)"
-        )
-        trial_limit = float(limit_raw)
-        if trial_limit <= 0:
-            pytest.skip("AI_TRIAL_USAGE_LIMIT not configured")
-
+        # Use a tiny special_ai_trial_budget so we control the limit without
+        # touching AI_TRIAL_USAGE_LIMIT or the user's actual spent value.
+        # A 1-cent limit means the very first request will exhaust it.
         email = ctx["email"]
-        near_limit = trial_limit - 0.1
+        TINY_LIMIT = 1  # cents
 
-        def _set_spent(value):
+        def _set_special_limit(value):
             _shell(
                 f"from feusers.models import FeUser; "
                 f"u = FeUser.objects.get(email='{email}'); "
-                f"u.ai_trial_budget_spent = {value}; "
-                f"u.save(update_fields=['ai_trial_budget_spent'])"
+                f"u.special_ai_trial_budget = {value}; "
+                f"u.save(update_fields=['special_ai_trial_budget'])"
             )
 
-        def _get_spent():
-            return float(_shell(
+        def _clear_special_limit():
+            _shell(
                 f"from feusers.models import FeUser; "
-                f"print(FeUser.objects.get(email='{email}').ai_trial_budget_spent)"
-            ))
+                f"u = FeUser.objects.get(email='{email}'); "
+                f"u.special_ai_trial_budget = None; "
+                f"u.ai_trial_budget_spent = 0; "
+                f"u.save(update_fields=['special_ai_trial_budget', 'ai_trial_budget_spent'])"
+            )
 
-        original_spent = _get_spent()
         try:
-            _set_spent(near_limit)
+            _set_special_limit(TINY_LIMIT)
             cards = _parse(driver, "Coffee 3€")
             assert cards, "First request should succeed"
             src = driver.page_source
@@ -322,7 +320,7 @@ class TestExpressCreation:
             assert "Monthly AI limit reached" in src
             assert driver.find_elements(By.CSS_SELECTOR, ".trial-blocked")
         finally:
-            _set_spent(original_spent)
+            _clear_special_limit()
 
     def test_express_refusal_on_non_financial_input(self, driver, w, ctx):
         if not ctx.get("express_trial_ok"):
