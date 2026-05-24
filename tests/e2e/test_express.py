@@ -291,7 +291,7 @@ class TestExpressCreation:
                 f"from feusers.models import FeUser; "
                 f"u = FeUser.objects.get(email='{email}'); "
                 f"u.special_ai_trial_budget = {value}; "
-                f"u.ai_trial_budget_spent = 0; "
+                f"u.ai_trial_budget_spent = {value - 0.001}; "
                 f"u.save(update_fields=['special_ai_trial_budget', 'ai_trial_budget_spent'])"
             )
 

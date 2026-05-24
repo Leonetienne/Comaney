@@ -69,10 +69,12 @@
         <span class="wizard-hint">(These will be added empty after setup.)</span>
       </div>
 
+      {% if ai_smart_create_available %}
       <div class="wizard-ai-row">
         <button type="button" class="btn btn-secondary btn-sm" id="tag-ai-btn">✦ Let AI decide</button>
         <span class="wizard-ai-status" id="tag-ai-status"></span>
       </div>
+      {% endif %}
 
       <div class="wizard-map-table" id="tag-map-table">
         <!-- Rows injected by JS -->
@@ -109,10 +111,12 @@
         <span class="wizard-hint">(These will be added empty after setup.)</span>
       </div>
 
+      {% if ai_smart_create_available %}
       <div class="wizard-ai-row">
         <button type="button" class="btn btn-secondary btn-sm" id="cat-ai-btn">✦ Let AI decide</button>
         <span class="wizard-ai-status" id="cat-ai-status"></span>
       </div>
+      {% endif %}
 
       <div class="wizard-map-table" id="cat-map-table">
         <!-- Rows injected by JS -->
@@ -517,8 +521,8 @@ document.getElementById('step4-apply').addEventListener('click', applyMigration)
 document.getElementById('step4-back').addEventListener('click', () => goStep(3));
 document.getElementById('step4-later').addEventListener('click', laterAndClose);
 
-document.getElementById('tag-ai-btn').addEventListener('click', () => aiSuggest('tag'));
-document.getElementById('cat-ai-btn').addEventListener('click', () => aiSuggest('cat'));
+document.getElementById('tag-ai-btn')?.addEventListener('click', () => aiSuggest('tag'));
+document.getElementById('cat-ai-btn')?.addEventListener('click', () => aiSuggest('cat'));
 
 // ── Clickable step dots (navigate back to completed steps) ─────────────────
 document.querySelectorAll('.wizard-step-dot').forEach(dot => {

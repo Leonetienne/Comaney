@@ -271,9 +271,10 @@ class TestDashboardCardLastMod:
         email = _mk_email()
         _create_user(email)
         uid = _shell(
-            f"from budget.models import DashboardCard; from feusers.models import FeUser; "
+            f"from budget.models import Dashboard, DashboardCard; from feusers.models import FeUser; "
             f"u = FeUser.objects.get(email='{email}'); "
-            f"c = DashboardCard.objects.create(owning_feuser=u, yaml_config='type: cell\\n'); "
+            f"d = Dashboard.objects.create(owning_feuser=u, title='Test Dashboard'); "
+            f"c = DashboardCard.objects.create(owning_feuser=u, dashboard=d, yaml_config='type: cell\\n'); "
             f"print(c.uid)"
         )
         yield int(uid)

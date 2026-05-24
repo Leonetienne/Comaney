@@ -201,6 +201,11 @@ def _first_card(driver):
     return driver.find_elements(By.CSS_SELECTOR, ".preview-card")[0]
 
 
+def _card_title(card) -> str:
+    """Read the AI-generated title from the card's title field."""
+    return card.find_element(By.CSS_SELECTOR, ".edit-title").get_property("value").strip()
+
+
 def _set_value(driver, card, amount: str) -> None:
     inp = card.find_element(By.CSS_SELECTOR, ".edit-value")
     driver.execute_script("arguments[0].value = arguments[1];", inp, amount)
@@ -208,8 +213,9 @@ def _set_value(driver, card, amount: str) -> None:
     time.sleep(0.2)
 
 
-def _click_tab(card, tab_class: str) -> None:
-    card.find_element(By.CSS_SELECTOR, tab_class).click()
+def _click_tab(driver, card, tab_class: str) -> None:
+    el = card.find_element(By.CSS_SELECTOR, tab_class)
+    driver.execute_script("arguments[0].click();", el)
     time.sleep(0.5)
 
 
@@ -306,22 +312,24 @@ class TestExpressNoProject:
         if not _ui_parse(driver, "Busticket 25 Euro"):
             pytest.skip("AI unavailable")
         card = _first_card(driver)
+        title = _card_title(card)
         # None tab is the default; verify it is active
         assert "assign-tab--active" in card.find_element(
             By.CSS_SELECTOR, ".pcard-assign-none"
         ).get_attribute("class"), "None tab must be active by default"
         _confirm(driver)
-        assert _expense_project_name("Busticket", ctx["email"]) is None
+        assert _expense_project_name(title, ctx["email"]) is None
 
     def test_switch_to_none_after_project_saves_without_project(self, driver, w, ctx):
         """Case 3: switch from Project tab back to None -> no project."""
         if not _ui_parse(driver, "Schlafsack 40 Euro"):
             pytest.skip("AI unavailable")
         card = _first_card(driver)
-        _click_tab(card, ".pcard-assign-project")
-        _click_tab(card, ".pcard-assign-none")
+        title = _card_title(card)
+        _click_tab(driver, card, ".pcard-assign-project")
+        _click_tab(driver, card, ".pcard-assign-none")
         _confirm(driver)
-        assert _expense_project_name("Schlafsack", ctx["email"]) is None
+        assert _expense_project_name(title, ctx["email"]) is None
 
 
 # ---------------------------------------------------------------------------
@@ -336,11 +344,12 @@ class TestExpressWithProject:
         if not _ui_parse(driver, "Benzin 60 Euro Anfahrt"):
             pytest.skip("AI unavailable")
         card = _first_card(driver)
-        _click_tab(card, ".pcard-assign-project")
+        title = _card_title(card)
+        _click_tab(driver, card, ".pcard-assign-project")
         time.sleep(0.5)
         # Schanzenfest 2026 is the only project; it is pre-selected
         _confirm(driver)
-        assert _expense_project_name("Benzin", ctx["email"]) == "Schanzenfest 2026"
+        assert _expense_project_name(title, ctx["email"]) == "Schanzenfest 2026"
 
 
 # ---------------------------------------------------------------------------
@@ -354,15 +363,17 @@ class TestExpressDirectBuddy:
         if not _ui_parse(driver, "Bierkisten 60 Euro"):
             pytest.skip("AI unavailable")
         card = _first_card(driver)
+        title = _card_title(card)
         _set_value(driver, card, "60.00")
-        _click_tab(card, ".pcard-assign-buddy")
+        _click_tab(driver, card, ".pcard-assign-buddy")
+        _set_payer(driver, card, "Me (")
         _select_single_buddy(driver, card, "Volker")
         _set_participant_slider(driver, card, 0, 35.0)
         _confirm(driver)
 
-        assert _expense_in_api("Bierkisten", ctx), \
-            "Me-payer expense must appear in the expense API"
-        spendings = _expense_spendings("Bierkisten", ctx["email"])
+        assert _expense_in_api(title, ctx), \
+            f"Me-payer expense must appear in the expense API (title={title!r})"
+        spendings = _expense_spendings(title, ctx["email"])
         assert len(spendings) == 1
         s = spendings[0]
         assert s["type"] == "dummy" and s["id"] == ctx["personal_dummy1_pk"]
@@ -373,16 +384,17 @@ class TestExpressDirectBuddy:
         if not _ui_parse(driver, "Zeltmiete 60 Euro"):
             pytest.skip("AI unavailable")
         card = _first_card(driver)
+        title = _card_title(card)
         _set_value(driver, card, "60.00")
-        _click_tab(card, ".pcard-assign-buddy")
+        _click_tab(driver, card, ".pcard-assign-buddy")
         _set_payer(driver, card, "Volker")
         # Me is auto-added as participant; slider at data-sidx=0
         _set_participant_slider(driver, card, 0, 40.0)
         _confirm(driver)
 
-        assert not _expense_in_api("Zeltmiete", ctx), \
-            "Dummy-payer expense must not appear in the regular expense API"
-        spendings = _expense_spendings("Zeltmiete", ctx["email"])
+        assert not _expense_in_api(title, ctx), \
+            f"Dummy-payer expense must not appear in the regular expense API (title={title!r})"
+        spendings = _expense_spendings(title, ctx["email"])
         assert len(spendings) == 1
         s = spendings[0]
         assert s["type"] == "feuser" and s["id"] == ctx["me_pk"]
@@ -400,18 +412,19 @@ class TestExpressProjectPayment:
         if not _ui_parse(driver, "Campingausrüstung für Schanzenfest, 60 Euro"):
             pytest.skip("AI unavailable")
         card = _first_card(driver)
+        title = _card_title(card)
         _set_value(driver, card, "60.00")
-        _click_tab(card, ".pcard-assign-project")
+        _click_tab(driver, card, ".pcard-assign-project")
         _set_payer(driver, card, "Volker")
         _uncheck_participant(driver, card, "Andreas")
         # Only me remains as participant at index 0
         _set_participant_slider(driver, card, 0, 55.0)
         _confirm(driver)
 
-        assert not _expense_in_api("Camping", ctx), \
-            "Dummy-payer project expense must not appear in the regular expense API"
-        assert _expense_project_name("Camping", ctx["email"]) == "Schanzenfest 2026"
-        spendings = _expense_spendings("Camping", ctx["email"])
+        assert not _expense_in_api(title, ctx), \
+            f"Dummy-payer project expense must not appear in the regular expense API (title={title!r})"
+        assert _expense_project_name(title, ctx["email"]) == "Schanzenfest 2026"
+        spendings = _expense_spendings(title, ctx["email"])
         assert len(spendings) == 1
         s = spendings[0]
         assert s["type"] == "feuser" and s["id"] == ctx["me_pk"]
@@ -422,18 +435,19 @@ class TestExpressProjectPayment:
         if not _ui_parse(driver, "Verpflegung Schanzenfest 60 Euro"):
             pytest.skip("AI unavailable")
         card = _first_card(driver)
+        title = _card_title(card)
         _set_value(driver, card, "60.00")
-        _click_tab(card, ".pcard-assign-project")
+        _click_tab(driver, card, ".pcard-assign-project")
         # Me is payer by default; uncheck Andreas
         _uncheck_participant(driver, card, "Andreas")
         # Volker is the only remaining participant at index 0
         _set_participant_slider(driver, card, 0, 45.0)
         _confirm(driver)
 
-        assert _expense_in_api("Verpflegung", ctx), \
-            "Me-payer project expense must appear in the expense API"
-        assert _expense_project_name("Verpflegung", ctx["email"]) == "Schanzenfest 2026"
-        spendings = _expense_spendings("Verpflegung", ctx["email"])
+        assert _expense_in_api(title, ctx), \
+            f"Me-payer project expense must appear in the expense API (title={title!r})"
+        assert _expense_project_name(title, ctx["email"]) == "Schanzenfest 2026"
+        spendings = _expense_spendings(title, ctx["email"])
         assert len(spendings) == 1
         s = spendings[0]
         assert s["type"] == "dummy" and s["id"] == ctx["dummy1_pk"]

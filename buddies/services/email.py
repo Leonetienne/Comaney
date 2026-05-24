@@ -150,8 +150,8 @@ class BuddyEmailService:
             message=f"{rejecting_name} declined the shared expense \"{expense.title}\".",
             template="emails/buddy_expense_rejected.html",
             ctx={"expense": expense, "rejecting_name": rejecting_name, "owner_rejected": owner_rejected},
-            related_expense=expense,
-            related_project=expense.project if expense.project_id else None,
+            related_expense=None if owner_rejected else expense,
+            related_project=None if owner_rejected else (expense.project if expense.project_id else None),
             related_feuser=rejecting_feuser,
         )
 
