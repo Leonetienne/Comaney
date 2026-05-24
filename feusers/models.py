@@ -56,6 +56,7 @@ class FeUser(models.Model):
     allowance_transition_month = models.CharField(max_length=10, blank=True)
     is_demo = models.BooleanField(default=False)
     special_ai_trial_budget = models.IntegerField(null=True, blank=True)
+    disable_ai_ui = models.BooleanField(default=False)
     has_seen_achim_intro = models.BooleanField(default=False)
     intro_seen_at = models.DateTimeField(null=True, blank=True)
     last_upgrade_intro_v_seen = models.IntegerField(null=True, blank=True)

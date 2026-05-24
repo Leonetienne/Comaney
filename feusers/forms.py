@@ -55,8 +55,9 @@ class NotificationPreferencesForm(forms.ModelForm):
 class AISettingsForm(forms.ModelForm):
     class Meta:
         model = FeUser
-        fields = ["anthropic_api_key", "ai_custom_instructions"]
+        fields = ["disable_ai_ui", "anthropic_api_key", "ai_custom_instructions"]
         labels = {
+            "disable_ai_ui": "Hide all AI features",
             "anthropic_api_key": "Anthropic API key",
             "ai_custom_instructions": "Custom instructions",
         }

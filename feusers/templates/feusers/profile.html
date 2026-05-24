@@ -186,7 +186,9 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="ai">
             {% for field in ai_form %}
-                {% if field.html_name == "anthropic_api_key" %}
+                {% if field.html_name == "disable_ai_ui" %}
+                    <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
+                {% elif field.html_name == "anthropic_api_key" %}
                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                     <div class="pw-wrap">
                         {{ field }}
