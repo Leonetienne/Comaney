@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import BASE_URL, DOCKER_WEB, _url, cleanup_user, setup_user
 
-BACKDROP_ASSET = os.path.join(os.path.dirname(__file__), "assets", "backdrop.png")
+BACKDROP_ASSET = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "backdrop.png")
 
 
 def _file_exists_on_server(pk) -> bool:

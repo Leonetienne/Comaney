@@ -11,7 +11,7 @@ from helpers import (
     BASE_URL, _url, setup_user, cleanup_user,
 )
 
-PPIC_ASSET = os.path.join(os.path.dirname(__file__), "assets", "ppic.jpg")
+PPIC_ASSET = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "ppic.jpg")
 
 
 @pytest.fixture(scope="module")

@@ -33,7 +33,7 @@ from selenium.webdriver.common.by import By
 from helpers import _url, api_get, setup_user, cleanup_user
 
 DOCKER_WEB = "comaney-web-1"
-ASSET = os.path.join(os.path.dirname(__file__), "assets", "projectpic.jpg")
+ASSET = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "projectpic.jpg")
 AI_TIMEOUT = 120
 
 
