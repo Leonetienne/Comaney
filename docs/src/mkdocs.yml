@@ -47,6 +47,7 @@ nav:
     - Features: introduction/features.md
   - User Manual:
     - user-manual/index.md
+    - Getting Started: user-manual/getting-started.md
     - Expenses: user-manual/expenses.md
     - Recurring Expenses: user-manual/scheduled-expenses.md
     - Categories & Tags: user-manual/categories-tags.md
