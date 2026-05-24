@@ -20,6 +20,7 @@ window.DASHBOARD_CONFIG = {
     urlReorder:           "{% url 'budget:dashboard_cards_reorder' %}",
     urlPresets:           "{% url 'budget:dashboard_card_presets' %}",
     urlReset:             "{% url 'budget:dashboard_cards_reset' %}",
+    urlCardAi:            "{% url 'budget:dashboard_card_ai' %}",
 
     dashboardId:          {{ current_dashboard.pk }},
     isFirstDashboard:     {{ is_first_dashboard|yesno:"true,false" }},
@@ -324,13 +325,24 @@ window.DASHBOARD_CONFIG = {
             </p>
             <div class="dash-yaml-editor" x-ref="editEditorEl"></div>
             <p class="dash-modal-error" x-show="editError" x-text="editError"></p>
-            <div class="dash-modal-actions">
-                <button class="btn btn-primary"
-                        :disabled="editSaving"
-                        @click="saveEdit()">
-                    <span x-text="editSaving ? 'Saving…' : 'Save'"></span>
+
+            {% if ai_smart_create_available and not ai_trial_blocked %}
+            <div class="dash-ai-section">
+                <p class="dash-ai-divider">... OR let AI create the card for you.</p>
+                <textarea class="dash-ai-input"
+                          x-model="editAiPrompt"
+                          placeholder="Modify this card to ..."></textarea>
+                <p class="dash-ai-error" x-show="editAiError" x-text="editAiError"></p>
+                <p class="dash-ai-note" x-show="editAiNote" x-text="editAiNote"></p>
+                <button class="btn btn-secondary"
+                        :disabled="editAiLoading || !editAiPrompt.trim()"
+                        @click="generateCardAi('edit')">
+                    <span x-text="editAiLoading ? 'Thinking…' : '✦ Generate with AI'"></span>
                 </button>
-                <button class="btn btn-secondary" @click="closeEdit()">Cancel</button>
+            </div>
+            {% endif %}
+
+            <div class="dash-modal-actions">
                 <template x-if="dashboards.length > 1">
                     <select class="form-select form-select-sm dash-card-move-select"
                             @change="moveCardToDashboard(editCard && editCard.id, $event.target.value)">
@@ -342,8 +354,16 @@ window.DASHBOARD_CONFIG = {
                         </template>
                     </select>
                 </template>
-                <button class="btn btn-danger ml-auto"
-                        @click="deleteCard(editCard && editCard.id)">Delete</button>
+                <button class="btn btn-danger" @click="deleteCard(editCard && editCard.id)">Delete</button>
+
+                <div class="dash-modal-actions-primary">
+                    <button class="btn btn-primary"
+                            :disabled="editSaving"
+                            @click="saveEdit()">
+                        <span x-text="editSaving ? 'Saving…' : 'Save'"></span>
+                    </button>
+                    <button class="btn btn-secondary" @click="closeEdit()">Cancel</button>
+                </div>
             </div>
         </div>
     </div>
@@ -372,13 +392,32 @@ window.DASHBOARD_CONFIG = {
 
             <div class="dash-yaml-editor" x-ref="addEditorEl"></div>
             <p class="dash-modal-error" x-show="addError" x-text="addError"></p>
-            <div class="dash-modal-actions">
-                <button class="btn btn-primary"
-                        :disabled="addSaving"
-                        @click="saveAdd()">
-                    <span x-text="addSaving ? 'Creating…' : 'Create'"></span>
+
+            {% if ai_smart_create_available and not ai_trial_blocked %}
+            <div class="dash-ai-section">
+                <p class="dash-ai-divider">... OR let AI create the card for you.</p>
+                <textarea class="dash-ai-input"
+                          x-model="addAiPrompt"
+                          placeholder="The card should show how much I spent on amazon this month."></textarea>
+                <p class="dash-ai-error" x-show="addAiError" x-text="addAiError"></p>
+                <p class="dash-ai-note" x-show="addAiNote" x-text="addAiNote"></p>
+                <button class="btn btn-secondary"
+                        :disabled="addAiLoading || !addAiPrompt.trim()"
+                        @click="generateCardAi('add')">
+                    <span x-text="addAiLoading ? 'Thinking…' : '✦ Generate with AI'"></span>
                 </button>
-                <button class="btn btn-secondary" @click="closeAdd()">Cancel</button>
+            </div>
+            {% endif %}
+
+            <div class="dash-modal-actions">
+                <div class="dash-modal-actions-primary">
+                    <button class="btn btn-primary"
+                            :disabled="addSaving"
+                            @click="saveAdd()">
+                        <span x-text="addSaving ? 'Creating…' : 'Create'"></span>
+                    </button>
+                    <button class="btn btn-secondary" @click="closeAdd()">Cancel</button>
+                </div>
             </div>
         </div>
     </div>

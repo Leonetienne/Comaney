@@ -53,6 +53,9 @@ def dashboard_detail(request, uid: int):
 
     dashboards_json = safe_json(_dashboard_list_json(feuser))
 
+    from ..express_service import _trial_state
+    _, _, _, _, ai_trial_blocked = _trial_state(feuser)
+
     ctx = {
         'active_nav': 'dashboard',
         'nav_show_sharing_toggle': has_buddy_or_multiuser_project(feuser),
@@ -61,6 +64,7 @@ def dashboard_detail(request, uid: int):
         'dashboards_json': dashboards_json,
         'initial_date_from': request.GET.get('date_from', ''),
         'initial_date_to':   request.GET.get('date_to', ''),
+        'ai_trial_blocked':  ai_trial_blocked,
     }
     ctx.update(_date_range_presets_context(feuser))
     return render(request, 'budget/dashboard.html', ctx)

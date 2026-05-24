@@ -19,6 +19,7 @@ urlpatterns = [
     path("dashboard/cards/reorder/", views.cards_reorder_api, name="dashboard_cards_reorder"),
     path("dashboard/cards/presets/", views.card_presets_api, name="dashboard_card_presets"),
     path("dashboard/cards/reset/", views.cards_reset_api, name="dashboard_cards_reset"),
+    path("dashboard/cards/ai/", views.card_ai_api, name="dashboard_card_ai"),
     path("dashboard/cards/<int:uid>/", views.card_detail_api, name="dashboard_card_detail"),
     path("dashboard/cards/<int:uid>/resize/", views.card_resize_api, name="dashboard_card_resize"),
 

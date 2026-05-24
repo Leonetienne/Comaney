@@ -308,12 +308,79 @@
   gap: 8px;
   margin-top: 14px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.dash-modal-actions-primary {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+
+  @media (max-width: 600px) {
+    width: 100%;
+    margin-left: 0;
+
+    .btn { flex: 1; }
+  }
 }
 
 .dash-modal-error {
   margin-top: 10px;
   font-size: 0.85rem;
   color: var(--error);
+}
+
+// ── AI card-creation assist ──────────────────────────────────────────────────
+
+.dash-ai-section {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+
+  .btn { margin-top: 10px; }
+
+  @media (max-width: 600px) {
+    .btn { width: 100%; }
+  }
+}
+
+.dash-ai-divider {
+  margin: 0 0 8px;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.dash-ai-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 64px;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  resize: vertical;
+  background: var(--bg-input);
+  color: var(--text);
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(128,128,128,.12);
+  }
+}
+
+.dash-ai-error {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--error);
+}
+
+.dash-ai-note {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-subtle);
 }
 
 // ── New card hint ──────────────────────────────────────────────────────────

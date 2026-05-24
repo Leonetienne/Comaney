@@ -1,7 +1,7 @@
 from .dashboard import dashboard, dashboard_detail
 from .dashboard_cards_api import (
     cards_api, card_detail_api, cards_reorder_api,
-    card_resize_api, card_presets_api, cards_reset_api,
+    card_resize_api, card_presets_api, cards_reset_api, card_ai_api,
 )
 from .dashboards_api import dashboards_api, dashboard_detail_api, dashboards_reorder_api
 from .expenses import (
@@ -24,7 +24,7 @@ from .express import express_creation
 __all__ = [
     "dashboard", "dashboard_detail",
     "cards_api", "card_detail_api", "cards_reorder_api",
-    "card_resize_api", "card_presets_api", "cards_reset_api",
+    "card_resize_api", "card_presets_api", "cards_reset_api", "card_ai_api",
     "dashboards_api", "dashboard_detail_api", "dashboards_reorder_api",
     "expenses_list", "expenses_export",
     "expense_create", "expense_edit", "expense_edit_overlay", "expense_delete", "expense_clone",

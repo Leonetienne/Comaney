@@ -7,10 +7,12 @@ Endpoints:
     POST       /budget/dashboard/cards/reorder/
     GET        /budget/dashboard/cards/presets/
     POST       /budget/dashboard/cards/reset/
+    POST       /budget/dashboard/cards/ai/
     GET        /budget/dashboard/data/          → all cards with computed data
 """
 
 import json
+import logging
 from decimal import Decimal
 
 import yaml
@@ -22,6 +24,8 @@ from ..date_utils import financial_month_range, financial_year_range
 from ..decorators import feuser_required
 from ..models import Dashboard, DashboardCard, Expense
 from ._period import _get_month, _get_period_mode, _get_year
+
+_log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +339,58 @@ def card_resize_api(request, uid: int):
 @require_http_methods(['GET'])
 def card_presets_api(request):
     return _ok({'presets': [{'name': p['name'], 'yaml': p['yaml']} for p in PRESETS]})
+
+
+# ---------------------------------------------------------------------------
+# AI card generation / editing
+# ---------------------------------------------------------------------------
+
+@feuser_required
+@require_http_methods(['POST'])
+def card_ai_api(request):
+    feuser = request.feuser
+    if feuser.disable_ai_ui:
+        return _err('AI features are disabled for this account.', 403)
+
+    body = _parse_body(request)
+    description = body.get('description', '').strip()
+    if not description:
+        return _err('description is required')
+
+    dashboard_id = body.get('dashboard_id')
+    dash, err = _resolve_dashboard(feuser, dashboard_id)
+    if err:
+        return err
+
+    current_yaml = body.get('current_yaml', '').strip()
+    try:
+        exclude_id = int(body.get('exclude_id')) if body.get('exclude_id') is not None else None
+    except (TypeError, ValueError):
+        exclude_id = None
+
+    from ..dashboard_card_ai import generate_card_yaml
+    from ..dashboard_cards import CardConfigError
+    from ..express_service import AIBudgetExceededError, AIInvalidResponseError, AIRefusalError
+
+    try:
+        yaml_str = generate_card_yaml(
+            feuser, dash, description,
+            current_yaml=current_yaml or None,
+            exclude_card_id=exclude_id,
+        )
+    except AIBudgetExceededError as exc:
+        return _err(str(exc) or 'AI budget exceeded.', 402)
+    except AIRefusalError as exc:
+        return _err(str(exc) or "I couldn't make a card out of that.", 400)
+    except CardConfigError as exc:
+        return _err(f'The AI produced an invalid card: {exc}', 400)
+    except AIInvalidResponseError:
+        return _err('The AI returned something unexpected. Please try rephrasing.', 400)
+    except Exception:
+        _log.exception('card_ai_api: AI call failed')
+        return _err('AI suggestion failed. Please try again or write the YAML directly.', 500)
+
+    return _ok({'yaml': yaml_str})
 
 
 # ---------------------------------------------------------------------------

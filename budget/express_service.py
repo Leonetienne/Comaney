@@ -61,11 +61,15 @@ class AgentConfig:
 
 def _call_agent(
     config: AgentConfig,
-    system_prompt: str,
+    system_prompt: str | list[dict],
     messages: list[dict],
 ) -> tuple[str, dict]:
     """
     Dispatch to the configured AI provider.
+    system_prompt may be a plain string (wrapped in a single cached block) or
+    a pre-built list of Anthropic system content blocks -- the latter lets a
+    caller split a large static portion (its own cache_control breakpoint,
+    shareable across requests/users) from a smaller per-request dynamic tail.
     Returns (raw_text_response, usage_dict).
     usage_dict keys: input_tokens, output_tokens, cache_write_tokens,
                      cache_read_tokens, total_tokens, cost_usd, cost_cents.
@@ -77,23 +81,28 @@ def _call_agent(
 
 def _call_claude_impl(
     config: AgentConfig,
-    system_prompt: str,
+    system_prompt: str | list[dict],
     messages: list[dict],
 ) -> tuple[str, dict]:
     """Raw Anthropic API call. Returns (response_text, usage_dict)."""
     import anthropic
 
-    client = anthropic.Anthropic(api_key=config.api_key)
-    response = client.messages.create(
-        model=config.model or "claude-sonnet-4-6",
-        max_tokens=config.max_tokens,
-        system=[
+    if isinstance(system_prompt, str):
+        system = [
             {
                 "type": "text",
                 "text": system_prompt,
                 "cache_control": {"type": "ephemeral"},
             }
-        ],
+        ]
+    else:
+        system = system_prompt
+
+    client = anthropic.Anthropic(api_key=config.api_key)
+    response = client.messages.create(
+        model=config.model or "claude-sonnet-4-6",
+        max_tokens=config.max_tokens,
+        system=system,
         messages=messages,
     )
 

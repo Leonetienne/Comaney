@@ -45,6 +45,7 @@ function dashboardBoard() {
         urlReset:            '',
         urlDashboards:       '',
         urlDashboardReorder: '',
+        urlCardAi:           '',
 
         // Current dashboard identity
         dashboardId:      0,
@@ -62,6 +63,12 @@ function dashboardBoard() {
         editError:  '',
         editSaving: false,
 
+        // Edit modal — AI assist
+        editAiPrompt:  '',
+        editAiLoading: false,
+        editAiError:   '',
+        editAiNote:    '',
+
         // New card dialog
         addOpen:      false,
         addYaml:      '',
@@ -69,6 +76,12 @@ function dashboardBoard() {
         addError:     '',
         addSaving:    false,
         presets:      [],
+
+        // New card dialog — AI assist
+        addAiPrompt:  '',
+        addAiLoading: false,
+        addAiError:   '',
+        addAiNote:    '',
 
         // CodeMirror editor instances
         _addEditor:         null,
@@ -119,6 +132,7 @@ function dashboardBoard() {
             this.urlReorder        = cfg.urlReorder;
             this.urlPresets        = cfg.urlPresets;
             this.urlReset          = cfg.urlReset;
+            this.urlCardAi         = cfg.urlCardAi;
             this.urlDashboards     = cfg.urlDashboards;
             this.urlDashboardReorder = cfg.urlDashboardReorder;
             this.dashboardId       = cfg.dashboardId;
@@ -833,9 +847,12 @@ function dashboardBoard() {
 
         // ── Edit modal ────────────────────────────────────────────────────────
         async openEdit(card) {
-            this.editCard  = card;
-            this.editYaml  = card.yaml_config;
-            this.editError = '';
+            this.editCard     = card;
+            this.editYaml     = card.yaml_config;
+            this.editError    = '';
+            this.editAiPrompt = '';
+            this.editAiError  = '';
+            this.editAiNote   = '';
             await Alpine.nextTick();
             const el = this.$refs.editEditorEl;
             if (!this._editEditor) {
@@ -894,6 +911,9 @@ function dashboardBoard() {
             this.addYaml      = '';
             this.addYamlDirty = false;
             this.addError     = '';
+            this.addAiPrompt  = '';
+            this.addAiError   = '';
+            this.addAiNote    = '';
             await Alpine.nextTick();
             const el = this.$refs.addEditorEl;
             if (!this._addEditor) {
@@ -950,6 +970,43 @@ function dashboardBoard() {
             }
         },
 
+        // ── AI card generation ──────────────────────────────────────────────────
+        async generateCardAi(mode) {
+            const isEdit = mode === 'edit';
+            const prompt = (isEdit ? this.editAiPrompt : this.addAiPrompt).trim();
+            if (!prompt) return;
+
+            if (isEdit) { this.editAiLoading = true; this.editAiError = ''; this.editAiNote = ''; }
+            else        { this.addAiLoading  = true; this.addAiError  = ''; this.addAiNote  = ''; }
+
+            try {
+                const body = { description: prompt, dashboard_id: this.dashboardId };
+                if (isEdit && this.editCard) {
+                    body.current_yaml = this.editYaml;
+                    body.exclude_id   = this.editCard.id;
+                }
+                const resp = await this._postJson(this.urlCardAi, body);
+                const data = await resp.json();
+                if (!resp.ok) {
+                    const msg = data.error || 'AI suggestion failed.';
+                    if (isEdit) this.editAiError = msg; else this.addAiError = msg;
+                    return;
+                }
+                if (isEdit) {
+                    this.editYaml = data.yaml;
+                    if (this._editEditor) this._setEditorContent(this._editEditor, data.yaml);
+                    this.editAiNote = 'Card updated above — click Save, then drag/resize it into place.';
+                } else {
+                    this.addYaml      = data.yaml;
+                    this.addYamlDirty = true;
+                    if (this._addEditor) this._setEditorContent(this._addEditor, data.yaml);
+                    this.addAiNote = 'Card filled in above — click Create, then drag/resize it into place.';
+                }
+            } finally {
+                if (isEdit) this.editAiLoading = false; else this.addAiLoading = false;
+            }
+        },
+
         // ── CodeMirror helpers ────────────────────────────────────────────────
         _makeEditor(el, initialDoc, onChange) {
             const darkMQ   = window.matchMedia('(prefers-color-scheme: dark)');
@@ -960,6 +1017,7 @@ function dashboardBoard() {
                     extensions: [
                         basicSetup,
                         yaml(),
+                        EditorView.lineWrapping,
                         themeC.of(darkMQ.matches ? oneDark : []),
                         EditorView.updateListener.of(u => {
                             if (u.docChanged && !this._programmaticEdit) onChange(u.state.doc.toString());
