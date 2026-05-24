@@ -35,7 +35,11 @@ def group_invite_member(request, group_id):
         return redirect("projects:project_detail", project_id=group_id)
 
     outcome, obj = BuddyGroupService.invite_member(group, feuser, email)
-    if outcome == "registration_disabled":
+    if outcome == "demo_restricted":
+        django_messages.error(request, "Demo accounts cannot invite group members.")
+    elif outcome == "invitee_is_demo":
+        django_messages.error(request, "That email address is not available.")
+    elif outcome == "registration_disabled":
         django_messages.error(request, "That email address is not registered and registration is not enabled on this instance.")
     elif outcome == "self":
         django_messages.error(request, "You cannot invite yourself.")
@@ -196,7 +200,11 @@ def group_send_merge(request, group_id, dummy_id):
     if not email:
         return redirect("projects:project_detail", project_id=group_id)
     outcome, obj = BuddyGroupService.send_group_dummy_merge_invite(group, feuser, dummy, email)
-    if outcome == "registration_disabled":
+    if outcome == "demo_restricted":
+        django_messages.error(request, "Demo accounts cannot send invitations.")
+    elif outcome == "invitee_is_demo":
+        django_messages.error(request, "That email address is not available.")
+    elif outcome == "registration_disabled":
         django_messages.error(request, "That email address is not registered and registration is not enabled on this instance.")
     elif outcome == "onboarding_no_email":
         site_url = getattr(django_settings, "SITE_URL", "")

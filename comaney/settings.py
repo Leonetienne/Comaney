@@ -129,6 +129,11 @@ SITE_URL = os.environ.get("SITE_URL", "http://localhost:8080")
 
 ENABLE_REGISTRATION = os.environ.get("ENABLE_REGISTRATION", "").upper() == "TRUE"
 
+ENABLE_DEMO_USERS   = os.environ.get("ENABLE_DEMO_USERS", "").upper() == "TRUE"
+DEMO_USER_EMAIL     = os.environ.get("DEMO_USER_EMAIL", "")
+DEMO_USER_PASSWORD  = os.environ.get("DEMO_USER_PASSWORD", "")
+DEMO_USER_AI_BUDGET = int(os.environ.get("DEMO_USER_AI_BUDGET", "0") or "0")  # cents; 0 = use global limit
+
 AI_TRIAL_API_KEY      = os.environ.get("AI_TRIAL_API_KEY", "")
 AI_TRIAL_USAGE_LIMIT  = float(os.environ.get("AI_TRIAL_USAGE_LIMIT", "0"))  # cents
 AI_TRIAL_DISABLED_FLAG = os.environ.get("AI_TRIAL_DISABLED_FLAG", str(BASE_DIR / "ai_trial_disabled.flag"))

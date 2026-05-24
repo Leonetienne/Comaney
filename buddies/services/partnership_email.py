@@ -13,6 +13,8 @@ def _send(subject: str, template: str, ctx: dict, recipient_email: str) -> bool:
     feuser = ctx.get("feuser_recipient")
     if feuser and not feuser.email_notifications:
         return False
+    if feuser and feuser.is_demo:
+        return False
     html = render_to_string(template, {**ctx, "site_url": getattr(settings, "SITE_URL", "")})
     try:
         send_mail(

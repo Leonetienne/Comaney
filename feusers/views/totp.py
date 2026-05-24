@@ -25,6 +25,8 @@ def totp_setup(request):
     feuser = _get_session_feuser(request)
     if not feuser:
         return redirect("login")
+    if feuser.is_demo:
+        return redirect("profile")
 
     import pyotp
     error = None

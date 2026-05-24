@@ -106,6 +106,7 @@
         </div>
         <p class="in-page-tip">Change your name, currency, and financial cycle. For example, if you're paid on the 27th, you may want your month to start on the 27th so it aligns with your salary.</p>
         {% if success == "profile" %}<p class="success-msg">Saved.</p>{% endif %}
+        {% if current_feuser.is_demo %}<p class="in-page-tip" style="opacity:.5;">Name cannot be changed on demo accounts.</p>{% endif %}
         <form method="post" novalidate>
             {% csrf_token %}
             <input type="hidden" name="action" value="profile">
@@ -116,6 +117,10 @@
                 {% if field.html_name == "month_start_prev" %}
                     <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
                     <p class="month-offset-preview" id="month-offset-preview"></p>
+                {% elif current_feuser.is_demo and field.html_name == "first_name" %}
+                    <input type="text" name="first_name" value="{{ field.value }}" disabled class="{{ field.field.widget.attrs.class|default:'' }}">
+                {% elif current_feuser.is_demo and field.html_name == "last_name" %}
+                    <input type="text" name="last_name" value="{{ field.value }}" disabled class="{{ field.field.widget.attrs.class|default:'' }}">
                 {% else %}
                     {{ field }}
                 {% endif %}
@@ -132,7 +137,9 @@
             <h2 class="settings-card-title">Email notifications</h2>
         </div>
         <p class="in-page-tip">Choose which types of emails you want to receive. Invite emails are always sent regardless of these settings.</p>
+        {% if current_feuser.is_demo %}<p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>{% endif %}
         {% if success == "notifications" %}<p class="success-msg">Saved.</p>{% endif %}
+        {% if current_feuser.is_demo %}<fieldset disabled style="border:none;padding:0;margin:0;">{% endif %}
         <form method="post" novalidate id="notifications-form">
             {% csrf_token %}
             <input type="hidden" name="action" value="notifications">
@@ -162,6 +169,7 @@
             sync();
         })();
         </script>
+        {% if current_feuser.is_demo %}</fieldset>{% endif %}
     </div>
 
     <div class="settings-card" id="section-ai">
@@ -170,6 +178,10 @@
         </div>
         <p class="in-page-tip">Use your own Anthropic API key to remove usage limits and define custom instructions for how expenses are classified.</p>
         {% if success == "ai" %}<p class="success-msg">Saved.</p>{% endif %}
+        {% if current_feuser.is_demo %}
+        <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
+        <fieldset disabled style="border:none;padding:0;margin:0;">
+        {% endif %}
         <form method="post" novalidate>
             {% csrf_token %}
             <input type="hidden" name="action" value="ai">
@@ -193,6 +205,7 @@
                 <button type="submit" class="btn">Save changes</button>
             </div>
         </form>
+        {% if current_feuser.is_demo %}</fieldset>{% endif %}
     </div>
 
     <div class="settings-card" id="section-2fa">
@@ -204,7 +217,10 @@
             <span class="settings-badge settings-badge--off">Not enabled</span>
             {% endif %}
         </div>
-        {% if current_feuser.totp_enabled %}
+        {% if current_feuser.is_demo %}
+        <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
+        <button type="button" class="btn" disabled>Set up 2FA</button>
+        {% elif current_feuser.totp_enabled %}
         <p class="in-page-tip">Your account is protected with an authenticator app.</p>
         <a href="{% url 'totp_disable' %}" class="btn btn-danger btn-sm">Disable 2FA</a>
         {% else %}
@@ -218,6 +234,7 @@
             <h2 class="settings-card-title">Email address</h2>
         </div>
         <p class="settings-current-value">{{ current_feuser.email }}</p>
+        {% if not current_feuser.is_demo %}
         {% if success == "email_direct" %}
         <p class="success-msg">Email address updated.</p>
         {% elif success == "email" %}
@@ -226,6 +243,11 @@
         <p class="error-msg">{{ email_error }}</p>
         {% elif current_feuser.pending_email %}
         <p class="success-msg">Pending confirmation for <strong>{{ current_feuser.pending_email }}</strong>.</p>
+        {% endif %}
+        {% endif %}
+        {% if current_feuser.is_demo %}
+        <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
+        <fieldset disabled style="border:none;padding:0;margin:0;">
         {% endif %}
         <form method="post" novalidate>
             {% csrf_token %}
@@ -239,6 +261,7 @@
                 <button type="submit" class="btn">Update email</button>
             </div>
         </form>
+        {% if current_feuser.is_demo %}</fieldset>{% endif %}
     </div>
 
     <div class="settings-card" id="section-password">
@@ -246,6 +269,10 @@
             <h2 class="settings-card-title">Password</h2>
         </div>
         {% if success == "password" %}<p class="success-msg">Password updated.</p>{% endif %}
+        {% if current_feuser.is_demo %}
+        <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
+        <fieldset disabled style="border:none;padding:0;margin:0;">
+        {% endif %}
         <form method="post" novalidate>
             {% csrf_token %}
             <input type="hidden" name="action" value="password">
@@ -258,6 +285,7 @@
                 <button type="submit" class="btn">Update password</button>
             </div>
         </form>
+        {% if current_feuser.is_demo %}</fieldset>{% endif %}
     </div>
 
     <div class="settings-card" id="section-apikey">
@@ -265,7 +293,10 @@
             <h2 class="settings-card-title">API key</h2>
         </div>
         <p class="in-page-tip">Use a Bearer token to access the REST API programmatically.</p>
-        {% if current_feuser.api_key %}
+        {% if current_feuser.is_demo %}
+        <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
+        <button type="button" class="btn btn-sm" disabled>Generate API key</button>
+        {% elif current_feuser.api_key %}
         <div class="pw-wrap settings-apikey-wrap">
             <input type="text" id="api-key-display" value="{{ current_feuser.api_key }}" readonly class="edit-input settings-apikey-input">
             <button type="button" class="pw-eye" aria-label="Copy to clipboard" id="api-key-copy" tabindex="-1" title="Copy">
@@ -304,7 +335,11 @@
                 <h2 class="settings-card-title">Danger zone</h2>
             </div>
             <p class="in-page-tip">Permanently delete your account and all associated data. This cannot be undone.</p>
+            {% if current_feuser.is_demo %}
+            <button type="button" class="btn btn-danger btn-sm" disabled title="Not available on demo accounts">Delete account</button>
+            {% else %}
             <a href="{% url 'account_delete' %}" class="btn btn-danger btn-sm">Delete account</a>
+            {% endif %}
         </div>
     </div>
 

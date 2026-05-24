@@ -10,7 +10,7 @@ DEFAULT_CATEGORIES = [
     "Investment",
     # Income kinds
     "Salary",
-    "Gifts",
+    "Gifted Money",
     "Sales",
     "Miscellaneous",
 ]

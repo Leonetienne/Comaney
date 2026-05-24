@@ -14,6 +14,8 @@ class Command(BaseCommand):
         parser.add_argument("-p", "--password", default=None, help="Password (prompted if omitted).")
         parser.add_argument("--first-name", default=None, help="First name (prompted if omitted in interactive mode).")
         parser.add_argument("--last-name", default=None, help="Last name (prompted if omitted in interactive mode).")
+        parser.add_argument("--demo", action="store_true", default=False, help="Mark the account as a demo user.")
+        parser.add_argument("--ai-trial-budget", type=int, default=None, metavar="CENTS", help="Override AI trial budget limit in cents.")
 
     def handle(self, *args, **options):
         email = options["email"].strip().lower()
@@ -39,8 +41,15 @@ class Command(BaseCommand):
         if not last_name and interactive:
             last_name = input("Last name: ").strip()
 
-        user = FeUser(email=email, first_name=first_name, last_name=last_name,
-                      is_active=True, is_confirmed=True)
+        user = FeUser(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=True,
+            is_confirmed=True,
+            is_demo=options["demo"],
+            special_ai_trial_budget=options["ai_trial_budget"],
+        )
         user.set_password(password)
         user.save()
 

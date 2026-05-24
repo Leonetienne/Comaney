@@ -34,8 +34,11 @@ class BuddyEmailService:
         if settings.DISABLE_EMAILING:
             return False
 
+        feuser = ctx.get("feuser_recipient")
+        if feuser and feuser.is_demo:
+            return False
+
         if respect_prefs:
-            feuser = ctx.get("feuser_recipient")
             if feuser:
                 if not feuser.email_notifications:
                     return False

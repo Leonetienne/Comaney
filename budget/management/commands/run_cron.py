@@ -28,5 +28,8 @@ class Command(BaseCommand):
         self.stdout.write("\n-- send_expense_notifications --")
         call_command("send_expense_notifications", stdout=self.stdout)
 
+        self.stdout.write("\n-- reset_demo_user --")
+        call_command("reset_demo_user", stdout=self.stdout)
+
         self.stdout.write(self.style.SUCCESS("\n=== done ==="))
 

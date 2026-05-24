@@ -71,7 +71,7 @@
                     <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
                     <div class="ctx-menu">
                         <button type="submit" id="btn-remove-member-{{ m.uid }}" form="remove-form-{{ m.uid }}" class="ctx-menu-item ctx-menu-item--danger">Remove</button>
-                        {% if p_state == "invite" %}
+                        {% if p_state == "invite" and not request.feuser.is_demo %}
                         <button class="ctx-menu-item partnership-invite-btn"
                                 data-feuser-id="{{ m.feuser.pk }}"
                                 data-name="{{ m.feuser.first_name|default:m.feuser.email|escapejs }}">Invite as partner</button>
@@ -117,8 +117,10 @@
                                 data-initials="{{ m.dummy.initials }}"
                                 data-avatar-color="{{ m.dummy.initials|avatar_color }}"
                                 onclick="openDummyPicModal(this)">Change photo</button>
+                        {% if not request.feuser.is_demo %}
                         <button class="ctx-menu-item" id="merge-btn-{{ m.dummy.uid }}"
                                 onclick="document.getElementById('ctx-wrap-prj-{{ m.dummy.uid }}').style.display='none';document.getElementById('merge-form-{{ m.dummy.uid }}').style.display='flex'">Invite as user</button>
+                        {% endif %}
                         <a href="{% url 'projects:project_remove_member' project_id=group.uid member_id=m.uid %}" class="ctx-menu-item ctx-menu-item--danger">Remove</a>
                     </div>
                 </div>
@@ -158,11 +160,19 @@
             <div class="settings-row">
                 <p class="settings-row__title">Invite by email</p>
                 <p class="settings-row__desc">Sends a project invitation. If the person is not yet your buddy, a connection is established at the same time.</p>
+                {% if request.feuser.is_demo %}
+                <p class="settings-row__desc" style="opacity:.5;">Not available on demo accounts.</p>
+                <div class="inline-form">
+                    <input type="email" placeholder="Email address" disabled class="input-inline">
+                    <button type="button" class="btn" disabled>Send invite</button>
+                </div>
+                {% else %}
                 <form method="post" action="{% url 'projects:project_invite_member' project_id=group.uid %}" class="inline-form">
                     {% csrf_token %}
                     <input type="email" name="email" placeholder="Email address" required class="input-inline">
                     <button type="submit" id="btn-group-invite" class="btn">Send invite</button>
                 </form>
+                {% endif %}
             </div>
 
             <div class="settings-row">

@@ -132,6 +132,8 @@ def send_expense_notification(expense, notification_class: str) -> bool:
     if notification_class not in CLASS_ORDER or not notification_class:
         return False
     feuser = expense.owning_feuser
+    if feuser.is_demo:
+        return False
     ctx = _build_email_context(expense, notification_class)
     subject = _subject(expense, notification_class, ctx)
     plain = _build_plain_text(expense, notification_class, ctx)

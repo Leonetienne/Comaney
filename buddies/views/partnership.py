@@ -52,6 +52,9 @@ def send_partnership_invite(request):
     from feusers.models import FeUser
     feuser = request.feuser
 
+    if feuser.is_demo:
+        return JsonResponse({"error": "Demo accounts cannot use Catalog Partnerships."}, status=403)
+
     try:
         data = json.loads(request.body)
         invitee_id = int(data["invitee_id"])
@@ -65,6 +68,9 @@ def send_partnership_invite(request):
 
     if invitee == feuser:
         return JsonResponse({"error": "Cannot invite yourself."}, status=400)
+
+    if invitee.is_demo:
+        return JsonResponse({"error": "Cannot invite a demo account as a partner."}, status=403)
 
     if not _has_mutual_connection(feuser, invitee):
         return JsonResponse({"error": "No mutual connection with this user."}, status=403)

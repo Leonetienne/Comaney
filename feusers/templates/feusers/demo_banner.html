@@ -1,0 +1,22 @@
+{% extends "auth_base.html" %}
+{% block title %}Comaney – Demo Account Notice{% endblock %}
+
+{% block auth_content %}
+<h1>Demo Account</h1>
+<p>You are using a <strong>public demo account</strong>. Please read and confirm the following before continuing:</p>
+
+<ul class="demo-banner-list">
+    <li>This account is visible to anyone who has the credentials. <strong>Do not upload personal, sensitive, or confidential information.</strong></li>
+    <li>Do not upload illegal content.</li>
+    <li>This account may be reset or deleted at any time without notice.</li>
+    <li>The following features are not available on demo accounts: deleting your account, inviting buddies, joining or creating projects with other users, entering a Catalog Partnership, setting a personal Anthropic API key, and generating a REST API key.</li>
+</ul>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="action" value="accept">
+    <div class="form-actions">
+        <button type="submit" id="btn-demo-accept" class="btn btn-full">Okay, I understand</button>
+    </div>
+</form>
+{% endblock %}

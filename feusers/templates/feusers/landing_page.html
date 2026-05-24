@@ -441,6 +441,13 @@
           Get started for free
         </a>
       </div>
+      {% if demo_users_enabled and demo_user_email %}
+      <p class="lp-cta-sub" style="margin-top:1.5rem;">
+        Not ready to sign up?
+        <a href="{% url 'login' %}" class="lp-link">Try the live demo</a>
+        &mdash; log in with <strong>{{ demo_user_email }}</strong> and see everything for yourself.
+      </p>
+      {% endif %}
     </div>
   </section>
   {% endif %}

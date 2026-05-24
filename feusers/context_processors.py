@@ -13,6 +13,8 @@ def current_feuser(request):
         except FeUser.DoesNotExist:
             ctx = {"current_feuser": None}
     ctx["registration_enabled"] = settings.ENABLE_REGISTRATION
+    ctx["demo_users_enabled"] = settings.ENABLE_DEMO_USERS
+    ctx["demo_user_email"] = settings.DEMO_USER_EMAIL
     feuser = ctx["current_feuser"]
     from budget.ai_trial import trial_is_disabled
     trial_ok = bool(settings.AI_TRIAL_API_KEY and settings.AI_TRIAL_USAGE_LIMIT and not trial_is_disabled())

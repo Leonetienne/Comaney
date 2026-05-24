@@ -441,8 +441,11 @@ def _trial_state(feuser):
     from django.conf import settings
     if feuser.anthropic_api_key:
         return feuser.anthropic_api_key, False, 0, 0, False
-    trial_key   = settings.AI_TRIAL_API_KEY
-    trial_limit = settings.AI_TRIAL_USAGE_LIMIT
+    trial_key = settings.AI_TRIAL_API_KEY
+    if feuser.special_ai_trial_budget is not None:
+        trial_limit = float(feuser.special_ai_trial_budget)
+    else:
+        trial_limit = settings.AI_TRIAL_USAGE_LIMIT
     if not trial_key or not trial_limit:
         return "", False, 0, 0, False
     spent   = float(feuser.ai_trial_budget_spent or 0)

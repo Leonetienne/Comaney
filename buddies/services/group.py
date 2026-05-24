@@ -54,10 +54,16 @@ class ProjectService:
         if email == admin_feuser.email.lower():
             return ("self", None)
 
+        if admin_feuser.is_demo:
+            return ("demo_restricted", None)
+
         try:
             invitee = FeUser.objects.get(email__iexact=email, is_active=True)
         except FeUser.DoesNotExist:
             invitee = None
+
+        if invitee and invitee.is_demo:
+            return ("invitee_is_demo", None)
 
         if invitee:
             existing = BuddyGroupMember.objects.filter(group=group, feuser=invitee).first()
@@ -270,11 +276,17 @@ class ProjectService:
         """
         from feusers.models import FeUser
 
+        if admin_feuser.is_demo:
+            return ("demo_restricted", None)
+
         target_email = target_email.strip().lower()
         try:
             invited = FeUser.objects.get(email__iexact=target_email, is_active=True)
         except FeUser.DoesNotExist:
             invited = None
+
+        if invited and invited.is_demo:
+            return ("invitee_is_demo", None)
 
         if invited is None:
             if settings.DISABLE_EMAILING:

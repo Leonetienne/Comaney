@@ -138,7 +138,11 @@ def invite_actual(request):
         return redirect("buddies:my_buddies")
 
     outcome, obj = BuddyLifecycleService.invite_actual(request.feuser, email)
-    if outcome == "registration_disabled":
+    if outcome == "demo_restricted":
+        django_messages.error(request, "Demo accounts cannot invite buddies.")
+    elif outcome == "invitee_is_demo":
+        django_messages.error(request, "That email address is not available.")
+    elif outcome == "registration_disabled":
         django_messages.error(request, "That email address is not registered and registration is not enabled on this instance.")
     elif outcome == "onboarding_no_email":
         site_url = getattr(django_settings, "SITE_URL", "")
@@ -233,7 +237,11 @@ def send_merge_invite(request, dummy_id):
     if not email:
         return redirect("buddies:my_buddies")
     outcome, obj = BuddyLifecycleService.send_merge_invite(request.feuser, dummy, email)
-    if outcome == "registration_disabled":
+    if outcome == "demo_restricted":
+        django_messages.error(request, "Demo accounts cannot send invitations.")
+    elif outcome == "invitee_is_demo":
+        django_messages.error(request, "That email address is not available.")
+    elif outcome == "registration_disabled":
         django_messages.error(request, "That email address is not registered and registration is not enabled on this instance.")
     elif outcome == "onboarding_no_email":
         site_url = getattr(django_settings, "SITE_URL", "")

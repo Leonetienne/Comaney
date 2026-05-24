@@ -574,7 +574,11 @@ def project_invite_member(request, project_id):
         return redirect("projects:project_settings", project_id=project_id)
 
     outcome, obj = ProjectService.invite_member(project, feuser, email)
-    if outcome == "registration_disabled":
+    if outcome == "demo_restricted":
+        django_messages.error(request, "Demo accounts cannot invite project members.")
+    elif outcome == "invitee_is_demo":
+        django_messages.error(request, "That email address is not available.")
+    elif outcome == "registration_disabled":
         django_messages.error(request, "That email address is not registered and registration is not enabled on this instance.")
     elif outcome == "self":
         django_messages.error(request, "You cannot invite yourself.")
@@ -746,7 +750,11 @@ def project_send_merge(request, project_id, dummy_id):
     if not email:
         return redirect("projects:project_detail", project_id=project_id)
     outcome, obj = ProjectService.send_group_dummy_merge_invite(project, feuser, dummy, email)
-    if outcome == "registration_disabled":
+    if outcome == "demo_restricted":
+        django_messages.error(request, "Demo accounts cannot send invitations.")
+    elif outcome == "invitee_is_demo":
+        django_messages.error(request, "That email address is not available.")
+    elif outcome == "registration_disabled":
         django_messages.error(request, "That email address is not registered and registration is not enabled on this instance.")
     elif outcome == "onboarding_no_email":
         site_url = getattr(django_settings, "SITE_URL", "")

@@ -225,6 +225,8 @@ def login_view(request):
                 error = "Invalid email or password."
             elif not user.is_confirmed:
                 error = "Please confirm your email address first."
+            elif user.is_demo and not settings.ENABLE_DEMO_USERS:
+                error = "Invalid email or password."
             elif user.totp_enabled:
                 request.session["totp_pending_id"] = user.pk
                 return redirect("totp_verify")

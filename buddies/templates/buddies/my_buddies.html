@@ -75,7 +75,7 @@
                     <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
                     <div class="ctx-menu">
                         <button type="submit" id="btn-kick-{{ info.link_uid }}" form="kick-form-{{ info.link_uid }}" class="ctx-menu-item ctx-menu-item--danger">Remove buddy</button>
-                        {% if info.feuser and p_state == "invite" %}
+                        {% if info.feuser and p_state == "invite" and not request.feuser.is_demo %}
                         <button class="ctx-menu-item partnership-invite-btn"
                                 data-feuser-id="{{ info.feuser.pk }}"
                                 data-name="{{ info.display_name|escapejs }}">Invite as partner</button>
@@ -113,8 +113,10 @@
                                 data-initials="{{ info.dummy.initials }}"
                                 data-avatar-color="{{ info.dummy.initials|avatar_color }}"
                                 onclick="openDummyPicModal(this)">Change photo</button>
+                        {% if not request.feuser.is_demo %}
                         <button class="ctx-menu-item" id="merge-btn-{{ info.dummy.uid }}"
                                 onclick="document.getElementById('ctx-wrap-{{ info.dummy.uid }}').style.display='none';document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='flex'">Invite as user</button>
+                        {% endif %}
                         <a href="{% url 'buddies:kick_dummy' info.dummy.uid %}" id="btn-kick-dummy-{{ info.dummy.uid }}" class="ctx-menu-item ctx-menu-item--danger">Remove</a>
                     </div>
                 </div>
@@ -214,11 +216,19 @@
         <div class="add-buddy-panel">
             <h3>Invite a buddy</h3>
             <p class="text-muted">For one-on-one expense sharing with another Comaney user.</p>
+            {% if request.feuser.is_demo %}
+            <p class="text-muted" style="opacity:.5;">Not available on demo accounts.</p>
+            <div class="inline-form">
+                <input type="email" placeholder="Email address" disabled class="input-inline">
+                <button type="button" class="btn" disabled>Send invite</button>
+            </div>
+            {% else %}
             <form method="post" action="{% url 'buddies:invite_actual' %}" class="inline-form">
                 {% csrf_token %}
                 <input type="email" name="email" placeholder="Email address" required class="input-inline">
                 <button type="submit" id="btn-invite-actual" class="btn">Send invite</button>
             </form>
+            {% endif %}
         </div>
 
         <div class="add-buddy-panel">

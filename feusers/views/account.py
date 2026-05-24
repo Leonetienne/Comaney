@@ -127,10 +127,19 @@ def profile(request):
             profile_form = ProfileForm(request.POST, instance=feuser)
             if profile_form.is_valid():
                 feuser.last_mod = timezone.now()
-                profile_form.save()
+                if feuser.is_demo:
+                    feuser.currency = profile_form.cleaned_data["currency"]
+                    feuser.month_start_day = profile_form.cleaned_data["month_start_day"]
+                    feuser.month_start_prev = profile_form.cleaned_data["month_start_prev"]
+                    feuser.unspent_allowance_action = profile_form.cleaned_data["unspent_allowance_action"]
+                    feuser.save(update_fields=["currency", "month_start_day", "month_start_prev", "unspent_allowance_action", "last_mod"])
+                else:
+                    profile_form.save()
                 return redirect(f"{request.path}?success=profile")
 
         elif action == "notifications":
+            if feuser.is_demo:
+                return redirect(f"{request.path}?success=notifications")
             notifications_form = NotificationPreferencesForm(request.POST, instance=feuser)
             if notifications_form.is_valid():
                 feuser.last_mod = timezone.now()
@@ -138,6 +147,8 @@ def profile(request):
                 return redirect(f"{request.path}?success=notifications")
 
         elif action == "ai":
+            if feuser.is_demo:
+                return redirect(f"{request.path}?success=ai")
             ai_form = AISettingsForm(request.POST, instance=feuser)
             if ai_form.is_valid():
                 feuser.last_mod = timezone.now()
@@ -145,6 +156,8 @@ def profile(request):
                 return redirect(f"{request.path}?success=ai")
 
         elif action == "email":
+            if feuser.is_demo:
+                return redirect(f"{request.path}?success=email")
             email_form = ChangeEmailForm(request.POST, feuser=feuser)
             if email_form.is_valid():
                 new_email = email_form.cleaned_data["email"]
@@ -178,6 +191,8 @@ def profile(request):
                     email_error = "We couldn't send a confirmation email to that address. Please check it and try again."
 
         elif action == "password":
+            if feuser.is_demo:
+                return redirect(f"{request.path}?success=password")
             password_form = ChangePasswordForm(request.POST, feuser=feuser)
             if password_form.is_valid():
                 feuser.set_password(password_form.cleaned_data["new_password"])
@@ -517,6 +532,9 @@ def account_delete(request):
     if not feuser:
         return redirect("login")
 
+    if feuser.is_demo:
+        return render(request, "feusers/account_delete.html", {"error": "Demo accounts cannot be deleted."})
+
     error = None
     if request.method == "POST":
         password = request.POST.get("password", "")
@@ -538,6 +556,8 @@ def api_key_generate(request):
     user = _get_session_feuser(request)
     if not user:
         return redirect("login")
+    if user.is_demo:
+        return redirect("profile")
     user.generate_api_key()
     user.last_mod = timezone.now()
     user.save(update_fields=["api_key", "last_mod"])
