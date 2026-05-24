@@ -32,6 +32,7 @@
     li {
       a {
         display: block;
+        position: relative;
         padding: 10px 24px;
         text-decoration: none;
         color: var(--sidebar-link, rgba(255, 255, 255, .45));
@@ -41,6 +42,15 @@
         &:hover {
           color: var(--sidebar-link-hover, rgba(255, 255, 255, .85));
           background: var(--sidebar-hover-bg, rgba(255, 255, 255, .05));
+        }
+
+        .action-badge {
+          position: absolute;
+          top: 50%;
+          right: 8px;
+          transform: translateY(-50%);
+          margin-left: 0;
+          vertical-align: unset;
         }
       }
 

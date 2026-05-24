@@ -22,13 +22,13 @@
             </li>
             <li><span class="sidebar-section-label">Buddy</span></li>
             <li class="{% if active_nav == 'my_buddies' %}active{% endif %}">
-                <a href="{% url 'buddies:my_buddies' %}">Manage Buddies</a>
+                <a href="{% url 'buddies:my_buddies' %}">Manage Buddies {% action_badge current_feuser "buddies" %}</a>
             </li>
             <li class="{% if active_nav == 'buddy_summary' %}active{% endif %}">
-                <a href="{% url 'buddies:buddy_summary' %}">Buddy Expenses</a>
+                <a href="{% url 'buddies:buddy_summary' %}">Buddy Expenses {% action_badge current_feuser "buddy_expenses" %}</a>
             </li>
             <li class="{% if active_nav == 'projects' %}active{% endif %}">
-                <a href="{% url 'projects:projects_list' %}">Projects</a>
+                <a href="{% url 'projects:projects_list' %}">Projects {% action_badge current_feuser "projects" %}</a>
             </li>
 
             {% if ai_smart_create_available %}

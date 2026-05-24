@@ -111,3 +111,109 @@ def _count_partnership_actions(feuser) -> int:
     except CatalogPartnershipMembership.DoesNotExist:
         pass
     return pending_invites + pending_onboarding
+
+
+@register_badge("buddies")
+def _count_buddy_actions(feuser) -> int:
+    from django.utils import timezone
+    from buddies.models import BuddyInvite, DummyMergeInvite
+    now = timezone.now()
+    incoming = BuddyInvite.objects.filter(
+        invitee_email=feuser.email,
+        expires_at__gt=now,
+    ).count()
+    merge_in = DummyMergeInvite.objects.filter(
+        invited_feuser=feuser,
+        expires_at__gt=now,
+    ).count()
+    return incoming + merge_in
+
+
+@register_badge("buddy_expenses")
+def _count_buddy_expense_actions(feuser) -> int:
+    from budget.models import Expense
+    from buddies.models import Project
+    count = 0
+    # Personal expenses where feuser is recorded as upfront payer and needs to confirm
+    count += Expense.objects.filter(
+        owning_feuser=feuser,
+        buddy_approved=False,
+        is_buddies_settlement=False,
+        project__isnull=True,
+    ).count()
+    # Settlements where feuser is the creditor (all contexts, including projects)
+    count += Expense.objects.filter(
+        buddy_spendings__participant_feuser=feuser,
+        buddy_approved=False,
+        is_buddies_settlement=True,
+    ).distinct().count()
+    # Admin: dummy upfront-payer expenses and dummy-creditor settlements in all projects
+    admin_ids = list(
+        Project.objects.filter(admin_feuser=feuser).values_list("uid", flat=True)
+    )
+    if admin_ids:
+        count += Expense.objects.filter(
+            project_id__in=admin_ids,
+            is_dummy=True,
+            is_buddies_settlement=False,
+            buddy_approved=False,
+        ).count()
+        count += Expense.objects.filter(
+            buddy_spendings__participant_dummy__owning_group_id__in=admin_ids,
+            buddy_approved=False,
+            is_buddies_settlement=True,
+        ).distinct().count()
+    return count
+
+
+@register_badge("projects")
+def _count_project_actions(feuser) -> int:
+    from django.utils import timezone
+    from budget.models import Expense
+    from buddies.models import Project, ProjectInvite, ProjectMember
+    now = timezone.now()
+    # Incoming project invites
+    invite_count = ProjectInvite.objects.filter(
+        invitee_email=feuser.email,
+        expires_at__gt=now,
+    ).count()
+    # Non-archived projects where feuser is a member
+    member_project_ids = list(
+        ProjectMember.objects.filter(feuser=feuser, group__archived=False)
+        .values_list("group_id", flat=True)
+    )
+    if not member_project_ids:
+        return invite_count
+    # Expenses where feuser is recorded as upfront payer within a project
+    owner_count = Expense.objects.filter(
+        project_id__in=member_project_ids,
+        owning_feuser=feuser,
+        buddy_approved=False,
+        is_buddies_settlement=False,
+    ).count()
+    # Settlements where feuser is the creditor within a project
+    creditor_count = Expense.objects.filter(
+        project_id__in=member_project_ids,
+        buddy_spendings__participant_feuser=feuser,
+        buddy_approved=False,
+        is_buddies_settlement=True,
+    ).distinct().count()
+    # Admin: dummy upfront-payer expenses and dummy-creditor settlements
+    admin_ids = list(
+        Project.objects.filter(uid__in=member_project_ids, admin_feuser=feuser)
+        .values_list("uid", flat=True)
+    )
+    admin_count = 0
+    if admin_ids:
+        admin_count += Expense.objects.filter(
+            project_id__in=admin_ids,
+            is_dummy=True,
+            is_buddies_settlement=False,
+            buddy_approved=False,
+        ).count()
+        admin_count += Expense.objects.filter(
+            buddy_spendings__participant_dummy__owning_group_id__in=admin_ids,
+            buddy_approved=False,
+            is_buddies_settlement=True,
+        ).distinct().count()
+    return invite_count + owner_count + creditor_count + admin_count

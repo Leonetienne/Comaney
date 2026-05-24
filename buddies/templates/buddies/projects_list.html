@@ -38,7 +38,7 @@
            data-project-id="{{ project.uid }}">
             <div class="bgs-card-header">
                 <div class="bgs-card-top">
-                    <span class="bgs-name">{{ project.name }}</span>
+                    <span class="bgs-name">{{ project.name }}{% if ps.pending_count %} <span class="action-badge" title="{{ ps.pending_count }} action{% if ps.pending_count != 1 %}s{% endif %} needed">{{ ps.pending_count }}</span>{% endif %}</span>
                     <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
                         {% if ps.is_admin %}<span class="pill pill--accent">Admin</span>{% endif %}
                         {% if project.archived %}<span class="pill" style="opacity:0.7;">Archived</span>{% endif %}

@@ -133,6 +133,51 @@ def _is_solo(project):
     return feuser_count == 1 and dummy_count == 0
 
 
+def _project_pending_counts(feuser, project_ids: list) -> dict:
+    """Return {project_id: pending_approval_count} for non-archived projects."""
+    if not project_ids:
+        return {}
+    counts = {pid: 0 for pid in project_ids}
+    # Expenses where feuser is the recorded upfront payer
+    for row in Expense.objects.filter(
+        project_id__in=project_ids,
+        owning_feuser=feuser,
+        buddy_approved=False,
+        is_buddies_settlement=False,
+    ).values("project_id"):
+        counts[row["project_id"]] += 1
+    # Settlements where feuser is the creditor
+    for row in Expense.objects.filter(
+        project_id__in=project_ids,
+        buddy_spendings__participant_feuser=feuser,
+        buddy_approved=False,
+        is_buddies_settlement=True,
+    ).distinct().values("project_id"):
+        counts[row["project_id"]] += 1
+    # Admin: dummy upfront-payer expenses
+    admin_ids = set(
+        Project.objects.filter(admin_feuser=feuser, uid__in=project_ids)
+        .values_list("uid", flat=True)
+    )
+    if admin_ids:
+        for row in Expense.objects.filter(
+            project_id__in=admin_ids,
+            is_dummy=True,
+            is_buddies_settlement=False,
+            buddy_approved=False,
+        ).values("project_id"):
+            counts[row["project_id"]] += 1
+        # Admin: settlements where a project dummy is the creditor
+        for row in Expense.objects.filter(
+            buddy_spendings__participant_dummy__owning_group_id__in=admin_ids,
+            buddy_approved=False,
+            is_buddies_settlement=True,
+        ).distinct().values("project_id"):
+            if row["project_id"] in counts:
+                counts[row["project_id"]] += 1
+    return counts
+
+
 @feuser_required
 def projects_list(request):
     feuser = request.feuser
@@ -151,6 +196,10 @@ def projects_list(request):
         s["group"].uid: s
         for s in BuddyQueryService.get_group_summaries_for_feuser(feuser)
     }
+
+    non_archived_ids = [p.uid for p in my_projects if not p.archived]
+    pending_counts = _project_pending_counts(feuser, non_archived_ids)
+
     # Attach summary data to each project for the template
     project_summaries = [
         {
@@ -161,6 +210,7 @@ def projects_list(request):
             "group_total_spending": summaries_by_id.get(p.uid, {}).get("group_total_spending", Decimal("0")),
             "has_multiple_members": summaries_by_id.get(p.uid, {}).get("has_multiple_members", False),
             "is_admin": p.admin_feuser_id == feuser.pk,
+            "pending_count": pending_counts.get(p.uid, 0),
         }
         for p in my_projects
     ]
