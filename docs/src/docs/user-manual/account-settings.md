@@ -71,7 +71,7 @@ Changes in these boxes are previewed live in the page as you type, so you can se
 | **Currency** | The symbol shown next to amounts throughout the app (for example: €, $, £). This is cosmetic only; Comaney does not convert between currencies. Default is €. |
 | **Month starts on day** | The day of the month when your financial month begins. Default: 1. |
 | **In the previous calendar month** | Turn this on if your pay arrives near the end of the month. For example, if your month starts on the 27th with this option on, your April would run from 27 March to 26 April. |
-| **At month end, unspent allowance should** | What happens to any leftover budget at the end of a financial month. See [End-of-month rollover](#end-of-month-rollover) below. |
+| **At month end, unspent allowance should** | What happens to any leftover budget at the end of a financial month. See [Unspent budget at month end](#unspent-budget-at-month-end) below. |
 
 A small preview under the month settings shows you the exact date ranges your financial months will cover, so you can check the result before saving.
 
@@ -84,13 +84,12 @@ Say your salary arrives on the 27th of each month. Set **Month starts on day** t
 
 Everything you spend between paydays is grouped in the same month.
 
-### End-of-month rollover
+### Unspent budget at month end
 
 | Option | What happens |
 |---|---|
 | **be dropped** | Each month starts fresh. This is the right choice for most people. |
 | **be deposited as savings** | Comaney automatically adds a savings deposit for the leftover amount. |
-| **carry over to next month** | Comaney adds an income entry in the next month for the leftover amount so it shows up in next month's budget. |
 
 ---
 

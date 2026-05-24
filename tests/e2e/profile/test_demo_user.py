@@ -627,7 +627,7 @@ class TestDemoProfileFieldRestrictions:
             "currency": "$",
             "month_start_day": "1",
             "month_start_prev": "False",
-            "unspent_allowance_action": "carry_over",
+            "unspent_allowance_action": "do_nothing",
         }, allow_redirects=True, timeout=10)
         currency = _shell(
             f"from feusers.models import FeUser; "
@@ -650,7 +650,7 @@ class TestDemoProfileFieldRestrictions:
             "currency": original or "€",
             "month_start_day": "1",
             "month_start_prev": "False",
-            "unspent_allowance_action": "carry_over",
+            "unspent_allowance_action": "do_nothing",
         }, allow_redirects=True, timeout=10)
         after = _shell(
             f"from feusers.models import FeUser; "
@@ -673,7 +673,7 @@ class TestDemoProfileFieldRestrictions:
             "currency": "€",
             "month_start_day": "1",
             "month_start_prev": "False",
-            "unspent_allowance_action": "carry_over",
+            "unspent_allowance_action": "do_nothing",
         }, allow_redirects=True, timeout=10)
         after = _shell(
             f"from feusers.models import FeUser; "

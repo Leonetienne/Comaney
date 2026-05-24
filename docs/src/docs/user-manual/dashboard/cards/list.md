@@ -32,7 +32,6 @@ Each row contains three columns:
 | Income | `IN` |
 | Savings Deposit | `SD` |
 | Savings Withdrawal | `SW` |
-| Carry-Over | `CO` |
 
 ## Sorting
 

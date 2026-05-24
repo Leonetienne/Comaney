@@ -20,8 +20,6 @@ class ExpenseForm(forms.ModelForm):
 
     def __init__(self, *args, feuser=None, **kwargs):
         super().__init__(*args, **kwargs)
-        allowed = [c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER]
-        self.fields["type"].choices = allowed
         if feuser:
             self.fields["category"].queryset = Category.objects.filter(owning_feuser=feuser)
             self.fields["tags"].queryset = Tag.objects.filter(owning_feuser=feuser)
@@ -41,9 +39,7 @@ class ExpenseForm(forms.ModelForm):
         model = Expense
         fields = ["title", "payee", "type", "value", "category", "tags", "note", "date_due", "settled", "auto_settle_on_due_date", "deactivated", "notify"]
         widgets = {
-            "type": forms.Select(choices=[
-                c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER
-            ]),
+            "type": forms.Select(choices=TransactionType.choices),
             "note": forms.Textarea(attrs={"rows": 3, "maxlength": 1024}),
             "date_due": forms.DateInput(attrs={"type": "date"}),
             "tags": forms.CheckboxSelectMultiple(),
@@ -83,8 +79,6 @@ class ScheduledExpenseForm(forms.ModelForm):
 
     def __init__(self, *args, feuser=None, **kwargs):
         super().__init__(*args, **kwargs)
-        allowed = [c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER]
-        self.fields["type"].choices = allowed
         if feuser:
             self.fields["category"].queryset = Category.objects.filter(owning_feuser=feuser)
             self.fields["tags"].queryset = Tag.objects.filter(owning_feuser=feuser)
@@ -112,9 +106,7 @@ class ScheduledExpenseForm(forms.ModelForm):
             "category", "tags", "note", "default_auto_settle_on_due_date", "deactivated", "notify",
         ]
         widgets = {
-            "type": forms.Select(choices=[
-                c for c in TransactionType.choices if c[0] != TransactionType.CARRY_OVER
-            ]),
+            "type": forms.Select(choices=TransactionType.choices),
             "repeat_base_date": forms.DateInput(attrs={"type": "date"}),
             "end_on": forms.DateInput(attrs={"type": "date"}),
             "repeat_every_factor": forms.NumberInput(attrs={"min": "1"}),

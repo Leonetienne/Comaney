@@ -1,6 +1,6 @@
 # Cron Jobs
 
-Comaney requires two management commands to run on a schedule inside the web container. Without them, recurring expenses are not generated, due-date notifications are not sent, auto-settle does not fire, and end-of-month rollover does not happen.
+Comaney requires two management commands to run on a schedule inside the web container. Without them, recurring expenses are not generated, due-date notifications are not sent, auto-settle does not fire, and unspent budget is not handled at month end.
 
 ## Required cron jobs
 
@@ -18,7 +18,7 @@ Comaney requires two management commands to run on a schedule inside the web con
 
 3. **Auto-settles expenses.** For expenses with `auto_settle_on_due_date=True`, marks them settled when their due date passes.
 
-4. **Processes end-of-month rollover.** When a user's financial month transitions, checks whether unspent budget should be deposited to savings or carried over, and creates the appropriate `Expense` record.
+4. **Processes the end-of-month allowance setting.** When a user's financial month transitions, checks whether unspent budget should be deposited to savings and creates the appropriate `Expense` record.
 
 5. **Resets the demo user (if enabled).** When `ENABLE_DEMO_USERS=TRUE`, checks whether the demo account's `last_seen` is older than one week. If so, deletes the account and recreates it with a clean slate. See [Demo user](environment-variables.md#demo-user) for configuration.
 
@@ -61,7 +61,7 @@ Replace `comaney` with the system user that owns the docker-compose file, and ad
 | Recurring expenses | Not generated; recurring transactions never appear |
 | Due-date notifications | Never sent |
 | Auto-settle | Never fires; expenses stay unsettled indefinitely |
-| End-of-month rollover | Never happens; no carry-over or savings deposit is created |
+| End-of-month allowance handling | Never happens; no savings deposit is created |
 | AI trial budget reset | Never resets; users stay at their monthly cap permanently |
 | Demo user reset | Never fires; demo account accumulates data indefinitely |
 

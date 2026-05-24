@@ -18,7 +18,7 @@ from feusers.templatetags.feuser_tags import avatar_color as _avatar_color
 from ..date_utils import financial_month_range, financial_year_range
 from ..decorators import feuser_required
 from ..forms import ExpenseForm, ExpenseOverlayForm
-from ..models import Category, Expense, ExpenseDataOverlay, Tag, TransactionType
+from ..models import Category, Expense, ExpenseDataOverlay, Tag
 from ..notifications import send_settled_notification, set_initial_notification_class
 from ._period import _get_month, _get_period_mode, _get_year, _date_range_presets_context
 from ._sharing import has_buddy_or_multiuser_project
@@ -360,8 +360,6 @@ def expense_edit(request, uid):
         )
         is_admin_edit = True
     form_feuser = expense.owning_feuser if is_admin_edit else feuser
-    if expense.type == TransactionType.CARRY_OVER:
-        return redirect("budget:expenses_list")
     if expense.is_buddies_settlement and not expense.settlement_can_edit:
         return redirect("budget:expenses_list")
     # Non-admin group members cannot edit an approved group settlement: only the
@@ -510,8 +508,6 @@ def expense_edit(request, uid):
 @require_POST
 def expense_delete(request, uid):
     expense = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
-    if expense.type == TransactionType.CARRY_OVER:
-        return redirect("budget:expenses_list")
     if expense.is_buddies_settlement:
         if not expense.settlement_can_delete:
             return redirect("budget:expenses_list")
@@ -723,8 +719,6 @@ def mute_all_notifications(request):
 @require_POST
 def expense_clone(request, uid):
     original = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
-    if original.type == TransactionType.CARRY_OVER:
-        return redirect("budget:expenses_list")
     if original.is_buddies_settlement:
         return redirect("budget:expenses_list")
     tags = list(original.tags.all())

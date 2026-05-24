@@ -157,27 +157,23 @@ window.EXPENSE_CONFIG = {
                 </div>
 
                 <div class="exp-actions">
-                    <template x-if="exp.type !== 'carry_over'">
-                        <div class="d-contents">
-                            <template x-if="!exp.is_foreign && (!exp.is_buddies_settlement || exp.can_edit)">
-                                <a :href="editUrl(exp.id) + '?back=' + encodedBackUrlFor(exp.id)" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
-                            </template>
-                            <template x-if="exp.is_foreign && !exp.is_buddies_settlement">
-                                <a :href="editLiteUrl(exp.id) + '?back=' + encodedBackUrlFor(exp.id)" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
-                            </template>
-                            <template x-if="!exp.is_buddies_settlement && !exp.is_foreign">
-                                <form method="post" :action="cloneUrl(exp.id)">
-                                    <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
-                                    <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
-                                </form>
-                            </template>
-                            <template x-if="exp.can_delete !== false">
-                                <form method="post" :action="deleteUrl(exp.id)" class="delete-form" :data-title="exp.title">
-                                    <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
-                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                                </form>
-                            </template>
-                        </div>
+                    <template x-if="!exp.is_foreign && (!exp.is_buddies_settlement || exp.can_edit)">
+                        <a :href="editUrl(exp.id) + '?back=' + encodedBackUrlFor(exp.id)" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
+                    </template>
+                    <template x-if="exp.is_foreign && !exp.is_buddies_settlement">
+                        <a :href="editLiteUrl(exp.id) + '?back=' + encodedBackUrlFor(exp.id)" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
+                    </template>
+                    <template x-if="!exp.is_buddies_settlement && !exp.is_foreign">
+                        <form method="post" :action="cloneUrl(exp.id)">
+                            <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
+                            <button type="submit" class="btn btn-sm btn-secondary">Clone</button>
+                        </form>
+                    </template>
+                    <template x-if="exp.can_delete !== false">
+                        <form method="post" :action="deleteUrl(exp.id)" class="delete-form" :data-title="exp.title">
+                            <input type="hidden" name="csrfmiddlewaretoken" :value="csrf">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
                     </template>
                 </div>
 

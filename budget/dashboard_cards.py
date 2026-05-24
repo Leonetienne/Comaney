@@ -87,7 +87,7 @@ VALID_LINE_METHODS = {'base', 'cum'}
 VALID_SERIES_METHODS = {'sum', 'total'}
 
 # Expense types that count as negative income under method=total
-_TOTAL_NEGATIVE_TYPES = {'income', 'savings_wit', 'carry_over'}
+_TOTAL_NEGATIVE_TYPES = {'income', 'savings_wit'}
 
 DEFAULT_POSITIONING = {'position': 0, 'width': 2, 'height': 2}
 

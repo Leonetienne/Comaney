@@ -3,7 +3,7 @@ from datetime import date
 from django.http import JsonResponse
 
 from budget.date_utils import financial_month_range, financial_year_range
-from budget.models import Expense, TransactionType
+from budget.models import Expense
 from budget.query_parser import apply_query, has_date_filter
 from budget.notifications import send_settled_notification, set_initial_notification_class
 from budget.views._sharing import build_shared_qs
@@ -134,9 +134,6 @@ def expense_detail(request, feuser, uid):
 
     if request.method == "GET":
         return _ok(_expense_json(exp))
-
-    if exp.type == "carry_over":
-        return _err("Carry-over entries cannot be modified or deleted.", 403)
 
     if exp.is_buddies_settlement:
         if request.method == "PATCH":

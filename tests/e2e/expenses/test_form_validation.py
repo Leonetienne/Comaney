@@ -134,11 +134,6 @@ class TestExpenseFormValidation:
         resp = _form_post(s, "/budget/expenses/new/", {**BASE_EXPENSE, "note": LONG_1024})
         assert resp.status_code == 200
 
-    def test_invalid_type(self, driver, w, ctx):
-        s = _session(driver)
-        resp = _form_post(s, "/budget/expenses/new/", {**BASE_EXPENSE, "type": "carry_over"})
-        assert resp.status_code == 200
-
 
 class TestScheduledFormValidation:
 
@@ -155,11 +150,6 @@ class TestScheduledFormValidation:
     def test_note_too_long(self, driver, w, ctx):
         s = _session(driver)
         resp = _form_post(s, "/budget/scheduled/new/", {**BASE_SCHEDULED, "note": LONG_1024})
-        assert resp.status_code == 200
-
-    def test_invalid_type(self, driver, w, ctx):
-        s = _session(driver)
-        resp = _form_post(s, "/budget/scheduled/new/", {**BASE_SCHEDULED, "type": "carry_over"})
         assert resp.status_code == 200
 
     def test_repeat_factor_missing(self, driver, w, ctx):

@@ -545,14 +545,12 @@
   &--expense     { background: rgba(248,215,218,.35); color: #721c24; }
   &--savings_dep { background: rgba(204,229,255,.35); color: var(--sav-dep-fg); }
   &--savings_wit { background: rgba(255,243,205,.35); color: var(--sav-wit-fg); }
-  &--carry_over  { background: rgba(232,224,247,.35); color: #4a2d8a; }
 
   @media (prefers-color-scheme: dark) {
     &--income      { background: rgba(26,51,38,.6);  color: #6ecf8a; }
     &--expense     { background: rgba(51,26,29,.6);  color: #cf7075; }
     &--savings_dep { background: rgba(13,42,74,.6);  color: var(--sav-dep-fg); }
     &--savings_wit { background: rgba(58,46,0,.6);   color: var(--sav-wit-fg); }
-    &--carry_over  { background: rgba(42,26,74,.6);  color: #b89fe8; }
   }
 }
 

@@ -241,7 +241,6 @@ function expenseList() {
                 expense:     'Expense',
                 savings_dep: 'Savings Deposit',
                 savings_wit: 'Savings Withdrawal',
-                carry_over:  'Carry-Over',
             };
             return m[type] || type;
         },

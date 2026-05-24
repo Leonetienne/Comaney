@@ -74,14 +74,13 @@ def ctx(driver, w):
 class TestAllowanceTransition:
 
     def test_do_nothing(self, driver, w, ctx):
-        """do_nothing: no savings_dep in prev month, no carry_over in current month."""
+        """do_nothing: no savings_dep entry is created for the previous month."""
         inc_id, exp_id = _setup_prev_month(ctx)
         time.sleep(1)
         _reset_action(ctx, "do_nothing")
         run_cmd("apply_allowance_transitions")
         time.sleep(1)
         assert _by_type(_expenses_in(ctx, PREV_YEAR, PREV_MONTH), "savings_dep") == []
-        assert _by_type(_expenses_in(ctx, CUR_YEAR,  CUR_MONTH),  "carry_over")  == []
         _teardown_prev_month(ctx, inc_id, exp_id)
         time.sleep(1)
 
@@ -96,22 +95,6 @@ class TestAllowanceTransition:
         assert len(savings) == 1
         assert savings[0]["value"] == UNSPENT
         api_delete(f"/api/v1/expenses/{savings[0]['id']}/", ctx)
-        _teardown_prev_month(ctx, inc_id, exp_id)
-        time.sleep(1)
-
-    def test_carry_over(self, driver, w, ctx):
-        """carry_over: 400 appears as carry_over in the current month."""
-        inc_id, exp_id = _setup_prev_month(ctx)
-        time.sleep(1)
-        _reset_action(ctx, "carry_over")
-        run_cmd("apply_allowance_transitions")
-        time.sleep(1)
-        carryover = _by_type(_expenses_in(ctx, CUR_YEAR, CUR_MONTH), "carry_over")
-        assert len(carryover) == 1
-        assert carryover[0]["value"] == UNSPENT
-        eid = carryover[0]["id"]
-        run_cmd("shell", "-c",
-                f"from budget.models import Expense; Expense.objects.filter(uid={eid}).delete()")
         _teardown_prev_month(ctx, inc_id, exp_id)
         time.sleep(1)
 
@@ -143,11 +126,11 @@ class TestAllowanceTransition:
         assert inc.status_code == 201
         assert exp.status_code == 201
         time.sleep(1)
-        _reset_action(ctx, "carry_over")
+        _reset_action(ctx, "deposit_savings")
         run_cmd("apply_allowance_transitions")
         time.sleep(1)
-        carryover = _by_type(_expenses_in(ctx, CUR_YEAR, CUR_MONTH), "carry_over")
-        assert carryover == [], f"Expected no carry_over for zero left, got {carryover}"
+        savings = _by_type(_expenses_in(ctx, PREV_YEAR, PREV_MONTH), "savings_dep")
+        assert savings == [], f"Expected no savings_dep for zero left, got {savings}"
         api_delete(f"/api/v1/expenses/{inc.json()['id']}/", ctx)
         api_delete(f"/api/v1/expenses/{exp.json()['id']}/", ctx)
         api_patch("/api/v1/account/", ctx, json={"unspent_allowance_action": "do_nothing"})

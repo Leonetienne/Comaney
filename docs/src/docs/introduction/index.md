@@ -18,8 +18,6 @@ Every financial month starts fresh. Comaney adds up your income, subtracts your 
 | **Savings deposit** | Money you move into savings. Treated like spending because it leaves your spending budget. |
 | **Savings withdrawal** | Money you take back from savings. Treated like income because it returns to your budget. |
 
-A fifth type, **carry-over**, is created automatically if you configure Comaney to roll unused budget from one month into the next. You do not create carry-overs yourself.
-
 ## Where to start
 
 - **Try it online**: visit [comaney.app](https://comaney.app) to use it without installing anything.

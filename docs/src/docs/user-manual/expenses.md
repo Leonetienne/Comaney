@@ -12,7 +12,6 @@ When you add a new expense, you choose what kind it is:
 | **Income** | Money you receive. For example: your salary, a refund, a gift. |
 | **Savings deposit** | Money you move into savings. Comaney treats this like spending because the money leaves your day-to-day budget. |
 | **Savings withdrawal** | Money you take back from savings. Treated like income: it comes back into your budget. |
-| **Carry-over** | Created automatically by Comaney at the end of a month when you have the carry-over setting turned on. You cannot create these yourself. |
 
 ## What information you can record
 

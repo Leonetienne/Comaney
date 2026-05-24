@@ -50,7 +50,6 @@ class FeUser(models.Model):
         choices=[
             ("do_nothing", "be dropped"),
             ("deposit_savings", "be deposited as savings"),
-            ("carry_over", "carry over to next month"),
         ],
     )
     allowance_transition_month = models.CharField(max_length=10, blank=True)

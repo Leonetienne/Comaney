@@ -214,7 +214,7 @@ docker exec -it comaney-web-1 python manage.py set_user_password you@example.com
 ### Required cron jobs
 
 ```sh
-# Every 5 minutes: notifications, recurring expense generation, auto-settle, end-of-month rollover
+# Every 5 minutes: notifications, recurring expense generation, auto-settle, end-of-month allowance handling
 */5 * * * * user docker compose -f /path/to/docker-compose.yml exec -T web python manage.py run_cron
 
 # Monthly: reset AI trial budgets

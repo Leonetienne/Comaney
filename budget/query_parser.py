@@ -43,12 +43,9 @@ _TYPE_MAP: dict[str, str] = {
     "expense":            "expense",
     "savings deposit":    "savings_dep",
     "savings withdrawal": "savings_wit",
-    "carry-over":         "carry_over",
-    "carry over":         "carry_over",
     # Also accept internal codes directly.
     "savings_dep":        "savings_dep",
     "savings_wit":        "savings_wit",
-    "carry_over":         "carry_over",
 }
 
 _TOKEN_RE = re.compile(

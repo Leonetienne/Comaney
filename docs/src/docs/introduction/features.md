@@ -51,7 +51,7 @@ Turn on notifications for any expense with a due date and Comaney will email you
 
 If your salary arrives on the 25th, you can set your financial month to run from the 25th to the 24th of the following month. All totals, charts, and the dashboard align to your actual pay cycle rather than the calendar.
 
-## End-of-month rollover
+## Unspent budget at month end
 
 Choose what happens to unspent budget at the end of each month:
 
@@ -59,7 +59,6 @@ Choose what happens to unspent budget at the end of each month:
 |---|---|
 | **Do nothing** | Each month starts fresh. This is the default and works well for most people. |
 | **Deposit to savings** | The leftover is automatically added as a savings deposit record. |
-| **Carry over** | The leftover is added as extra income at the start of next month, increasing your available budget. |
 
 ## Security
 

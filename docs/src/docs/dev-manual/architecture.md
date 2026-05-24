@@ -26,7 +26,7 @@ The core budgeting functionality. Contains all models (`Expense`, `ScheduledExpe
 - The modular dashboard (YAML card parsing and data computation)
 - AI express creation
 - Email notifications
-- End-of-month rollover logic
+- End-of-month allowance handling logic
 - The query language parser (translates the search bar mini-language into Django Q objects)
 
 ### `api/`

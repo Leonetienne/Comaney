@@ -20,7 +20,6 @@ const TYPE_ABBR = {
     income:      'IN',
     savings_dep: 'SD',
     savings_wit: 'SW',
-    carry_over:  'CO',
 };
 
 const GRID_GAP = 12;

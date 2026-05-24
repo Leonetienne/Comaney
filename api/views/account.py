@@ -61,7 +61,7 @@ def account(request, feuser):
             feuser.month_start_prev = bool(data["month_start_prev"])
             update_fields.append("month_start_prev")
         if "unspent_allowance_action" in data:
-            valid = {"do_nothing", "deposit_savings", "carry_over"}
+            valid = {"do_nothing", "deposit_savings"}
             val = str(data["unspent_allowance_action"])
             if val not in valid:
                 return _err(f"'unspent_allowance_action' must be one of: {', '.join(sorted(valid))}.")

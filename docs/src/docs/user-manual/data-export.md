@@ -17,7 +17,7 @@ The file includes all expenses visible in the list at that moment. If you have a
 |---|---|
 | Date due | The due date, in the format YYYY-MM-DD. Blank if no due date was set. |
 | Title | The expense title. |
-| Type | The transaction type: expense, income, savings_dep, savings_wit, or carry_over. |
+| Type | The transaction type: expense, income, savings_dep, or savings_wit. |
 | Value | The amount (always a positive number). |
 | Payee | Who was paid, or who paid you. Blank if not set. |
 | Category | The category name. Blank if uncategorised. |
