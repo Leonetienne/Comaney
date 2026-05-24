@@ -2,11 +2,11 @@
 Dashboard card YAML parsing, data computation, and sandboxed Python execution.
 
 Card YAML schema:
-    type: cell | bar-chart | pie-chart | list | line-chart | spacer
+    type: cell | bar-chart | pie-chart | list | line-chart | gauge | spacer
     # spacer: invisible placeholder; only positioning + hide_on are meaningful
     hide_on: mobile | desktop   # optional (spacer only); hides card on that viewport (frees grid space)
     title: "string"
-    query: "query string"       # optional; filters the period queryset
+    query: "query string"       # optional; filters the period queryset (required for gauge)
     group: tags | categories    # required for bar-chart / pie-chart
     max_groups: N               # optional; top-N groups (bar-chart only)
     hide_groups: "a,b"          # optional; comma-sep group names to exclude
@@ -15,6 +15,7 @@ Card YAML schema:
       bar-chart / pie-chart:  sum | total
       list:       sum | total | count  (controls optional sum row)
       line-chart: base | cum           (per-bucket vs cumulative; default cum)
+      gauge:      sum | total | count  (required; computes the gauge's current value)
     flip_signs: true/false      # optional; multiply computed value/sum by -1
     color: "#hex"               # optional; cell background color (both modes)
     color_lightmode: "#hex"    # optional; overrides color in light mode
@@ -22,16 +23,25 @@ Card YAML schema:
     text_color: "#hex"         # optional (cell only); text color (both modes); default white/black
     text_color_lightmode: "#hex"  # optional; overrides text_color in light mode
     text_color_darkmode: "#hex"   # optional; overrides text_color in dark mode
-    color_breakpoints:          # optional (cell only); override color by computed value
-      - less_than: 100          # applies when value < 100
+    color_breakpoints:          # optional (cell, gauge); override color by computed value
+      - less_than: 100          # cell: applies when value < 100; gauge: when percent-of-max < 100
         color: "#ffff00"
         color_lightmode: "#hex" # optional per-breakpoint mode overrides
         color_darkmode: "#hex"
       - less_than: 0
         color: "#ff0000"        # last matching breakpoint wins
-    link: "/path?search=..."    # optional; clicking a cell navigates here
+    link: "/path?search=..."    # optional; clicking a cell/gauge navigates here
     link_template: "/path?search=tag%3D$GROUP_NAME"  # optional; $GROUP_NAME replaced per segment
     template: "$VALUE $CURRENCY_SYMBOL"  # optional; cell display template ($VALUE / $CURRENCY_SYMBOL)
+    # gauge-only fields:
+    max_value: N                 # fixed gauge maximum; mutually exclusive with max_value_query
+    max_value_query: "query"     # dynamic gauge maximum; requires max_value_method
+    max_value_method: sum | total | count
+    gauge_color: "#hex"          # optional; arc + value-text color (both modes); default neutral grey
+    gauge_color_lightmode: "#hex"
+    gauge_color_darkmode: "#hex"
+    show_raw_values: true/false  # optional; show "value / max CURRENCY" text; default true
+    show_percent: true/false     # optional; show "NN%" text; default true (not mutually exclusive)
     # list-only fields:
     order_by: value | date | title   # sort field; default date
     order_dir: asc | desc            # sort direction; default desc
@@ -66,7 +76,7 @@ from django.db.models import Case, DecimalField, F, Sum, When
 
 from .query_parser import apply_query, has_date_filter
 
-VALID_TYPES = {'cell', 'bar-chart', 'pie-chart', 'list', 'line-chart', 'spacer'}
+VALID_TYPES = {'cell', 'bar-chart', 'pie-chart', 'list', 'line-chart', 'gauge', 'spacer'}
 VALID_HIDE_ON = {'', 'mobile', 'desktop'}
 VALID_GROUPS = {'tags', 'categories'}
 VALID_METHODS = {'sum', 'total', 'count'}
@@ -101,6 +111,10 @@ ALLOWED_KEYS = {
     'line-chart': _COMMON_KEYS | {'method', 'series', 'render_type',
                                    'suggested_min', 'suggested_max',
                                    'limit_min', 'limit_max'},
+    'gauge':      _COMMON_KEYS | {'method', 'max_value', 'max_value_query', 'max_value_method',
+                                   'gauge_color', 'gauge_color_lightmode', 'gauge_color_darkmode',
+                                   'color_breakpoints', 'color-breakpoints',
+                                   'show_raw_values', 'show_percent', 'link'},
     'spacer':     {'type', 'positioning', 'hide_on'},
 }
 
@@ -151,6 +165,33 @@ def parse_card_config(yaml_str: str) -> dict:
         if method not in VALID_METHODS:
             raise CardConfigError(f"method must be one of: {', '.join(sorted(VALID_METHODS))}")
 
+    if card_type == 'gauge':
+        method = cfg.get('method')
+        if method not in VALID_METHODS:
+            raise CardConfigError(f"gauge requires a method, one of: {', '.join(sorted(VALID_METHODS))}")
+        if not str(cfg.get('query', '')).strip():
+            raise CardConfigError("gauge requires a 'query'")
+
+        has_fixed_max = cfg.get('max_value') is not None
+        has_dynamic_max = bool(str(cfg.get('max_value_query', '')).strip())
+        if has_fixed_max and has_dynamic_max:
+            raise CardConfigError("gauge: specify either max_value or max_value_query, not both")
+        if not has_fixed_max and not has_dynamic_max:
+            raise CardConfigError("gauge: requires either max_value or max_value_query + max_value_method")
+        if has_fixed_max:
+            try:
+                max_value_num = float(cfg['max_value'])
+            except (TypeError, ValueError):
+                raise CardConfigError("max_value must be a number")
+            if max_value_num <= 0:
+                raise CardConfigError("max_value must be greater than 0")
+        if has_dynamic_max:
+            max_value_method = cfg.get('max_value_method')
+            if max_value_method not in VALID_METHODS:
+                raise CardConfigError(
+                    f"gauge: max_value_method must be one of: {', '.join(sorted(VALID_METHODS))}"
+                )
+
     if card_type == 'list':
         order_by = cfg.get('order_by', 'date')
         if str(order_by) not in VALID_ORDER_BY:
@@ -169,7 +210,7 @@ def parse_card_config(yaml_str: str) -> dict:
             raise CardConfigError("hide_on must be mobile, desktop, or omitted")
 
     color_breakpoints = []
-    if card_type == 'cell':
+    if card_type in ('cell', 'gauge'):
         raw_bp = cfg.get('color_breakpoints') or cfg.get('color-breakpoints') or []
         if not isinstance(raw_bp, list):
             raise CardConfigError("color_breakpoints must be a list")
@@ -309,6 +350,15 @@ def parse_card_config(yaml_str: str) -> dict:
         'suggested_max': ranges.get('suggested_max'),
         'limit_min':      ranges.get('limit_min'),
         'limit_max':      ranges.get('limit_max'),
+        # gauge-only fields
+        'max_value':             float(cfg['max_value']) if cfg.get('max_value') is not None else None,
+        'max_value_query':       str(cfg.get('max_value_query', '')),
+        'max_value_method':      str(cfg.get('max_value_method', '')),
+        'gauge_color':           str(cfg.get('gauge_color', '')),
+        'gauge_color_lightmode': str(cfg.get('gauge_color_lightmode', '')),
+        'gauge_color_darkmode':  str(cfg.get('gauge_color_darkmode', '')),
+        'show_raw_values':       bool(cfg.get('show_raw_values', True)),
+        'show_percent':          bool(cfg.get('show_percent', True)),
         'positioning':   positioning,
         'hide_on':       hide_on,
     }
@@ -355,6 +405,8 @@ def compute_card_data(config: dict, period_qs, feuser, period_info: dict = None,
         if not period_info:
             return {'labels': [], 'series': []}
         return _compute_line_chart(config, period_qs, period_info, value_field=value_field, feuser=feuser)
+    if card_type == 'gauge':
+        return _compute_gauge(config, period_qs, value_field=value_field, feuser=feuser)
     return {}
 
 
@@ -395,6 +447,49 @@ def _compute_cell(config: dict, period_qs, value_field: str = 'value', feuser=No
     if invert:
         value = -value
     return {'value': float(value)}
+
+
+def _aggregate_by_method(qs, method: str, value_field: str = 'value') -> Decimal:
+    """Shared sum/total/count aggregation, used for gauge's current and max values."""
+    if method == 'sum':
+        return qs.aggregate(t=Sum(value_field))['t'] or Decimal('0')
+    if method == 'total':
+        return _signed_sum(qs, value_field=value_field)
+    if method == 'count':
+        return Decimal(str(qs.count()))
+    return Decimal('0')
+
+
+def _compute_gauge(config: dict, period_qs, value_field: str = 'value', feuser=None) -> dict:
+    qs = _filtered_qs(config, period_qs, feuser=feuser)
+    value = _aggregate_by_method(qs, config['method'], value_field=value_field)
+
+    if config.get('max_value') is not None:
+        max_value = Decimal(str(config['max_value']))
+    else:
+        max_qs = period_qs
+        # Same date-filter override as compute_card_data, applied independently to
+        # max_value_query so a dynamic max can span all history, not just the UI period.
+        if has_date_filter(config.get('max_value_query', '')):
+            if value_field == 'effective_value':
+                from .views._sharing import build_shared_qs
+                max_qs = build_shared_qs(feuser, None, None)
+            else:
+                max_qs = max_qs.model.objects.filter(
+                    owning_feuser=feuser,
+                    deactivated=False,
+                    is_dummy=False,
+                )
+        max_query = config.get('max_value_query', '').strip()
+        if max_query:
+            max_qs = apply_query(max_qs, max_query, feuser=feuser)
+        max_value = _aggregate_by_method(max_qs, config['max_value_method'], value_field=value_field)
+
+    value_f = float(value)
+    max_value_f = float(max_value)
+    percent = (value_f / max_value_f * 100) if max_value_f > 0 else 0.0
+
+    return {'value': value_f, 'max_value': max_value_f, 'percent': percent}
 
 
 def _compute_chart(config: dict, period_qs, value_field: str = 'value', feuser=None) -> dict:

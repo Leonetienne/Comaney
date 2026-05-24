@@ -200,6 +200,42 @@ window.DASHBOARD_CONFIG = {
                     </div>
                 </template>
 
+                {# ── Gauge card ────────────────────────────────────────── #}
+                <template x-if="card.config && card.config.type === 'gauge'">
+                    <div class="dash-card-body dash-card-body--gauge"
+                         :class="{'dash-card-body--linked': card.config.link}"
+                         @click="card.config.link && _navTo(card.config.link)"
+                         draggable="false">
+                        <template x-if="card.error">
+                            <p class="dash-card-error" x-text="card.error"></p>
+                        </template>
+                        <template x-if="!card.error">
+                            <div class="dash-gauge">
+                                <svg class="dash-gauge-svg" viewBox="0 0 120 64" preserveAspectRatio="xMidYMid meet">
+                                    <path class="dash-gauge-track" d="M10,60 A50,50 0 0 1 110,60"></path>
+                                    <path class="dash-gauge-value" d="M10,60 A50,50 0 0 1 110,60"
+                                          pathLength="100"
+                                          stroke-dasharray="100"
+                                          :stroke-dashoffset="100 - gaugeClampedPercent(card)"
+                                          :style="'stroke:' + gaugeColor(card)"></path>
+                                </svg>
+                                <div class="dash-gauge-text" :style="'color:' + gaugeColor(card)">
+                                    <template x-if="card.config.show_raw_values">
+                                        <div class="dash-gauge-line"
+                                             :class="card.config.show_percent ? 'dash-gauge-line--primary' : 'dash-gauge-line--solo'"
+                                             x-text="gaugeRawText(card)"></div>
+                                    </template>
+                                    <template x-if="card.config.show_percent">
+                                        <div class="dash-gauge-line"
+                                             :class="card.config.show_raw_values ? 'dash-gauge-line--secondary' : 'dash-gauge-line--solo'"
+                                             x-text="gaugePercentText(card)"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
                 {# ── List card ─────────────────────────────────────────── #}
                 <template x-if="card.config && card.config.type === 'list'">
                     <div class="dash-card-body dash-card-body--list"

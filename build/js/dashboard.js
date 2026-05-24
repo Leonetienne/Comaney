@@ -1100,11 +1100,14 @@ function dashboardBoard() {
             return '';
         },
 
-        cardColorStyle(cfg, value) {
-            const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        // Shared by cell (background) and gauge (arc/number): resolve the base
+        // color + any matching color_breakpoints entry, dark/light aware.
+        // baseField lets callers point at a differently-named base color
+        // (cell's 'color' vs gauge's 'gauge_color') while reusing one breakpoint walk.
+        _resolveColorAndBreakpoint(cfg, value, dark, baseField) {
             let color = dark
-                ? (cfg.color_darkmode  || cfg.color)
-                : (cfg.color_lightmode || cfg.color);
+                ? (cfg[baseField + '_darkmode']  || cfg[baseField])
+                : (cfg[baseField + '_lightmode'] || cfg[baseField]);
 
             let bpTextColor = '';
             const bps = cfg && cfg.color_breakpoints;
@@ -1126,6 +1129,16 @@ function dashboardBoard() {
                 }
             }
 
+            return { color, bpTextColor };
+        },
+
+        cardColorStyle(cfg, value) {
+            // Whole-card background tinting is cell-only; gauge has its own
+            // gaugeColor() for the arc/number and must not also tint the card shell
+            // (gauge configs carry the same color_breakpoints field, reused by design).
+            if (!cfg || cfg.type !== 'cell') return '';
+            const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const { color, bpTextColor } = this._resolveColorAndBreakpoint(cfg, value, dark, 'color');
             if (!color) return '';
 
             const textColor = bpTextColor
@@ -1134,6 +1147,36 @@ function dashboardBoard() {
                     : (cfg.text_color_lightmode || cfg.text_color || 'black'));
 
             return `background:${color};color:${textColor}`;
+        },
+
+        // ── Gauge card ────────────────────────────────────────────────────────
+        gaugeClampedPercent(card) {
+            const p = (card.data && card.data.percent) || 0;
+            return Math.max(0, Math.min(100, p));
+        },
+
+        gaugeColor(card) {
+            const cfg = card.config || {};
+            const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            // Breakpoints compare against the percent-of-max (0-100, can exceed 100 when
+            // over budget), not the raw value: thresholds need to mean the same thing
+            // regardless of what max_value happens to be.
+            const percent = card.data && card.data.percent;
+            const { color, bpTextColor } = this._resolveColorAndBreakpoint(cfg, percent, dark, 'gauge_color');
+            return bpTextColor || color || (dark ? '#999' : '#888');
+        },
+
+        gaugeRawText(card) {
+            const d = card.data || {};
+            const val = this.formatValue(d.value);
+            const max = this.formatValue(d.max_value);
+            return `${val} / ${max} ${this.currency}`;
+        },
+
+        gaugePercentText(card) {
+            const p = card.data && card.data.percent;
+            if (p === null || p === undefined) return '–';
+            return Math.round(p) + '%';
         },
     };
 }

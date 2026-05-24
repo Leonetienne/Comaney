@@ -124,6 +124,65 @@
   }
 }
 
+// ── Gauge card ─────────────────────────────────────────────────────────────
+
+.dash-card-body--gauge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  // Lets .dash-gauge-line use cqw units below, so the value text scales
+  // together with the arc as the card is resized.
+  container-type: inline-size;
+}
+
+.dash-gauge {
+  position: relative;
+  width: 100%;
+}
+
+.dash-gauge-svg {
+  display: block;
+  width: 100%;
+}
+
+.dash-gauge-track {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.dash-gauge-value {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset .35s ease, stroke .2s ease;
+}
+
+.dash-gauge-text {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4%;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.dash-gauge-line {
+  &--solo,
+  &--primary {
+    font-size: clamp(0.95rem, 6.3cqw, 2.4rem);
+    font-weight: 600;
+  }
+
+  &--secondary {
+    font-size: clamp(0.7rem, 4.5cqw, 1.6rem);
+    font-weight: 500;
+    opacity: .75;
+  }
+}
+
 // ── Coloured cell ──────────────────────────────────────────────────────────
 
 .dash-card--colored {
