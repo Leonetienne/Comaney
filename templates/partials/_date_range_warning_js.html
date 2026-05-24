@@ -1,0 +1,26 @@
+<script>
+// Reads the globally selected date range (see build/js/date-range.js) on pages
+// that don't bundle that module themselves, so an expense being saved outside
+// it can be flagged before it silently "disappears" from the current view.
+window.getCurrentDateRange = function () {
+    function isIso(s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+    var params = new URLSearchParams(window.location.search);
+    var f = params.get('date_from'), t = params.get('date_to');
+    if (isIso(f) && isIso(t)) return { from: f, to: t };
+    try {
+        var raw = localStorage.getItem('comaney_date_range');
+        if (raw) {
+            var parsed = JSON.parse(raw);
+            if (isIso(parsed.from) && isIso(parsed.to)) return parsed;
+        }
+    } catch (_) {}
+    return null;
+};
+
+window.isDateOutsideDisplayRange = function (dateStr) {
+    if (!dateStr) return false;
+    var range = window.getCurrentDateRange();
+    if (!range) return false;
+    return dateStr < range.from || dateStr > range.to;
+};
+</script>

@@ -76,6 +76,7 @@
     </form>
 </div>
 </div>
+{% include "partials/_date_range_warning_js.html" %}
 <script>
 (function () {
     var settled  = document.getElementById('{{ form.settled.id_for_label }}');
@@ -83,6 +84,33 @@
     function sync() { autoWrap.style.display = settled.checked ? 'none' : ''; }
     settled.addEventListener('change', sync);
     sync();
+})();
+
+(function () {
+    var dateInput = document.getElementById('{{ form.date_due.id_for_label }}');
+    var form = dateInput && dateInput.closest('form');
+    if (!form) return;
+    var skipDateConfirm = false;
+
+    // Registered as a plain inline script (not deferred), so this runs before
+    // buddy_expense.js's own submit guard (loaded with `defer`). That lets us
+    // stopImmediatePropagation() and re-dispatch via requestSubmit() once the
+    // user confirms, so the payer-approval warning still gets its own turn.
+    form.addEventListener('submit', function (e) {
+        if (skipDateConfirm) { skipDateConfirm = false; return; }
+        if (!window.isDateOutsideDisplayRange(dateInput.value)) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        var range = window.getCurrentDateRange();
+        window.confirmDialog(
+            'This expense\'s date falls outside your currently selected display period (' + range.from + ' to ' + range.to + '). ' +
+            'It will be saved, but won\'t show up in your expense list or dashboard until you change the date range.',
+            'Save anyway'
+        ).then(function () {
+            skipDateConfirm = true;
+            form.requestSubmit();
+        }).catch(function () {});
+    });
 })();
 </script>
 
