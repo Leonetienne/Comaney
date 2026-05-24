@@ -1,5 +1,9 @@
-from django.conf import settings
+from datetime import timedelta
 
+from django.conf import settings
+from django.utils import timezone
+
+from .intros import CURRENT_UPGRADE_INTRO_VERSION
 from .models import FeUser, Notification
 
 
@@ -26,4 +30,20 @@ def current_feuser(request):
         Notification.objects.filter(owning_feuser=feuser, read=False).count()
         if feuser else 0
     )
+
+    ctx["show_intro_modal"] = bool(feuser and feuser.intro_seen_at is None)
+
+    if feuser and feuser.intro_seen_at is not None:
+        intro_is_recent = (timezone.now() - feuser.intro_seen_at) < timedelta(days=30)
+        needs_upgrade_intro = (
+            feuser.last_upgrade_intro_v_seen is None
+            or feuser.last_upgrade_intro_v_seen < CURRENT_UPGRADE_INTRO_VERSION
+        )
+        created_on_current_version = feuser.app_v_created_at == settings.APP_VERSION
+        ctx["show_upgrade_intro_modal"] = (
+            needs_upgrade_intro and not intro_is_recent and not created_on_current_version
+        )
+    else:
+        ctx["show_upgrade_intro_modal"] = False
+
     return ctx

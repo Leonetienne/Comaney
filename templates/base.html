@@ -121,6 +121,8 @@
         }
     });
     </script>
+    {% if show_intro_modal %}{% include "feusers/intro_modal.html" %}{% endif %}
+    {% if show_upgrade_intro_modal %}{% include "feusers/upgrade_intro_modal.html" %}{% endif %}
     {% block extra_scripts %}{% endblock %}
     <script>
     (function () {

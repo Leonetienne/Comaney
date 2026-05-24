@@ -43,6 +43,7 @@ def register(request):
                     last_name=form.cleaned_data["last_name"],
                     is_confirmed=True,
                     is_active=True,
+                    app_v_created_at=settings.APP_VERSION,
                 )
                 user.set_password(form.cleaned_data["password"])
                 user.save()
@@ -58,6 +59,7 @@ def register(request):
                 first_name=form.cleaned_data["first_name"],
                 last_name=form.cleaned_data["last_name"],
                 is_confirmed=False,
+                app_v_created_at=settings.APP_VERSION,
             )
             user.set_password(form.cleaned_data["password"])
             user.generate_confirmation_token()

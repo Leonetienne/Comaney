@@ -1,0 +1,62 @@
+{# Upgrade intro modal -- shown when last_upgrade_intro_v_seen < CURRENT_UPGRADE_INTRO_VERSION #}
+{# and intro_seen_at is older than 30 days (new users are excluded).                          #}
+{#                                                                                             #}
+{# To announce new features: update this file and bump CURRENT_UPGRADE_INTRO_VERSION          #}
+{# in feusers/intros.py. That is the only change needed to re-trigger the modal.              #}
+{#                                                                                             #}
+{# Current version: 1                                                                          #}
+<div id="upgrade-intro-modal" class="cdialog-backdrop" aria-hidden="true">
+    <div class="cdialog" role="dialog" aria-modal="true" aria-labelledby="upgrade-intro-title">
+        <p class="cdialog-title" id="upgrade-intro-title">What's new in Comaney {{ APP_VERSION }}</p>
+        <ul class="intro-feature-list">
+            <li>
+                <strong>Partnership catalog</strong>
+                Link your account with users to automatically sync your categories and tags, so you're always working with the same vocabulary.
+            </li>
+            <li>
+                <strong>Multiple dashboards</strong>
+                Create as many dashboards as you like, each with its own set of cards and layout. Switch between them from the dashboard header.
+            </li>
+            <li>
+                <strong>Custom time ranges</strong>
+                Filter your expenses by any date range you choose, not just the current month or year.
+            </li>
+            <li>
+                <strong>Notifications</strong>
+                Get in-app alerts for expense activity, settlements, and project events. Open the bell icon in the header to see your notifications.
+            </li>
+        </ul>
+        <div class="cdialog-actions">
+            <button type="button" class="btn btn-primary" id="upgrade-intro-ok">Got it</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var modal = document.getElementById('upgrade-intro-modal');
+
+    function getCsrf() {
+        var m = document.cookie.match(/csrftoken=([^;]+)/);
+        return m ? m[1] : '';
+    }
+
+    function close() {
+        modal.classList.remove('cdialog-visible');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.getElementById('upgrade-intro-ok').addEventListener('click', function () {
+        fetch('/upgrade-intro/seen/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrf() },
+        }).finally(close);
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        modal.classList.add('cdialog-visible');
+        modal.setAttribute('aria-hidden', 'false');
+        document.getElementById('upgrade-intro-ok').focus();
+    });
+}());
+</script>

@@ -1,6 +1,7 @@
 import getpass
 import sys
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from feusers.models import FeUser
@@ -49,6 +50,7 @@ class Command(BaseCommand):
             is_confirmed=True,
             is_demo=options["demo"],
             special_ai_trial_budget=options["ai_trial_budget"],
+            app_v_created_at=settings.APP_VERSION,
         )
         user.set_password(password)
         user.save()

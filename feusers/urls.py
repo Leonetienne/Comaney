@@ -28,4 +28,6 @@ urlpatterns = [
     path("notifications/",              views.notifications_list,         name="notifications_list"),
     path("notifications/mark-read/",    views.notifications_mark_read,    name="notifications_mark_read"),
     path("notifications/delete-read/",  views.notifications_delete_read,  name="notifications_delete_read"),
+    path("intro/seen/",                 views.intro_seen,                 name="intro_seen"),
+    path("upgrade-intro/seen/",         views.upgrade_intro_seen,         name="upgrade_intro_seen"),
 ]

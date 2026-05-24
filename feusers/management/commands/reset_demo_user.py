@@ -55,6 +55,7 @@ class Command(BaseCommand):
             is_confirmed=True,
             is_demo=True,
             special_ai_trial_budget=budget,
+            app_v_created_at=settings.APP_VERSION,
         )
         user.set_password(password)
         user.save()

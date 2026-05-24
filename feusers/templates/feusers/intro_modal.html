@@ -1,0 +1,52 @@
+{# Getting-started intro modal -- shown once per user (intro_seen_at is None). #}
+{# To edit content: update this file only. No version bump needed. #}
+<div id="intro-modal" class="cdialog-backdrop" aria-hidden="true">
+    <div class="cdialog" role="dialog" aria-modal="true" aria-labelledby="intro-modal-title">
+        <p class="cdialog-title" id="intro-modal-title">Welcome to Comaney!</p>
+        <p>Since you're new here, would you like to check out the Getting Started guide? It walks you through the basics and has you up to speed in just a few minutes.</p>
+        <div class="cdialog-actions">
+            <button type="button" class="btn btn-primary" id="intro-modal-ok">Check it out</button>
+            <button type="button" class="btn btn-secondary" id="intro-modal-dismiss">No, thank you</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var modal = document.getElementById('intro-modal');
+
+    function getCsrf() {
+        var m = document.cookie.match(/csrftoken=([^;]+)/);
+        return m ? m[1] : '';
+    }
+
+    function markSeen(callback) {
+        fetch('/intro/seen/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrf() },
+        }).finally(callback);
+    }
+
+    function close() {
+        modal.classList.remove('cdialog-visible');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.getElementById('intro-modal-ok').addEventListener('click', function () {
+        markSeen(function () {
+            window.open('/docs/user-manual/getting-started/', '_blank');
+            close();
+        });
+    });
+
+    document.getElementById('intro-modal-dismiss').addEventListener('click', function () {
+        markSeen(close);
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        modal.classList.add('cdialog-visible');
+        modal.setAttribute('aria-hidden', 'false');
+        document.getElementById('intro-modal-ok').focus();
+    });
+}());
+</script>
