@@ -28,11 +28,11 @@
             {% endif %}{% endfor %}
             {% endif %}
             {% if exp.owning_feuser == request.feuser and exp.settlement_can_edit %}
-            <a href="{% url 'budget:expense_edit' exp.uid %}?back={{ back_url|default:request.get_full_path|urlencode }}%23expense-{{ exp.uid }}" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
+            <a href="{% url 'budget:expense_edit' exp.uid %}?back={{ back_url|default:request.get_full_path|urlencode }}%3Fscroll_to%3D{{ exp.uid }}" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
             {% endif %}
             {% if not exp.is_buddies_settlement and exp.owning_feuser != request.feuser %}
             {% for bs in exp.buddy_spendings.all %}{% if bs.participant_feuser == request.feuser %}
-            <a href="{% url 'budget:expense_edit_overlay' exp.uid %}?back={{ back_url|default:request.get_full_path|urlencode }}%23expense-{{ exp.uid }}" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
+            <a href="{% url 'budget:expense_edit_overlay' exp.uid %}?back={{ back_url|default:request.get_full_path|urlencode }}%3Fscroll_to%3D{{ exp.uid }}" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
             {% endif %}{% endfor %}
             {% endif %}
             {% if exp.owning_feuser == request.feuser and exp.settlement_can_delete %}

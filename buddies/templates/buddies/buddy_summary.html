@@ -486,7 +486,12 @@
         xhr.onload = function() {
             _xhr = null;
             container.style.opacity = '';
-            if (xhr.status === 200) container.innerHTML = xhr.responseText;
+            if (xhr.status === 200) {
+                container.innerHTML = xhr.responseText;
+                if (window._attachPaginator) {
+                    window._attachPaginator(container, '.bexp-breakdown-card');
+                }
+            }
         };
         xhr.onerror = function() { _xhr = null; container.style.opacity = ''; };
         xhr.onabort = function() { _xhr = null; container.style.opacity = ''; };

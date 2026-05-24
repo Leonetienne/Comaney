@@ -1,5 +1,6 @@
 import Alpine from 'alpinejs';
 import dateRange from './date-range.js';
+import { EXP_PAGE_SIZE } from './pagination-config.js';
 
 // Expose singleton for the date-range-nav partial inline script
 window._dateRange = dateRange;
@@ -36,6 +37,9 @@ function expenseList() {
         urlBulkAction: '',
         urlExport: '',
         exportHref: '',
+        page: 1,
+        pageSize: EXP_PAGE_SIZE,
+        _scrollHandled: false,
 
         init() {
             const cfg = window.EXPENSE_CONFIG;
@@ -152,11 +156,12 @@ function expenseList() {
                         const data = JSON.parse(xhr.responseText);
                         this.expenses = data.expenses || [];
                         this.selected = {};
+                        this.page = 1;
                     } catch(e) {}
                 }
                 // defer until after x-for has re-rendered, so data-search-loading
                 // is only removed once the filtered cards are in the DOM
-                Alpine.nextTick(() => { this.fetching = false; });
+                Alpine.nextTick(() => { this.fetching = false; this._scrollToExpense(); });
             };
             xhr.onerror = () => { this._xhr = null; this.fetching = false; };
             xhr.onabort = () => { this._xhr = null; };
@@ -168,6 +173,33 @@ function expenseList() {
             const raw = (this.sharingMode === 'shared' && e.effective_value != null)
                 ? e.effective_value : e.value;
             return Math.round((parseFloat(raw) || 0) * 100) / 100;
+        },
+
+        get pagedExpenses() {
+            const start = (this.page - 1) * this.pageSize;
+            return this.expenses.slice(start, start + this.pageSize);
+        },
+
+        get totalPages() {
+            return Math.max(1, Math.ceil(this.expenses.length / this.pageSize));
+        },
+
+        get pageNumbers() {
+            const total = this.totalPages;
+            const count = Math.min(7, total);
+            let lo = this.page - Math.floor(count / 2);
+            if (lo < 1) lo = 1;
+            if (lo + count - 1 > total) lo = total - count + 1;
+            const pages = [];
+            for (let i = lo; i < lo + count; i++) pages.push(i);
+            return pages;
+        },
+
+        goToPage(p, scrollToList = true) {
+            this.page = Math.max(1, Math.min(p, this.totalPages));
+            if (scrollToList) {
+                document.getElementById('exp-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         },
 
         get visibleSum() {
@@ -226,6 +258,29 @@ function expenseList() {
         },
 
         encodedBackUrl() { return encodeURIComponent(this.backUrl()); },
+
+        encodedBackUrlFor(id) {
+            return encodeURIComponent(this.backUrl() + '&scroll_to=' + id);
+        },
+
+        _scrollToExpense() {
+            if (this._scrollHandled) return;
+            this._scrollHandled = true;
+            const id = new URLSearchParams(window.location.search).get('scroll_to');
+            if (!id) return;
+            const params = new URLSearchParams(window.location.search);
+            params.delete('scroll_to');
+            const clean = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+            history.replaceState(null, '', clean);
+            const idx = this.expenses.findIndex(e => e.id === parseInt(id));
+            if (idx === -1) return;
+            const targetPage = Math.floor(idx / this.pageSize) + 1;
+            if (targetPage !== this.page) this.page = targetPage;
+            Alpine.nextTick(() => {
+                const el = document.getElementById('expense-' + id);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        },
 
         tagStr(exp) { return (exp.tags || []).map(t => t.title.toLowerCase()).join('|'); },
         catStr(exp) { return exp.category ? exp.category.title.toLowerCase() : ''; },

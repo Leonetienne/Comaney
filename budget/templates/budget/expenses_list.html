@@ -111,12 +111,27 @@ window.EXPENSE_CONFIG = {
     #exp-list[data-search-loading] { opacity: 0.5; pointer-events: none; transition: opacity 0.1s; }
     </style>
 
+    <nav class="exp-pagination exp-pagination--top" x-show="totalPages > 1" style="display:none" aria-label="Pages">
+        <button type="button" class="btn btn-sm btn-secondary" @click="goToPage(1, false)" :disabled="page === 1">|&lt;</button>
+        <button type="button" class="btn btn-sm btn-secondary" @click="goToPage(page - 1, false)" :disabled="page === 1">&lt;</button>
+        <template x-for="p in pageNumbers" :key="p">
+            <button type="button"
+                    @click="goToPage(p, false)"
+                    :class="p === page ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary'"
+                    x-text="p"></button>
+        </template>
+        <button type="button" class="btn btn-sm btn-secondary" @click="goToPage(page + 1, false)" :disabled="page === totalPages">&gt;</button>
+        <button type="button" class="btn btn-sm btn-secondary" @click="goToPage(totalPages, false)" :disabled="page === totalPages">&gt;|</button>
+        <span class="exp-pagination__info">Page <span x-text="page"></span> of <span x-text="totalPages"></span> (<span x-text="expenses.length"></span> entries)</span>
+    </nav>
+
     <div class="exp-list" id="exp-list"
          :data-search-loading="fetching ? '' : null"
          :data-search-pending="pending ? '' : null">
 
-        <template x-for="exp in expenses" :key="exp.id">
+        <template x-for="exp in pagedExpenses" :key="exp.id">
             <div class="exp-card"
+                 :id="'expense-' + exp.id"
                  :class="{ unsettled: !exp.settled, 'exp-card--deactivated': exp.deactivated }"
                  :data-uid="exp.id"
                  :data-value="exp.value"
@@ -145,10 +160,10 @@ window.EXPENSE_CONFIG = {
                     <template x-if="exp.type !== 'carry_over'">
                         <div class="d-contents">
                             <template x-if="!exp.is_foreign && (!exp.is_buddies_settlement || exp.can_edit)">
-                                <a :href="editUrl(exp.id) + '?back=' + encodedBackUrl()" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
+                                <a :href="editUrl(exp.id) + '?back=' + encodedBackUrlFor(exp.id)" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
                             </template>
                             <template x-if="exp.is_foreign && !exp.is_buddies_settlement">
-                                <a :href="editLiteUrl(exp.id) + '?back=' + encodedBackUrl()" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
+                                <a :href="editLiteUrl(exp.id) + '?back=' + encodedBackUrlFor(exp.id)" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
                             </template>
                             <template x-if="!exp.is_buddies_settlement && !exp.is_foreign">
                                 <form method="post" :action="cloneUrl(exp.id)">
@@ -197,6 +212,20 @@ window.EXPENSE_CONFIG = {
 
         <p x-show="!fetching && expenses.length === 0" class="empty exp-empty-search">No expenses yet. <a href="{% url 'budget:expense_create' %}">Add one.</a></p>
     </div>
+
+    <nav class="exp-pagination" x-show="totalPages > 1" style="display:none" aria-label="Pages">
+        <button type="button" class="btn btn-sm btn-secondary" @click="goToPage(1)" :disabled="page === 1">|&lt;</button>
+        <button type="button" class="btn btn-sm btn-secondary" @click="goToPage(page - 1)" :disabled="page === 1">&lt;</button>
+        <template x-for="p in pageNumbers" :key="p">
+            <button type="button"
+                    @click="goToPage(p)"
+                    :class="p === page ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary'"
+                    x-text="p"></button>
+        </template>
+        <button type="button" class="btn btn-sm btn-secondary" @click="goToPage(page + 1)" :disabled="page === totalPages">&gt;</button>
+        <button type="button" class="btn btn-sm btn-secondary" @click="goToPage(totalPages)" :disabled="page === totalPages">&gt;|</button>
+        <span class="exp-pagination__info">Page <span x-text="page"></span> of <span x-text="totalPages"></span> (<span x-text="expenses.length"></span> entries)</span>
+    </nav>
 
     <a :href="exportHref" class="expenses-export-link">&#8595; Export CSV</a>
 </div>

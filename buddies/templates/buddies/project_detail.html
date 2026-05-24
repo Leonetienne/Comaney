@@ -706,6 +706,10 @@
             currentXhr = null;
             if (xhr.status === 200) {
                 container.innerHTML = xhr.responseText;
+                var approvedSection = container.querySelector('#proj-approved-section');
+                if (window._attachPaginator && approvedSection) {
+                    window._attachPaginator(approvedSection, '.bexp-breakdown-card');
+                }
             }
             container.removeAttribute('data-loading');
         };

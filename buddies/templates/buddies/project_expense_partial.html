@@ -20,10 +20,10 @@
                 </div>
                 <div class="bexp-breakdown-header-right">
                     {% if e.can_edit %}
-                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ project_url|urlencode }}%23pending-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
+                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ project_url|urlencode }}%3Fscroll_to%3D{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
                     {% endif %}
                     {% if e.can_edit_overlay %}
-                    <a href="{% url 'budget:expense_edit_overlay' e.expense.uid %}?back={{ project_url|urlencode }}%23pending-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
+                    <a href="{% url 'budget:expense_edit_overlay' e.expense.uid %}?back={{ project_url|urlencode }}%3Fscroll_to%3D{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
                     {% endif %}
 
                     {% if e.owner_approval_needed %}
@@ -79,22 +79,22 @@
                     <div class="consent-btns">
                         <form method="post" action="{% url 'buddies:participant_approve' e.expense.uid %}">
                             {% csrf_token %}
-                            <input type="hidden" name="back" value="{{ project_url }}#expense-{{ e.expense.uid }}">
+                            <input type="hidden" name="back" value="{{ project_url }}?scroll_to={{ e.expense.uid }}">
                             <button type="submit" class="btn-consent{% if s.approval_state == 1 %} btn-consent--approved{% endif %}" title="Approve">✓</button>
                         </form>
                         <form method="post" action="{% url 'buddies:participant_reject' e.expense.uid %}">
                             {% csrf_token %}
-                            <input type="hidden" name="back" value="{{ project_url }}#expense-{{ e.expense.uid }}">
+                            <input type="hidden" name="back" value="{{ project_url }}?scroll_to={{ e.expense.uid }}">
                             <button type="submit" class="btn-consent{% if s.approval_state == 2 %} btn-consent--rejected{% endif %}" title="Reject">✗</button>
                         </form>
                     </div>
                     {% endif %}{% endfor %}
                     {% endif %}
                     {% if e.can_edit %}
-                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ project_url|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
+                    <a href="{% url 'budget:expense_edit' e.expense.uid %}?back={{ project_url|urlencode }}%3Fscroll_to%3D{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="full">Edit</a>
                     {% endif %}
                     {% if e.can_edit_overlay %}
-                    <a href="{% url 'budget:expense_edit_overlay' e.expense.uid %}?back={{ project_url|urlencode }}%23expense-{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
+                    <a href="{% url 'budget:expense_edit_overlay' e.expense.uid %}?back={{ project_url|urlencode }}%3Fscroll_to%3D{{ e.expense.uid }}" class="btn btn-sm btn-secondary" data-edit="lite">Edit</a>
                     {% endif %}
 
                     {% if e.can_delete %}
