@@ -1,7 +1,7 @@
 {% if direct_expense_data %}
 <div class="buddy-expense-list">
     {% for e in direct_expense_data %}
-    {% include "buddies/_expense_row.html" with exp=e.expense e=e bexp_color_class=e.payer_is_me|yesno:"bexp-card-i-paid,bexp-card-other-paid" %}
+    {% include "buddies/_expense_row.html" with exp=e.expense e=e bexp_color_class=e.payer_is_me|yesno:"bexp-card-i-paid,bexp-card-other-paid" back_url="/buddies/summary/" %}
     {% endfor %}
 </div>
 {% else %}

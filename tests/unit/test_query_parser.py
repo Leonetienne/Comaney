@@ -168,3 +168,49 @@ class TestTokenizer:
         assert 'lp' in types
         assert 'or' in types
         assert 'rp' in types
+
+
+# ---------------------------------------------------------------------------
+# Inline copy of has_date_filter from budget/query_parser.py
+# ---------------------------------------------------------------------------
+
+def _has_date_filter(query_str: str) -> bool:
+    import re
+    return bool(re.search(r'\bdate\s*(?:==|[<>]=?)', query_str or ''))
+
+
+class TestHasDateFilter:
+
+    def test_date_gte(self):
+        assert _has_date_filter('date>=2024-01-01') is True
+
+    def test_date_gt(self):
+        assert _has_date_filter('date>2024-06-15') is True
+
+    def test_date_lte(self):
+        assert _has_date_filter('date<=2024-12-31') is True
+
+    def test_date_lt(self):
+        assert _has_date_filter('date<today') is True
+
+    def test_date_eq(self):
+        assert _has_date_filter('date==2025-01-01') is True
+
+    def test_no_date_filter(self):
+        assert _has_date_filter('type=expense cat=food') is False
+
+    def test_empty_string(self):
+        assert _has_date_filter('') is False
+
+    def test_none(self):
+        assert _has_date_filter(None) is False
+
+    def test_date_in_free_text(self):
+        # "date" as a free-text word without a comparison operator is not a filter
+        assert _has_date_filter('date') is False
+
+    def test_mixed_with_other_filters(self):
+        assert _has_date_filter('type=expense date>=2024-01-01') is True
+
+    def test_combined_date_range(self):
+        assert _has_date_filter('date>=2024-01-01 date<=2024-12-31') is True

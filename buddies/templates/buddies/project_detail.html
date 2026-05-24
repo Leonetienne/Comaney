@@ -383,6 +383,7 @@
     </script>
     </div>
 </section>
+{% endif %}{# end not is_solo for spending breakdown pie #}
 
 <section class="buddies-section" id="section-spending-time" style="display:none">
     <h2>Spending over time</h2>
@@ -468,7 +469,6 @@
     });
 })();
 </script>
-{% endif %}
 
 <script src="{% static 'dist/project_detail.js' %}" defer></script>
 <script src="{% static 'dist/project_charts.js' %}" defer></script>

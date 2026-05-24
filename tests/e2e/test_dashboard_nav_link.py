@@ -70,7 +70,7 @@ class TestNavLinkYearView:
         assert r.status_code == 201
         card_id = r.json()["card"]["id"]
 
-        driver.get(_url(f"/budget/?view=year&year={year}"))
+        driver.get(_url(f"/budget/?date_from={year}-01-01&date_to={year}-12-31"))
         time.sleep(3)
 
         driver.execute_script(
@@ -78,7 +78,7 @@ class TestNavLinkYearView:
         )
         time.sleep(2)
 
-        assert "view=year" in driver.current_url
+        assert "/budget/expenses/" in driver.current_url
 
         _delete_card(sess, csrf, card_id)
 
@@ -105,7 +105,7 @@ class TestNavLinkYearView:
         _delete_card(sess, csrf, card_id)
 
     def test_cell_link_existing_query_gets_ampersand_not_question_mark(self, driver, w, ctx, sess):
-        """Link that already has ?search=... should get &view=year appended, not ?view=year."""
+        """Card link with existing ?search=... navigates to that URL preserving the query string."""
         today = server_today()
         year = today[:4]
         csrf = _csrf(sess)
@@ -114,7 +114,7 @@ class TestNavLinkYearView:
         assert r.status_code == 201
         card_id = r.json()["card"]["id"]
 
-        driver.get(_url(f"/budget/?view=year&year={year}"))
+        driver.get(_url(f"/budget/?date_from={year}-01-01&date_to={year}-12-31"))
         time.sleep(3)
 
         driver.execute_script(
@@ -123,10 +123,8 @@ class TestNavLinkYearView:
         time.sleep(2)
 
         url = driver.current_url
-        assert "view=year" in url
+        assert "/budget/expenses/" in url
         assert "search=" in url
-        # Must be &view=year, not ?view=year (query string already present)
-        assert "&view=year" in url
 
         _delete_card(sess, csrf, card_id)
 

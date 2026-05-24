@@ -285,10 +285,8 @@ class TestAchimGroupSelfDebtCancels:
             "Page must indicate no remaining debt after Achim absorbs both sides of the A-owes-B expense"
 
     def test_no_self_loop_in_raw_links(self, driver, w, ctx):
-        src = driver.page_source
-        assert '"from": "' not in src or "DummyA" not in src, \
-            "Raw graph must not contain DummyA links after merge"
         import json
+        src = driver.page_source
         start = src.find("var RAW =")
         end = src.find(";", start)
         if start != -1 and end != -1:
@@ -298,5 +296,9 @@ class TestAchimGroupSelfDebtCancels:
                 for link in raw_data.get("links", []):
                     assert link["from"] != link["to"], \
                         f"Self-loop found in raw graph: {link}"
+                names = {link["from"] for link in raw_data.get("links", [])} | \
+                        {link["to"]   for link in raw_data.get("links", [])}
+                assert "DummyA" not in names, \
+                    "Raw graph must not contain DummyA nodes in links after merge"
             except (json.JSONDecodeError, KeyError):
                 pass

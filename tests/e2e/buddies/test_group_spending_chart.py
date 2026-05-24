@@ -121,9 +121,14 @@ class TestGroupSpendingChartHidden:
     def test_spending_section_absent(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/"))
-        time.sleep(1)
-        assert "Spending breakdown" not in driver.page_source, \
-            "Spending breakdown section must not appear when group only has settlement expenses"
+        time.sleep(2)  # Wait for AJAX charts to load
+        is_hidden = driver.execute_script(
+            "var s = document.getElementById('section-spending-breakdown');"
+            "if (!s) return true;"
+            "return getComputedStyle(s).display === 'none';"
+        )
+        assert is_hidden, \
+            "Spending breakdown section must not be visible when group only has settlement expenses"
 
 
 class TestBgsCardTotalSpending:

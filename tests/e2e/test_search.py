@@ -55,7 +55,7 @@ def _visible_titles(driver):
 
 
 def _expenses_url(year=FIXED_YEAR):
-    return _url(f"/budget/expenses/?view=year&year={year}")
+    return _url(f"/budget/expenses/?date_from={year}-01-01&date_to={year}-12-31")
 
 
 def _api_titles(ctx, q, year=FIXED_YEAR):
