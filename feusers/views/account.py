@@ -221,7 +221,7 @@ def account_export(request):
 
     from django.db.models import Q
     from budget.models import Category, Dashboard, DashboardCard, Expense, ExpenseDataOverlay, ScheduledExpense, Tag
-    from buddies.models import BuddyLink, BuddySpending, DummyUser, Project, ProjectMember
+    from buddies.models import BuddyLink, BuddySpending, CatalogPartnershipMembership, DummyUser, Project, ProjectMember
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -512,6 +512,28 @@ def account_export(request):
                 pic = settings.MEDIA_ROOT / "offline-buddy-ppic" / f"{d.pk}.jpg"
                 if pic.exists():
                     zf.write(pic, f"offline_buddies/{d.pk}.jpg")
+
+        # ------------------------------------------------------------------
+        # catalog_partnership.csv — co-members of the user's catalog partnership
+        # (if any), identified by email address.
+        # ------------------------------------------------------------------
+        try:
+            membership = feuser.catalog_membership
+            co_members = (
+                CatalogPartnershipMembership.objects
+                .filter(partnership=membership.partnership)
+                .exclude(feuser=feuser)
+                .select_related("feuser")
+                .order_by("feuser__email")
+            )
+            p = io.StringIO()
+            w = csv.writer(p)
+            w.writerow(["partner_email", "joined_at"])
+            for m in co_members:
+                w.writerow([m.feuser.email, m.joined_at.isoformat()])
+            zf.writestr("catalog_partnership.csv", p.getvalue())
+        except CatalogPartnershipMembership.DoesNotExist:
+            pass
 
         # ------------------------------------------------------------------
         # Feuser media files.
