@@ -1,13 +1,10 @@
 from decimal import Decimal
 
-from django.views.decorators.csrf import csrf_exempt
-
 from budget.date_utils import financial_month_range
 from budget.models import Expense
 from ..utils import _err, _ok, _parse_month, _require_auth
 
 
-@csrf_exempt
 @_require_auth
 def dashboard(request, feuser):
     if request.method != "GET":

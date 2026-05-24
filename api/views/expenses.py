@@ -1,7 +1,6 @@
 from datetime import date
 
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 
 from budget.date_utils import financial_month_range, financial_year_range
 from budget.models import Expense, TransactionType
@@ -12,7 +11,6 @@ from ..serializers import _expense_json, _apply_expense_fields, _set_tags
 from ..utils import _err, _ok, _parse_body, _parse_month, _require_auth
 
 
-@csrf_exempt
 @_require_auth
 def expenses(request, feuser):
     if request.method == "GET":
@@ -122,7 +120,6 @@ def expenses(request, feuser):
     return _err("Method not allowed.", 405)
 
 
-@csrf_exempt
 @_require_auth
 def expense_detail(request, feuser, uid):
     try:

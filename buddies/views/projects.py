@@ -2,6 +2,8 @@ import json
 from datetime import date, timedelta
 from decimal import Decimal
 
+from comaney.json_utils import safe_json
+
 from django.conf import settings
 from django.contrib import messages as django_messages
 from django.utils import timezone
@@ -296,7 +298,7 @@ def project_detail(request, project_id):
             "initials": obj.initials if obj else "?",
         })
 
-    raw_graph_json = json.dumps({
+    raw_graph_json = safe_json({
         "nodes": graph_nodes,
         "links": [
             {"from": f, "to": t, "amount": float(a)}
@@ -305,7 +307,7 @@ def project_detail(request, project_id):
         ],
     })
 
-    simplified_graph_json = json.dumps({
+    simplified_graph_json = safe_json({
         "nodes": graph_nodes,
         "links": [
             {
@@ -317,7 +319,7 @@ def project_detail(request, project_id):
         ],
     })
 
-    raw_debts_json = json.dumps([
+    raw_debts_json = safe_json([
         {"from": frm, "to": to, "amount": float(amount)}
         for (frm, to), amount in raw_flows.items()
         if amount > Decimal("0.005") and frm != to
@@ -331,7 +333,7 @@ def project_detail(request, project_id):
             my_balances.append({"name": t["from_name"], "you_owe": False, "amount": t["amount"]})
     my_balances.sort(key=lambda x: -x["amount"])
 
-    all_members_json = json.dumps([
+    all_members_json = safe_json([
         {"key": feuser_key, "name": "You", "is_me": True},
         *[
             {
@@ -347,7 +349,7 @@ def project_detail(request, project_id):
         ],
     ])
 
-    settle_all_pairs_json = json.dumps([
+    settle_all_pairs_json = safe_json([
         {
             "from": t["from_name"],
             "to": t["to_name"],

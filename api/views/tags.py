@@ -1,12 +1,10 @@
 from django.http import JsonResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 from budget.models import Tag
 from ..utils import _err, _ok, _parse_body, _require_auth
 
 
-@csrf_exempt
 @_require_auth
 def tags(request, feuser):
     if request.method == "GET":
@@ -28,7 +26,6 @@ def tags(request, feuser):
     return _err("Method not allowed.", 405)
 
 
-@csrf_exempt
 @_require_auth
 def tag_detail(request, feuser, uid):
     try:

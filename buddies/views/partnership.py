@@ -4,6 +4,8 @@ Partnership views: invite, onboarding wizard, kick, leave.
 import json
 import logging
 
+from comaney.json_utils import safe_json
+
 from django.contrib import messages as django_messages
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -161,12 +163,12 @@ def onboarding_wizard(request, token):
         "unmatched_tags": unmatched_tags,
         "matched_cats": matched_cats,
         "unmatched_cats": unmatched_cats,
-        "master_tags_json": json.dumps(master_tags),
-        "master_cats_json": json.dumps(master_cats),
-        "matched_tags_json": json.dumps(matched_tags),
-        "matched_cats_json": json.dumps(matched_cats),
-        "unmatched_tags_json": json.dumps(unmatched_tags),
-        "unmatched_cats_json": json.dumps(unmatched_cats),
+        "master_tags_json": safe_json(master_tags),
+        "master_cats_json": safe_json(master_cats),
+        "matched_tags_json": safe_json(matched_tags),
+        "matched_cats_json": safe_json(matched_cats),
+        "unmatched_tags_json": safe_json(unmatched_tags),
+        "unmatched_cats_json": safe_json(unmatched_cats),
     })
 
 

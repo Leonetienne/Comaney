@@ -18,7 +18,7 @@
 
 {% if messages %}
 {% for message in messages %}
-<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message|safe }}</div>
+<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
 {% endfor %}
 {% endif %}
 

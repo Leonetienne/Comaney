@@ -17,8 +17,8 @@ window.EXPENSE_CONFIG = {
     urlExpenses:   "{% url 'budget:expenses_list' %}",
     urlBulkAction: "{% url 'budget:expense_bulk_action' %}",
     urlExport:     "{% url 'budget:expenses_export' %}",
-    categories:    {{ categories_json }},
-    tags:          {{ tags_json }},
+    categories:    {{ categories_json|safe }},
+    tags:          {{ tags_json|safe }},
 };
 </script>
 <script src="{% static 'dist/expenses.js' %}" defer></script>

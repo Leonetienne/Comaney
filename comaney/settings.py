@@ -1,11 +1,18 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-change-in-production")
-
 DEBUG = os.environ.get("DEBUG", "").upper() == "TRUE"
+
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "dev-secret-key-change-in-production"
+    else:
+        raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set in production (DEBUG is not True).")
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "*").split(",") if h.strip()]
 

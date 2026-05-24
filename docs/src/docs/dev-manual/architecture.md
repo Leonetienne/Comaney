@@ -68,8 +68,6 @@ Cards are stored as `DashboardCard` model instances containing only a raw YAML s
 
 When the dashboard loads, the frontend fetches all cards via the session-authenticated card API. For each card, the server parses the YAML, applies the card's query filter against the current period, and computes either a scalar value (cell cards) or grouped chart data (bar/pie charts). The result is returned as JSON.
 
-Cell cards with `method: custom` execute a user-supplied Python snippet in a sandboxed thread with a 2-second timeout and restricted builtins.
-
 ## Static files
 
 SCSS and JS source files in `build/` are compiled to `static/dist/` by the build script. WhiteNoise serves them with a content-hash in the URL (via `CompressedManifestStaticFilesStorage`), enabling aggressive browser caching.

@@ -111,7 +111,6 @@ Cell cards compute a single number. List cards use `method` only to calculate th
 | `sum` | Adds up all matching values. Every transaction type counts as positive. |
 | `total` | Adds up values but treats income and savings withdrawals as negative. Good for a net-balance figure. |
 | `count` | Counts how many matching expenses there are instead of summing values. |
-| `custom` | Lets you write a small Python calculation. Cell cards only. See [Cell Cards](cell.md). |
 
 Default for cell and list cards: `sum`.
 

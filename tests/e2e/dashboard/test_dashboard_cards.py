@@ -1,5 +1,5 @@
 """
-Dashboard cards: API CRUD, computed values, YAML validation, sandboxed Python,
+Dashboard cards: API CRUD, computed values, YAML validation,
 color_breakpoints, flip_signs, method=total, presets, and browser smoke tests.
 """
 import time
@@ -37,25 +37,6 @@ def _post_card(sess, csrf, yaml_str) -> requests.Response:
 
 def _delete_card(sess, csrf, card_id):
     sess.delete(f"{CARDS_URL}{card_id}/", headers={"X-CSRFToken": csrf})
-
-
-def _sandbox_yaml(code: str) -> str:
-    indented = "\n".join("  " + line for line in code.splitlines())
-    return (
-        "type: cell\ntitle: SandboxTest\nmethod: custom\npython: |\n"
-        f"{indented}\n"
-        "positioning:\n  position: 99\n  width: 1\n  height: 1\n"
-    )
-
-
-def _sandbox_post(driver, code: str) -> dict:
-    sess = _cards_session(driver)
-    csrf = _csrf(sess)
-    r = _post_card(sess, csrf, _sandbox_yaml(code))
-    assert r.status_code == 201, r.text
-    card = r.json()["card"]
-    _delete_card(sess, csrf, card["id"])
-    return card
 
 
 def _cm_text(driver, backdrop_id: str) -> str:
@@ -163,14 +144,18 @@ class TestCardCrud:
         r = _post_card(sess, csrf, "type: not_a_valid_type\ntitle: Bad\n")
         assert r.status_code == 400
 
-    def test_chart_rejects_custom_method(self, driver, w, ctx, sess):
+    def test_custom_method_rejected_for_all_types(self, driver, w, ctx, sess):
         csrf = _csrf(sess)
-        yaml_str = (
+        cell_yaml = (
+            "type: cell\ntitle: Bad Cell\nmethod: custom\n"
+            "positioning:\n  position: 3\n  width: 2\n  height: 1\n"
+        )
+        assert _post_card(sess, csrf, cell_yaml).status_code == 400
+        chart_yaml = (
             "type: bar-chart\ntitle: Bad Chart\nmethod: custom\ngroup: categories\n"
             "positioning:\n  position: 3\n  width: 4\n  height: 2\n"
         )
-        r = _post_card(sess, csrf, yaml_str)
-        assert r.status_code == 400
+        assert _post_card(sess, csrf, chart_yaml).status_code == 400
 
     def test_missing_group_returns_400(self, driver, w, ctx, sess):
         csrf = _csrf(sess)
@@ -384,107 +369,6 @@ class TestColorBreakpoints:
             "positioning:\n  position: 21\n  width: 2\n  height: 1\n"
         )
         assert _post_card(sess, csrf, yaml_str).status_code == 400
-
-
-class TestSandboxedPython:
-    """Sandbox security tests for method=custom cells."""
-
-    def test_custom_cell_returns_value(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return query_sum + 0")
-        assert card is not None
-
-    def test_sb_01_import_blocked(self, driver, w, ctx):
-        card = _sandbox_post(driver, "import os\nreturn 0")
-        assert card["error"] is not None
-        assert "import" in card["error"].lower() or "not allowed" in card["error"].lower()
-
-    def test_sb_02_from_import_blocked(self, driver, w, ctx):
-        card = _sandbox_post(driver, "from os import getcwd\nreturn 0")
-        assert card["error"] is not None
-        assert "import" in card["error"].lower() or "not allowed" in card["error"].lower()
-
-    def test_sb_03_dunder_attribute_blocked(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return (0).__class__")
-        assert card["error"] is not None
-        assert "dunder" in card["error"].lower() or "not allowed" in card["error"].lower()
-
-    def test_sb_04_dunder_mro_blocked(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return str.__mro__[-1].__subclasses__()")
-        assert card["error"] is not None
-        assert "dunder" in card["error"].lower() or "not allowed" in card["error"].lower()
-
-    def test_sb_05_dunder_globals_on_helper_blocked(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return query_sum.__globals__['os']")
-        assert card["error"] is not None
-        assert "dunder" in card["error"].lower() or "not allowed" in card["error"].lower()
-
-    def test_sb_06_dunder_closure_blocked(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return query_sum.__closure__[0].cell_contents")
-        assert card["error"] is not None
-
-    def test_sb_07_dunder_import_unavailable(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return __import__('os').getcwd()")
-        assert card["error"] is not None
-        assert "runtime error" in card["error"].lower()
-
-    def test_sb_08_getattr_unavailable(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return getattr(str, '__cl' + 'ass__')")
-        assert card["error"] is not None
-        assert "runtime error" in card["error"].lower()
-
-    def test_sb_09_eval_unavailable(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return eval('__import__(\"os\").getcwd()')")
-        assert card["error"] is not None
-        assert "runtime error" in card["error"].lower()
-
-    def test_sb_10_open_unavailable(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return len(open('/etc/passwd').read())")
-        assert card["error"] is not None
-        assert "runtime error" in card["error"].lower()
-
-    def test_sb_11_globals_unavailable(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return len(globals())")
-        assert card["error"] is not None
-        assert "runtime error" in card["error"].lower()
-
-    def test_sb_12_type_unavailable(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return type(query_sum)")
-        assert card["error"] is not None
-        assert "runtime error" in card["error"].lower()
-
-    def test_sb_13_builtins_is_empty_dict(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return len(__builtins__)")
-        assert card["error"] is None
-        assert card["data"]["value"] == 0.0
-
-    def test_sb_14_string_return_coerces_to_zero(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return 'not a number'")
-        assert card["error"] is None
-        assert card["data"]["value"] == 0.0
-
-    def test_sb_15_none_return_coerces_to_zero(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return None")
-        assert card["error"] is None
-        assert card["data"]["value"] == 0.0
-
-    def test_sb_16_runtime_exception_surfaces_as_error(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return 1 / 0")
-        assert card["error"] is not None
-        assert "runtime error" in card["error"].lower()
-
-    def test_sb_17_swallowed_exception_returns_zero(self, driver, w, ctx):
-        card = _sandbox_post(driver, "try:\n  return 1 / 0\nexcept:\n  pass")
-        assert card["error"] is None
-        assert card["data"]["value"] == 0.0
-
-    def test_sb_18_query_sum_empty_is_numeric(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return query_sum('')")
-        assert card["error"] is None
-        assert isinstance(card["data"]["value"], (int, float))
-
-    def test_sb_19_sql_injection_does_not_crash(self, driver, w, ctx):
-        card = _sandbox_post(driver, "return query_sum(\"' OR '1'='1\")")
-        assert card.get("data") is not None or card.get("error") is not None
 
 
 class TestReorderAndResize:

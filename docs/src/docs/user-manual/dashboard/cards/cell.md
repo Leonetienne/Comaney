@@ -18,7 +18,6 @@ For the fields every card shares (type, title, query, positioning), see [Dashboa
 | `color_breakpoints` | Changes the card colour automatically based on the value. |
 | `link` | A URL to navigate to when someone clicks the card body. |
 | `template` | Controls how the number is displayed (for example: "€ 142.50 left"). |
-| `python` | A custom calculation, for `method: custom` only. |
 
 ---
 
@@ -127,33 +126,6 @@ template: '$VALUE $CURRENCY_SYMBOL remaining'
 | `$VALUE $CURRENCY_SYMBOL left` | `142.50 € left` |
 | `$CURRENCY_SYMBOL $VALUE` | `€ 142.50` |
 | `$VALUE` | `142.50` (no currency symbol) |
-
----
-
-## Custom calculations (`method: custom`)
-
-If the built-in `sum`, `total`, and `count` methods are not enough, you can write your own small calculation.
-
-```yaml
-method: custom
-python: |
-  income = query_sum('type=income')
-  expenses = query_sum('type=expense')
-  savings = query_sum('type="savings deposit"')
-  withdrawals = query_sum('type="savings withdrawal"')
-  return income - expenses - savings + withdrawals
-```
-
-Inside the `python` block you have access to four helpers:
-
-| Helper | What it returns |
-|---|---|
-| `query_sum('...')` | The sum of all matching expenses for the current period |
-| `query_sum_abs('...')` | Same, but always positive |
-| `query_sum_gt0('...')` | Sum of matching expenses where the value is positive |
-| `query_sum_lt0('...')` | Sum of matching expenses where the value is negative |
-
-The text inside the quotes uses the same filter language as the search bar. See [Search & Filters](../query-language.md).
 
 ---
 

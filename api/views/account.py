@@ -1,10 +1,8 @@
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 from ..utils import _err, _ok, _parse_body, _require_auth
 
 
-@csrf_exempt
 @_require_auth
 def account(request, feuser):
     if request.method == "GET":

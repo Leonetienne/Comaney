@@ -1,13 +1,11 @@
 from django.core.management import call_command
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 
 from budget.models import ScheduledExpense
 from ..serializers import _scheduled_json, _apply_scheduled_fields, _set_tags
 from ..utils import _err, _ok, _parse_body, _require_auth
 
 
-@csrf_exempt
 @_require_auth
 def scheduled(request, feuser):
     if request.method == "GET":
@@ -38,7 +36,6 @@ def scheduled(request, feuser):
     return _err("Method not allowed.", 405)
 
 
-@csrf_exempt
 @_require_auth
 def scheduled_detail(request, feuser, uid):
     try:

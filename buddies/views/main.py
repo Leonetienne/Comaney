@@ -2,6 +2,8 @@ import json
 from datetime import date
 from decimal import Decimal
 
+from comaney.json_utils import safe_json
+
 from django.shortcuts import redirect, render
 
 from budget.decorators import feuser_required
@@ -29,7 +31,7 @@ def _debts_to_json(unified_debts) -> str:
             "avatar_url": obj.ppic_url if has_pic else None,
             "initials": obj.initials if obj else "?",
         })
-    return json.dumps(rows)
+    return safe_json(rows)
 
 
 @feuser_required
@@ -261,7 +263,7 @@ def buddy_summary_page(request):
                     break
 
 
-    me_avatar_json = json.dumps({
+    me_avatar_json = safe_json({
         "has_pic": feuser.profile_picture,
         "avatar_url": feuser.ppic_url if feuser.profile_picture else None,
         "initials": feuser.initials,
@@ -273,8 +275,8 @@ def buddy_summary_page(request):
         "debts_json": _debts_to_json(unified_debts),
         "me_avatar_json": me_avatar_json,
         "feuser_key": feuser_key,
-        "direct_settle_members_json": json.dumps(direct_settle_members),
-        "settle_debts_json": json.dumps(settle_debts),
+        "direct_settle_members_json": safe_json(direct_settle_members),
+        "settle_debts_json": safe_json(settle_debts),
         "pending_approvals": pending_approvals,
         "initial_date_from": request.GET.get("date_from", ""),
         "initial_date_to":   request.GET.get("date_to", ""),

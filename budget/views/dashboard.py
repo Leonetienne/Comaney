@@ -2,6 +2,8 @@ import json
 
 from django.shortcuts import redirect, render, get_object_or_404
 
+from comaney.json_utils import safe_json
+
 from ..decorators import feuser_required
 from ..models import Dashboard
 from ._period import _date_range_presets_context
@@ -49,7 +51,7 @@ def dashboard_detail(request, uid: int):
     first = _first_dashboard(feuser)
     is_first = (first is not None and first.pk == dash.pk)
 
-    dashboards_json = json.dumps(_dashboard_list_json(feuser))
+    dashboards_json = safe_json(_dashboard_list_json(feuser))
 
     ctx = {
         'active_nav': 'dashboard',

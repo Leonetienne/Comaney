@@ -11,7 +11,7 @@ Card YAML schema:
     max_groups: N               # optional; top-N groups (bar-chart only)
     hide_groups: "a,b"          # optional; comma-sep group names to exclude
     method:                     # meaning depends on card type:
-      cell:       sum | total | count | custom
+      cell:       sum | total | count
       bar-chart / pie-chart:  sum | total
       list:       sum | total | count  (controls optional sum row)
       line-chart: base | cum           (per-bucket vs cumulative; default cum)
@@ -32,8 +32,6 @@ Card YAML schema:
     link: "/path?search=..."    # optional; clicking a cell navigates here
     link_template: "/path?search=tag%3D$GROUP_NAME"  # optional; $GROUP_NAME replaced per segment
     template: "$VALUE $CURRENCY_SYMBOL"  # optional; cell display template ($VALUE / $CURRENCY_SYMBOL)
-    python: |                   # required when method=custom; function body
-        return query_sum('...')
     # list-only fields:
     order_by: value | date | title   # sort field; default date
     order_dir: asc | desc            # sort direction; default desc
@@ -61,8 +59,6 @@ Card YAML schema:
             height: N
 """
 
-import ast
-import threading
 from decimal import Decimal, InvalidOperation
 
 import yaml
@@ -73,7 +69,7 @@ from .query_parser import apply_query, has_date_filter
 VALID_TYPES = {'cell', 'bar-chart', 'pie-chart', 'list', 'line-chart', 'spacer'}
 VALID_HIDE_ON = {'', 'mobile', 'desktop'}
 VALID_GROUPS = {'tags', 'categories'}
-VALID_METHODS = {'sum', 'total', 'count', 'custom'}
+VALID_METHODS = {'sum', 'total', 'count'}
 VALID_LIST_METHODS = {'sum', 'total', 'count'}
 VALID_ORDER_BY = {'value', 'date', 'title'}
 VALID_ORDER_DIR = {'asc', 'desc'}
@@ -95,7 +91,7 @@ ALLOWED_KEYS = {
     'cell':       _COMMON_KEYS | {'method', 'flip_signs', 'color', 'color_lightmode',
                                    'color_darkmode', 'color_breakpoints', 'color-breakpoints',
                                    'text_color', 'text_color_lightmode', 'text_color_darkmode',
-                                   'link', 'link_template', 'template', 'python'},
+                                   'link', 'link_template', 'template'},
     'bar-chart':  _COMMON_KEYS | {'method', 'group', 'max_groups', 'hide_groups',
                                    'flip_signs', 'link_template'},
     'pie-chart':  _COMMON_KEYS | {'method', 'group', 'max_groups', 'hide_groups',
@@ -154,8 +150,6 @@ def parse_card_config(yaml_str: str) -> dict:
         method = cfg.get('method', 'sum')
         if method not in VALID_METHODS:
             raise CardConfigError(f"method must be one of: {', '.join(sorted(VALID_METHODS))}")
-        if method == 'custom' and not cfg.get('python', '').strip():
-            raise CardConfigError("method=custom requires a 'python' code block")
 
     if card_type == 'list':
         order_by = cfg.get('order_by', 'date')
@@ -302,7 +296,6 @@ def parse_card_config(yaml_str: str) -> dict:
         'link':             str(cfg.get('link', '')),
         'link_template':    str(cfg.get('link_template', '')),
         'template':         str(cfg.get('template', '')),
-        'python':        str(cfg.get('python', '')),
         # list-only fields
         'order_by':      str(cfg.get('order_by', 'date')),
         'order_dir':     str(cfg.get('order_dir', 'desc')),
@@ -396,9 +389,6 @@ def _compute_cell(config: dict, period_qs, value_field: str = 'value', feuser=No
         value = _signed_sum(qs, value_field=value_field)
     elif method == 'count':
         return {'value': qs.count()}
-    elif method == 'custom':
-        fns = _make_query_fns(period_qs, value_field=value_field)
-        value = _run_sandboxed(config['python'], fns)
     else:
         value = Decimal('0')
 
@@ -621,94 +611,6 @@ def _compute_line_chart(config: dict, period_qs, period_info: dict,
         })
 
     return {'labels': labels, 'bucket_starts': bucket_starts, 'series': result_series}
-
-
-# ---------------------------------------------------------------------------
-# Sandboxed Python execution for method=custom cells
-# ---------------------------------------------------------------------------
-
-_SAFE_BUILTINS = {
-    '__builtins__': {},
-    'abs': abs, 'round': round, 'min': min, 'max': max,
-    'sum': sum, 'len': len, 'int': int, 'float': float,
-    'str': str, 'bool': bool,
-    'True': True, 'False': False, 'None': None,
-    'Decimal': Decimal,
-}
-
-_FORBIDDEN_NODES = (ast.Import, ast.ImportFrom)
-
-
-def _make_query_fns(period_qs, value_field: str = 'value') -> dict:
-    def query_sum(q=''):
-        qs = apply_query(period_qs, q)
-        return qs.aggregate(t=Sum(value_field))['t'] or Decimal('0')
-
-    def query_sum_abs(q=''):
-        vals = list(apply_query(period_qs, q).values_list(value_field, flat=True))
-        return sum(abs(v) for v in vals) if vals else Decimal('0')
-
-    def query_sum_gt0(q=''):
-        qs = apply_query(period_qs, q).filter(**{f'{value_field}__gt': 0})
-        return qs.aggregate(t=Sum(value_field))['t'] or Decimal('0')
-
-    def query_sum_lt0(q=''):
-        qs = apply_query(period_qs, q).filter(**{f'{value_field}__lt': 0})
-        return qs.aggregate(t=Sum(value_field))['t'] or Decimal('0')
-
-    return {
-        'query_sum':      query_sum,
-        'query_sum_abs':  query_sum_abs,
-        'query_sum_gt0':  query_sum_gt0,
-        'query_sum_lt0':  query_sum_lt0,
-    }
-
-
-def _run_sandboxed(code: str, fns: dict, timeout: float = 2.0) -> Decimal:
-    """Execute a user-supplied function body in a restricted environment."""
-    indented = '\n'.join('    ' + line for line in code.splitlines())
-    wrapped = f"def __fn__():\n{indented}\n__result__ = __fn__()"
-
-    try:
-        tree = ast.parse(wrapped, '<card>', 'exec')
-    except SyntaxError as exc:
-        raise CardConfigError(f"Syntax error in python block: {exc}") from exc
-
-    for node in ast.walk(tree):
-        if isinstance(node, _FORBIDDEN_NODES):
-            raise CardConfigError("Imports are not allowed in sandboxed code")
-        if isinstance(node, ast.Attribute) and isinstance(node.attr, str) and node.attr.startswith('__'):
-            raise CardConfigError("Dunder attributes are not allowed in sandboxed code")
-
-    compiled = compile(tree, '<card>', 'exec')
-    ns = {**_SAFE_BUILTINS, **fns}
-
-    result_holder: list = [None]
-    error_holder:  list = [None]
-
-    def _run():
-        try:
-            exec(compiled, ns)
-            result_holder[0] = ns.get('__result__')
-        except Exception as exc:  # noqa: BLE001
-            error_holder[0] = exc
-
-    thread = threading.Thread(target=_run, daemon=True)
-    thread.start()
-    thread.join(timeout)
-
-    if thread.is_alive():
-        raise CardConfigError("Custom python block timed out (> 2 s)")
-    if error_holder[0] is not None:
-        raise CardConfigError(f"Runtime error in python block: {error_holder[0]}")
-
-    raw = result_holder[0]
-    if raw is None:
-        return Decimal('0')
-    try:
-        return Decimal(str(raw))
-    except (InvalidOperation, TypeError):
-        return Decimal('0')
 
 
 # ---------------------------------------------------------------------------

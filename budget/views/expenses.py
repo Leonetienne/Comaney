@@ -4,7 +4,10 @@ import secrets
 import urllib.parse
 from datetime import date
 
+from comaney.json_utils import safe_json
+
 from django.contrib import messages
+from django.utils.html import escape as html_escape
 from django.utils.safestring import mark_safe
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
@@ -57,10 +60,10 @@ def _buddy_context(feuser) -> dict:
         "buddy_actual": actual,
         "buddy_dummy": dummy,
         "buddy_groups": projects,
-        "projects_data_json": json.dumps(
+        "projects_data_json": safe_json(
             BuddyQueryService.projects_data_for_expense_form(feuser)
         ),
-        "single_buddies_json": json.dumps(single_buddies),
+        "single_buddies_json": safe_json(single_buddies),
     }
 
 
@@ -142,7 +145,7 @@ def _existing_buddy_json(expense) -> str:
             rows.append({"type": "feuser", "id": bs.participant_feuser_id, "share_percent": float(bs.share_percent)})
         else:
             rows.append({"type": "dummy", "id": bs.participant_dummy_id, "share_percent": float(bs.share_percent)})
-    return json.dumps(rows)
+    return safe_json(rows)
 
 
 def _safe_back_url(url):
@@ -169,8 +172,8 @@ def expenses_list(request):
     ctx = {
         "active_nav": "expenses",
         "nav_show_sharing_toggle": has_buddy_or_multiuser_project(feuser),
-        "categories_json": mark_safe(json.dumps(categories)),
-        "tags_json": mark_safe(json.dumps(tags)),
+        "categories_json": safe_json(categories),
+        "tags_json": safe_json(tags),
         "initial_date_from": request.GET.get("date_from", ""),
         "initial_date_to": request.GET.get("date_to", ""),
     }
@@ -305,7 +308,7 @@ def expense_create(request):
                     messages.info(
                         request,
                         mark_safe(
-                            f'"{expense.title}" was saved. Since <strong>{dummy_name}</strong> paid upfront, '
+                            f'"{html_escape(expense.title)}" was saved. Since <strong>{html_escape(dummy_name)}</strong> paid upfront, '
                             f'this expense won\'t appear in your regular expense list'
                             f' — you\'ll find it under <a href="{summary_url}">Buddy Expenses</a>.'
                         ),

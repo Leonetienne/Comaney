@@ -38,6 +38,9 @@ def profile(request):
     if request.method == "POST":
         action = request.POST.get("action")
 
+        if action in ("picture", "picture_delete", "backdrop", "backdrop_delete", "backdrop_settings") and feuser.is_demo:
+            return redirect(request.path)
+
         if action == "picture":
             upload = request.FILES.get("profile_picture")
             if not upload:
