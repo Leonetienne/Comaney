@@ -1,0 +1,10 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">A new partner is in the house!</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ joined_name }}</strong> has joined your Catalog Partnership and completed setup.
+</p>
+<p style="color:#aaa;line-height:1.6;font-size:0.9rem;">
+    Your shared catalog now includes {{ joined_name }}. Any tag or category changes any partner makes will apply to everyone.
+</p>
+{% endblock %}

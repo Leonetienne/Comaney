@@ -62,6 +62,18 @@ urlpatterns = [
     path("expense/<int:expense_id>/participant-approve/", views.participant_approve, name="participant_approve"),
     path("expense/<int:expense_id>/participant-reject/", views.participant_reject, name="participant_reject"),
 
+    # Catalog Partnership
+    path("partnership/invite/", views.send_partnership_invite, name="partnership_invite"),
+    path("partnership/accept/<str:token>/", views.onboarding_wizard, name="partnership_onboarding"),
+    path("partnership/accept/<str:token>/catalog-state/", views.onboarding_catalog_state, name="partnership_catalog_state"),
+    path("partnership/accept/<str:token>/ai-tags/", views.onboarding_ai_suggest_tags, name="partnership_ai_tags"),
+    path("partnership/accept/<str:token>/ai-cats/", views.onboarding_ai_suggest_cats, name="partnership_ai_cats"),
+    path("partnership/accept/<str:token>/apply/", views.onboarding_apply, name="partnership_apply"),
+    path("partnership/accept/<str:token>/decline/", views.onboarding_decline, name="partnership_decline"),
+    path("partnership/cancel-invite/<str:token>/", views.cancel_partnership_invite, name="partnership_cancel_invite"),
+    path("partnership/kick/<int:feuser_id>/", views.kick_partner, name="partnership_kick"),
+    path("partnership/leave/", views.leave_partnership, name="partnership_leave"),
+
     # Group settlement actions
     path("groups/<int:group_id>/expense/<int:expense_id>/approve-dummy/", views.admin_approve_dummy_settlement, name="admin_approve_dummy_settlement"),
     path("groups/<int:group_id>/expense/<int:expense_id>/reject-dummy/", views.admin_reject_dummy_settlement, name="admin_reject_dummy_settlement"),

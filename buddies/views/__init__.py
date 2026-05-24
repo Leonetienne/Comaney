@@ -25,6 +25,18 @@ from .expenses import (
     group_expense_delete, group_expense_unlink,
     participant_approve, participant_reject,
 )
+from .partnership import (
+    send_partnership_invite,
+    onboarding_wizard,
+    onboarding_catalog_state,
+    onboarding_ai_suggest_tags,
+    onboarding_ai_suggest_cats,
+    onboarding_apply,
+    onboarding_decline,
+    cancel_partnership_invite,
+    kick_partner,
+    leave_partnership,
+)
 # Project views (new namespace)
 from .projects import (
     projects_list, create_project, project_detail, project_expense_list_partial, project_settings,

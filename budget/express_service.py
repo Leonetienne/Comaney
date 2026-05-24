@@ -1,11 +1,20 @@
 """
-AI-powered express expense creation: Claude API integration, image handling,
+AI-powered express expense creation: agent abstraction, image handling,
 item validation, and trial-key management.
 
 The view layer lives in budget/views/express.py and imports from here.
+
+AI call hierarchy:
+  _call_agent(AgentConfig, system_prompt, messages) -> (raw_text, usage)
+    └── _call_claude_impl  (provider="claude")
+        └── future providers via AgentConfig.provider
+
+Express-creation callers use the legacy _call_claude() wrapper which builds
+the content array and parses the smart-create JSON format on top of _call_agent.
 """
 import json
 import logging
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
@@ -13,6 +22,10 @@ from .models import Category, Tag
 
 _log = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Errors
+# ---------------------------------------------------------------------------
 
 class AIRefusalError(Exception):
     """AI returned {"result": "fail", "msg": "..."}"""
@@ -28,6 +41,108 @@ class AIInvalidResponseError(Exception):
         self.raw = raw
         self.cause = cause
 
+
+class AIBudgetExceededError(Exception):
+    """Trial or user budget is exhausted."""
+
+
+# ---------------------------------------------------------------------------
+# Agent abstraction
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AgentConfig:
+    provider: str = "claude"
+    api_key: str = ""
+    model: str = "claude-sonnet-4-6"
+    max_tokens: int = 8192
+    extra: dict = field(default_factory=dict)
+
+
+def _call_agent(
+    config: AgentConfig,
+    system_prompt: str,
+    messages: list[dict],
+) -> tuple[str, dict]:
+    """
+    Dispatch to the configured AI provider.
+    Returns (raw_text_response, usage_dict).
+    usage_dict keys: input_tokens, output_tokens, cache_write_tokens,
+                     cache_read_tokens, total_tokens, cost_usd, cost_cents.
+    """
+    if config.provider == "claude":
+        return _call_claude_impl(config, system_prompt, messages)
+    raise ValueError(f"Unsupported AI provider: {config.provider!r}")
+
+
+def _call_claude_impl(
+    config: AgentConfig,
+    system_prompt: str,
+    messages: list[dict],
+) -> tuple[str, dict]:
+    """Raw Anthropic API call. Returns (response_text, usage_dict)."""
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=config.api_key)
+    response = client.messages.create(
+        model=config.model or "claude-sonnet-4-6",
+        max_tokens=config.max_tokens,
+        system=[
+            {
+                "type": "text",
+                "text": system_prompt,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
+        messages=messages,
+    )
+
+    raw = ""
+    for block in response.content:
+        if getattr(block, "type", None) == "text":
+            raw = block.text.strip()
+            break
+
+    if not raw:
+        _log.error("_call_claude_impl: empty response. blocks: %r", response.content)
+        raise ValueError(
+            f"Claude returned an empty response. Content blocks: "
+            f"{[getattr(b, 'type', '?') for b in response.content]}"
+        )
+
+    u = response.usage
+    input_tok       = getattr(u, "input_tokens", 0)
+    output_tok      = getattr(u, "output_tokens", 0)
+    cache_write_tok = getattr(u, "cache_creation_input_tokens", 0)
+    cache_read_tok  = getattr(u, "cache_read_input_tokens", 0)
+
+    cost = (
+        (input_tok       / 1_000_000) * _PRICE_INPUT +
+        (output_tok      / 1_000_000) * _PRICE_OUTPUT +
+        (cache_write_tok / 1_000_000) * _PRICE_CACHE_WRITE +
+        (cache_read_tok  / 1_000_000) * _PRICE_CACHE_READ
+    )
+    usage = {
+        "input_tokens":       input_tok,
+        "output_tokens":      output_tok,
+        "cache_write_tokens": cache_write_tok,
+        "cache_read_tokens":  cache_read_tok,
+        "total_tokens":       input_tok + output_tok + cache_write_tok + cache_read_tok,
+        "cost_usd":           round(cost, 6),
+        "cost_cents":         round(cost * 100, 1),
+    }
+    return raw, usage
+
+
+def _default_agent_config(feuser) -> AgentConfig:
+    """Resolve the right API key for a feuser (own key > trial key)."""
+    api_key, *_ = _trial_state(feuser)
+    return AgentConfig(provider="claude", api_key=api_key)
+
+
+# ---------------------------------------------------------------------------
+# Express-creation constants and helpers
+# ---------------------------------------------------------------------------
 
 _SMART_CREATE_SYSTEM = """You are a financial data-entry assistant for a budgeting app.
 The user may provide an image (receipt, invoice, order confirmation, etc.), a text description, or both.
@@ -127,6 +242,10 @@ def _build_catalog(feuser) -> str:
     return "\n\n".join(parts)
 
 
+# ---------------------------------------------------------------------------
+# Legacy express-creation wrapper (keeps express.py unchanged)
+# ---------------------------------------------------------------------------
+
 def _call_claude(
     api_key: str,
     system_prompt: str,
@@ -134,11 +253,11 @@ def _call_claude(
     image_b64: str = "",
     image_type: str = "image/jpeg",
 ) -> tuple[list[dict], dict]:
-    """Return (parsed_items, usage_info_dict)."""
-    import anthropic
-
-    client = anthropic.Anthropic(api_key=api_key)
-
+    """
+    Express-creation specific AI call.
+    Builds the content array, calls _call_agent, parses the smart-create JSON format.
+    Returns (parsed_items, usage_dict).
+    """
     content: list[dict] = []
     if image_b64:
         content.append({
@@ -154,30 +273,10 @@ def _call_claude(
         "text": description or "Please analyse this image and extract all expense items.",
     })
 
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=8192,
-        system=[
-            {
-                "type": "text",
-                "text": system_prompt,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": content}],
-    )
-
-    raw = ""
-    for block in response.content:
-        if getattr(block, "type", None) == "text":
-            raw = block.text.strip()
-            break
+    config = AgentConfig(provider="claude", api_key=api_key, max_tokens=8192)
+    raw, usage = _call_agent(config, system_prompt, [{"role": "user", "content": content}])
 
     _log.debug("smart_create raw response: %r", raw)
-
-    if not raw:
-        _log.error("smart_create: empty response. Full content: %r", response.content)
-        raise ValueError(f"Claude returned an empty response. Content blocks: {[getattr(b, 'type', '?') for b in response.content]}")
 
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[-1]
@@ -211,30 +310,12 @@ def _call_claude(
     else:
         raise AIInvalidResponseError(raw)
 
-    u = response.usage
-    input_tok        = getattr(u, "input_tokens", 0)
-    output_tok       = getattr(u, "output_tokens", 0)
-    cache_write_tok  = getattr(u, "cache_creation_input_tokens", 0)
-    cache_read_tok   = getattr(u, "cache_read_input_tokens", 0)
-
-    cost = (
-        (input_tok       / 1_000_000) * _PRICE_INPUT +
-        (output_tok      / 1_000_000) * _PRICE_OUTPUT +
-        (cache_write_tok / 1_000_000) * _PRICE_CACHE_WRITE +
-        (cache_read_tok  / 1_000_000) * _PRICE_CACHE_READ
-    )
-
-    usage = {
-        "input_tokens":       input_tok,
-        "output_tokens":      output_tok,
-        "cache_write_tokens": cache_write_tok,
-        "cache_read_tokens":  cache_read_tok,
-        "total_tokens":       input_tok + output_tok + cache_write_tok + cache_read_tok,
-        "cost_usd":           round(cost, 6),
-        "cost_cents":         round(cost * 100, 1),
-    }
     return items, usage
 
+
+# ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
 
 def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
     """Validate and sanitise parsed items against the user's actual categories/tags/projects."""

@@ -1,0 +1,37 @@
+<script>
+(function () {
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    document.addEventListener('click', async function (e) {
+        const btn = e.target.closest('.partnership-invite-btn');
+        if (!btn) return;
+        const name = btn.dataset.name;
+        const id   = btn.dataset.feuserId;
+        try {
+            await confirmDialog(
+                `Invite ${name} to a Catalog Partnership?\n\nThis will sync tags and categories between your accounts. ${name} will need to complete a short setup before syncing begins.`,
+                'Send invite'
+            );
+        } catch (_) { return; }
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        try {
+            const res = await fetch('{% url "buddies:partnership_invite" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body: JSON.stringify({ invitee_id: parseInt(id) }),
+            });
+            const data = await res.json();
+            if (res.ok && data.ok) {
+                btn.outerHTML = '<span class="pill pill--faded pill--sm">Invite pending</span>';
+            } else {
+                btn.disabled = false;
+                btn.textContent = 'Invite as partner';
+                alert(data.error || 'Could not send invite. Please try again.');
+            }
+        } catch (_) {
+            btn.disabled = false;
+            btn.textContent = 'Invite as partner';
+        }
+    });
+})();
+</script>

@@ -254,7 +254,7 @@ def _participant_set_approval(request, expense_id, new_state):
 
     if bs.approval_state != new_state:
         update_fields = ["approval_state"]
-        if bs.consent_set_at is None:
+        if new_state == BuddySpending.APPROVAL_APPROVED:
             bs.consent_set_at = timezone.now()
             update_fields.append("consent_set_at")
         bs.approval_state = new_state

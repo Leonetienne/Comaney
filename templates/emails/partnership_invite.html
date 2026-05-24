@@ -1,0 +1,19 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Catalog Partnership invitation</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ inviter_name }}</strong> has invited you to join their Catalog Partnership on Comaney.
+</p>
+<p style="color:#aaa;line-height:1.6;font-size:0.9rem;">
+    A Catalog Partnership keeps your tags and categories in sync. Any tag or category either of you creates, renames, or deletes applies to both accounts instantly &mdash; perfect for couples or flatmates who share expenses.
+</p>
+<p style="color:#aaa;line-height:1.6;font-size:0.9rem;">
+    To join, you'll go through a short setup that maps your existing tags and categories to {{ inviter_name }}'s catalog.
+</p>
+<div style="margin:28px 0;text-align:center;">
+    <a href="{{ onboarding_url }}" style="display:inline-block;background:#e0e0e0;color:#141414;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;">Set up partnership</a>
+</div>
+<p style="color:#666;font-size:0.82rem;line-height:1.5;">
+    If you did not expect this email, you can safely ignore it.
+</p>
+{% endblock %}

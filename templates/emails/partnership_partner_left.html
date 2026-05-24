@@ -1,0 +1,10 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">A partner has left</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ left_name }}</strong> has left your Catalog Partnership.
+</p>
+<p style="color:#aaa;line-height:1.6;font-size:0.9rem;">
+    Your catalog continues to sync with your remaining partners. {{ left_name }}'s catalog is now independent.
+</p>
+{% endblock %}

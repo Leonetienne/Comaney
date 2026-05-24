@@ -42,6 +42,8 @@ class FeUser(models.Model):
     notify_participant_decisions = models.BooleanField(default=True)
     notify_settlements = models.BooleanField(default=True)
     notify_group_activity = models.BooleanField(default=True)
+    notify_own_partnership_changes = models.BooleanField(default=True)
+    notify_someones_partnership_changes = models.BooleanField(default=True)
     unspent_allowance_action = models.CharField(
         max_length=20,
         default="do_nothing",

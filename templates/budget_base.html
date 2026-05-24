@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% load action_badges %}
 
 {% block layout %}
 <div class="app-layout">
@@ -18,7 +18,7 @@
             </li>
             <li><span class="sidebar-section-label">Budget</span></li>
             <li class="{% if active_nav == 'categories_tags' %}active{% endif %}">
-                <a href="{% url 'budget:categories_tags' %}">Categories &amp; Tags</a>
+                <a href="{% url 'budget:categories_tags' %}">Categories &amp; Tags {% action_badge current_feuser "partnership" %}</a>
             </li>
             <li><span class="sidebar-section-label">Buddy</span></li>
             <li class="{% if active_nav == 'my_buddies' %}active{% endif %}">
@@ -54,6 +54,7 @@
         {% endif %}
     </nav>{% endif %}
     <main class="app-main">
+        {% if current_feuser %}{% partnership_stoerer current_feuser %}{% endif %}
         <div class="app-content">
             {% block content %}{% endblock %}
         </div>

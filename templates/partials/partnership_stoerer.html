@@ -1,0 +1,37 @@
+{% if wizard_url %}
+<div class="cdialog-backdrop" id="partnership-stoerer-backdrop" data-token="{{ invite.token }}" aria-hidden="true">
+  <div class="cdialog" role="dialog" aria-modal="true">
+    <div class="cdialog-body" style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      {% include 'partials/_avatar.html' with user_obj=invite.inviter %}
+      <span><strong>{{ invite.inviter.first_name|default:invite.inviter.email }}</strong> has invited you to a Catalog Partnership. Ready to set it up?</span>
+    </div>
+    <div class="cdialog-actions">
+      <a href="{{ wizard_url }}" class="btn" id="partnership-stoerer-ok">Okay, let's continue</a>
+      <button type="button" class="btn btn-secondary" id="partnership-stoerer-later">Later</button>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  var backdrop = document.getElementById('partnership-stoerer-backdrop');
+  var CLOSED_KEY = 'partnership_stoerer_closed_' + backdrop.dataset.token;
+
+  function shouldShow() {
+    try {
+      var closedAt = localStorage.getItem(CLOSED_KEY);
+      if (closedAt && (Date.now() - parseInt(closedAt, 10)) < 5 * 60 * 1000) return false;
+    } catch(_) { return false; }
+    return true;
+  }
+
+  if (shouldShow()) {
+    backdrop.classList.add('cdialog-visible');
+  }
+
+  document.getElementById('partnership-stoerer-later').addEventListener('click', function() {
+    try { localStorage.setItem(CLOSED_KEY, String(Date.now())); } catch(_) {}
+    backdrop.classList.remove('cdialog-visible');
+  });
+})();
+</script>
+{% endif %}

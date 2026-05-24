@@ -1,0 +1,539 @@
+{% extends "budget_base.html" %}
+{% block title %}Comaney – Catalog Partnership Setup{% endblock %}
+
+{% block content %}
+<h1>Catalog Partnership Setup</h1>
+<p class="page-tip">Complete the wizard below to finish setting up your Catalog Partnership with <strong>{{ master_name }}</strong>.</p>
+
+<!-- Wizard Modal -->
+<div class="cdialog-backdrop cdialog-visible" id="partnership-wizard-backdrop">
+  <div class="cdialog partnership-wizard" id="partnership-wizard" role="dialog" aria-modal="true" aria-label="Partnership Setup">
+
+    <!-- Header -->
+    <div class="wizard-header">
+      <span class="wizard-title" id="wizard-title">Catalog Partnership Setup</span>
+      <button type="button" class="wizard-close" id="wizard-close" title="Continue later">✕</button>
+    </div>
+
+    <!-- Step indicators -->
+    <div class="wizard-steps">
+      <span class="wizard-step-dot" data-step="1">1</span>
+      <span class="wizard-step-line"></span>
+      <span class="wizard-step-dot" data-step="2">2</span>
+      <span class="wizard-step-line"></span>
+      <span class="wizard-step-dot" data-step="3">3</span>
+      <span class="wizard-step-line"></span>
+      <span class="wizard-step-dot" data-step="4">4</span>
+    </div>
+
+    <!-- Step 1: Explanation -->
+    <div class="wizard-step" id="step-1">
+      <p class="wizard-body">
+        <strong>{{ master_name }}</strong> has invited you to join their Catalog Partnership.
+      </p>
+      <p class="wizard-body">
+        A Catalog Partnership keeps your tags and categories in sync. Any tag or category either of you creates, renames, or deletes will instantly apply to all partners.
+      </p>
+      <p class="wizard-body">
+        To join, we need to map your existing tags and categories to <strong>{{ master_name }}</strong>'s catalog. Exact matches are handled automatically. You only need to decide what to do with the rest.
+      </p>
+      <div class="wizard-actions">
+        <button type="button" class="btn btn-danger-subtle" id="step1-decline">I don't want a partnership</button>
+        <button type="button" class="btn btn-secondary" id="step1-later">Continue later</button>
+        <button type="button" class="btn" id="step1-next">Next</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Tag migration -->
+    <div class="wizard-step" id="step-2" style="display:none">
+      <h3 class="wizard-section-title">Map your tags</h3>
+      <p class="wizard-body">
+        Tags that match exactly are handled automatically (shown below in grey).
+        For each unmatched tag, choose a target from <strong>{{ master_name }}</strong>'s catalog — or check DROP to remove it from your expenses.
+      </p>
+
+      {% if matched_tags %}
+      <div class="wizard-matched-section">
+        <p class="wizard-hint">Auto-matched ({{ matched_tags|length }}):</p>
+        <div class="wizard-matched-pills">
+          {% for t in matched_tags %}<span class="pill pill--faded">{{ t.title }}</span>{% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div id="tag-warning-undecided" class="wizard-warning" style="display:none">
+        <strong>Not yet decided:</strong> <span id="tag-undecided-list"></span>
+      </div>
+      <div id="tag-warning-unmapped" class="wizard-info" style="display:none">
+        <strong>Not yet in your catalog:</strong> <span id="tag-unmapped-list"></span>
+        <span class="wizard-hint">(These will be added empty after setup.)</span>
+      </div>
+
+      <div class="wizard-ai-row">
+        <button type="button" class="btn btn-secondary btn-sm" id="tag-ai-btn">✦ Let AI decide</button>
+        <span class="wizard-ai-status" id="tag-ai-status"></span>
+      </div>
+
+      <div class="wizard-map-table" id="tag-map-table">
+        <!-- Rows injected by JS -->
+      </div>
+
+      <div class="wizard-actions">
+        <button type="button" class="btn btn-secondary" id="step2-back">Back</button>
+        <button type="button" class="btn btn-secondary" id="step2-later">Continue later</button>
+        <button type="button" class="btn" id="step2-next">Next</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Category migration -->
+    <div class="wizard-step" id="step-3" style="display:none">
+      <h3 class="wizard-section-title">Map your categories</h3>
+      <p class="wizard-body">
+        Same as tags: exact matches are automatic. Decide what to do with the rest.
+      </p>
+
+      {% if matched_cats %}
+      <div class="wizard-matched-section">
+        <p class="wizard-hint">Auto-matched ({{ matched_cats|length }}):</p>
+        <div class="wizard-matched-pills">
+          {% for c in matched_cats %}<span class="pill pill--faded">{{ c.title }}</span>{% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div id="cat-warning-undecided" class="wizard-warning" style="display:none">
+        <strong>Not yet decided:</strong> <span id="cat-undecided-list"></span>
+      </div>
+      <div id="cat-warning-unmapped" class="wizard-info" style="display:none">
+        <strong>Not yet in your catalog:</strong> <span id="cat-unmapped-list"></span>
+        <span class="wizard-hint">(These will be added empty after setup.)</span>
+      </div>
+
+      <div class="wizard-ai-row">
+        <button type="button" class="btn btn-secondary btn-sm" id="cat-ai-btn">✦ Let AI decide</button>
+        <span class="wizard-ai-status" id="cat-ai-status"></span>
+      </div>
+
+      <div class="wizard-map-table" id="cat-map-table">
+        <!-- Rows injected by JS -->
+      </div>
+
+      <div class="wizard-actions">
+        <button type="button" class="btn btn-secondary" id="step3-back">Back</button>
+        <button type="button" class="btn btn-secondary" id="step3-later">Continue later</button>
+        <button type="button" class="btn" id="step3-next">Next</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Confirmation -->
+    <div class="wizard-step" id="step-4" style="display:none">
+      <h3 class="wizard-section-title">Ready to apply</h3>
+      <div id="step4-summary" class="wizard-summary"></div>
+      <p class="wizard-body wizard-body--warn">
+        This cannot be undone. Your catalog will be replaced with {{ master_name }}'s catalog, and your existing expenses will be updated accordingly.
+      </p>
+      <div id="step4-error" class="wizard-error" style="display:none"></div>
+      <div class="wizard-actions">
+        <button type="button" class="btn btn-secondary" id="step4-back">Back</button>
+        <button type="button" class="btn btn-secondary" id="step4-later">Continue later</button>
+        <button type="button" class="btn" id="step4-apply">Apply and finish</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+const csrf = document.querySelector('meta[name="csrf-token"]').content;
+const TOKEN = "{{ invite_token|escapejs }}";
+const STORAGE_KEY = 'partnership_onboarding_' + TOKEN;
+
+const masterTags = {{ master_tags_json|safe }};
+const masterCats = {{ master_cats_json|safe }};
+const unmatchedTagsInitial = {{ unmatched_tags_json|safe }};
+const unmatchedCatsInitial = {{ unmatched_cats_json|safe }};
+
+const masterTagTitles = masterTags.map(t => t.title);
+const masterCatTitles = masterCats.map(c => c.title);
+
+// ── State ──────────────────────────────────────────────────────────────────
+let state = loadState();
+let currentStep = state.step || 1;
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(_) {}
+  return { step: 1, tagMappings: {}, catMappings: {} };
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(_) {}
+}
+
+function clearState() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch(_) {}
+}
+
+// ── Reconcile catalog (master may have changed since last open) ────────────
+async function reconcile() {
+  try {
+    const res = await fetch(`/buddies/partnership/accept/${TOKEN}/catalog-state/`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const freshMasterTagTitles = new Set(data.master_tags.map(t => t.title));
+    const freshMasterCatTitles = new Set(data.master_cats.map(c => c.title));
+
+    // Remove decisions for tags/cats that no longer exist in master
+    for (const src of Object.keys(state.tagMappings)) {
+      const target = state.tagMappings[src];
+      if (target && !freshMasterTagTitles.has(target)) {
+        state.tagMappings[src] = null;
+      }
+    }
+    for (const src of Object.keys(state.catMappings)) {
+      const target = state.catMappings[src];
+      if (target && !freshMasterCatTitles.has(target)) {
+        state.catMappings[src] = null;
+      }
+    }
+
+    // Add new master tags/cats to unmatched if they appeared since last open
+    // (handled when building rows - we always re-fetch unmatched from current page data)
+    saveState();
+  } catch(_) {}
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function goStep(n) {
+  document.getElementById('step-' + currentStep).style.display = 'none';
+  currentStep = n;
+  state.step = n;
+  saveState();
+  document.getElementById('step-' + n).style.display = '';
+  updateStepDots();
+  // Refresh warnings when entering step 2 or 3
+  if (n === 2) { buildMapTable('tag'); updateWarnings('tag'); }
+  if (n === 3) { buildMapTable('cat'); updateWarnings('cat'); }
+  if (n === 4) buildSummary();
+}
+
+function updateStepDots() {
+  document.querySelectorAll('.wizard-step-dot').forEach(dot => {
+    const s = parseInt(dot.dataset.step);
+    dot.classList.toggle('active', s === currentStep);
+    dot.classList.toggle('done', s < currentStep);
+    dot.style.cursor = s < currentStep ? 'pointer' : 'default';
+  });
+}
+
+function laterAndClose() {
+  state.step = currentStep;
+  saveState();
+  try { localStorage.setItem('partnership_stoerer_closed_' + TOKEN, String(Date.now())); } catch(_) {}
+  window.location.href = '/budget/categories-tags/';
+}
+
+// ── Map table ──────────────────────────────────────────────────────────────
+function buildMapTable(kind) {
+  const tableEl = document.getElementById(kind + '-map-table');
+  const masterTitles = kind === 'tag' ? masterTagTitles : masterCatTitles;
+  const unmatchedItems = kind === 'tag' ? unmatchedTagsInitial : unmatchedCatsInitial;
+  const mappings = kind === 'tag' ? state.tagMappings : state.catMappings;
+
+  if (!unmatchedItems.length) {
+    tableEl.innerHTML = '<p class="wizard-hint">All your ' + kind + 's matched exactly — nothing to map!</p>';
+    return;
+  }
+
+  tableEl.innerHTML = '';
+  for (const item of unmatchedItems) {
+    const src = item.title;
+    const currentTarget = mappings[src];
+    const isDropped = mappings.hasOwnProperty(src) && mappings[src] === null;
+
+    const row = document.createElement('div');
+    row.className = 'wizard-map-row';
+    row.dataset.source = src;
+    row.dataset.kind = kind;
+
+    const srcLabel = document.createElement('span');
+    srcLabel.className = 'wizard-map-source';
+    srcLabel.textContent = src;
+
+    const arrow = document.createElement('span');
+    arrow.className = 'wizard-map-arrow';
+    arrow.textContent = '→';
+
+    const sel = document.createElement('select');
+    sel.className = 'wizard-map-select';
+    sel.dataset.source = src;
+    sel.dataset.kind = kind;
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = '— choose —';
+    sel.appendChild(emptyOpt);
+    for (const title of masterTitles) {
+      const opt = document.createElement('option');
+      opt.value = title;
+      opt.textContent = title;
+      if (currentTarget === title) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    if (isDropped) sel.disabled = true;
+
+    const dropLabel = document.createElement('label');
+    dropLabel.className = 'wizard-map-drop';
+    const dropCb = document.createElement('input');
+    dropCb.type = 'checkbox';
+    dropCb.checked = isDropped;
+    dropCb.dataset.source = src;
+    dropCb.dataset.kind = kind;
+    dropLabel.appendChild(dropCb);
+    dropLabel.append(' DROP');
+
+    sel.addEventListener('change', () => {
+      const m = kind === 'tag' ? state.tagMappings : state.catMappings;
+      m[src] = sel.value || undefined;
+      if (!sel.value) delete m[src];
+      saveState();
+      updateWarnings(kind);
+    });
+
+    dropCb.addEventListener('change', () => {
+      const m = kind === 'tag' ? state.tagMappings : state.catMappings;
+      if (dropCb.checked) {
+        m[src] = null;
+        sel.value = '';
+        sel.disabled = true;
+      } else {
+        delete m[src];
+        sel.disabled = false;
+      }
+      saveState();
+      updateWarnings(kind);
+    });
+
+    row.appendChild(srcLabel);
+    row.appendChild(arrow);
+    row.appendChild(sel);
+    row.appendChild(dropLabel);
+    tableEl.appendChild(row);
+  }
+  updateWarnings(kind);
+}
+
+// ── Warnings ───────────────────────────────────────────────────────────────
+function updateWarnings(kind) {
+  const masterTitles = kind === 'tag' ? masterTagTitles : masterCatTitles;
+  const unmatchedItems = kind === 'tag' ? unmatchedTagsInitial : unmatchedCatsInitial;
+  const mappings = kind === 'tag' ? state.tagMappings : state.catMappings;
+
+  // Undecided: source has no target and is not dropped
+  const undecided = unmatchedItems
+    .map(i => i.title)
+    .filter(src => !mappings.hasOwnProperty(src) || (mappings[src] !== null && !mappings[src]));
+
+  const undecidedEl = document.getElementById(kind + '-warning-undecided');
+  const undecidedList = document.getElementById(kind + '-undecided-list');
+  if (undecided.length) {
+    undecidedList.textContent = undecided.join(', ');
+    undecidedEl.style.display = '';
+  } else {
+    undecidedEl.style.display = 'none';
+  }
+
+  // Not yet mapped: master titles that no row currently maps to
+  const mappedTargets = new Set(Object.values(mappings).filter(v => v));
+  // Also include exact-matched titles as "mapped"
+  const exactMatchedTitles = new Set(
+    (kind === 'tag' ? unmatchedTagsInitial : unmatchedCatsInitial)
+      .map(i => i.title)
+      // Not in unmatched = was in matched, already mapped
+  );
+  // masterTitles that are not targeted by any decision
+  const notMapped = masterTitles.filter(t => !mappedTargets.has(t));
+  // Exclude titles that came from exact matches (they're already in the catalog)
+  const matchedSet = new Set(kind === 'tag'
+    ? {{ matched_tags_json|safe }}.map(t => t.title)
+    : {{ matched_cats_json|safe }}.map(c => c.title)
+  );
+  const notMappedFiltered = notMapped.filter(t => !matchedSet.has(t));
+
+  const unmappedEl = document.getElementById(kind + '-warning-unmapped');
+  const unmappedList = document.getElementById(kind + '-unmapped-list');
+  if (notMappedFiltered.length) {
+    unmappedList.textContent = notMappedFiltered.join(', ');
+    unmappedEl.style.display = '';
+  } else {
+    unmappedEl.style.display = 'none';
+  }
+}
+
+function isStepValid(kind) {
+  const unmatchedItems = kind === 'tag' ? unmatchedTagsInitial : unmatchedCatsInitial;
+  const mappings = kind === 'tag' ? state.tagMappings : state.catMappings;
+  return unmatchedItems.every(i => {
+    const src = i.title;
+    return mappings.hasOwnProperty(src) && (mappings[src] === null || mappings[src]);
+  });
+}
+
+// ── Summary ────────────────────────────────────────────────────────────────
+function buildSummary() {
+  let tagRemapped = 0, tagDropped = 0, catRemapped = 0, catDropped = 0;
+  for (const v of Object.values(state.tagMappings)) {
+    if (v === null) tagDropped++; else tagRemapped++;
+  }
+  for (const v of Object.values(state.catMappings)) {
+    if (v === null) catDropped++; else catRemapped++;
+  }
+  const el = document.getElementById('step4-summary');
+  el.innerHTML = `<ul class="wizard-summary-list">
+    <li>${tagRemapped} tag(s) will be remapped on your expenses</li>
+    <li>${tagDropped} tag(s) will be dropped from your expenses</li>
+    <li>${catRemapped} categor${catRemapped === 1 ? 'y' : 'ies'} will be remapped</li>
+    <li>${catDropped} categor${catDropped === 1 ? 'y' : 'ies'} will be dropped</li>
+  </ul>`;
+}
+
+// ── AI suggest ─────────────────────────────────────────────────────────────
+async function aiSuggest(kind) {
+  const btn = document.getElementById(kind + '-ai-btn');
+  const status = document.getElementById(kind + '-ai-status');
+  btn.disabled = true;
+  status.textContent = 'Thinking…';
+
+  try {
+    const url = `/buddies/partnership/accept/${TOKEN}/ai-${kind}s/`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      status.textContent = data.error || 'AI suggestion failed.';
+      btn.disabled = false;
+      return;
+    }
+    const mappings = kind === 'tag' ? state.tagMappings : state.catMappings;
+    const masterTitles = kind === 'tag' ? masterTagTitles : masterCatTitles;
+    const masterSet = new Set(masterTitles);
+
+    for (const m of data.mappings) {
+      if (!m.source) continue;
+      if (mappings.hasOwnProperty(m.source) && (mappings[m.source] || mappings[m.source] === null)) {
+        continue; // don't overwrite user decisions
+      }
+      mappings[m.source] = (m.target && masterSet.has(m.target)) ? m.target : null;
+    }
+    saveState();
+    buildMapTable(kind);
+    status.textContent = 'Done! Review and adjust as needed.';
+  } catch(e) {
+    status.textContent = 'Request failed. Please try again.';
+  }
+  btn.disabled = false;
+}
+
+// ── Apply ──────────────────────────────────────────────────────────────────
+async function applyMigration() {
+  const applyBtn = document.getElementById('step4-apply');
+  const errEl = document.getElementById('step4-error');
+  applyBtn.disabled = true;
+  applyBtn.textContent = 'Applying…';
+  errEl.style.display = 'none';
+
+  const tagMappings = Object.entries(state.tagMappings).map(([source, target]) => ({ source, target: target || null }));
+  const catMappings = Object.entries(state.catMappings).map(([source, target]) => ({ source, target: target || null }));
+
+  try {
+    const res = await fetch(`/buddies/partnership/accept/${TOKEN}/apply/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      body: JSON.stringify({ tag_mappings: tagMappings, cat_mappings: catMappings }),
+    });
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      clearState();
+      window.location.href = data.redirect || '/budget/categories-tags/';
+    } else {
+      errEl.textContent = data.error || 'Something went wrong. Please try again.';
+      errEl.style.display = '';
+      applyBtn.disabled = false;
+      applyBtn.textContent = 'Apply and finish';
+    }
+  } catch(e) {
+    errEl.textContent = 'Network error. Please try again.';
+    errEl.style.display = '';
+    applyBtn.disabled = false;
+    applyBtn.textContent = 'Apply and finish';
+  }
+}
+
+// ── Decline ────────────────────────────────────────────────────────────────
+async function declinePartnership() {
+  try {
+    await window.confirmDialog("Are you sure? This will permanently decline the invitation. You can be re-invited later.", "Decline");
+  } catch(_) { return; }
+
+  await fetch(`/buddies/partnership/accept/${TOKEN}/decline/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrf },
+  });
+  clearState();
+  window.location.href = '/budget/categories-tags/';
+}
+
+// ── Wire events ────────────────────────────────────────────────────────────
+document.getElementById('wizard-close').addEventListener('click', laterAndClose);
+document.getElementById('step1-next').addEventListener('click', () => goStep(2));
+document.getElementById('step1-later').addEventListener('click', laterAndClose);
+document.getElementById('step1-decline').addEventListener('click', declinePartnership);
+
+document.getElementById('step2-back').addEventListener('click', () => goStep(1));
+document.getElementById('step2-next').addEventListener('click', () => {
+  if (!isStepValid('tag')) {
+    updateWarnings('tag');
+    return;
+  }
+  goStep(3);
+});
+document.getElementById('step2-later').addEventListener('click', laterAndClose);
+
+document.getElementById('step3-back').addEventListener('click', () => goStep(2));
+document.getElementById('step3-next').addEventListener('click', () => {
+  if (!isStepValid('cat')) {
+    updateWarnings('cat');
+    return;
+  }
+  goStep(4);
+});
+document.getElementById('step3-later').addEventListener('click', laterAndClose);
+
+document.getElementById('step4-apply').addEventListener('click', applyMigration);
+document.getElementById('step4-back').addEventListener('click', () => goStep(3));
+document.getElementById('step4-later').addEventListener('click', laterAndClose);
+
+document.getElementById('tag-ai-btn').addEventListener('click', () => aiSuggest('tag'));
+document.getElementById('cat-ai-btn').addEventListener('click', () => aiSuggest('cat'));
+
+// ── Clickable step dots (navigate back to completed steps) ─────────────────
+document.querySelectorAll('.wizard-step-dot').forEach(dot => {
+  dot.addEventListener('click', () => {
+    const s = parseInt(dot.dataset.step);
+    if (s < currentStep) goStep(s);
+  });
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+reconcile().then(() => {
+  goStep(currentStep);
+  updateStepDots();
+});
+
+})();
+</script>
+{% endblock %}

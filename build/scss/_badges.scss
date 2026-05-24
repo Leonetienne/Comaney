@@ -65,4 +65,46 @@
     font-style: italic;
     color: var(--text-muted);
   }
+
+  &.pill--sm {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+  }
+
+  &.pill--green {
+    background: color-mix(in srgb, var(--success) 12%, var(--bg-surface));
+    color: var(--success);
+    border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+    font-weight: 600;
+  }
+
+  &.pill--yellow {
+    background: color-mix(in srgb, #e3a008 14%, var(--bg-surface));
+    color: #b07800;
+    border-color: color-mix(in srgb, #e3a008 30%, var(--border));
+    font-weight: 600;
+
+    @media (prefers-color-scheme: dark) { color: #e3a008; }
+  }
+}
+
+// ── Action badge (sidebar notification dot) ────────────────────────────────────
+
+.action-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #d93025;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: super;
+  margin-left: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+  pointer-events: none;
 }

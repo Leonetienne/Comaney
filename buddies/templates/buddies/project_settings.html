@@ -1,5 +1,5 @@
 {% extends "budget_base.html" %}
-
+{% load action_badges %}
 {% block title %}Comaney - {{ project.name }} - Manage{% endblock %}
 
 {% block content %}
@@ -59,14 +59,25 @@
                     <span class="buddy-name">{{ m.feuser.first_name }} {{ m.feuser.last_name }}</span>
                     <span class="buddy-email">{{ m.feuser.email }}</span>
                     {% if m.feuser.pk == group.admin_feuser_id %}<span class="pill">Admin</span>{% endif %}
+                    {% partnership_invite_state request.feuser m.feuser as p_state %}
+                    {% if p_state == "partner" %}<span class="pill">Partner</span>{% endif %}
+                    {% if p_state == "pending" %}<span class="pill">Invite pending</span>{% endif %}
                 </div>
             </div>
             <div></div>
             <div class="buddy-card-actions">
-                <form method="post" action="{% url 'projects:project_remove_member' project_id=group.uid member_id=m.uid %}" class="confirm-form" data-confirm="Remove {{ m.feuser.first_name|default:m.feuser.email }} from the group? Their past expenses will stay in the group history under an offline entry." data-ok="Remove">
-                    {% csrf_token %}
-                    <button type="submit" id="btn-remove-member-{{ m.uid }}" class="btn btn-sm btn-danger-subtle">Remove</button>
-                </form>
+                <form id="remove-form-{{ m.uid }}" method="post" action="{% url 'projects:project_remove_member' project_id=group.uid member_id=m.uid %}" class="confirm-form" data-confirm="Remove {{ m.feuser.first_name|default:m.feuser.email }} from the group? Their past expenses will stay in the group history under an offline entry." data-ok="Remove" style="display:none">{% csrf_token %}</form>
+                <div class="ctx-menu-wrap">
+                    <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
+                    <div class="ctx-menu">
+                        <button type="submit" id="btn-remove-member-{{ m.uid }}" form="remove-form-{{ m.uid }}" class="ctx-menu-item ctx-menu-item--danger">Remove</button>
+                        {% if p_state == "invite" %}
+                        <button class="ctx-menu-item partnership-invite-btn"
+                                data-feuser-id="{{ m.feuser.pk }}"
+                                data-name="{{ m.feuser.first_name|default:m.feuser.email|escapejs }}">Invite as partner</button>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -84,20 +95,6 @@
             </div>
             <div></div>
             <div class="buddy-card-actions">
-                <button class="btn btn-sm btn-secondary"
-                        data-dummy-id="{{ m.dummy.uid }}"
-                        data-dummy-name="{{ m.dummy.display_name|escapejs }}"
-                        data-has-pic="{% if m.dummy.profile_picture %}1{% else %}0{% endif %}"
-                        data-ppic-url="{{ m.dummy.ppic_url }}"
-                        data-initials="{{ m.dummy.initials }}"
-                        data-avatar-color="{{ m.dummy.initials|avatar_color }}"
-                        onclick="openDummyPicModal(this)">
-                    Choose image
-                </button>
-                <button class="btn btn-sm btn-secondary" id="merge-btn-{{ m.dummy.uid }}"
-                        onclick="this.style.display='none';document.getElementById('merge-form-{{ m.dummy.uid }}').style.display='flex'">
-                    Invite as user
-                </button>
                 <form id="merge-form-{{ m.dummy.uid }}" method="post"
                       action="{% url 'projects:project_send_merge' project_id=group.uid dummy_id=m.dummy.uid %}"
                       style="display:none;gap:6px;flex-wrap:wrap;align-items:center;">
@@ -105,11 +102,26 @@
                     <input type="email" name="email" placeholder="Their email" class="input-inline" required>
                     <button type="submit" class="btn btn-sm">Send</button>
                     <button type="button" class="btn btn-sm btn-secondary"
-                            onclick="this.closest('form').style.display='none';document.getElementById('merge-btn-{{ m.dummy.uid }}').style.display=''">
+                            onclick="document.getElementById('merge-form-{{ m.dummy.uid }}').style.display='none';document.getElementById('ctx-wrap-prj-{{ m.dummy.uid }}').style.display='inline-flex'">
                         Cancel
                     </button>
                 </form>
-                <a href="{% url 'projects:project_remove_member' project_id=group.uid member_id=m.uid %}" class="btn btn-sm btn-danger-subtle">Remove</a>
+                <div class="ctx-menu-wrap" id="ctx-wrap-prj-{{ m.dummy.uid }}">
+                    <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
+                    <div class="ctx-menu">
+                        <button class="ctx-menu-item"
+                                data-dummy-id="{{ m.dummy.uid }}"
+                                data-dummy-name="{{ m.dummy.display_name|escapejs }}"
+                                data-has-pic="{% if m.dummy.profile_picture %}1{% else %}0{% endif %}"
+                                data-ppic-url="{{ m.dummy.ppic_url }}"
+                                data-initials="{{ m.dummy.initials }}"
+                                data-avatar-color="{{ m.dummy.initials|avatar_color }}"
+                                onclick="openDummyPicModal(this)">Change photo</button>
+                        <button class="ctx-menu-item" id="merge-btn-{{ m.dummy.uid }}"
+                                onclick="document.getElementById('ctx-wrap-prj-{{ m.dummy.uid }}').style.display='none';document.getElementById('merge-form-{{ m.dummy.uid }}').style.display='flex'">Invite as user</button>
+                        <a href="{% url 'projects:project_remove_member' project_id=group.uid member_id=m.uid %}" class="ctx-menu-item ctx-menu-item--danger">Remove</a>
+                    </div>
+                </div>
             </div>
         </div>
         {% endif %}{% endfor %}
@@ -126,7 +138,12 @@
             </div>
             <div></div>
             <div class="buddy-card-actions">
-                <a href="{% url 'projects:project_archive_wipe' project_id=group.uid dummy_id=m.dummy.uid %}" class="btn btn-sm btn-danger-subtle">Delete expenses</a>
+                <div class="ctx-menu-wrap">
+                    <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
+                    <div class="ctx-menu">
+                        <a href="{% url 'projects:project_archive_wipe' project_id=group.uid dummy_id=m.dummy.uid %}" class="ctx-menu-item ctx-menu-item--danger">Delete expenses</a>
+                    </div>
+                </div>
             </div>
         </div>
         {% endif %}{% endfor %}
@@ -539,4 +556,23 @@
 </script>
 {% endif %}
 
+<script>
+(function() {
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.ctx-menu-btn');
+        if (btn) {
+            var wrap = btn.closest('.ctx-menu-wrap');
+            var isOpen = wrap.classList.contains('ctx-open');
+            document.querySelectorAll('.ctx-menu-wrap.ctx-open').forEach(function(w) { w.classList.remove('ctx-open'); });
+            if (!isOpen) wrap.classList.add('ctx-open');
+            e.stopPropagation();
+            return;
+        }
+        if (!e.target.closest('.ctx-menu')) {
+            document.querySelectorAll('.ctx-menu-wrap.ctx-open').forEach(function(w) { w.classList.remove('ctx-open'); });
+        }
+    });
+})();
+</script>
+{% include "partials/partnership_invite_js.html" %}
 {% endblock %}

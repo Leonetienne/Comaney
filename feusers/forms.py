@@ -35,16 +35,20 @@ class NotificationPreferencesForm(forms.ModelForm):
             "notify_participant_decisions",
             "notify_settlements",
             "notify_group_activity",
+            "notify_own_partnership_changes",
+            "notify_someones_partnership_changes",
         ]
         labels = {
-            "email_notifications":          "Enable email notifications",
-            "notify_expense_reminders":     "Expense due date reminders (upcoming and overdue)",
-            "notify_expense_settled":       "Expense marked as paid",
-            "notify_expense_participation": "Added to, updated in, or removed from a shared expense",
-            "notify_expense_assignments":   "A shared expense was assigned to you as upfront payer",
-            "notify_participant_decisions": "A participant approved or rejected your shared expense",
-            "notify_settlements":           "Settlement requests and confirmations",
-            "notify_group_activity":        "Group membership changes",
+            "email_notifications":                  "Enable email notifications",
+            "notify_expense_reminders":             "Expense due date reminders (upcoming and overdue)",
+            "notify_expense_settled":               "Expense marked as paid",
+            "notify_expense_participation":         "Added to, updated in, or removed from a shared expense",
+            "notify_expense_assignments":           "A shared expense was assigned to you as upfront payer",
+            "notify_participant_decisions":         "A participant approved or rejected your shared expense",
+            "notify_settlements":                   "Settlement requests and confirmations",
+            "notify_group_activity":                "Project membership changes",
+            "notify_own_partnership_changes":       "Catalog Partnership: events that affect you (invites, being kicked)",
+            "notify_someones_partnership_changes":  "Catalog Partnership: activity from others (partner joined, left, or removed)",
         }
 
 

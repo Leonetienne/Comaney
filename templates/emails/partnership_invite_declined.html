@@ -1,0 +1,10 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Partnership invitation declined</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ invitee_name }}</strong> has declined your Catalog Partnership invitation.
+</p>
+<p style="color:#aaa;line-height:1.6;font-size:0.9rem;">
+    No changes were made to your catalog. You can invite them again from their profile at any time.
+</p>
+{% endblock %}

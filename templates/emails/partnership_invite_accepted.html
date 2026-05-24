@@ -1,0 +1,10 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Partnership invitation accepted</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ invitee_name }}</strong> has accepted your Catalog Partnership invitation and completed setup.
+</p>
+<p style="color:#aaa;line-height:1.6;font-size:0.9rem;">
+    Your catalogs are now in sync. Any tag or category changes either of you makes will apply to both accounts.
+</p>
+{% endblock %}

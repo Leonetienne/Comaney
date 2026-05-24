@@ -1,5 +1,5 @@
 {% extends "budget_base.html" %}
-
+{% load action_badges %}
 {% block title %}Comaney - My Buddies{% endblock %}
 
 {% block content %}
@@ -51,11 +51,14 @@
                 {% if info.type == 'feuser' and info.feuser %}
                 <span class="buddy-email">{{ info.feuser.email }}</span>
                 {% endif %}
-                {% if info.type == 'dummy' and info.dummy or info.sources %}
+                {% if info.type == 'feuser' and info.feuser %}{% partnership_invite_state request.feuser info.feuser as p_state %}{% endif %}
+                {% if info.type == 'dummy' and info.dummy or info.sources or p_state == "partner" or p_state == "pending" %}
                 <div class="bbl-tags">
                     {% if info.type == 'dummy' and info.dummy and not info.dummy.is_archive %}<span class="pill">Offline member</span>{% endif %}
                     {% if info.type == 'dummy' and info.dummy and info.dummy.is_archive %}<span class="pill pill--faded">Archive</span>{% endif %}
                     {% for src in info.sources %}<span class="pill">{{ src }}</span>{% endfor %}
+                    {% if p_state == "partner" %}<span class="pill">Partner</span>{% endif %}
+                    {% if p_state == "pending" %}<span class="pill">Invite pending</span>{% endif %}
                 </div>
                 {% endif %}
                 </div>
@@ -67,28 +70,27 @@
             </div>
             <div class="bbl-actions">
                 {% if info.type == 'feuser' and info.link_uid %}
-                <form method="post" action="{% url 'buddies:kick_actual' info.link_uid %}" class="confirm-form" data-confirm="Remove {{ info.display_name|escapejs }} as a spending buddy?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Your shared expenses will stay in your history." data-ok="Remove">
-                    {% csrf_token %}
-                    <button type="submit" id="btn-kick-{{ info.link_uid }}" class="btn btn-sm btn-danger-subtle">Remove</button>
-                </form>
+                <form id="kick-form-{{ info.link_uid }}" method="post" action="{% url 'buddies:kick_actual' info.link_uid %}" class="confirm-form" data-confirm="Remove {{ info.display_name|escapejs }} as a spending buddy?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Your shared expenses will stay in your history." data-ok="Remove" style="display:none">{% csrf_token %}</form>
+                <div class="ctx-menu-wrap">
+                    <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
+                    <div class="ctx-menu">
+                        <button type="submit" id="btn-kick-{{ info.link_uid }}" form="kick-form-{{ info.link_uid }}" class="ctx-menu-item ctx-menu-item--danger">Remove buddy</button>
+                        {% if info.feuser and p_state == "invite" %}
+                        <button class="ctx-menu-item partnership-invite-btn"
+                                data-feuser-id="{{ info.feuser.pk }}"
+                                data-name="{{ info.display_name|escapejs }}">Invite as partner</button>
+                        {% endif %}
+                    </div>
+                </div>
                 {% elif info.type == 'dummy' and info.dummy %}
                 {% if info.dummy.is_archive %}
-                <a href="{% url 'buddies:personal_archive_wipe' info.dummy.uid %}" class="btn btn-sm btn-danger-subtle">Delete expenses</a>
+                <div class="ctx-menu-wrap">
+                    <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
+                    <div class="ctx-menu">
+                        <a href="{% url 'buddies:personal_archive_wipe' info.dummy.uid %}" class="ctx-menu-item ctx-menu-item--danger">Delete expenses</a>
+                    </div>
+                </div>
                 {% else %}
-                <button class="btn btn-sm btn-secondary"
-                        data-dummy-id="{{ info.dummy.uid }}"
-                        data-dummy-name="{{ info.dummy.display_name|escapejs }}"
-                        data-has-pic="{% if info.dummy.profile_picture %}1{% else %}0{% endif %}"
-                        data-ppic-url="{{ info.dummy.ppic_url }}"
-                        data-initials="{{ info.dummy.initials }}"
-                        data-avatar-color="{{ info.dummy.initials|avatar_color }}"
-                        onclick="openDummyPicModal(this)">
-                    Choose image
-                </button>
-                <button class="btn btn-sm btn-secondary" id="merge-btn-{{ info.dummy.uid }}"
-                        onclick="this.style.display='none';document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='flex'">
-                    Invite as user
-                </button>
                 <form id="merge-form-{{ info.dummy.uid }}" method="post"
                       action="{% url 'buddies:send_merge_invite' info.dummy.uid %}"
                       style="display:none;gap:6px;flex-wrap:wrap;align-items:center;">
@@ -96,11 +98,26 @@
                     <input type="email" name="email" placeholder="Their email" class="input-inline" required>
                     <button type="submit" class="btn btn-sm">Send</button>
                     <button type="button" class="btn btn-sm btn-secondary"
-                            onclick="this.closest('form').style.display='none';document.getElementById('merge-btn-{{ info.dummy.uid }}').style.display=''">
+                            onclick="document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='none';document.getElementById('ctx-wrap-{{ info.dummy.uid }}').style.display='inline-flex'">
                         Cancel
                     </button>
                 </form>
-                <a href="{% url 'buddies:kick_dummy' info.dummy.uid %}" id="btn-kick-dummy-{{ info.dummy.uid }}" class="btn btn-sm btn-danger-subtle">Remove</a>
+                <div class="ctx-menu-wrap" id="ctx-wrap-{{ info.dummy.uid }}">
+                    <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
+                    <div class="ctx-menu">
+                        <button class="ctx-menu-item"
+                                data-dummy-id="{{ info.dummy.uid }}"
+                                data-dummy-name="{{ info.dummy.display_name|escapejs }}"
+                                data-has-pic="{% if info.dummy.profile_picture %}1{% else %}0{% endif %}"
+                                data-ppic-url="{{ info.dummy.ppic_url }}"
+                                data-initials="{{ info.dummy.initials }}"
+                                data-avatar-color="{{ info.dummy.initials|avatar_color }}"
+                                onclick="openDummyPicModal(this)">Change photo</button>
+                        <button class="ctx-menu-item" id="merge-btn-{{ info.dummy.uid }}"
+                                onclick="document.getElementById('ctx-wrap-{{ info.dummy.uid }}').style.display='none';document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='flex'">Invite as user</button>
+                        <a href="{% url 'buddies:kick_dummy' info.dummy.uid %}" id="btn-kick-dummy-{{ info.dummy.uid }}" class="ctx-menu-item ctx-menu-item--danger">Remove</a>
+                    </div>
+                </div>
                 {% endif %}
                 {% endif %}
             </div>
@@ -290,4 +307,23 @@
 })();
 </script>
 
+<script>
+(function() {
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.ctx-menu-btn');
+        if (btn) {
+            var wrap = btn.closest('.ctx-menu-wrap');
+            var isOpen = wrap.classList.contains('ctx-open');
+            document.querySelectorAll('.ctx-menu-wrap.ctx-open').forEach(function(w) { w.classList.remove('ctx-open'); });
+            if (!isOpen) wrap.classList.add('ctx-open');
+            e.stopPropagation();
+            return;
+        }
+        if (!e.target.closest('.ctx-menu')) {
+            document.querySelectorAll('.ctx-menu-wrap.ctx-open').forEach(function(w) { w.classList.remove('ctx-open'); });
+        }
+    });
+})();
+</script>
+{% include "partials/partnership_invite_js.html" %}
 {% endblock %}
