@@ -67,14 +67,28 @@ comaney/       Settings, root urls, middleware
 - UI assertions: must verify via UI (not just API) when the test is about what the user sees
 - Pure algorithm logic with no Django/DB: goes in `tests/unit/`
 
+## Demo users (`is_demo=True`)
+
+A demo user is a shared public account anyone can log into. Every restriction on a demo user must satisfy two hard rules:
+
+1. **No interaction with real users.** A demo user must never be able to send emails, invitations, partnership requests, or any other out-of-band contact to a real account. Real users must equally be unable to pull a demo account into their social graph (buddy, project member, partner).
+2. **No sabotage of the shared demo experience.** A demo user must never be able to perform an action that degrades the demo for the next visitor: they cannot change their own name, email, or password; cannot delete the account; cannot set up 2FA; cannot generate an API key.
+
+What demo users **can** do: change currency, financial month settings, rollover action, create expenses, use AI express entry (subject to `special_ai_trial_budget`).
+
+The demo banner (shown at every login, must be accepted) and all server-side blocks are enforced regardless of `ENABLE_DEMO_USERS`. That flag only gates login access and the landing-page advert. `reset_demo_user` (run by `run_cron`) deletes all `is_demo=True` users and recreates a fresh "Dean Demo" account once the last one has been inactive for a week.
+
+When adding any new feature: if it sends email, modifies another user's data, or lets a user meaningfully alter their own identity/credentials, block it for demo users — both in the view (redirect/403) and in the UI (disabled/hidden).
+
 ## Management commands
-- `create_user <email> [-p pw]`
+- `create_user <email> [-p pw] [--demo] [--ai-trial-budget CENTS]`
 - `set_user_password <email> [-p pw]`
 - `remove_user_2fa <email>`
 - `delete_user <email> [--yes]`
+- `reset_demo_user` (checks condition and resets demo account; called by `run_cron`)
 
 ## Cron
-- `run_cron`: every 5 min (notifications, auto-settle, carry-overs)
+- `run_cron`: every 5 min (notifications, auto-settle, carry-overs, demo user reset)
 - `reset_trial_budgets`: monthly (resets AI trial usage)
 
 ## Key env vars

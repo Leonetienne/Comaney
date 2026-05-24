@@ -20,6 +20,8 @@ Comaney requires two management commands to run on a schedule inside the web con
 
 4. **Processes end-of-month rollover.** When a user's financial month transitions, checks whether unspent budget should be deposited to savings or carried over, and creates the appropriate `Expense` record.
 
+5. **Resets the demo user (if enabled).** When `ENABLE_DEMO_USERS=TRUE`, checks whether the demo account's `last_seen` is older than one week. If so, deletes the account and recreates it with a clean slate. See [Demo user](environment-variables.md#demo-user) for configuration.
+
 ### `reset_trial_budgets`: monthly (1st of each month)
 
 ```cron
@@ -61,5 +63,6 @@ Replace `comaney` with the system user that owns the docker-compose file, and ad
 | Auto-settle | Never fires; expenses stay unsettled indefinitely |
 | End-of-month rollover | Never happens; no carry-over or savings deposit is created |
 | AI trial budget reset | Never resets; users stay at their monthly cap permanently |
+| Demo user reset | Never fires; demo account accumulates data indefinitely |
 
 Comaney will otherwise continue to function normally; you can still create, edit, and view expenses manually.

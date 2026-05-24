@@ -2,6 +2,16 @@
 Budgeting that actually fits into your life.  
 [Check it out now!](https://comaney.app)
 
+### Try it without signing up
+
+| | |
+|---|---|
+| URL | [comaney.app/login](https://comaney.app/login) |
+| Email | `demo@comaney.app` |
+| Password | `91448` |
+
+The demo account is a public sandbox. Do not enter personal, sensitive, or illegal data. It is reset automatically once a week.
+
 ![image](https://raw.githubusercontent.com/Leonetienne/Comaney/refs/heads/master/github-assets/dash-with-themes.png)
 
 *Custom themes, configurable in your account settings. [Download exemplary backdrop files](https://github.com/Leonetienne/Comaney/tree/master/github-assets/exemplary_backdrops/backdrop_files).*

@@ -221,6 +221,50 @@ When disabled, the registration page returns a 403 and no new accounts can be cr
 
 ---
 
+## Demo user
+
+These variables enable a public demo account that visitors can use without signing up. When enabled, a landing page advert is shown and the account is reset automatically by `run_cron` once it has been inactive for at least one week.
+
+Note: the demo banner (shown to any `is_demo` user at every login) is always active regardless of this flag. `ENABLE_DEMO_USERS` only controls the landing page advert, the login gate, and the automatic reset.
+
+### `ENABLE_DEMO_USERS`
+
+**Default:** `FALSE`
+
+Set to `TRUE` to activate the public demo user feature. When set:
+
+- The landing page shows a "try the live demo" advert with the demo email address.
+- Demo users can log in. When `FALSE`, any account flagged `is_demo` is denied login (credentials are silently rejected) and existing demo sessions are invalidated.
+- `run_cron` runs the automatic reset check.
+
+Requires `DEMO_USER_EMAIL` and `DEMO_USER_PASSWORD` to also be set.
+
+---
+
+### `DEMO_USER_EMAIL`
+
+**Default:** *(empty)*
+
+Email address for the demo account. On reset, `reset_demo_user` deletes all `is_demo` users and creates a fresh account at this address. The account does not need to exist beforehand.
+
+---
+
+### `DEMO_USER_PASSWORD`
+
+**Default:** *(empty)*
+
+Password used when recreating the demo account after a reset.
+
+---
+
+### `DEMO_USER_AI_BUDGET`
+
+**Default:** `0` (use global `AI_TRIAL_USAGE_LIMIT`)
+
+Per-reset AI trial allowance for the demo user, in US cents. Overrides `AI_TRIAL_USAGE_LIMIT` for this account only. Set to a small value (e.g. `10` for $0.10) to limit trial spend per demo cycle. `0` means the global limit applies.
+
+---
+
 ## AI / Express Creation
 
 ### `AI_TRIAL_API_KEY`
