@@ -15,6 +15,7 @@ If you don't want to write the YAML yourself, look for **"... OR let AI create t
 | `pie-chart` | A pie showing spending proportions across categories or tags. |
 | `line-chart` | One or more lines plotted over time, showing how money moves day by day or week by week. |
 | `list` | A scrollable table listing individual expenses that match a query. |
+| `gauge` | An arc that fills up toward a maximum, like a speedometer. Built for budgets and caps. |
 | `spacer` | An invisible placeholder that reserves space in the grid. Useful for alignment and visual gaps. |
 
 ## Fields that every card has
@@ -25,7 +26,7 @@ If you don't want to write the YAML yourself, look for **"... OR let AI create t
 type: cell
 ```
 
-Sets the card style. Must be one of `cell`, `bar-chart`, `pie-chart`, `list`, `line-chart`, or `spacer`.
+Sets the card style. Must be one of `cell`, `bar-chart`, `pie-chart`, `list`, `line-chart`, `gauge`, or `spacer`.
 
 ---
 
@@ -104,9 +105,9 @@ If you do not add a `mobile` block, the card uses the desktop values on both scr
 
 The `method` field controls how a card calculates its value. Its meaning depends on the card type, because different types need different kinds of computation.
 
-### Cell and list cards
+### Cell, list, and gauge cards
 
-Cell cards compute a single number. List cards use `method` only to calculate the optional summary row.
+Cell cards compute a single number. List cards use `method` only to calculate the optional summary row. Gauge cards use it to calculate the current value (and, separately, `max_value_method` uses the same options to calculate a dynamic maximum).
 
 | `method` | What it calculates |
 |---|---|
@@ -114,7 +115,7 @@ Cell cards compute a single number. List cards use `method` only to calculate th
 | `total` | Adds up values but treats income and savings withdrawals as negative. Good for a net-balance figure. |
 | `count` | Counts how many matching expenses there are instead of summing values. |
 
-Default for cell and list cards: `sum`.
+Default for cell and list cards: `sum`. Gauge cards have no default; `method` (and `query`) must always be set explicitly.
 
 #### Example: total spent on groceries
 
@@ -222,6 +223,21 @@ positioning:
   height: 3
 ```
 
+The simplest gauge:
+
+```yaml
+type: gauge
+title: Amazon budget
+query: tag=amazon
+method: sum
+max_value: 200
+show_raw_values: true
+positioning:
+  position: 20
+  width: 3
+  height: 2
+```
+
 For all the extra options available to each type, see:
 
 - [Cell Cards](cell.md)
@@ -229,4 +245,5 @@ For all the extra options available to each type, see:
 - [Pie Chart Cards](pie-chart.md)
 - [List Cards](list.md)
 - [Line Chart Cards](line-chart.md)
+- [Gauge Cards](gauge.md)
 - [Spacer Cards](spacer.md)
