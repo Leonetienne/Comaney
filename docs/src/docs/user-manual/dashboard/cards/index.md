@@ -4,6 +4,8 @@ Each card on your dashboard is configured using a small text recipe called YAML.
 
 When you click **+ Add card** or the pencil icon on an existing card, an editor opens where you type (or paste) the configuration. Click **Save** and the card updates immediately.
 
+If you don't want to write the YAML yourself, look for **"... OR let AI create the card for you"** below the editor (this only appears if AI features are available on your account). Describe what you want in plain language, for example *"The card should show how much I spent on Amazon this month"*, and click **Generate with AI**. It fills in the editor for you, ready to review, tweak and save. The AI also sees your other cards so the new one fits the same style, and your categories, tags and projects so it can filter correctly. When editing an existing card, describe the change instead, for example *"Modify this card to also include savings withdrawals"*.
+
 ## Card types
 
 | `type` value | What it shows |
