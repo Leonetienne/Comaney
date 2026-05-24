@@ -65,6 +65,38 @@
   cursor: pointer;
 }
 
+// ── Help FAB ─────────────────────────────────────────────────────────────────
+
+.help-fab {
+  position: fixed;
+  top: 68px;
+  right: 1rem;
+  z-index: 150;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s;
+
+  &:hover {
+    opacity: 1;
+    background: var(--bg-elevated);
+    color: var(--link);
+    border-color: var(--link);
+    text-decoration: none;
+  }
+}
+
 .page-tip {
   margin-bottom: 3em;
   opacity: 0.5;

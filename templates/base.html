@@ -38,6 +38,7 @@
     </main>
     {% endblock %}
     {% include "partials/_footer.html" %}
+    {% if help_fab_url %}<a class="help-fab" href="{{ help_fab_url }}" target="_blank" rel="noopener" title="Open help">?</a>{% endif %}
 
     <div class="cdialog-backdrop" id="cdialog-backdrop" aria-hidden="true">
         <div class="cdialog" role="dialog" aria-modal="true">
