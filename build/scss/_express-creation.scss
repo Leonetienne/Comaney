@@ -132,7 +132,7 @@
   margin-top: 20px;
   padding: 32px 28px 24px;
   border-radius: 12px;
-  background: color-mix(in srgb, #2db0ff 7%, transparent);
+  background: color-mix(in srgb, #2db0ff 12%, color-mix(in srgb, var(--bg) 65%, transparent));
   border: 1px solid #2db0ff;
   box-shadow:
     0 0 8px #2db0ff,
