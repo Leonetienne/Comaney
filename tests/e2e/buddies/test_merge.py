@@ -222,7 +222,7 @@ class TestGroupDummyMergeAccept:
         cleanup_user(c["email"])
 
     def test_invite_as_user_button_visible_on_group_detail(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
         buttons = driver.find_elements(By.XPATH,
             "//*[contains(text(),'Invite as user')]")

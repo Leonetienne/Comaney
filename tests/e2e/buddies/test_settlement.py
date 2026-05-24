@@ -496,9 +496,12 @@ class TestGroupSettlementReviewFlow:
         src = driver.page_source
         assert "Waiting for approval" in src, \
             "Pending settlement must appear in the 'Waiting for approval' section"
-        assert "Expense Breakdown" not in src or \
-            "Settlement" not in src.split("Expense Breakdown")[-1], \
-            "Settlement must not appear inside the Expense Breakdown section"
+        # The approved-expenses div must not contain the settlement.
+        # (The "Waiting for approval" section is nested inside the "Expense Breakdown"
+        # section, so we check by the approved-section id rather than the h2 text.)
+        assert 'id="proj-approved-section"' not in src or \
+            "Settlement" not in src.split('id="proj-approved-section"')[-1], \
+            "Settlement must not appear in the approved expense section"
 
     def test_no_review_button_for_debtor(self, driver, w, ctx):
         # The debtor must not see a Review button for their own settlement

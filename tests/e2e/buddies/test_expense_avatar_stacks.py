@@ -435,18 +435,45 @@ class TestExpenseAvatarStacks:
 
     def _load_group(self, driver, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(2)
+        time.sleep(3)
+
+    def _avatars_in_group_card(self, driver, card_id: str) -> int:
+        """Count .user-avatar elements in a server-rendered card by its element id."""
+        return driver.execute_script(
+            """
+            var card = document.getElementById(arguments[0]);
+            if (!card) return -1;
+            var stack = card.querySelector('.avatar-stack');
+            return stack ? stack.querySelectorAll('.user-avatar').length : 0;
+            """,
+            card_id,
+        )
+
+    def _avatar_texts_in_group_card(self, driver, card_id: str) -> list:
+        """Return initials/img src for each avatar in a server-rendered card by id."""
+        return driver.execute_script(
+            """
+            var card = document.getElementById(arguments[0]);
+            if (!card) return null;
+            var stack = card.querySelector('.avatar-stack');
+            if (!stack) return [];
+            return Array.from(stack.querySelectorAll('.user-avatar')).map(function(el) {
+                return el.tagName === 'IMG' ? el.getAttribute('src') : el.textContent.trim();
+            });
+            """,
+            card_id,
+        )
 
     def test_group_pending_case2_count(self, driver, w, ctx):
         """Case 2 in group Waiting-for-approval: 3 avatars (GDummy1 + Bob + GDummy2)."""
         _login_as(driver, ctx["alice"])
         self._load_group(driver, ctx)
-        count = _avatars_in_card(driver, "AvatarTest Dummy Payer Pending")
+        count = self._avatars_in_group_card(driver, f"pending-{ctx['e2_pk']}")
         assert count == 3, f"Expected 3 avatars in group pending for Case 2, got {count}"
 
     def test_group_pending_case2_content(self, driver, w, ctx):
         """Case 2 group pending: GG (payer), BB and GD (spendings), no duplicates."""
-        texts = _avatar_texts_in_card(driver, "AvatarTest Dummy Payer Pending")
+        texts = self._avatar_texts_in_group_card(driver, f"pending-{ctx['e2_pk']}")
         assert texts is not None, "Card not found in group Waiting-for-approval"
         assert "GG" in texts, f"GDummy1 'GG' missing from {texts}"
         assert "BB" in texts, f"Bob 'BB' missing from {texts}"
@@ -457,12 +484,12 @@ class TestExpenseAvatarStacks:
 
     def test_group_breakdown_case2_count(self, driver, w, ctx):
         """Case 2 approved in group Expense Breakdown: 3 avatars (GDummy1 + Bob + GDummy2)."""
-        count = _avatars_in_card(driver, "AvatarTest Dummy Payer Approved")
+        count = self._avatars_in_group_card(driver, f"expense-{ctx['e2_appr_pk']}")
         assert count == 3, f"Expected 3 avatars in group Expense Breakdown for Case 2, got {count}"
 
     def test_group_breakdown_case2_content(self, driver, w, ctx):
         """Case 2 group breakdown: GG (payer), BB and GD (spendings), no duplicates."""
-        texts = _avatar_texts_in_card(driver, "AvatarTest Dummy Payer Approved")
+        texts = self._avatar_texts_in_group_card(driver, f"expense-{ctx['e2_appr_pk']}")
         assert texts is not None, "Card not found in group Expense Breakdown"
         assert "GG" in texts, f"GDummy1 'GG' missing from {texts}"
         assert "BB" in texts, f"Bob 'BB' missing from {texts}"

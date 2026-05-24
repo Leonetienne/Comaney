@@ -54,7 +54,25 @@ class TestCloneDirectBuddyExpense:
         ctx["seen_before_clone"] = seen_before
 
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/clone/"))
+        # expense_clone requires POST; submit via JS form to avoid GET 405 error
+        driver.execute_script(
+            """
+            var csrftoken = document.cookie.split(';')
+                .find(function(c){ return c.trim().startsWith('csrftoken='); })
+                .split('=')[1];
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = arguments[0];
+            var inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = 'csrfmiddlewaretoken';
+            inp.value = csrftoken;
+            form.appendChild(inp);
+            document.body.appendChild(form);
+            form.submit();
+            """,
+            _url(f"/budget/expenses/{ctx['exp_pk']}/clone/"),
+        )
         time.sleep(2)
 
         import re
@@ -76,7 +94,8 @@ class TestCloneDirectBuddyExpense:
             f"bs = BuddySpending.objects.get(expense_id={ctx['clone_pk']}); "
             f"print(bs.share_percent)"
         )
-        assert share == "50.00", f"Cloned share_percent should be 50.00, got {share}"
+        # share_percent has decimal_places=3, so Django prints "50.000"
+        assert float(share) == 50.0, f"Cloned share_percent should be 50, got {share}"
 
         participant_email = _shell(
             f"from buddies.models import BuddySpending; "
@@ -149,7 +168,25 @@ class TestCloneProjectExpense:
         ctx["seen_before_clone"] = seen_before
 
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/clone/"))
+        # expense_clone requires POST; submit via JS form to avoid GET 405 error
+        driver.execute_script(
+            """
+            var csrftoken = document.cookie.split(';')
+                .find(function(c){ return c.trim().startsWith('csrftoken='); })
+                .split('=')[1];
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = arguments[0];
+            var inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = 'csrfmiddlewaretoken';
+            inp.value = csrftoken;
+            form.appendChild(inp);
+            document.body.appendChild(form);
+            form.submit();
+            """,
+            _url(f"/budget/expenses/{ctx['exp_pk']}/clone/"),
+        )
         time.sleep(2)
 
         import re

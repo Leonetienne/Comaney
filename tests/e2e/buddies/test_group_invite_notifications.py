@@ -168,7 +168,7 @@ class TestGroupMemberRemovedNotification:
         seen_before = mailpit_seen_ids()
         ctx["seen_before_remove"] = seen_before
         _login_as(driver, ctx["a"])
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
         # Find and click the remove button for member b
         member_pk = _shell(

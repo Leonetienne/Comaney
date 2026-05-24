@@ -42,6 +42,20 @@ def _confirm(driver) -> None:
     time.sleep(1)
 
 
+def _open_ctx_menu_for(driver, element) -> None:
+    """Open the context menu that contains the given element."""
+    wrap = element.find_element(By.XPATH, "ancestor::*[contains(@class,'ctx-menu-wrap')]")
+    wrap.find_element(By.CSS_SELECTOR, ".ctx-menu-btn").click()
+    time.sleep(0.3)
+
+
+def _ctx_click(driver, selector: str) -> None:
+    """Find an element by CSS selector, open its context menu, then click it."""
+    el = driver.find_element(By.CSS_SELECTOR, selector)
+    _open_ctx_menu_for(driver, el)
+    el.click()
+
+
 def _create_buddy_link(email_a: str, email_b: str) -> str:
     """Create a BuddyLink between two users; return link pk as string."""
     return _shell(

@@ -403,11 +403,12 @@ class TestOwnerCannotAccessParticipantEndpoints:
 
 
 # ---------------------------------------------------------------------------
-# 24-hour lock: consent_set_at is recorded and changes are blocked after 24h
+# 24-hour lock: consent_set_at tracks the latest approval and resets on re-approve
 # ---------------------------------------------------------------------------
 
 class TestConsentSetAtRecorded:
-    """consent_set_at is set on first decision and not overwritten on subsequent changes."""
+    """consent_set_at is set on approve and reset on every subsequent approve;
+    rejecting leaves it unchanged so the original approval timestamp is preserved."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -425,17 +426,28 @@ class TestConsentSetAtRecorded:
     def test_consent_set_at_is_null_before_first_decision(self, driver, w, ctx):
         assert _get_consent_set_at(ctx["exp_pk"], ctx["b"]["email"]) == "None"
 
-    def test_consent_set_at_recorded_on_first_approve(self, driver, w, ctx):
+    def test_consent_set_at_null_after_reject(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
+        _reject_via_url(driver, ctx["exp_pk"])
+        assert _get_consent_set_at(ctx["exp_pk"], ctx["b"]["email"]) == "None", \
+            "consent_set_at must remain null when only a reject has been made"
+
+    def test_consent_set_at_recorded_on_approve(self, driver, w, ctx):
         _approve_via_url(driver, ctx["exp_pk"])
         ts1 = _get_consent_set_at(ctx["exp_pk"], ctx["b"]["email"])
-        assert ts1 != "None", "consent_set_at must be set after first decision"
+        assert ts1 != "None", "consent_set_at must be set after approving"
         ctx["ts1"] = ts1
 
-    def test_consent_set_at_not_overwritten_on_second_change(self, driver, w, ctx):
+    def test_consent_set_at_unchanged_after_reject(self, driver, w, ctx):
         _reject_via_url(driver, ctx["exp_pk"])
+        ts = _get_consent_set_at(ctx["exp_pk"], ctx["b"]["email"])
+        assert ts == ctx["ts1"], "consent_set_at must not change when rejecting"
+
+    def test_consent_set_at_reset_on_re_approve(self, driver, w, ctx):
+        _approve_via_url(driver, ctx["exp_pk"])
         ts2 = _get_consent_set_at(ctx["exp_pk"], ctx["b"]["email"])
-        assert ts2 == ctx["ts1"], "consent_set_at must not change on subsequent state changes"
+        assert ts2 != "None", "consent_set_at must be set after re-approving"
+        assert ts2 != ctx["ts1"], "consent_set_at must be refreshed on every approve"
 
 
 def _is_403(driver):

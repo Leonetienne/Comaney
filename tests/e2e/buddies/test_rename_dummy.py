@@ -125,6 +125,8 @@ class TestRenameGroupDummy:
         assert "Old Group Member" in driver.page_source
 
     def test_name_span_is_editable(self, driver, w, ctx):
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+        time.sleep(1)
         span = driver.find_element(By.CSS_SELECTOR, ".buddy-name--editable")
         assert span.text.strip() == "Old Group Member"
 
@@ -146,7 +148,7 @@ class TestRenameGroupDummy:
         assert "New Group Member" in driver.page_source
 
     def test_old_name_gone(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
         assert "Old Group Member" not in driver.page_source
 
