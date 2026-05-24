@@ -65,7 +65,24 @@ You have two options:
 
 ## The expense list
 
-The expense list shows all your records for the current period. At the top you can switch between **month view** and **year view**, and use the arrows to move to a different month or year.
+The expense list shows all your records for the selected date range.
+
+### Choosing a date range
+
+At the top of the page you will find the **date range bar**. It has three parts:
+
+**Quick presets** — buttons for common ranges. Click one to jump straight to it:
+
+| Button | What it shows |
+|---|---|
+| Fin.May / Fin.Jun / Fin.Jul | The previous, current, and next financial month. Financial months follow your start-day setting in Account Settings. |
+| 2025 / 2026 / 2027 | The previous, current, and next calendar year (always 1 Jan – 31 Dec). |
+| Q1 / Q2 / Q3 / Q4 | Calendar quarters: Jan–Mar, Apr–Jun, Jul–Sep, Oct–Dec. |
+| Clear | Resets to the default range (your current financial month). |
+
+**Manual dates** — the Start and End date pickers below the presets. Type or pick any two dates you like. The list refreshes automatically. The end date must not be earlier than the start date.
+
+Your chosen range is remembered when you move between pages.
 
 ### Searching
 

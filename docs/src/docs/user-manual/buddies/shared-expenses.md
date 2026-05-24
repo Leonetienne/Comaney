@@ -26,9 +26,9 @@ Any expense can be turned into a shared expense. You decide who is involved, how
 
 ## Where shared expenses appear
 
-- **Buddy Expenses** shows all shared expenses you are involved in, whether you created them or not.
+- **Buddy Expenses** shows all shared expenses you are involved in, whether you created them or not. Use the **date range bar** at the top of the page to narrow the list to a specific period, and the search and sort controls to filter or sort within that range.
 - **Buddy Expenses** shows the current balance (who owes who) across all shared expenses.
-- **Project pages** show the breakdown for that project specifically.
+- **Project pages** show the breakdown for that project specifically, also with date range and search controls.
 
 ## Approving or rejecting an expense someone created for you
 

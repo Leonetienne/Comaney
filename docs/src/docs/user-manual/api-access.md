@@ -38,9 +38,13 @@ When listing expenses, you can pass these parameters:
 
 | Parameter | What it does |
 |---|---|
-| `year` | The year to show (required) |
-| `month` | Month number 1–12 for a single month. Leave out for the whole year. |
+| `date_from` | Start of the date range in `YYYY-MM-DD` format. Use together with `date_to`. |
+| `date_to` | End of the date range in `YYYY-MM-DD` format. Use together with `date_from`. |
+| `year` | Financial year to show. Falls back to the current year if omitted. Used when `date_from`/`date_to` are not provided. |
+| `month` | Financial month 1–12 within `year`. Leave out for the whole year. Used when `date_from`/`date_to` are not provided. |
 | `q` | A search filter using the [query language](dashboard/query-language.md). |
+
+`date_from` and `date_to` take priority over `year`/`month`. Passing both pairs in the same request is not useful; use one or the other.
 
 ### Recurring expenses
 

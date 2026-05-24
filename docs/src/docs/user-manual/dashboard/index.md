@@ -2,9 +2,57 @@
 
 The dashboard is a fully customisable grid of cards. Each card is a self-contained widget that computes and displays financial data for the currently selected period.
 
-## Period selection
+## Choosing a date range
 
-The period selector at the top of the dashboard switches between **month view** and **year view**. In month view, all cards show data for the selected financial month. In year view, all cards aggregate across all 12 financial months of the selected year. Navigate between periods using the prev/next arrows.
+The **date range bar** at the top of the dashboard controls which period all cards show data for. It has three parts:
+
+**Quick presets** - buttons for common ranges:
+
+| Button | What it shows |
+|---|---|
+| Fin.May / Fin.Jun / Fin.Jul | The previous, current, and next financial month. Financial months follow your start-day setting in Account Settings. |
+| 2025 / 2026 / 2027 | The previous, current, and next calendar year (always 1 Jan – 31 Dec). |
+| Q1 / Q2 / Q3 / Q4 | Calendar quarters: Jan–Mar, Apr–Jun, Jul–Sep, Oct–Dec. |
+| Clear | Resets to the default range (your current financial month). |
+
+**Manual dates** - the Start and End date pickers. Type or pick any two dates to define a custom range. All cards update immediately.
+
+Your chosen range is remembered when you move between pages.
+
+**Display mode** (dashboard only), the Personal / Shared toggle next to the date range.
+In **Personal**, your own expenses are always calculated fully and others expenses are ignored. In a nutshell: "Money that leaves your pocket"-
+In **Shared** mode, your own expenses are only calculated at your own share, and others expenses are included
+respecting your share in them. In a nutshell: "Depts you have agreed to take between friends", as in "I pay for the hotel, you pay for dinner".
+In personal mode, it would only show the cost for the hotel, but that it does completely. In shared mode, it shows your share of the hotel cost and your share of the dinner cost.
+Use shared mode if you want to see what **tags** and **categories** you took loans for by lets say your room mate. 
+
+## Multiple dashboards
+
+You can have as many dashboards as you like, each with its own set of cards. Dashboards appear as tabs along the top of the page (or a dropdown on mobile).
+
+### Adding a dashboard
+
+Click the **+** button at the right end of the tab bar, type a name in the field that appears, and press Enter or click **Add**.
+
+### Switching dashboards
+
+Click any tab to switch to that dashboard. On mobile, tap the selector at the top to open the list and choose a dashboard.
+
+### Renaming a dashboard
+
+Double-click a tab to edit its name inline. Press Enter or click away to save.
+
+### Reordering dashboards
+
+Drag a tab left or right to change its position.
+
+### Deleting a dashboard
+
+Click the **x** that appears on the active tab. The last remaining dashboard cannot be deleted.
+
+### Moving a card to another dashboard
+
+Open the card editor (pencil icon) and use the **Move to dashboard** dropdown to place the card on a different dashboard.
 
 ## Managing cards
 

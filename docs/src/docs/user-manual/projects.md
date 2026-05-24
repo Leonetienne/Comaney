@@ -23,7 +23,7 @@ You land on the new project page and become its admin.
 The project page shows everything related to that project:
 
 - The **member list** with user.
-- The **expense list**: all expenses linked to this project, with each person's share.
+- The **expense list**: all expenses linked to this project, with each person's share. Use the **date range bar** at the top of the page to narrow the list to a specific period. Use the search bar and sort controls above the expense list to search or sort within that range.
 - **Who owes who**: two diagrams showing raw debts and a simplified minimum-payment view. Hidden for solo projects (see below).
 - **Your balance**: a plain summary of who you owe and how much.
 - **Pending items**: expenses waiting for approval, and settlements waiting for confirmation.
