@@ -10,101 +10,104 @@ from ..models import BuddyInvite, BuddyGroupInvite, BuddyOnboardingInvite, Dummy
 from ._helpers import _display_name
 
 
-_CLASS_FIELD = {
-    "expense_participation": "notify_expense_participation",
-    "expense_assignments":   "notify_expense_assignments",
-    "participant_decisions":  "notify_participant_decisions",
-    "settlements":            "notify_settlements",
-    "group_activity":         "notify_group_activity",
-}
+def _send_raw(
+    subject: str,
+    template: str,
+    ctx: dict,
+    recipient_email: str,
+):
+    """Send an email to a non-registered recipient (no DB notification record)."""
+    if settings.DISABLE_EMAILING:
+        return False
+    html = render_to_string(template, {**ctx, "site_url": getattr(settings, "SITE_URL", "")})
+    try:
+        send_mail(
+            subject=subject,
+            message="",
+            html_message=html,
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com"),
+            recipient_list=[recipient_email],
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _emit(feuser, *, type: str, subject: str, message: str, template: str, ctx: dict,
+          related_project=None, related_feuser=None, related_expense=None):
+    """Create a DB notification and send an email for a registered FeUser."""
+    from feusers.notifications_service import emit_notification
+    emit_notification(
+        feuser,
+        type=type,
+        subject=subject,
+        message=message,
+        related_project=related_project,
+        related_feuser=related_feuser,
+        related_expense=related_expense,
+        email_template=template,
+        email_ctx={**ctx, "feuser_recipient": feuser},
+    )
 
 
 class BuddyEmailService:
-    """All buddy-related email sending. Respects DISABLE_EMAILING and email_notifications."""
-
-    @staticmethod
-    def _send(
-        subject: str,
-        template: str,
-        ctx: dict,
-        recipient_email: str,
-        respect_prefs: bool = True,
-        notification_class: str | None = None,
-    ):
-        if settings.DISABLE_EMAILING:
-            return False
-
-        feuser = ctx.get("feuser_recipient")
-        if feuser and feuser.is_demo:
-            return False
-
-        if respect_prefs:
-            if feuser:
-                if not feuser.email_notifications:
-                    return False
-                field = _CLASS_FIELD.get(notification_class or "")
-                if field and not getattr(feuser, field, True):
-                    return False
-
-        html = render_to_string(template, {**ctx, "site_url": getattr(settings, "SITE_URL", "")})
-        try:
-            send_mail(
-                subject=subject,
-                message="",
-                html_message=html,
-                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com"),
-                recipient_list=[recipient_email],
-            )
-            return True
-        except Exception:
-            return False
+    """All buddy-related notifications. Routes through emit_notification for registered users."""
 
     @staticmethod
     def send_buddy_invite(invite: BuddyInvite):
         from feusers.models import FeUser
         site_url = getattr(settings, "SITE_URL", "")
         invite_url = f"{site_url}/buddies/invite/{invite.token}/"
+        inviter_name = _display_name(invite.inviter)
         try:
             invitee_feuser = FeUser.objects.get(email=invite.invitee_email)
         except FeUser.DoesNotExist:
             invitee_feuser = None
-        BuddyEmailService._send(
-            subject=f"{_display_name(invite.inviter)} invited you to be spending buddies on Comaney",
-            template="emails/buddy_invite.html",
-            ctx={
-                "invite": invite,
-                "inviter_name": _display_name(invite.inviter),
-                "invite_url": invite_url,
-                "feuser_recipient": invitee_feuser,
-            },
-            recipient_email=invite.invitee_email,
-            respect_prefs=invitee_feuser is not None,
-            notification_class="group_activity",
-        )
+
+        subject = f"{inviter_name} invited you to be spending buddies on Comaney"
+        if invitee_feuser:
+            _emit(
+                invitee_feuser,
+                type="group_activity",
+                subject=subject,
+                message=f"{inviter_name} invited you to be spending buddies.",
+                template="emails/buddy_invite.html",
+                ctx={"invite": invite, "inviter_name": inviter_name, "invite_url": invite_url},
+                related_feuser=invite.inviter,
+            )
+        else:
+            _send_raw(
+                subject=subject,
+                template="emails/buddy_invite.html",
+                ctx={"invite": invite, "inviter_name": inviter_name, "invite_url": invite_url,
+                     "feuser_recipient": None},
+                recipient_email=invite.invitee_email,
+            )
 
     @staticmethod
     def send_group_invite(invite: BuddyGroupInvite, invitee):
         site_url = getattr(settings, "SITE_URL", "")
         invite_url = f"{site_url}/projects/project-invite/{invite.token}/"
-        BuddyEmailService._send(
-            subject=f"{_display_name(invite.inviting_feuser)} invited you to join the group \"{invite.group.name}\" on Comaney",
+        inviter_name = _display_name(invite.inviting_feuser)
+        group_name = invite.group.name
+        _emit(
+            invitee,
+            type="group_activity",
+            subject=f"{inviter_name} invited you to join the group \"{group_name}\" on Comaney",
+            message=f"{inviter_name} invited you to join the project \"{group_name}\".",
             template="emails/buddy_group_invite.html",
-            ctx={
-                "invite": invite,
-                "inviter_name": _display_name(invite.inviting_feuser),
-                "group_name": invite.group.name,
-                "invite_url": invite_url,
-                "feuser_recipient": invitee,
-            },
-            recipient_email=invite.invitee_email,
-            notification_class="group_activity",
+            ctx={"invite": invite, "inviter_name": inviter_name, "group_name": group_name,
+                 "invite_url": invite_url},
+            related_project=invite.group,
+            related_feuser=invite.inviting_feuser,
         )
 
     @staticmethod
     def send_group_onboarding_invite(invite: BuddyOnboardingInvite):
+        """Recipient is not yet registered; email only, no DB record."""
         site_url = getattr(settings, "SITE_URL", "")
         register_url = f"{site_url}/register/"
-        BuddyEmailService._send(
+        _send_raw(
             subject=f"{_display_name(invite.inviting_feuser)} invited you to join their project on Comaney",
             template="emails/buddy_onboarding_invite.html",
             ctx={
@@ -115,42 +118,41 @@ class BuddyEmailService:
                 "is_group": True,
                 "group_name": invite.group.name if invite.group_id else None,
                 "register_url": register_url,
+                "feuser_recipient": None,
             },
             recipient_email=invite.invitee_email,
-            respect_prefs=False,
         )
 
     @staticmethod
     def send_expense_approval_request(expense, initiating_feuser):
         site_url = getattr(settings, "SITE_URL", "")
         review_url = f"{site_url}/buddies/expense/{expense.uid}/review/"
-        BuddyEmailService._send(
+        initiating_name = _display_name(initiating_feuser)
+        _emit(
+            expense.owning_feuser,
+            type="expense_assignments",
             subject=f"New shared expense needs your approval: {expense.title}",
+            message=f"{initiating_name} needs your approval on a shared expense: \"{expense.title}\".",
             template="emails/buddy_expense_approval.html",
-            ctx={
-                "expense": expense,
-                "initiating_name": _display_name(initiating_feuser),
-                "review_url": review_url,
-                "feuser_recipient": expense.owning_feuser,
-            },
-            recipient_email=expense.owning_feuser.email,
-            notification_class="expense_assignments",
+            ctx={"expense": expense, "initiating_name": initiating_name, "review_url": review_url},
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
+            related_feuser=initiating_feuser,
         )
 
     @staticmethod
     def send_rejection_notification(expense, rejecting_feuser, notifying_feuser, owner_rejected=False):
-        site_url = getattr(settings, "SITE_URL", "")
-        BuddyEmailService._send(
-            subject=f"Shared expense declined by {_display_name(rejecting_feuser)}: {expense.title}",
+        rejecting_name = _display_name(rejecting_feuser)
+        _emit(
+            notifying_feuser,
+            type="expense_participation",
+            subject=f"Shared expense declined by {rejecting_name}: {expense.title}",
+            message=f"{rejecting_name} declined the shared expense \"{expense.title}\".",
             template="emails/buddy_expense_rejected.html",
-            ctx={
-                "expense": expense,
-                "rejecting_name": _display_name(rejecting_feuser),
-                "feuser_recipient": notifying_feuser,
-                "owner_rejected": owner_rejected,
-            },
-            recipient_email=notifying_feuser.email,
-            notification_class="expense_participation",
+            ctx={"expense": expense, "rejecting_name": rejecting_name, "owner_rejected": owner_rejected},
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
+            related_feuser=rejecting_feuser,
         )
 
     @staticmethod
@@ -159,51 +161,61 @@ class BuddyEmailService:
         merge_url = f"{site_url}/buddies/merge/{invite.token}/"
         group = invite.dummy.owning_group
         is_group_merge = group is not None
+        inviting_name = _display_name(invite.inviting_feuser)
         subject = (
-            f"{_display_name(invite.inviting_feuser)} wants to add you to the group \"{group.name}\" on Comaney"
+            f"{inviting_name} wants to add you to the group \"{group.name}\" on Comaney"
             if is_group_merge else
-            f"{_display_name(invite.inviting_feuser)} wants to link your account with their buddy record on Comaney"
+            f"{inviting_name} wants to link your account with their buddy record on Comaney"
         )
-        BuddyEmailService._send(
+        message = (
+            f"{inviting_name} wants to add you to the project \"{group.name}\"."
+            if is_group_merge else
+            f"{inviting_name} wants to link your account with their buddy record."
+        )
+        _emit(
+            invite.invited_feuser,
+            type="group_activity",
             subject=subject,
+            message=message,
             template="emails/buddy_merge_invite.html",
             ctx={
                 "invite": invite,
-                "inviting_name": _display_name(invite.inviting_feuser),
+                "inviting_name": inviting_name,
                 "dummy_name": invite.dummy.display_name + " (offline member)",
                 "merge_url": merge_url,
-                "feuser_recipient": invite.invited_feuser,
                 "is_group_merge": is_group_merge,
                 "group_name": group.name if is_group_merge else None,
             },
-            recipient_email=invite.invited_feuser.email,
-            notification_class="group_activity",
+            related_project=group if is_group_merge else None,
+            related_feuser=invite.inviting_feuser,
         )
 
     @staticmethod
     def send_onboarding_invite(invite: BuddyOnboardingInvite):
+        """Recipient is not yet registered; email only, no DB record."""
         site_url = getattr(settings, "SITE_URL", "")
         register_url = f"{site_url}/register/"
         is_merge = invite.dummy_id is not None
+        inviter_name = _display_name(invite.inviting_feuser)
         subject = (
-            f"{_display_name(invite.inviting_feuser)} wants to link a buddy record with your account on Comaney"
+            f"{inviter_name} wants to link a buddy record with your account on Comaney"
             if is_merge else
-            f"{_display_name(invite.inviting_feuser)} invited you to be spending buddies on Comaney"
+            f"{inviter_name} invited you to be spending buddies on Comaney"
         )
-        BuddyEmailService._send(
+        _send_raw(
             subject=subject,
             template="emails/buddy_onboarding_invite.html",
             ctx={
                 "invite": invite,
-                "inviter_name": _display_name(invite.inviting_feuser),
+                "inviter_name": inviter_name,
                 "dummy_name": (invite.dummy.display_name + " (offline member)") if is_merge else None,
                 "is_merge": is_merge,
                 "is_group": False,
                 "group_name": None,
                 "register_url": register_url,
+                "feuser_recipient": None,
             },
             recipient_email=invite.invitee_email,
-            respect_prefs=False,
         )
 
     @staticmethod
@@ -217,18 +229,20 @@ class BuddyEmailService:
             if group_name
             else f"{debtor_name} recorded a settlement with you"
         )
-        BuddyEmailService._send(
+        _emit(
+            creditor_feuser,
+            type="settlements",
             subject=subject,
+            message=f"{debtor_name} recorded a settlement with you. Please confirm receipt.",
             template="emails/buddy_settlement_creditor_confirm.html",
             ctx={
                 "expense": expense,
                 "acting_name": _display_name(acting_feuser),
                 "debtor_name": debtor_name,
                 "confirm_url": confirm_url,
-                "feuser_recipient": creditor_feuser,
             },
-            recipient_email=creditor_feuser.email,
-            notification_class="settlements",
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
         )
 
     @staticmethod
@@ -249,16 +263,16 @@ class BuddyEmailService:
             if group_name
             else f"{creditor_name} confirmed your settlement"
         )
-        BuddyEmailService._send(
+        _emit(
+            debtor_feuser,
+            type="settlements",
             subject=subject,
+            message=f"{creditor_name} confirmed your settlement.",
             template="emails/buddy_settlement_approved.html",
-            ctx={
-                "expense": expense,
-                "creditor_name": creditor_name,
-                "feuser_recipient": debtor_feuser,
-            },
-            recipient_email=debtor_feuser.email,
-            notification_class="settlements",
+            ctx={"expense": expense, "creditor_name": creditor_name},
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
+            related_feuser=creditor_feuser,
         )
 
     @staticmethod
@@ -271,21 +285,22 @@ class BuddyEmailService:
             if group_name
             else f"{creditor_name} rejected your settlement"
         )
-        BuddyEmailService._send(
+        _emit(
+            debtor_feuser,
+            type="settlements",
             subject=subject,
+            message=f"{creditor_name} rejected your settlement.",
             template="emails/buddy_settlement_rejected.html",
-            ctx={
-                "expense": expense,
-                "creditor_name": creditor_name,
-                "feuser_recipient": debtor_feuser,
-            },
-            recipient_email=debtor_feuser.email,
-            notification_class="settlements",
+            ctx={"expense": expense, "creditor_name": creditor_name},
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
+            related_feuser=creditor_feuser,
         )
 
     @staticmethod
     def send_group_settlement_emails(admin_feuser, group, settlements: list):
         """Send summary emails after a group-wide settlement."""
+        from feusers.notifications_service import emit_notification
         site_url = getattr(settings, "SITE_URL", "")
 
         debtor_map: dict = {}
@@ -316,106 +331,113 @@ class BuddyEmailService:
                     "expense": s["expense"],
                 })
 
+        admin_name = _display_name(admin_feuser)
+
         for info in debtor_map.values():
-            BuddyEmailService._send(
+            emit_notification(
+                info["feuser"],
+                type="settlements",
                 subject=f"Group settlement for {group.name}: payments due",
-                template="emails/buddy_group_settlement_debtor.html",
-                ctx={
+                message=f"Group settlement for \"{group.name}\": you have payments due.",
+                related_project=group,
+                email_template="emails/buddy_group_settlement_debtor.html",
+                email_ctx={
                     "group": group,
                     "items": info["items"],
                     "feuser_recipient": info["feuser"],
-                    "admin_name": _display_name(admin_feuser),
+                    "admin_name": admin_name,
+                    "site_url": getattr(settings, "SITE_URL", ""),
                 },
-                recipient_email=info["feuser"].email,
-                notification_class="settlements",
             )
 
         for info in creditor_map.values():
-            BuddyEmailService._send(
+            emit_notification(
+                info["feuser"],
+                type="settlements",
                 subject=f"Group settlement for {group.name}: please confirm receipts",
-                template="emails/buddy_group_settlement_creditor.html",
-                ctx={
+                message=f"Group settlement for \"{group.name}\": please confirm receipts.",
+                related_project=group,
+                email_template="emails/buddy_group_settlement_creditor.html",
+                email_ctx={
                     "group": group,
                     "items": info["items"],
                     "feuser_recipient": info["feuser"],
-                    "admin_name": _display_name(admin_feuser),
+                    "admin_name": admin_name,
+                    "site_url": getattr(settings, "SITE_URL", ""),
                 },
-                recipient_email=info["feuser"].email,
-                notification_class="settlements",
             )
 
         if dummy_creditor_items:
-            BuddyEmailService._send(
-                subject=f"Group settlement for {group.name}: offline member receipts",
-                template="emails/buddy_group_settlement_admin_dummies.html",
-                ctx={
-                    "group": group,
-                    "items": dummy_creditor_items,
-                    "feuser_recipient": admin_feuser,
-                    "admin_name": _display_name(admin_feuser),
-                },
-                recipient_email=admin_feuser.email,
-                respect_prefs=False,
-            )
+            # Admin summary for offline-member creditors — no per-type gate, always send
+            if not settings.DISABLE_EMAILING and not admin_feuser.is_demo:
+                _send_raw(
+                    subject=f"Group settlement for {group.name}: offline member receipts",
+                    template="emails/buddy_group_settlement_admin_dummies.html",
+                    ctx={
+                        "group": group,
+                        "items": dummy_creditor_items,
+                        "feuser_recipient": admin_feuser,
+                        "admin_name": admin_name,
+                    },
+                    recipient_email=admin_feuser.email,
+                )
 
     @staticmethod
     def send_group_removed_notification(removed_feuser, admin_feuser, group):
-        BuddyEmailService._send(
+        admin_name = _display_name(admin_feuser)
+        _emit(
+            removed_feuser,
+            type="group_activity",
             subject=f"You have been removed from the group \"{group.name}\"",
+            message=f"{admin_name} removed you from the project \"{group.name}\".",
             template="emails/buddy_group_removed.html",
-            ctx={
-                "group_name": group.name,
-                "admin_name": _display_name(admin_feuser),
-                "feuser_recipient": removed_feuser,
-            },
-            recipient_email=removed_feuser.email,
-            notification_class="group_activity",
+            ctx={"group_name": group.name, "admin_name": admin_name},
+            related_project=group,
         )
 
     @staticmethod
     def send_group_invite_accepted(invite: "BuddyGroupInvite", acceptee_name: str):
-        BuddyEmailService._send(
+        _emit(
+            invite.inviting_feuser,
+            type="group_activity",
             subject=f"{acceptee_name} joined your group \"{invite.group.name}\"",
+            message=f"{acceptee_name} joined your project \"{invite.group.name}\".",
             template="emails/buddy_group_invite_accepted.html",
-            ctx={
-                "acceptee_name": acceptee_name,
-                "group_name": invite.group.name,
-                "feuser_recipient": invite.inviting_feuser,
-            },
-            recipient_email=invite.inviting_feuser.email,
-            notification_class="group_activity",
+            ctx={"acceptee_name": acceptee_name, "group_name": invite.group.name},
+            related_project=invite.group,
         )
 
     @staticmethod
     def send_group_invite_declined(invite: "BuddyGroupInvite", decliner_name: str):
-        BuddyEmailService._send(
+        _emit(
+            invite.inviting_feuser,
+            type="group_activity",
             subject=f"{decliner_name} declined your invitation to \"{invite.group.name}\"",
+            message=f"{decliner_name} declined your invitation to \"{invite.group.name}\".",
             template="emails/buddy_group_invite_declined.html",
-            ctx={
-                "decliner_name": decliner_name,
-                "group_name": invite.group.name,
-                "feuser_recipient": invite.inviting_feuser,
-            },
-            recipient_email=invite.inviting_feuser.email,
-            notification_class="group_activity",
+            ctx={"decliner_name": decliner_name, "group_name": invite.group.name},
+            related_project=invite.group,
         )
 
     @staticmethod
     def send_expense_unlinked_notification(expense, admin_feuser, group, notify_feuser, is_owner: bool):
-        site_url = getattr(settings, "SITE_URL", "")
-        BuddyEmailService._send(
+        admin_name = _display_name(admin_feuser)
+        _emit(
+            notify_feuser,
+            type="group_activity",
             subject=f"An expense was unlinked from {group.name} by the group admin",
+            message=f"{admin_name} unlinked \"{expense.title}\" from the project \"{group.name}\".",
             template="emails/buddy_expense_unlinked.html",
             ctx={
-                "admin_name": _display_name(admin_feuser),
+                "admin_name": admin_name,
                 "expense_title": expense.title,
                 "group_name": group.name,
                 "group_id": group.uid,
                 "is_owner": is_owner,
-                "feuser_recipient": notify_feuser,
             },
-            recipient_email=notify_feuser.email,
-            notification_class="group_activity",
+            related_expense=expense,
+            related_project=group,
+            related_feuser=admin_feuser,
         )
 
     @staticmethod
@@ -431,8 +453,11 @@ class BuddyEmailService:
             if group_name
             else f"{debtor_name} updated their settlement with you"
         )
-        BuddyEmailService._send(
+        _emit(
+            creditor_feuser,
+            type="settlements",
             subject=subject,
+            message=f"{debtor_name} updated their settlement with you.",
             template="emails/buddy_settlement_updated.html",
             ctx={
                 "expense_title": expense.title,
@@ -440,10 +465,9 @@ class BuddyEmailService:
                 "debtor_name": debtor_name,
                 "group_name": group_name,
                 "currency": expense.owning_feuser.currency,
-                "feuser_recipient": creditor_feuser,
             },
-            recipient_email=creditor_feuser.email,
-            notification_class="settlements",
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
         )
 
     @staticmethod
@@ -459,8 +483,11 @@ class BuddyEmailService:
             if group_name
             else f"{debtor_name} cancelled their settlement with you"
         )
-        BuddyEmailService._send(
+        _emit(
+            creditor_feuser,
+            type="settlements",
             subject=subject,
+            message=f"{debtor_name} cancelled their settlement with you.",
             template="emails/buddy_settlement_cancelled.html",
             ctx={
                 "expense_title": expense.title,
@@ -468,24 +495,20 @@ class BuddyEmailService:
                 "debtor_name": debtor_name,
                 "group_name": group_name,
                 "currency": expense.owning_feuser.currency,
-                "feuser_recipient": creditor_feuser,
             },
-            recipient_email=creditor_feuser.email,
-            notification_class="settlements",
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
         )
 
     @staticmethod
     def send_kicked_notification(kicked_feuser, kicking_display_name: str):
-        site_url = getattr(settings, "SITE_URL", "")
-        BuddyEmailService._send(
+        _emit(
+            kicked_feuser,
+            type="group_activity",
             subject=f"{kicking_display_name} removed you as a spending buddy on Comaney",
+            message=f"{kicking_display_name} removed you as a spending buddy.",
             template="emails/buddy_kicked.html",
-            ctx={
-                "kicking_name": kicking_display_name,
-                "feuser_recipient": kicked_feuser,
-            },
-            recipient_email=kicked_feuser.email,
-            notification_class="group_activity",
+            ctx={"kicking_name": kicking_display_name},
         )
 
     # ------------------------------------------------------------------
@@ -552,11 +575,19 @@ class BuddyEmailService:
             if is_added_to_existing
             else f"{actor_name} included you in a shared expense: {expense.title}"
         )
+        message = (
+            f"{actor_name} added you to the shared expense \"{expense.title}\"."
+            if is_added_to_existing
+            else f"{actor_name} included you in the shared expense \"{expense.title}\"."
+        )
         site_url = getattr(settings, "SITE_URL", "")
         approve_url = f"{site_url}/buddies/expense/{expense.uid}/participant-approve/"
         reject_url = f"{site_url}/buddies/expense/{expense.uid}/participant-reject/"
-        BuddyEmailService._send(
+        _emit(
+            recipient_feuser,
+            type="expense_participation",
             subject=subject,
+            message=message,
             template="emails/buddy_expense_participant_notice.html",
             ctx={
                 "expense": expense,
@@ -567,12 +598,12 @@ class BuddyEmailService:
                 "participant_rows": participant_rows,
                 "currency": currency,
                 "is_added_to_existing": is_added_to_existing,
-                "feuser_recipient": recipient_feuser,
                 "approve_url": approve_url,
                 "reject_url": reject_url,
             },
-            recipient_email=recipient_feuser.email,
-            notification_class="expense_participation",
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
+            related_feuser=actor_feuser,
         )
 
     @staticmethod
@@ -604,8 +635,11 @@ class BuddyEmailService:
             if group_name
             else f"{participant_name} {state_label} a shared expense: {expense.title}"
         )
-        BuddyEmailService._send(
+        _emit(
+            notify_feuser,
+            type="participant_decisions",
             subject=subject,
+            message=f"{participant_name} {state_label} the shared expense \"{expense.title}\".",
             template="emails/buddy_participant_approval_changed.html",
             ctx={
                 "expense": expense,
@@ -613,12 +647,12 @@ class BuddyEmailService:
                 "new_state": new_state,
                 "state_label": state_label,
                 "group_name": group_name,
-                "feuser_recipient": notify_feuser,
                 "APPROVAL_APPROVED": BuddySpending.APPROVAL_APPROVED,
                 "APPROVAL_REJECTED": BuddySpending.APPROVAL_REJECTED,
             },
-            recipient_email=notify_feuser.email,
-            notification_class="participant_decisions",
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
+            related_feuser=participant_feuser,
         )
 
     @staticmethod
@@ -629,8 +663,11 @@ class BuddyEmailService:
         share_percent = bs.share_percent if bs else None
         share_value = (expense.value * share_percent / Decimal("100")) if share_percent is not None else None
         payer_row, participant_rows = BuddyEmailService._build_expense_rows(expense)
-        BuddyEmailService._send(
+        _emit(
+            recipient_feuser,
+            type="expense_participation",
             subject=f"{actor_name} updated a shared expense: {expense.title}",
+            message=f"{actor_name} updated the shared expense \"{expense.title}\".",
             template="emails/buddy_expense_updated.html",
             ctx={
                 "expense": expense,
@@ -641,10 +678,10 @@ class BuddyEmailService:
                 "participant_rows": participant_rows,
                 "currency": currency,
                 "changes": changes,
-                "feuser_recipient": recipient_feuser,
             },
-            recipient_email=recipient_feuser.email,
-            notification_class="expense_participation",
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
+            related_feuser=actor_feuser,
         )
 
     @staticmethod
@@ -654,8 +691,11 @@ class BuddyEmailService:
     ):
         """Notify a participant who was removed from a shared expense."""
         actor_name = _display_name(actor_feuser)
-        BuddyEmailService._send(
+        _emit(
+            recipient_feuser,
+            type="expense_participation",
             subject=f"{actor_name} removed you from a shared expense: {old_title}",
+            message=f"{actor_name} removed you from the shared expense \"{old_title}\".",
             template="emails/buddy_expense_removed.html",
             ctx={
                 "expense": expense,
@@ -664,10 +704,10 @@ class BuddyEmailService:
                 "old_share_percent": old_share_percent,
                 "old_share_value": old_share_value,
                 "currency": currency,
-                "feuser_recipient": recipient_feuser,
             },
-            recipient_email=recipient_feuser.email,
-            notification_class="expense_participation",
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
+            related_feuser=actor_feuser,
         )
 
     @staticmethod

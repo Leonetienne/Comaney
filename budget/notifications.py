@@ -10,11 +10,8 @@ Notification classes (in order of precedence):
   "settled" – expense has been paid
 """
 from datetime import date
-from smtplib import SMTPException
 
 from django.conf import settings
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
 
 CLASS_ORDER = {"": 0, "soon": 1, "tomorrow": 2, "today": 3, "late": 4, "settled": 5}
 
@@ -121,34 +118,53 @@ def _subject(expense, notification_class: str, ctx: dict) -> str:
     if notification_class == "today":
         return f"Payment due today: {title}"
     if notification_class == "late":
-        return f"Payment overdue – still unpaid: {title}"
+        return f"Payment overdue - still unpaid: {title}"
     return f"Payment marked as paid: {title}"
 
 
+def _in_app_message(expense, notification_class: str, ctx: dict) -> str:
+    currency = expense.owning_feuser.currency
+    if notification_class == "soon":
+        days = ctx.get("days_until_due", "")
+        return f'Your payment "{expense.title}" is due in {days} days ({expense.value} {currency}).'
+    if notification_class == "tomorrow":
+        return f'Your payment "{expense.title}" is due tomorrow ({expense.value} {currency}).'
+    if notification_class == "today":
+        return f'Your payment "{expense.title}" is due today ({expense.value} {currency}).'
+    if notification_class == "late":
+        return f'Your payment "{expense.title}" is overdue ({expense.value} {currency}).'
+    return f'Your payment "{expense.title}" ({expense.value} {currency}) has been marked as paid.'
+
+
 def send_expense_notification(expense, notification_class: str) -> bool:
-    """Send an email for the given notification class. Returns True on success."""
-    if settings.DISABLE_EMAILING:
-        return False
+    """
+    Create a DB notification and send an email for the given class.
+    Returns True on success (email sent or emailing disabled but record created).
+    """
     if notification_class not in CLASS_ORDER or not notification_class:
         return False
     feuser = expense.owning_feuser
     if feuser.is_demo:
         return False
+
+    from feusers.notifications_service import emit_notification
+
+    notif_type = "expense_settled" if notification_class == "settled" else "expense_reminders"
     ctx = _build_email_context(expense, notification_class)
     subject = _subject(expense, notification_class, ctx)
+    message = _in_app_message(expense, notification_class, ctx)
     plain = _build_plain_text(expense, notification_class, ctx)
-    html = render_to_string(f"emails/expense_notification_{notification_class}.html", ctx)
-    try:
-        send_mail(
-            subject=subject,
-            message=plain,
-            html_message=html,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[feuser.email],
-        )
-        return True
-    except (SMTPException, OSError):
-        return False
+
+    result = emit_notification(
+        feuser,
+        type=notif_type,
+        subject=subject,
+        message=message,
+        related_expense=expense,
+        email_template=f"emails/expense_notification_{notification_class}.html",
+        email_ctx={**ctx, "plain_text": plain},
+    )
+    return result is not None
 
 
 def send_settled_notification(expense) -> bool:
@@ -158,9 +174,7 @@ def send_settled_notification(expense) -> bool:
     """
     from .models import Expense
     feuser = expense.owning_feuser
-    if not feuser.email_notifications or not expense.notify:
-        return False
-    if not feuser.notify_expense_settled:
+    if not expense.notify:
         return False
     if expense.last_notification_class_sent == "settled":
         return False
@@ -176,8 +190,6 @@ def process_due_notifications() -> tuple[int, int]:
     Scan all active unsettled expenses and send any pending due-date notifications.
     Returns (sent, skipped).
     """
-    if settings.DISABLE_EMAILING:
-        return 0, 0
     from .models import Expense
     sent = skipped = 0
     qs = (
@@ -188,14 +200,12 @@ def process_due_notifications() -> tuple[int, int]:
             deactivated=False,
             is_dummy=False,
             date_due__isnull=False,
-            auto_settle_on_due_date=False,  # auto-settle expenses need no manual-payment reminders
+            auto_settle_on_due_date=False,
         )
         .select_related("owning_feuser")
     )
     for expense in qs:
         feuser = expense.owning_feuser
-        if not feuser.email_notifications:
-            continue
         if not feuser.notify_expense_reminders:
             continue
         target = _target_class(expense)

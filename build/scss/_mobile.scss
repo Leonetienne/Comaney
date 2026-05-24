@@ -8,7 +8,7 @@
 
   .hamburger { display: flex; }
 
-  .header-user-actions { display: none; }
+  .header-user-identity { display: none; }
 
   .sidebar {
     position: fixed;
@@ -48,6 +48,12 @@
     color: rgba(255, 255, 255, .6);
     text-align: left;
     &:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+  }
+
+  .notif-dropdown {
+    right: 0;
+    width: calc(100vw - 24px);
+    max-width: 340px;
   }
 
   .app-main { padding: 20px 16px; }

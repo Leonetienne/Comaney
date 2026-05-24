@@ -11,16 +11,33 @@
     <nav>
         {% if current_feuser %}
             <span class="header-user-actions">
-                {% if current_feuser.profile_picture %}
-                    <img src="{{ current_feuser.ppic_url }}" class="user-avatar" alt="">
-                {% else %}
-                    <span class="user-avatar user-avatar--initials" style="background: {{ current_feuser.initials|avatar_color }};">{{ current_feuser.initials }}</span>
-                {% endif %}
-                <a class="user-name" href="{% url 'profile' %}">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</a>
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button type="submit" id="logout-button">Logout</button>
-                </form>
+                <span class="notif-bell-wrap" id="notif-bell-wrap">
+                    <button class="notif-bell" id="notif-bell" aria-label="Notifications" aria-expanded="false">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        {% if unread_notification_count %}<span class="notif-badge" id="notif-badge">{{ unread_notification_count }}</span>{% endif %}
+                    </button>
+                    <div class="notif-dropdown" id="notif-dropdown" aria-hidden="true">
+                        <div class="notif-dropdown-header">
+                            <span>Notifications</span>
+                            <button class="notif-mark-all-read" id="notif-mark-all-read" type="button">Mark all read</button>
+                        </div>
+                        <div class="notif-list" id="notif-list">
+                            <p class="notif-loading">Loading&hellip;</p>
+                        </div>
+                    </div>
+                </span>
+                <span class="header-user-identity">
+                    {% if current_feuser.profile_picture %}
+                        <img src="{{ current_feuser.ppic_url }}" class="user-avatar" alt="">
+                    {% else %}
+                        <span class="user-avatar user-avatar--initials" style="background: {{ current_feuser.initials|avatar_color }};">{{ current_feuser.initials }}</span>
+                    {% endif %}
+                    <a class="user-name" href="{% url 'profile' %}">{{ current_feuser.first_name }} {{ current_feuser.last_name }}</a>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" id="logout-button">Logout</button>
+                    </form>
+                </span>
             </span>
         {% else %}
             <a href="{% url 'login' %}">Log In</a>
@@ -28,3 +45,7 @@
         {% endif %}
     </nav>
 </header>
+
+{% if current_feuser %}
+{% include "partials/_notification_bell_js.html" %}
+{% endif %}
