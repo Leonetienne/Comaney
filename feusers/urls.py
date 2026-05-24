@@ -25,6 +25,7 @@ urlpatterns = [
     path("api-key/revoke/",   views.api_key_revoke,   name="api_key_revoke"),
     path("contact/",          views.contact,           name="contact"),
     path("demo-banner/",      views.demo_banner_view,  name="demo_banner"),
-    path("notifications/",            views.notifications_list,       name="notifications_list"),
-    path("notifications/mark-read/",  views.notifications_mark_read,  name="notifications_mark_read"),
+    path("notifications/",              views.notifications_list,         name="notifications_list"),
+    path("notifications/mark-read/",    views.notifications_mark_read,    name="notifications_mark_read"),
+    path("notifications/delete-read/",  views.notifications_delete_read,  name="notifications_delete_read"),
 ]

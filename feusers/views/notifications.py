@@ -56,3 +56,13 @@ def notifications_mark_read(request):
         qs = qs.filter(pk__in=ids)
     qs.update(read=True)
     return JsonResponse({"ok": True})
+
+
+def notifications_delete_read(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    feuser = _get_session_feuser(request)
+    if not feuser:
+        return JsonResponse({"error": "not authenticated"}, status=401)
+    Notification.objects.filter(owning_feuser=feuser, read=True).delete()
+    return JsonResponse({"ok": True})

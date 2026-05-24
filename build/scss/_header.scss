@@ -238,13 +238,20 @@ header {
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 
-  > span {
+  > span:first-child {
     font-weight: 600;
     font-size: 0.9rem;
   }
 }
 
-.notif-mark-all-read {
+.notif-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.notif-mark-all-read,
+.notif-clear-read {
   background: none;
   border: none;
   color: var(--link);
