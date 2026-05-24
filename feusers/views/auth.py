@@ -7,6 +7,7 @@ from django.template.loader import render_to_string
 
 from ..forms import LoginForm, PasswordForgotForm, PasswordResetForm, RegistrationForm
 from ..models import FeUser
+from ..rate_limit import clear as rl_clear, is_limited, record_failure
 from ..utils import _POW_DIFFICULTY, _check_pow, _new_pow_challenge, _record_login
 
 
@@ -216,7 +217,10 @@ def login_view(request):
     error = None
     if request.method == "POST":
         form = LoginForm(request.POST)
-        if form.is_valid():
+        ip = request.META.get("REMOTE_ADDR", "")
+        if is_limited("login", ip):
+            error = "Too many failed attempts. Please wait a moment and try again."
+        elif form.is_valid():
             email = form.cleaned_data["email"].lower().strip()
             try:
                 user = FeUser.objects.get(email=email, is_active=True)
@@ -224,15 +228,19 @@ def login_view(request):
                 user = None
 
             if user is None or not user.check_password(form.cleaned_data["password"]):
+                record_failure("login", ip)
                 error = "Invalid email or password."
             elif not user.is_confirmed:
                 error = "Please confirm your email address first."
             elif user.is_demo and not settings.ENABLE_DEMO_USERS:
+                record_failure("login", ip)
                 error = "Invalid email or password."
             elif user.totp_enabled:
+                rl_clear("login", ip)
                 request.session["totp_pending_id"] = user.pk
                 return redirect("totp_verify")
             else:
+                rl_clear("login", ip)
                 _record_login(user)
                 request.session["feuser_id"] = user.pk
                 return redirect("landing_page")

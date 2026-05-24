@@ -5,6 +5,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from ..models import FeUser
+from ..rate_limit import clear as rl_clear, is_limited, record_failure
 from ..utils import _get_session_feuser, _record_login
 
 
@@ -103,20 +104,26 @@ def totp_verify(request):
         return redirect("login")
 
     import pyotp
+    rl_key = str(pending_id)
     error = None
     if request.method == "POST":
-        try:
-            user = FeUser.objects.get(pk=pending_id, is_active=True, totp_enabled=True)
-        except FeUser.DoesNotExist:
-            return redirect("login")
+        if is_limited("totp", rl_key):
+            error = "Too many failed attempts. Please wait a moment and try again."
+        else:
+            try:
+                user = FeUser.objects.get(pk=pending_id, is_active=True, totp_enabled=True)
+            except FeUser.DoesNotExist:
+                return redirect("login")
 
-        code = request.POST.get("code", "").strip()
-        if pyotp.TOTP(user.totp_secret).verify(code, valid_window=1):
-            _record_login(user)
-            del request.session["totp_pending_id"]
-            request.session["feuser_id"] = user.pk
-            return redirect("landing_page")
-        error = "Invalid code — please try again."
+            code = request.POST.get("code", "").strip()
+            if pyotp.TOTP(user.totp_secret).verify(code, valid_window=1):
+                rl_clear("totp", rl_key)
+                _record_login(user)
+                del request.session["totp_pending_id"]
+                request.session["feuser_id"] = user.pk
+                return redirect("landing_page")
+            record_failure("totp", rl_key)
+            error = "Invalid code — please try again."
 
     return render(request, "feusers/totp_verify.html", {"error": error})
 
