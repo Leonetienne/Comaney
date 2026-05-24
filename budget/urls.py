@@ -5,13 +5,23 @@ from . import views
 app_name = "budget"
 
 urlpatterns = [
+    # Dashboard pages
     path("", views.dashboard, name="dashboard"),
+    path("dash/<int:uid>/", views.dashboard_detail, name="dashboard_detail"),
+
+    # Dashboard CRUD API
+    path("dashboards/", views.dashboards_api, name="dashboards_api"),
+    path("dashboards/<int:uid>/", views.dashboard_detail_api, name="dashboard_detail_api"),
+    path("dashboards/reorder/", views.dashboards_reorder_api, name="dashboards_reorder"),
+
+    # Dashboard card APIs
     path("dashboard/cards/", views.cards_api, name="dashboard_cards"),
     path("dashboard/cards/reorder/", views.cards_reorder_api, name="dashboard_cards_reorder"),
     path("dashboard/cards/presets/", views.card_presets_api, name="dashboard_card_presets"),
     path("dashboard/cards/reset/", views.cards_reset_api, name="dashboard_cards_reset"),
     path("dashboard/cards/<int:uid>/", views.card_detail_api, name="dashboard_card_detail"),
     path("dashboard/cards/<int:uid>/resize/", views.card_resize_api, name="dashboard_card_resize"),
+
     path("categories-tags/", views.categories_tags, name="categories_tags"),
     path("categories/create/", views.category_create, name="category_create"),
     path("categories/<int:uid>/delete/", views.category_delete, name="category_delete"),

@@ -2,10 +2,11 @@
 Dashboard card API endpoints (session auth, not Bearer).
 
 Endpoints:
-    GET/POST   /budget/dashboard/cards/
+    GET/POST   /budget/dashboard/cards/?dashboard_id=<uid>
     PATCH/DEL  /budget/dashboard/cards/<uid>/
     POST       /budget/dashboard/cards/reorder/
     GET        /budget/dashboard/cards/presets/
+    POST       /budget/dashboard/cards/reset/
     GET        /budget/dashboard/data/          → all cards with computed data
 """
 
@@ -19,7 +20,7 @@ from django.views.decorators.http import require_http_methods
 from ..dashboard_cards import PRESETS, CardConfigError, compute_card_data, parse_card_config
 from ..date_utils import financial_month_range, financial_year_range
 from ..decorators import feuser_required
-from ..models import DashboardCard, Expense
+from ..models import Dashboard, DashboardCard, Expense
 from ._period import _get_month, _get_period_mode, _get_year
 
 
@@ -93,18 +94,41 @@ def _card_to_json(card: DashboardCard, period_qs, feuser, period_info: dict = No
     pos = config.get('positioning', {}) if config else {}
     mobile = (pos.get('mobile') or {}) if pos else {}
     return {
-        'id':             card.pk,
-        'yaml_config':    card.yaml_config,
-        'position':       pos.get('position', 0),
-        'width':          pos.get('width', 2),
-        'height':         pos.get('height', 2),
+        'id':              card.pk,
+        'dashboard_id':    card.dashboard_id,
+        'yaml_config':     card.yaml_config,
+        'position':        pos.get('position', 0),
+        'width':           pos.get('width', 2),
+        'height':          pos.get('height', 2),
         'mobile_position': mobile.get('position'),
-        'mobile_width':   mobile.get('width'),
-        'mobile_height':  mobile.get('height'),
-        'config':         config,
-        'data':           data,
-        'error':          error,
+        'mobile_width':    mobile.get('width'),
+        'mobile_height':   mobile.get('height'),
+        'config':          config,
+        'data':            data,
+        'error':           error,
     }
+
+
+def _first_dashboard(feuser):
+    return (
+        Dashboard.objects.filter(owning_feuser=feuser)
+        .order_by('sorting', 'uid')
+        .first()
+    )
+
+
+def _resolve_dashboard(feuser, dashboard_id):
+    """Return (Dashboard, error_response). If dashboard_id is None, return first."""
+    if dashboard_id is None:
+        first = _first_dashboard(feuser)
+        if first is None:
+            return None, _err('No dashboard found', 404)
+        return first, None
+    try:
+        dash = Dashboard.objects.get(pk=int(dashboard_id), owning_feuser=feuser)
+        return dash, None
+    except (Dashboard.DoesNotExist, ValueError, TypeError):
+        return None, _err('Dashboard not found', 404)
 
 
 # ---------------------------------------------------------------------------
@@ -117,16 +141,25 @@ def cards_api(request):
     feuser = request.feuser
 
     if request.method == 'GET':
+        dashboard_id = request.GET.get('dashboard_id')
+        dash, err = _resolve_dashboard(feuser, dashboard_id)
+        if err:
+            return err
         period_qs, period_info = _period_qs(request, feuser)
-        cards = DashboardCard.objects.filter(owning_feuser=feuser)
+        cards = DashboardCard.objects.filter(owning_feuser=feuser, dashboard=dash)
         card_list = sorted(
             [_card_to_json(c, period_qs, feuser, period_info) for c in cards],
             key=lambda c: (c['position'], c['id']),
         )
         return _ok({'cards': card_list})
 
-    # POST — create new card
+    # POST: create new card
     body = _parse_body(request)
+    dashboard_id = body.get('dashboard_id')
+    dash, err = _resolve_dashboard(feuser, dashboard_id)
+    if err:
+        return err
+
     yaml_str = body.get('yaml_config', '').strip()
     if not yaml_str:
         return _err('yaml_config is required')
@@ -136,7 +169,7 @@ def cards_api(request):
     except CardConfigError as exc:
         return _err(str(exc))
 
-    card = DashboardCard(owning_feuser=feuser, yaml_config=yaml_str)
+    card = DashboardCard(owning_feuser=feuser, dashboard=dash, yaml_config=yaml_str)
     card.save()
 
     period_qs, period_info = _period_qs(request, feuser)
@@ -160,18 +193,28 @@ def card_detail_api(request, uid: int):
         card.delete()
         return _ok({'deleted': True})
 
-    # PATCH — update yaml
+    # PATCH: update yaml and/or move to another dashboard
     body = _parse_body(request)
+
+    # Optional dashboard move
+    new_dashboard_id = body.get('dashboard_id')
+    if new_dashboard_id is not None:
+        try:
+            new_dash = Dashboard.objects.get(pk=int(new_dashboard_id), owning_feuser=feuser)
+            card.dashboard = new_dash
+        except (Dashboard.DoesNotExist, ValueError, TypeError):
+            return _err('Dashboard not found', 404)
+
     yaml_str = body.get('yaml_config', '').strip()
-    if not yaml_str:
+    if yaml_str:
+        try:
+            config = parse_card_config(yaml_str)
+        except CardConfigError as exc:
+            return _err(str(exc))
+        card.yaml_config = yaml_str
+    elif new_dashboard_id is None:
         return _err('yaml_config is required')
 
-    try:
-        config = parse_card_config(yaml_str)
-    except CardConfigError as exc:
-        return _err(str(exc))
-
-    card.yaml_config = yaml_str
     card.save()
 
     period_qs, period_info = _period_qs(request, feuser)
@@ -284,7 +327,7 @@ def card_presets_api(request):
 
 
 # ---------------------------------------------------------------------------
-# Reset dashboard to defaults
+# Reset dashboard to defaults (first dashboard only)
 # ---------------------------------------------------------------------------
 
 @feuser_required
@@ -292,13 +335,24 @@ def card_presets_api(request):
 def cards_reset_api(request):
     from ..fixtures import DEFAULT_DASHBOARD_CARDS
     feuser = request.feuser
-    DashboardCard.objects.filter(owning_feuser=feuser).delete()
+
+    body = _parse_body(request)
+    dashboard_id = body.get('dashboard_id')
+    dash, err = _resolve_dashboard(feuser, dashboard_id)
+    if err:
+        return err
+
+    first = _first_dashboard(feuser)
+    if first is None or dash.pk != first.pk:
+        return _err('Reset is only allowed on the first dashboard', 409)
+
+    DashboardCard.objects.filter(owning_feuser=feuser, dashboard=dash).delete()
     DashboardCard.objects.bulk_create([
-        DashboardCard(owning_feuser=feuser, yaml_config=entry['yaml'])
+        DashboardCard(owning_feuser=feuser, dashboard=dash, yaml_config=entry['yaml'])
         for entry in DEFAULT_DASHBOARD_CARDS
     ])
     period_qs, period_info = _period_qs(request, feuser)
-    cards = DashboardCard.objects.filter(owning_feuser=feuser)
+    cards = DashboardCard.objects.filter(owning_feuser=feuser, dashboard=dash)
     card_list = sorted(
         [_card_to_json(c, period_qs, feuser, period_info) for c in cards],
         key=lambda c: (c['position'], c['id']),

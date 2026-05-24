@@ -220,7 +220,7 @@ def account_export(request):
         return redirect("login")
 
     from django.db.models import Q
-    from budget.models import Category, DashboardCard, Expense, ExpenseDataOverlay, ScheduledExpense, Tag
+    from budget.models import Category, Dashboard, DashboardCard, Expense, ExpenseDataOverlay, ScheduledExpense, Tag
     from buddies.models import BuddyLink, BuddySpending, DummyUser, Project, ProjectMember
 
     buf = io.BytesIO()
@@ -337,6 +337,14 @@ def account_export(request):
             extra=[_TAG_IDS],
         )
         zf.writestr("scheduled_expenses.csv", p.getvalue())
+
+        p = io.StringIO()
+        _write_model_csv(
+            p,
+            Dashboard.objects.filter(owning_feuser=feuser),
+            skip={"owning_feuser"},
+        )
+        zf.writestr("dashboards.csv", p.getvalue())
 
         p = io.StringIO()
         _write_model_csv(

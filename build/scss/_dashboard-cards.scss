@@ -430,5 +430,237 @@
   }
 }
 
+// ── Tab bar ────────────────────────────────────────────────────────────────
+
+.dash-tabbar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 10px;
+  min-width: 0;
+}
+
+.dash-tabbar-scroll {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.dash-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: var(--bg-surface);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  flex-shrink: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  transition: background .12s, color .12s;
+
+  &:hover { background: var(--bg); color: var(--text); }
+
+  &--active {
+    background: var(--bg);
+    color: var(--text);
+    font-weight: 600;
+    border-color: var(--border);
+  }
+
+  &--drag-over {
+    box-shadow: 0 0 0 2px var(--link);
+    background: color-mix(in srgb, var(--link) 15%, var(--bg));
+  }
+}
+
+.dash-tab-title {
+  cursor: pointer;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-tab-rename-input {
+  width: 100px;
+  font-size: 0.82rem;
+  padding: 1px 4px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text);
+  outline: none;
+  &:focus { border-color: var(--link); }
+}
+
+.dash-tab-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  border-radius: 3px;
+  opacity: .6;
+  transition: opacity .1s, color .1s;
+
+  &:hover:not(:disabled) { opacity: 1; color: var(--error); }
+  &:disabled { opacity: .2; cursor: not-allowed; }
+}
+
+.dash-tab-add-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.dash-tab-add-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s, color .12s;
+  &:hover { background: var(--bg); color: var(--text); }
+}
+
+.dash-tab-new-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dash-tab-new-input {
+  font-size: 0.82rem;
+  padding: 4px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text);
+  width: 140px;
+  &:focus { outline: none; border-color: var(--link); }
+}
+
+// ── Mobile dashboard selector ──────────────────────────────────────────────
+
+.dash-mobile-selector {
+  display: none;
+  position: relative;
+  margin: 10px 0 6px;
+
+  @media (max-width: 559px) { display: block; }
+}
+
+.dash-mobile-selector-btn {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.dash-mobile-selector-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.15);
+  min-width: 200px;
+  max-width: 280px;
+  padding: 6px 0;
+}
+
+.dash-mobile-selector-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--text);
+
+  &:hover { background: var(--bg-surface); }
+  &--active { font-weight: 700; color: var(--link); }
+}
+
+.dash-mobile-selector-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px 6px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 4px;
+}
+
+.dash-mobile-new-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+// ── Mobile edge zones (shown during touch card drag) ───────────────────────
+
+.dash-edge-zone {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 15%;
+  z-index: 10;
+  pointer-events: none;
+  transition: background .15s;
+
+  &--left  { left: 0; }
+  &--right { right: 0; }
+
+  &--active {
+    background: color-mix(in srgb, var(--link) 20%, transparent);
+    border: 2px solid var(--link);
+  }
+}
+
+// ── Move card select in edit modal ─────────────────────────────────────────
+
+.dash-card-move-select {
+  font-size: 0.82rem;
+  padding: 4px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text);
+}
+
+// ── Hide desktop tab bar on very small screens ─────────────────────────────
+
+.dash-tabbar-wrap {
+  @media (max-width: 559px) { display: none; }
+}
+
 // grid-template-columns is set entirely by JS (_syncRowHeight) based on MIN_CELL_W,
 // so no CSS media queries needed for column count.

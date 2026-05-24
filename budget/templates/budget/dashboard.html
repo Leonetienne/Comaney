@@ -15,19 +15,126 @@
 
 <script>
 window.DASHBOARD_CONFIG = {
-    currency:     "{{ current_feuser.currency|escapejs }}",
-    year:         "{{ nav_year }}",
-    month:        "{{ nav_month|default:'' }}",
-    mode:         "{{ nav_mode }}",
-    urlCards:     "{% url 'budget:dashboard_cards' %}",
-    urlReorder:   "{% url 'budget:dashboard_cards_reorder' %}",
-    urlPresets:   "{% url 'budget:dashboard_card_presets' %}",
-    urlReset:     "{% url 'budget:dashboard_cards_reset' %}",
+    currency:             "{{ current_feuser.currency|escapejs }}",
+    year:                 "{{ nav_year }}",
+    month:                "{{ nav_month|default:'' }}",
+    mode:                 "{{ nav_mode }}",
+    urlCards:             "{% url 'budget:dashboard_cards' %}?dashboard_id={{ current_dashboard.pk }}",
+    urlReorder:           "{% url 'budget:dashboard_cards_reorder' %}",
+    urlPresets:           "{% url 'budget:dashboard_card_presets' %}",
+    urlReset:             "{% url 'budget:dashboard_cards_reset' %}",
+
+    dashboardId:          {{ current_dashboard.pk }},
+    isFirstDashboard:     {{ is_first_dashboard|yesno:"true,false" }},
+    urlDashboards:        "{% url 'budget:dashboards_api' %}",
+    urlDashboardReorder:  "{% url 'budget:dashboards_reorder' %}",
+    urlDashboardDetail:   "/budget/dashboards/",
+    dashboards:           {{ dashboards_json|safe }},
 };
 </script>
 
 {# ── Dashboard board (Alpine.js) ─────────────────────────────────────────── #}
 <div x-data="dashboardBoard" x-init="init()">
+
+    {# ── Tab bar ────────────────────────────────────────────────────────────── #}
+    <div class="dash-tabbar-wrap" x-show="!loading || dashboards.length > 0">
+        <div class="dash-tabbar-scroll" x-ref="tabbarScroll">
+            <template x-for="tab in dashboards" :key="tab.id">
+                <div class="dash-tab"
+                     :class="{
+                         'dash-tab--active':    tab.id === dashboardId,
+                         'dash-tab--drag-over': tabDragOverId === tab.id,
+                     }"
+                     draggable="true"
+                     @dragstart.stop="onTabDragStart(tab.id, $event)"
+                     @dragover.stop="onTabDragOver(tab.id, $event)"
+                     @dragleave.stop="onTabDragLeave($event)"
+                     @dragend.stop="onTabDragEnd()"
+                     @drop.stop="onTabDrop(tab.id, $event)"
+                     @click="tab.id !== dashboardId && renamingTabId === null && navigateToTab(tab)"
+                     @dblclick.stop="startRenameTab(tab)">
+
+                    <span class="dash-tab-title"
+                          x-show="renamingTabId !== tab.id"
+                          x-text="tab.title">
+                    </span>
+
+                    <input class="dash-tab-rename-input"
+                           x-show="renamingTabId === tab.id"
+                           :value="renamingTabTitle"
+                           @input.stop="renamingTabTitle = $event.target.value"
+                           @click.stop
+                           @keydown.enter.prevent.stop="commitRenameTab(tab)"
+                           @keydown.escape.prevent.stop="cancelRenameTab()"
+                           @blur="commitRenameTab(tab)"
+                           style="display:none">
+
+                    <button class="dash-tab-close"
+                            :disabled="dashboards.length <= 1"
+                            x-show="tab.id === dashboardId"
+                            @click.stop="deleteTab(tab)"
+                            title="Delete this dashboard">×</button>
+                </div>
+            </template>
+        </div>
+
+        {# "+" add button — outside scroll area #}
+        <div class="dash-tab-add-wrap">
+            <template x-if="!addTabOpen">
+                <button class="dash-tab-add-btn" @click="openAddTab()" title="New dashboard">+</button>
+            </template>
+            <template x-if="addTabOpen">
+                <div class="dash-tab-new-form">
+                    <input class="dash-tab-new-input"
+                           x-model="addTabTitle"
+                           x-init="$nextTick(() => $el.focus())"
+                           placeholder="Dashboard name"
+                           @keydown.enter.prevent="submitAddTab()"
+                           @keydown.escape.prevent="closeAddTab()">
+                    <button class="btn btn-primary btn-xs" @click="submitAddTab()">Create</button>
+                    <button class="btn btn-secondary btn-xs" @click="closeAddTab()">Cancel</button>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    {# Mobile dashboard selector #}
+    <div class="dash-mobile-selector" x-show="dashboards.length > 1">
+        <button class="dash-mobile-selector-btn"
+                @click="mobileSelectorOpen = !mobileSelectorOpen"
+                x-text="'≡ ' + (dashboards.find(d => d.id === dashboardId) || {title: 'Dashboard'}).title + ' ▾'">
+        </button>
+        <div class="dash-mobile-selector-panel" x-show="mobileSelectorOpen" @click.outside="mobileSelectorOpen = false">
+            <template x-for="tab in dashboards" :key="tab.id">
+                <button class="dash-mobile-selector-item"
+                        :class="{'dash-mobile-selector-item--active': tab.id === dashboardId}"
+                        x-text="tab.title"
+                        @click="navigateToTab(tab); mobileSelectorOpen = false">
+                </button>
+            </template>
+            <div class="dash-mobile-selector-actions">
+                <template x-if="!mobileSelectorAddOpen">
+                    <button class="btn btn-secondary btn-xs" @click="mobileSelectorAddOpen = true">+ New dashboard</button>
+                </template>
+                <template x-if="mobileSelectorAddOpen">
+                    <div class="dash-mobile-new-form">
+                        <input class="dash-tab-new-input"
+                               x-model="addTabTitle"
+                               x-init="$nextTick(() => $el.focus())"
+                               placeholder="Name"
+                               @keydown.enter.prevent="submitAddTab(true)"
+                               @keydown.escape.prevent="mobileSelectorAddOpen = false">
+                        <button class="btn btn-primary btn-xs" @click="submitAddTab(true)">Create</button>
+                    </div>
+                </template>
+                <button class="btn btn-danger btn-xs"
+                        :disabled="dashboards.length <= 1"
+                        @click="deleteCurrentDashboard(); mobileSelectorOpen = false">
+                    Delete this dashboard
+                </button>
+            </div>
+        </div>
+    </div>
 
     {# Loading state #}
     <div x-show="loading" class="dash-loading">Loading…</div>
@@ -35,7 +142,19 @@ window.DASHBOARD_CONFIG = {
     {# ── Grid ──────────────────────────────────────────────────────────────── #}
     <div class="dash-grid"
          x-show="!loading"
-         x-ref="grid">
+         x-ref="grid"
+         @touchstart.passive="onGridTouchStart($event)"
+         @touchmove.passive="onGridTouchMove($event)"
+         @touchend.passive="onGridTouchEnd($event)">
+
+        {# Left edge zone (mobile card-move) #}
+        <div class="dash-edge-zone dash-edge-zone--left"
+             x-show="touchDragging && isMobileEdgeActive"
+             :class="{'dash-edge-zone--active': touchEdge === 'left'}"></div>
+        {# Right edge zone (mobile card-move) #}
+        <div class="dash-edge-zone dash-edge-zone--right"
+             x-show="touchDragging && isMobileEdgeActive"
+             :class="{'dash-edge-zone--active': touchEdge === 'right'}"></div>
 
         <template x-for="card in cards" :key="card.id">
             <div class="dash-card"
@@ -192,7 +311,7 @@ window.DASHBOARD_CONFIG = {
     {# ── Add card / reset buttons (below grid) ──────────────────────────── #}
     <div x-show="!loading" class="dash-add-btn">
         <button id="dash-add-new-btn" x-show="cards.length > 0" class="btn btn-secondary" @click="openAdd()">+ New dashboard card</button>
-        <button id="dash-reset-btn" class="btn btn-secondary" @click="resetDashboard()">Reset dashboard</button>
+        <button id="dash-reset-btn" x-show="isFirstDashboard" class="btn btn-secondary" @click="resetDashboard()">Reset dashboard</button>
     </div>
 
     {# ── Edit modal ───────────────────────────────────────────────────────── #}
@@ -215,6 +334,17 @@ window.DASHBOARD_CONFIG = {
                     <span x-text="editSaving ? 'Saving…' : 'Save'"></span>
                 </button>
                 <button class="btn btn-secondary" @click="closeEdit()">Cancel</button>
+                <template x-if="dashboards.length > 1">
+                    <select class="form-select form-select-sm dash-card-move-select"
+                            @change="moveCardToDashboard(editCard && editCard.id, $event.target.value)">
+                        <option value="">Move to dashboard…</option>
+                        <template x-for="tab in dashboards" :key="tab.id">
+                            <option :value="tab.id"
+                                    :disabled="editCard && editCard.dashboard_id === tab.id"
+                                    x-text="tab.title"></option>
+                        </template>
+                    </select>
+                </template>
                 <button class="btn btn-danger ml-auto"
                         @click="deleteCard(editCard && editCard.id)">Delete</button>
             </div>

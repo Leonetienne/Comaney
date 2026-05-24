@@ -238,7 +238,7 @@ DEFAULT_DASHBOARD_CARDS = [
 
 
 def create_defaults(feuser) -> None:
-    from .models import Category, DashboardCard, Tag
+    from .models import Category, Dashboard, DashboardCard, Tag
 
     existing_cats = set(Category.objects.filter(owning_feuser=feuser).values_list("title", flat=True))
     Category.objects.bulk_create([
@@ -255,7 +255,12 @@ def create_defaults(feuser) -> None:
     ])
 
     if not DashboardCard.objects.filter(owning_feuser=feuser).exists():
+        dashboard, _ = Dashboard.objects.get_or_create(
+            owning_feuser=feuser,
+            sorting=0,
+            defaults={"title": "Dashboard"},
+        )
         DashboardCard.objects.bulk_create([
-            DashboardCard(owning_feuser=feuser, yaml_config=entry["yaml"])
+            DashboardCard(owning_feuser=feuser, dashboard=dashboard, yaml_config=entry["yaml"])
             for entry in DEFAULT_DASHBOARD_CARDS
         ])
