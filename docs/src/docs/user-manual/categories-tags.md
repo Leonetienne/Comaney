@@ -63,3 +63,13 @@ In the search bar:
 - `tag=none` finds expenses with no tags at all.
 
 See [Search & Filters](dashboard/query-language.md) for the full reference.
+
+---
+
+## Catalog Partnerships
+
+If you split expenses regularly with another person, you can link your catalogs so that any tag or category either of you creates, renames, or deletes is automatically reflected in the other person's account too.
+
+When you are in a Catalog Partnership, a banner at the top of this page reminds you, and the delete confirmation tells you that the change will affect all your partners.
+
+See [Catalog Partnerships](catalog-partnerships.md) for the full guide.

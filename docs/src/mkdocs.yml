@@ -50,6 +50,7 @@ nav:
     - Expenses: user-manual/expenses.md
     - Recurring Expenses: user-manual/scheduled-expenses.md
     - Categories & Tags: user-manual/categories-tags.md
+    - Catalog Partnerships: user-manual/catalog-partnerships.md
     - Dashboard:
       - Overview: user-manual/dashboard/index.md
       - Query Language: user-manual/dashboard/query-language.md

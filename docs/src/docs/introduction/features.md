@@ -35,6 +35,10 @@ The search bar on the expense list lets you find anything quickly. Type a word t
 
 The same filter language works inside dashboard card settings, so you learn it once and use it everywhere.
 
+## Catalog Partnerships
+
+Link your tags and categories with a partner's account so that both of you always work with the same labels. Any tag or category either of you creates, renames, or deletes is instantly applied to everyone in the partnership. A short setup wizard maps your existing labels before syncing begins, and an AI suggestion tool helps if you are not sure how your labels should line up.
+
 ## AI receipt scanning
 
 Take a photo of a receipt or describe a purchase in plain language, and Comaney's AI assistant will extract all the details for you: title, amount, payee, date, category, and tags. You review everything before it is saved, so you are always in control. A typical grocery receipt takes a few seconds instead of several minutes.

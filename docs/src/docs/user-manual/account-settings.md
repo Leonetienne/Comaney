@@ -100,15 +100,17 @@ The top checkbox, **Enable email notifications**, is the master switch. When it 
 
 When the master switch is on, you can turn individual notification types on or off independently:
 
-| Notification | When it is sent |
-|---|---|
-| **Expense due date reminders (upcoming and overdue)** | A reminder before or after the due date of an expense that has reminders enabled. |
-| **Expense marked as paid** | When someone marks one of your expenses as paid. |
+| Notification                                               | When it is sent |
+|------------------------------------------------------------|---|
+| **Expense due date reminders (upcoming and overdue)**      | A reminder before or after the due date of an expense that has reminders enabled. |
+| **Expense marked as paid**                                 | When someone marks one of your expenses as paid. |
 | **Added to, updated in, or removed from a shared expense** | When you are added, changed, or removed as a participant on a shared expense. |
-| **A shared expense was assigned to you as upfront payer** | When someone sets you as the person who paid upfront for a shared expense. |
+| **A shared expense was assigned to you as upfront payer**  | When someone sets you as the person who paid upfront for a shared expense. |
 | **A participant approved or rejected your shared expense** | When a participant confirms or declines their share of an expense you created. |
-| **Settlement requests and confirmations** | When a settlement is proposed or confirmed in a shared project. |
-| **Group membership changes** | When someone joins or leaves a project you are part of. |
+| **Settlement requests and confirmations**                  | When a settlement is proposed or confirmed in a shared project. |
+| **Project membership changes**                             | When someone joins or leaves a project you are part of. |
+| **Catalog Partnership events affecting you**               | When you receive a partnership invite, your invite is accepted or declined, or you are removed from a partnership. |
+| **Catalog Partnership events affecting others**            | When a partner joins, leaves, or is removed from your Catalog Partnership. |
 
 Invite emails are always sent, regardless of these settings.
 
