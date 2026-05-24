@@ -73,12 +73,11 @@ window.DASHBOARD_CONFIG = {
                             title="Delete this dashboard">×</button>
                 </div>
             </template>
-        </div>
 
-        {# "+" add button — outside scroll area #}
-        <div class="dash-tab-add-wrap">
+            {# "+" add button — inside scroll area, directly after last tab #}
+            <div class="dash-tab-add-wrap">
             <template x-if="!addTabOpen">
-                <button class="dash-tab-add-btn" @click="openAddTab()" title="New dashboard">+</button>
+                <button class="dash-tab-add-btn" @click="openAddTab()" title="New dashboard"><span style="transform:translateY(-0.1em);display:block">+</span></button>
             </template>
             <template x-if="addTabOpen">
                 <div class="dash-tab-new-form">
@@ -92,6 +91,7 @@ window.DASHBOARD_CONFIG = {
                     <button class="btn btn-secondary btn-xs" @click="closeAddTab()">Cancel</button>
                 </div>
             </template>
+        </div>
         </div>
     </div>
 
