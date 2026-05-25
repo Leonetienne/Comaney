@@ -96,6 +96,22 @@ def partnership_invite_state(viewer_feuser, target_feuser):
     return "invite"
 
 
+@register.simple_tag
+def buddy_invite_state(viewer_feuser, target_feuser):
+    """
+    Returns: 'buddy' | 'pending' | 'invite'
+    - buddy:   viewer and target are already direct buddies
+    - pending: viewer already has an outgoing invite to target
+    - invite:  viewer can invite target as a direct buddy
+    """
+    from buddies.services.query import BuddyQueryService
+    if BuddyQueryService.are_buddies(viewer_feuser, target_feuser):
+        return "buddy"
+    if BuddyQueryService.has_pending_invite_to(viewer_feuser, target_feuser):
+        return "pending"
+    return "invite"
+
+
 @register_badge("partnership")
 def _count_partnership_actions(feuser) -> int:
     from buddies.models import CatalogPartnershipInvite, CatalogPartnershipMembership

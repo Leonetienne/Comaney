@@ -153,6 +153,49 @@ def invite_actual(request):
 
 
 @feuser_required
+@require_POST
+def send_buddy_invite(request):
+    """
+    POST body: {"invitee_id": <feuser pk>}
+    Invites a specific user as a direct buddy without typing their email.
+    Called from buddy lists and project member lists.
+    """
+    from feusers.models import FeUser
+    feuser = request.feuser
+
+    if feuser.is_demo:
+        return JsonResponse({"error": "Demo accounts cannot invite buddies."}, status=403)
+
+    try:
+        data = json.loads(request.body)
+        invitee_id = int(data["invitee_id"])
+    except (KeyError, ValueError, json.JSONDecodeError):
+        return JsonResponse({"error": "Invalid request."}, status=400)
+
+    try:
+        invitee = FeUser.objects.get(pk=invitee_id, is_active=True)
+    except FeUser.DoesNotExist:
+        return JsonResponse({"error": "User not found."}, status=404)
+
+    if invitee == feuser:
+        return JsonResponse({"error": "Cannot invite yourself."}, status=400)
+
+    if invitee.is_demo:
+        return JsonResponse({"error": "Cannot invite a demo account as a buddy."}, status=403)
+
+    if BuddyQueryService.are_buddies(feuser, invitee):
+        return JsonResponse({"error": "You are already buddies with this user."}, status=409)
+
+    if BuddyQueryService.has_pending_invite_to(feuser, invitee):
+        return JsonResponse({"error": "An invite is already pending for this user."}, status=409)
+
+    outcome, _obj = BuddyLifecycleService.invite_actual(feuser, invitee.email)
+    if outcome not in ("invite", "link", "onboarding", "onboarding_no_email"):
+        return JsonResponse({"error": "Could not send invite."}, status=400)
+    return JsonResponse({"ok": True})
+
+
+@feuser_required
 def view_invite(request, token):
     try:
         invite = BuddyInvite.objects.select_related("inviter").get(token=token)

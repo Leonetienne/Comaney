@@ -431,6 +431,8 @@
         </div>
 
         {% for m in feuser_members %}
+        {% partnership_invite_state request.feuser m.feuser as p_state %}
+        {% buddy_invite_state request.feuser m.feuser as b_state %}
         <div class="buddy-card">
             <div class="buddy-card-identity">
                 {% include 'partials/_avatar.html' with user_obj=m.feuser %}
@@ -438,10 +440,35 @@
                     <span class="buddy-name">{{ m.feuser.first_name }} {{ m.feuser.last_name }}</span>
                     <span class="buddy-email">{{ m.feuser.email }}</span>
                     {% if m.feuser.pk == group.admin_feuser_id %}<span class="pill">Admin</span>{% endif %}
+                    {% if p_state == "partner" %}<span class="pill">Partner</span>{% endif %}
+                    {% if p_state == "pending" %}<span class="pill">Invite pending</span>{% endif %}
+                    {% if b_state == "pending" %}<span class="pill">Buddy invite pending</span>{% endif %}
                 </div>
             </div>
             <div></div>
+            {% if request.feuser.is_demo %}
             <div></div>
+            {% elif p_state == "invite" or b_state == "invite" %}
+            <div class="buddy-card-actions">
+                <div class="ctx-menu-wrap">
+                    <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
+                    <div class="ctx-menu">
+                        {% if p_state == "invite" %}
+                        <button class="ctx-menu-item partnership-invite-btn"
+                                data-feuser-id="{{ m.feuser.pk }}"
+                                data-name="{{ m.feuser.first_name|default:m.feuser.email|escapejs }}">Invite as partner</button>
+                        {% endif %}
+                        {% if b_state == "invite" %}
+                        <button class="ctx-menu-item buddy-invite-btn"
+                                data-feuser-id="{{ m.feuser.pk }}"
+                                data-name="{{ m.feuser.first_name|default:m.feuser.email|escapejs }}">Invite as direct buddy</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div></div>
+            {% endif %}
         </div>
         {% endfor %}
 
@@ -585,4 +612,5 @@
 })();
 </script>
 {% include "partials/partnership_invite_js.html" %}
+{% include "partials/buddy_invite_js.html" %}
 {% endblock %}

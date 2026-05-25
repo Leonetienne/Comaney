@@ -21,6 +21,7 @@ urlpatterns = [
 
     # Actual-user invitations
     path("invite-actual/", views.invite_actual, name="invite_actual"),
+    path("buddy/invite/", views.send_buddy_invite, name="buddy_invite"),
     path("invite/<str:token>/", views.view_invite, name="view_invite"),
     path("invite/<str:token>/accept/", views.accept_invite, name="accept_invite"),
     path("invite/<str:token>/decline/", views.decline_invite, name="decline_invite"),

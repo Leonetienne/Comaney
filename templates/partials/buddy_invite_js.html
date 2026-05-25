@@ -1,0 +1,37 @@
+<script>
+(function () {
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    document.addEventListener('click', async function (e) {
+        const btn = e.target.closest('.buddy-invite-btn');
+        if (!btn) return;
+        const name = btn.dataset.name;
+        const id   = btn.dataset.feuserId;
+        try {
+            await confirmDialog(
+                `Invite ${name} to be your spending buddy?`,
+                'Send invite'
+            );
+        } catch (_) { return; }
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        try {
+            const res = await fetch('{% url "buddies:buddy_invite" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body: JSON.stringify({ invitee_id: parseInt(id) }),
+            });
+            const data = await res.json();
+            if (res.ok && data.ok) {
+                btn.outerHTML = '<span class="pill pill--faded pill--sm">Buddy invite pending</span>';
+            } else {
+                btn.disabled = false;
+                btn.textContent = 'Invite as direct buddy';
+                alert(data.error || 'Could not send invite. Please try again.');
+            }
+        } catch (_) {
+            btn.disabled = false;
+            btn.textContent = 'Invite as direct buddy';
+        }
+    });
+})();
+</script>

@@ -209,6 +209,15 @@ class BuddyQueryService:
         return BuddyLink.between(feuser_a, feuser_b) is not None
 
     @staticmethod
+    def has_pending_invite_to(feuser, target_feuser) -> bool:
+        from django.utils import timezone
+        return BuddyInvite.objects.filter(
+            inviter=feuser,
+            invitee_email__iexact=target_feuser.email,
+            expires_at__gt=timezone.now(),
+        ).exists()
+
+    @staticmethod
     def get_net_debt(feuser, buddy_feuser=None, buddy_dummy=None) -> Decimal:
         """
         Net debt from feuser's perspective for a single direct-buddy relationship.

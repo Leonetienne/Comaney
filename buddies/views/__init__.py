@@ -5,7 +5,7 @@ from .settlement import (
 )
 from .buddies import (
     add_dummy, kick_dummy, rename_dummy, personal_archive_wipe,
-    invite_actual, view_invite, accept_invite, decline_invite, revoke_invite, revoke_onboarding_invite,
+    invite_actual, send_buddy_invite, view_invite, accept_invite, decline_invite, revoke_invite, revoke_onboarding_invite,
     kick_actual,
     send_merge_invite, view_merge_invite, accept_merge, decline_merge,
     dummy_picture,
