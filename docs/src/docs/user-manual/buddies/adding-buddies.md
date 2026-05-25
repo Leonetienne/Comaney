@@ -32,6 +32,18 @@ They receive an email with a link. Once they click **Accept**, you are connected
 
 **Receiving an invitation:** If someone invites you, you will see it under **Pending Invitations** on the My Buddies page. Click **Accept** to connect or **Decline** to ignore it.
 
+## Inviting a fellow project member directly
+
+If you already share a project with someone, you can invite them as a direct buddy without typing their email.
+
+**To do this:**
+
+1. Go to the project's **Manage** tab.
+2. Find their name in the member list and click **···**.
+3. Choose **Invite as direct buddy**.
+
+This works for any member, not just the project admin. The option only appears if you are not already buddies and you do not already have a pending invite to them. The same menu may also offer **Invite as partner** - see [Catalog Partnerships](../catalog-partnerships.md).
+
 ## Upgrading an offline buddy to a connected user
 
 Once an offline buddy has a Comaney account, you can link it to their existing entry so the full shared expense history moves to their real account.

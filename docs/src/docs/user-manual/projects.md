@@ -79,6 +79,15 @@ You can log expenses on their behalf and settle their share yourself. You can al
 !!! note
     Adding an offline member to a solo project makes it a multi-member project. The debt diagram and settlement tools become visible.
 
+## Connecting with a fellow member
+
+Any member, not just the admin, can click the **···** menu next to another real member's name on the Manage tab to:
+
+- **Invite as direct buddy** - connects you one-on-one outside the project, so you can also share personal expenses together.
+- **Invite as partner** - sets up a Catalog Partnership so your tags and categories stay in sync. See [Catalog Partnerships](catalog-partnerships.md).
+
+Each option only appears when it applies. For example, **Invite as direct buddy** disappears once you are already buddies, and **Invite as partner** disappears once they are already in a partnership.
+
 ## Removing a member
 
 Admin only. On the project page, click **Remove** next to the member's name.
