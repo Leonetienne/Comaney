@@ -52,9 +52,9 @@ Use this when the limit should move with your finances instead of staying fixed,
 ```yaml
 type: gauge
 title: Income spent
-query: type=expense
+query: 'type=expense || type="savings deposit"'
 method: sum
-max_value_query: type=income
+max_value_query: 'type=income || type="savings withdrawal"'
 max_value_method: sum
 show_raw_values: true
 show_percent: true
@@ -78,7 +78,7 @@ positioning:
     height: 2
 ```
 
-This gauge sums every expense this month and uses that month's total income as the maximum, so the cap moves with your finances instead of staying fixed. It also gets redder the more is spent: see [Colour breakpoints](#colour-breakpoints) below for how `gauge_color` and `color_breakpoints` work together to achieve that.
+This gauge sums every expense plus every savings deposit this month, and uses that month's income plus savings withdrawals as the maximum, so both sides count money moving out of and into your regular funds, not just plain expenses and income. The cap moves with your finances instead of staying fixed. It also gets redder the more is spent: see [Colour breakpoints](#colour-breakpoints) below for how `gauge_color` and `color_breakpoints` work together to achieve that.
 
 ### Full example: a fixed spending cap
 
