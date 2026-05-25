@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.buddies_page, name="buddies_page"),
     path("my-buddies/", views.my_buddies_page, name="my_buddies"),
     path("summary/", views.buddy_summary_page, name="buddy_summary"),
+    path("summary/export/", views.buddy_summary_export, name="buddy_summary_export"),
     path("direct-expenses/partial/", views.direct_expense_list_partial, name="direct_expense_list_partial"),
 
     # Personal dummy management

@@ -455,6 +455,7 @@
         <a href="https://github.com/Leonetienne/Comaney#advanced-search-filters" target="_blank" rel="noopener" class="search-hint-link">Advanced search filters</a>
     </div>
     <div id="buddy-direct-exp-container"></div>
+    <a id="buddy-summary-export-link" href="{% url 'buddies:buddy_summary_export' %}" class="expenses-export-link">&#8595; Export ZIP</a>
 </section>
 
 <script>
@@ -465,8 +466,18 @@
     var hideRecEl  = document.getElementById('buddy-exp-hide-recurring');
     var sortByEl   = document.getElementById('buddy-exp-sort-by');
     var sortDirEl  = document.getElementById('buddy-exp-sort-dir');
+    var exportLink    = document.getElementById('buddy-summary-export-link');
+    var exportBaseUrl = exportLink ? exportLink.getAttribute('href') : '';
     var _xhr = null;
     var _debounce = null;
+
+    function updateExportHref() {
+        if (!exportLink) return;
+        var dr = window._dateRange ? window._dateRange.get() : { from: '', to: '' };
+        var params = new URLSearchParams({ date_from: dr.from, date_to: dr.to });
+        exportLink.href = exportBaseUrl + '?' + params.toString();
+    }
+    updateExportHref();
 
     function fetchList() {
         if (_xhr) _xhr.abort();
@@ -507,7 +518,7 @@
     hideRecEl.addEventListener('change', fetchList);
     sortByEl.addEventListener('change', fetchList);
     sortDirEl.addEventListener('change', fetchList);
-    window.addEventListener('daterangechange', fetchList);
+    window.addEventListener('daterangechange', function() { fetchList(); updateExportHref(); });
     document.addEventListener('DOMContentLoaded', fetchList);
 })();
 </script>

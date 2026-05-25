@@ -14,6 +14,7 @@ urlpatterns = [
     path("<int:project_id>/charts-data/", views.project_charts_data, name="project_charts_data"),
     path("<int:project_id>/expenses/partial/", views.project_expense_list_partial, name="project_expense_list_partial"),
     path("<int:project_id>/settings/", views.project_settings, name="project_settings"),
+    path("<int:project_id>/export/", views.project_export, name="project_export"),
     path("<int:project_id>/rename/", views.project_rename, name="project_rename"),
     path("<int:project_id>/picture/", views.project_picture, name="project_picture"),
     path("<int:project_id>/archive/", views.project_archive, name="project_archive"),

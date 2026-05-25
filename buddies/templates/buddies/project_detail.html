@@ -666,6 +666,7 @@
          data-partial-url="{% url 'projects:project_expense_list_partial' project_id=project.uid %}">
         {% include "buddies/project_expense_partial.html" %}
     </div>
+    <a id="proj-export-link" href="{% url 'projects:project_export' project_id=project.uid %}" class="expenses-export-link">&#8595; Export ZIP</a>
 </section>
 
 <style>
@@ -674,6 +675,18 @@
 
 <script>
 (function () {
+    var exportLink    = document.getElementById('proj-export-link');
+    var exportBaseUrl = exportLink ? exportLink.getAttribute('href') : '';
+
+    function updateExportHref() {
+        if (!exportLink) return;
+        var dr = window._dateRange ? window._dateRange.get() : { from: '', to: '' };
+        var params = new URLSearchParams({ date_from: dr.from, date_to: dr.to });
+        exportLink.href = exportBaseUrl + '?' + params.toString();
+    }
+    updateExportHref();
+    window.addEventListener('daterangechange', updateExportHref);
+
     var container   = document.getElementById('proj-exp-list-container');
     var partialUrl  = container.dataset.partialUrl;
     var searchEl    = document.getElementById('proj-exp-search');

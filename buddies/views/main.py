@@ -1,15 +1,18 @@
+import io
 import json
+import zipfile
 from datetime import date
 from decimal import Decimal
 
 from comaney.json_utils import safe_json
 
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 
 from budget.decorators import feuser_required
 from budget.query_parser import apply_query
-from budget.views._period import _date_range_presets_context
-from ..services import BuddyQueryService
+from budget.views._period import _date_range_presets_context, resolve_date_range
+from ..services import BuddyExportService, BuddyQueryService
 
 
 _SORT_FIELD_MAP = {
@@ -283,3 +286,22 @@ def buddy_summary_page(request):
     }
     ctx.update(_date_range_presets_context(feuser))
     return render(request, "buddies/buddy_summary.html", ctx)
+
+
+@feuser_required
+def buddy_summary_export(request):
+    """Download direct-buddies.csv (the combined real-user + offline buddy
+    roster, never date-filtered), direct-buddy-expenses.csv, and
+    direct-buddy-expense-participation.csv (both scoped to the currently
+    selected date range) as a ZIP, mirroring the per-project export."""
+    feuser = request.feuser
+    start_date, end_date = resolve_date_range(request, feuser)
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        BuddyExportService.write_buddy_csvs(zf, feuser, start_date=start_date, end_date=end_date)
+
+    filename = f"direct_buddies_export_{start_date.isoformat()}_to_{end_date.isoformat()}.zip"
+    response = HttpResponse(buf.getvalue(), content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response

@@ -49,6 +49,23 @@ def _get_month(request, start_day: int = 1, prev_month: bool = False) -> tuple[i
     return year, month
 
 
+def resolve_date_range(request, feuser) -> tuple[date, date]:
+    """Resolve the currently active date range from GET params, falling back
+    to the feuser's current financial month when missing or invalid. Used by
+    page-level CSV/ZIP export endpoints so they respect the date range the
+    user has selected via the date-range nav."""
+    date_from_raw = request.GET.get("date_from", "").strip()
+    date_to_raw   = request.GET.get("date_to", "").strip()
+    if date_from_raw and date_to_raw:
+        try:
+            return date.fromisoformat(date_from_raw), date.fromisoformat(date_to_raw)
+        except ValueError:
+            pass
+    sd, pm = feuser.month_start_day, feuser.month_start_prev
+    year, month = current_financial_month(sd, pm)
+    return financial_month_range(year, month, sd, pm)
+
+
 def _date_range_presets_context(feuser) -> dict:
     """Return context dict with preset date ranges for the date range picker."""
     today = date.today()

@@ -1,4 +1,7 @@
+import io
 import json
+import re
+import zipfile
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -7,7 +10,7 @@ from comaney.json_utils import safe_json
 from django.conf import settings
 from django.contrib import messages as django_messages
 from django.utils import timezone
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -15,10 +18,10 @@ from django.views.decorators.http import require_POST
 from budget.decorators import feuser_required
 from budget.models import Expense
 from budget.query_parser import apply_query, has_date_filter
-from budget.views._period import _date_range_presets_context
+from budget.views._period import _date_range_presets_context, resolve_date_range
 from feusers.models import FeUser
 from ..models import Project, ProjectInvite, ProjectMember, BuddySpending, DummyUser
-from ..services import BuddyArchiveService, ProjectService, BuddyQueryService, _display_name
+from ..services import BuddyArchiveService, ProjectService, ProjectExportService, BuddyQueryService, _display_name
 
 
 def _fetch_overlay_notes(feuser, breakdown):
@@ -676,6 +679,35 @@ def project_settings(request, project_id):
         "pending_invites": pending_invites,
         "currency": feuser.currency,
     })
+
+
+@feuser_required
+def project_export(request, project_id):
+    """
+    Export project data for the currently selected date range as a
+    downloadable ZIP of CSV files: meta.csv (project settings, never
+    date-filtered), members.csv (the member roster, never date-filtered),
+    expenses.csv and participation_matrix.csv (scoped to the date range),
+    and any pictures. See ProjectExportService.write_project_csvs.
+    """
+    feuser = request.feuser
+    project = get_object_or_404(
+        Project.objects.select_related("admin_feuser").prefetch_related("members__feuser", "members__dummy"),
+        uid=project_id,
+        members__feuser=feuser,
+    )
+    start_date, end_date = resolve_date_range(request, feuser)
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        ProjectExportService.write_project_csvs(zf, project, feuser, start_date=start_date, end_date=end_date)
+
+    _name_slug = re.sub(r"[^A-Za-z0-9]+", "_", project.name).strip("_")
+    _name_part = f"_{_name_slug}" if _name_slug else ""
+    filename = f"project_export{_name_part}_{start_date.isoformat()}_to_{end_date.isoformat()}.zip"
+    response = HttpResponse(buf.getvalue(), content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @feuser_required
