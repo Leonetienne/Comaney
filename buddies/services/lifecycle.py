@@ -154,7 +154,7 @@ class BuddyLifecycleService:
 
         if has_expenses:
             archive, created = BuddyArchiveService.get_or_create_personal_archive(feuser)
-            BuddyArchiveService.merge_dummy_into_archive(dummy, archive)
+            BuddyArchiveService.merge_dummy_into_dummy(dummy, archive)
         else:
             created = False
 
@@ -172,6 +172,64 @@ class BuddyLifecycleService:
 
         dummy.delete()
         return {"kicked": True, "archive_created": created}
+
+    @staticmethod
+    @transaction.atomic
+    def merge_dummy_into_dummy_now(feuser, source: DummyUser, target: DummyUser):
+        """
+        Immediately merge one personal offline buddy into another. Irreversible.
+        Returns 'invalid_dummy' if either dummy is not a personal, non-archive
+        dummy, 'already_pending' if source has an outstanding merge request
+        (revoke it first), otherwise 'ok'.
+        """
+        for dummy in (source, target):
+            if dummy.owning_group_id is not None or dummy.is_archive:
+                return "invalid_dummy"
+
+        from django.utils import timezone
+        if DummyMergeInvite.objects.filter(dummy=source, expires_at__gt=timezone.now()).exists():
+            return "already_pending"
+
+        from .archive import BuddyArchiveService
+        from budget.scheduled_assignment import replace_dummy_in_scheduled
+
+        BuddyArchiveService.merge_dummy_into_dummy(source, target)
+        replace_dummy_in_scheduled(feuser, source, target)
+
+        source.delete()
+        return "ok"
+
+    @staticmethod
+    @transaction.atomic
+    def merge_dummy_into_self(feuser, dummy: DummyUser) -> str:
+        """
+        Merge a personal offline buddy directly into its own owner
+        ("self-merge"). Immediate, like merge_dummy_into_dummy_now - there's
+        no second party to ask. Returns 'already_pending' if dummy has an
+        outstanding merge request (revoke it first), otherwise 'ok'.
+        """
+        from django.db.models import Q
+        from django.utils import timezone
+
+        if DummyMergeInvite.objects.filter(dummy=dummy, expires_at__gt=timezone.now()).exists():
+            return "already_pending"
+
+        from .archive import BuddyArchiveService
+        from budget.models import ScheduledExpense
+        from budget.scheduled_assignment import clear_scheduled_assignments
+
+        BuddyArchiveService.merge_dummy_into_self(dummy, feuser)
+
+        clear_scheduled_assignments(
+            ScheduledExpense.objects.filter(owning_feuser=feuser).filter(
+                Q(assign_upfront_dummy=dummy) |
+                Q(assign_buddy_mode__in=['single', 'group'],
+                  assign_spendings_json__contains=f'"id": {dummy.uid}')
+            )
+        )
+
+        dummy.delete()
+        return "ok"
 
     @staticmethod
     @transaction.atomic
@@ -301,53 +359,54 @@ class BuddyLifecycleService:
 
     @staticmethod
     @transaction.atomic
-    def send_merge_invite(feuser, dummy: DummyUser, target_email: str):
-        from feusers.models import FeUser
+    def request_merge_with_feuser(feuser, dummy: DummyUser, target_feuser):
+        """
+        Ask an already-linked direct buddy to approve merging dummy's expense
+        history into their account. Returns ('demo_restricted'|'self'|
+        'target_is_demo'|'not_linked'|'already_pending'|'invalid_dummy'|
+        'invite', invite_or_None).
+        """
+        from django.utils import timezone
+
+        if dummy.owning_group_id is not None or dummy.is_archive:
+            return ("invalid_dummy", None)
 
         if feuser.is_demo:
             return ("demo_restricted", None)
 
-        target_email = target_email.strip().lower()
-        try:
-            invited = FeUser.objects.get(email__iexact=target_email, is_active=True)
-        except FeUser.DoesNotExist:
-            invited = None
+        if target_feuser.pk == feuser.pk:
+            return ("self", None)
 
-        if invited and invited.is_demo:
-            return ("invitee_is_demo", None)
+        if target_feuser.is_demo:
+            return ("target_is_demo", None)
 
-        if invited is None:
-            if settings.DISABLE_EMAILING:
-                if not settings.ENABLE_REGISTRATION:
-                    return ("registration_disabled", None)
-                ob = BuddyOnboardingInvite(
-                    inviting_feuser=feuser, dummy=dummy, invitee_email=target_email
-                )
-                ob.save()
-                return ("onboarding_no_email", ob)
-            if not settings.ENABLE_REGISTRATION:
-                return ("registration_disabled", None)
-            ob = BuddyOnboardingInvite(
-                inviting_feuser=feuser, dummy=dummy, invitee_email=target_email
-            )
-            ob.save()
-            BuddyEmailService.send_onboarding_invite(ob)
-            return ("onboarding", ob)
+        if not BuddyQueryService.are_buddies(feuser, target_feuser):
+            return ("not_linked", None)
+
+        if DummyMergeInvite.objects.filter(dummy=dummy, expires_at__gt=timezone.now()).exists():
+            return ("already_pending", None)
 
         invite = DummyMergeInvite(
             inviting_feuser=feuser,
             dummy=dummy,
-            invited_feuser=invited,
+            invited_feuser=target_feuser,
         )
         invite.save()
         BuddyEmailService.send_merge_invite(invite)
         return ("invite", invite)
 
     @staticmethod
+    def revoke_merge_invite(token: str, revoking_feuser) -> bool:
+        try:
+            invite = DummyMergeInvite.objects.get(token=token, inviting_feuser=revoking_feuser)
+        except DummyMergeInvite.DoesNotExist:
+            return False
+        invite.delete()
+        return True
+
+    @staticmethod
     @transaction.atomic
     def accept_merge(token: str, accepting_feuser) -> bool:
-        from budget.models import Expense
-
         try:
             invite = DummyMergeInvite.objects.select_related(
                 "dummy", "inviting_feuser"
@@ -368,17 +427,18 @@ class BuddyLifecycleService:
         if dummy.owning_group_id:
             return BuddyGroupService.accept_group_dummy_merge(token, accepting_feuser)
 
-        for exp in Expense.objects.filter(upfront_payee_dummy=dummy, is_dummy=True):
-            exp.owning_feuser = accepting_feuser
-            exp.is_dummy = False
-            exp.upfront_payee_dummy = None
-            BuddyExpenseService.reconcile_categories_tags(exp, accepting_feuser)
-            exp.save()
+        # Re-check the precondition at accept time, not just request time: up to
+        # 7 days may have passed, during which the two could have un-buddied. If
+        # so, _create_link below would silently re-establish a connection the
+        # user deliberately severed.
+        if not BuddyQueryService.are_buddies(inviting_feuser, accepting_feuser):
+            return False
 
-        BuddySpending.objects.filter(participant_dummy=dummy).update(
-            participant_dummy=None,
-            participant_feuser=accepting_feuser,
-        )
+        from .archive import BuddyArchiveService
+        from budget.scheduled_assignment import replace_dummy_in_scheduled
+        BuddyArchiveService.transfer_upfront_payer_to_feuser(dummy, accepting_feuser)
+        BuddyArchiveService.transfer_dummy_participation_to_feuser(dummy, accepting_feuser)
+        replace_dummy_in_scheduled(inviting_feuser, dummy, accepting_feuser)
 
         _create_link(inviting_feuser, accepting_feuser)
 
@@ -390,56 +450,19 @@ class BuddyLifecycleService:
     @transaction.atomic
     def complete_onboarding_invites(new_feuser) -> None:
         from django.utils import timezone
-        from budget.models import Expense
 
         pending = BuddyOnboardingInvite.objects.filter(
             invitee_email__iexact=new_feuser.email,
             expires_at__gt=timezone.now(),
-        ).select_related("inviting_feuser", "dummy", "group")
+        ).select_related("inviting_feuser", "group")
 
         for invite in pending:
-            if invite.group_id and invite.dummy_id:
-                _create_link(invite.inviting_feuser, new_feuser)
-                dummy = invite.dummy
-                group = invite.group
-                for exp in Expense.objects.filter(upfront_payee_dummy=dummy, is_dummy=True):
-                    exp.owning_feuser = new_feuser
-                    exp.is_dummy = False
-                    exp.upfront_payee_dummy = None
-                    BuddyExpenseService.reconcile_categories_tags(exp, new_feuser)
-                    exp.save()
-                BuddySpending.objects.filter(participant_dummy=dummy).update(
-                    participant_dummy=None, participant_feuser=new_feuser
-                )
-                dummy_member = BuddyGroupMember.objects.filter(group=group, dummy=dummy).first()
-                if dummy_member:
-                    dummy_member.delete()
-                BuddyGroupMember.objects.get_or_create(group=group, feuser=new_feuser)
-                dummy.delete()
-                from budget.scheduled_assignment import reset_project_assignment_to_equal_shares
-                reset_project_assignment_to_equal_shares(group)
-
-            elif invite.group_id:
+            if invite.group_id:
                 _create_link(invite.inviting_feuser, new_feuser)
                 _, member_created = BuddyGroupMember.objects.get_or_create(group=invite.group, feuser=new_feuser)
                 if member_created:
                     from budget.scheduled_assignment import reset_project_assignment_to_equal_shares
                     reset_project_assignment_to_equal_shares(invite.group)
-
-            elif invite.dummy_id:
-                dummy = invite.dummy
-                inviting_feuser = invite.inviting_feuser
-                for exp in Expense.objects.filter(upfront_payee_dummy=dummy, is_dummy=True):
-                    exp.owning_feuser = new_feuser
-                    exp.is_dummy = False
-                    exp.upfront_payee_dummy = None
-                    BuddyExpenseService.reconcile_categories_tags(exp, new_feuser)
-                    exp.save()
-                BuddySpending.objects.filter(participant_dummy=dummy).update(
-                    participant_dummy=None, participant_feuser=new_feuser
-                )
-                _create_link(inviting_feuser, new_feuser)
-                dummy.delete()
 
             else:
                 _create_link(invite.inviting_feuser, new_feuser)

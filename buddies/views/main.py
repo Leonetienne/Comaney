@@ -50,6 +50,7 @@ def my_buddies_page(request):
     pending_out = BuddyQueryService.pending_invites_outgoing(feuser)
     pending_onboarding_out = BuddyQueryService.pending_onboarding_invites_outgoing(feuser)
     merge_in = BuddyQueryService.pending_merge_invites_incoming(feuser)
+    merge_out = BuddyQueryService.pending_merge_invites_outgoing(feuser)
     group_invites_in = BuddyQueryService.pending_group_invites_incoming(feuser)
 
     return render(request, "buddies/my_buddies.html", {
@@ -59,6 +60,7 @@ def my_buddies_page(request):
         "pending_invites_out": pending_out,
         "pending_onboarding_invites_out": pending_onboarding_out,
         "merge_invites_in": merge_in,
+        "merge_invites_out": merge_out,
         "group_invites_in": group_invites_in,
     })
 

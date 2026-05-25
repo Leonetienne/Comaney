@@ -4,11 +4,11 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Invitation for a different account</h1>
+    <h1>{{ noun|default:"Invitation"|capfirst }} for a different account</h1>
 </div>
 <div class="form-wrap">
-    <p>This invitation was sent to <strong>{{ invite.invitee_email }}</strong>, but you are logged in as <strong>{{ request.feuser.email }}</strong>.</p>
-    <p>Please log in with the correct account to accept this invitation.</p>
+    <p>This {{ noun|default:"invitation" }} was sent to <strong>{% firstof invite.invitee_email invitee_display %}</strong>, but you are logged in as <strong>{{ request.feuser.email }}</strong>.</p>
+    <p>Please log in with the correct account to accept this {{ noun|default:"invitation" }}.</p>
     <div class="form-actions">
         <a href="{% url 'logout' %}" class="btn btn-secondary">Log out</a>
         <a href="{% url 'buddies:buddies_page' %}" class="btn btn-secondary">Go to Buddies</a>

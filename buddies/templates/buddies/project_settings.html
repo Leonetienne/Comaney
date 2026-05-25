@@ -31,6 +31,27 @@
     <a href="{% url 'projects:project_settings' project_id=project.uid %}" class="project-tab project-tab--active">Manage</a>
 </nav>
 
+{% if merge_invites_in_project %}
+<section class="buddies-section" id="section-merge-requests">
+    <h2>Merge requests for you</h2>
+    {% for invite in merge_invites_in_project %}
+    <div class="invite-card">
+        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> has you listed as an offline member of this project under the name "<strong>{{ invite.dummy.display_name }}</strong>". You're already a member - if you accept, all expense history under that entry will be linked to your account.</p>
+        <div class="invite-actions">
+            <form method="post" action="{% url 'buddies:accept_merge' invite.token %}">
+                {% csrf_token %}
+                <button type="submit" id="btn-accept-merge-{{ invite.token }}" class="btn btn-sm">Accept</button>
+            </form>
+            <form method="post" action="{% url 'buddies:decline_merge' invite.token %}">
+                {% csrf_token %}
+                <button type="submit" id="btn-decline-merge-{{ invite.token }}" class="btn btn-sm btn-secondary">Decline</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</section>
+{% endif %}
+
 {% if is_admin %}
 
 <section class="buddies-section">
@@ -96,11 +117,25 @@
             <div></div>
             <div class="buddy-card-actions">
                 <form id="merge-form-{{ m.dummy.uid }}" method="post"
-                      action="{% url 'projects:project_send_merge' project_id=group.uid dummy_id=m.dummy.uid %}"
+                      action="{% url 'projects:project_merge_dummy' project_id=group.uid dummy_id=m.dummy.uid %}"
+                      class="merge-dummy-form"
+                      data-source-name="{{ m.dummy.display_name|escapejs }}"
                       style="display:none;gap:6px;flex-wrap:wrap;align-items:center;">
                     {% csrf_token %}
-                    <input type="email" name="email" placeholder="Their email" class="input-inline" required>
-                    <button type="submit" class="btn btn-sm">Send</button>
+                    <select name="target_key" class="input-inline" required>
+                        <option value="self" data-kind="self">Yourself</option>
+                        <optgroup label="Offline members">
+                            {% for other in dummy_members %}{% if not other.dummy.is_archive and other.dummy.uid != m.dummy.uid %}
+                            <option value="d{{ other.dummy.uid }}" data-kind="dummy">{{ other.dummy.display_name }}</option>
+                            {% endif %}{% endfor %}
+                        </optgroup>
+                        <optgroup label="Project members">
+                            {% for other in feuser_members %}
+                            <option value="f{{ other.feuser.pk }}" data-kind="feuser">{{ other.feuser.first_name }} {{ other.feuser.last_name }}</option>
+                            {% endfor %}
+                        </optgroup>
+                    </select>
+                    <button type="submit" class="btn btn-sm">Merge</button>
                     <button type="button" class="btn btn-sm btn-secondary"
                             onclick="document.getElementById('merge-form-{{ m.dummy.uid }}').style.display='none';document.getElementById('ctx-wrap-prj-{{ m.dummy.uid }}').style.display='inline-flex'">
                         Cancel
@@ -119,7 +154,7 @@
                                 onclick="openDummyPicModal(this)">Change photo</button>
                         {% if not request.feuser.is_demo %}
                         <button class="ctx-menu-item" id="merge-btn-{{ m.dummy.uid }}"
-                                onclick="document.getElementById('ctx-wrap-prj-{{ m.dummy.uid }}').style.display='none';document.getElementById('merge-form-{{ m.dummy.uid }}').style.display='flex'">Invite as user</button>
+                                onclick="document.getElementById('ctx-wrap-prj-{{ m.dummy.uid }}').style.display='none';document.getElementById('merge-form-{{ m.dummy.uid }}').style.display='flex'">Merge into&hellip;</button>
                         {% endif %}
                         <a href="{% url 'projects:project_remove_member' project_id=group.uid member_id=m.uid %}" class="ctx-menu-item ctx-menu-item--danger">Remove</a>
                     </div>
@@ -198,6 +233,23 @@
                 <form method="post" action="{% url 'projects:project_revoke_invite' project_id=group.uid token=invite.token %}">
                     {% csrf_token %}
                     <button type="submit" id="btn-revoke-group-invite-{{ invite.token }}" class="btn btn-sm btn-secondary">Revoke</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if merge_invites_out_project %}
+    <div class="settings-group">
+        <p class="settings-group-label">Merge requests sent</p>
+        <div class="settings-list">
+            {% for invite in merge_invites_out_project %}
+            <div class="settings-row" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+                <span class="font-sm">Sent to <strong>{{ invite.invited_feuser.first_name }} {{ invite.invited_feuser.last_name }}</strong> for "<strong>{{ invite.dummy.display_name }}</strong>" &middot; Expires {{ invite.expires_at|date:"N j, Y" }}</span>
+                <form method="post" action="{% url 'buddies:revoke_merge_invite' invite.token %}">
+                    {% csrf_token %}
+                    <button type="submit" id="btn-revoke-merge-{{ invite.token }}" class="btn btn-sm btn-secondary">Revoke</button>
                 </form>
             </div>
             {% endfor %}
@@ -613,4 +665,5 @@
 </script>
 {% include "partials/partnership_invite_js.html" %}
 {% include "partials/buddy_invite_js.html" %}
+{% include "partials/merge_dummy_js.html" %}
 {% endblock %}

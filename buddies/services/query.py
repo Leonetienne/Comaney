@@ -610,18 +610,48 @@ class BuddyQueryService:
         from ..models import BuddyOnboardingInvite
         return BuddyOnboardingInvite.objects.filter(
             inviting_feuser=feuser,
-            dummy__isnull=True,
             group__isnull=True,
             expires_at__gt=timezone.now(),
         )
 
     @staticmethod
     def pending_merge_invites_incoming(feuser):
+        """Incoming merge requests for personal (non-project) dummies only.
+        Project-scoped requests are surfaced on the project's settings page instead."""
         from django.utils import timezone
         return DummyMergeInvite.objects.filter(
             invited_feuser=feuser,
+            dummy__owning_group__isnull=True,
+            expires_at__gt=timezone.now(),
+        ).select_related("inviting_feuser", "dummy")
+
+    @staticmethod
+    def pending_merge_invites_incoming_for_project(feuser, project):
+        from django.utils import timezone
+        return DummyMergeInvite.objects.filter(
+            invited_feuser=feuser,
+            dummy__owning_group=project,
             expires_at__gt=timezone.now(),
         ).select_related("inviting_feuser", "dummy__owning_group")
+
+    @staticmethod
+    def pending_merge_invites_outgoing(feuser):
+        """Outgoing merge requests for personal (non-project) dummies only."""
+        from django.utils import timezone
+        return DummyMergeInvite.objects.filter(
+            inviting_feuser=feuser,
+            dummy__owning_group__isnull=True,
+            expires_at__gt=timezone.now(),
+        ).select_related("invited_feuser", "dummy")
+
+    @staticmethod
+    def pending_merge_invites_outgoing_for_project(feuser, project):
+        from django.utils import timezone
+        return DummyMergeInvite.objects.filter(
+            inviting_feuser=feuser,
+            dummy__owning_group=project,
+            expires_at__gt=timezone.now(),
+        ).select_related("invited_feuser", "dummy__owning_group")
 
     @staticmethod
     def pending_group_invites_incoming(feuser):

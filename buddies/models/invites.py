@@ -95,18 +95,13 @@ class DummyMergeInvite(models.Model):
 class BuddyOnboardingInvite(models.Model):
     """Sent when inviting a non-existing user.
 
-    dummy set: merge invite for a dummy user.
     group set: project join invite (also creates BuddyLink on accept).
-    dummy + group set: merge invite for a project dummy.
     Neither set: plain buddy invite.
     """
 
     uid = models.BigAutoField(primary_key=True)
     inviting_feuser = models.ForeignKey(
         "feusers.FeUser", on_delete=models.CASCADE, related_name="onboarding_invites_sent"
-    )
-    dummy = models.ForeignKey(
-        "buddies.DummyUser", on_delete=models.CASCADE, null=True, blank=True, related_name="onboarding_invites"
     )
     group = models.ForeignKey(
         "buddies.Project", on_delete=models.CASCADE, null=True, blank=True, related_name="onboarding_invites"
@@ -128,12 +123,5 @@ class BuddyOnboardingInvite(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        if self.dummy_id and self.group_id:
-            kind = "group-merge"
-        elif self.dummy_id:
-            kind = "merge"
-        elif self.group_id:
-            kind = "group"
-        else:
-            kind = "buddy"
+        kind = "group" if self.group_id else "buddy"
         return f"Onboarding {kind} invite from {self.inviting_feuser} to {self.invitee_email}"

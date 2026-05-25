@@ -181,6 +181,14 @@ def _project_pending_counts(feuser, project_ids: list) -> dict:
         ).distinct().values("project_id"):
             if row["project_id"] in counts:
                 counts[row["project_id"]] += 1
+    # Incoming offline-member merge requests for this feuser within these projects
+    from ..models import DummyMergeInvite
+    for row in DummyMergeInvite.objects.filter(
+        invited_feuser=feuser,
+        dummy__owning_group_id__in=project_ids,
+        expires_at__gt=timezone.now(),
+    ).values("dummy__owning_group_id"):
+        counts[row["dummy__owning_group_id"]] += 1
     return counts
 
 
@@ -669,6 +677,8 @@ def project_settings(request, project_id):
         m for m in project.members.all() if m.feuser_id and m.feuser_id != feuser.pk
     ]
     dummy_members = [m for m in project.members.all() if m.dummy_id]
+    merge_invites_in_project = BuddyQueryService.pending_merge_invites_incoming_for_project(feuser, project)
+    merge_invites_out_project = BuddyQueryService.pending_merge_invites_outgoing_for_project(feuser, project) if is_admin else []
     return render(request, "buddies/project_settings.html", {
         "active_nav": "projects",
         "project": project,
@@ -677,6 +687,8 @@ def project_settings(request, project_id):
         "feuser_members": feuser_members,
         "dummy_members": dummy_members,
         "pending_invites": pending_invites,
+        "merge_invites_in_project": merge_invites_in_project,
+        "merge_invites_out_project": merge_invites_out_project,
         "currency": feuser.currency,
     })
 
@@ -893,27 +905,60 @@ def project_add_dummy(request, project_id):
 
 @feuser_required
 @require_POST
-def project_send_merge(request, project_id, dummy_id):
-    from django.conf import settings as django_settings
+def project_merge_dummy(request, project_id, dummy_id):
+    """Merge an offline member into another offline member (immediate) or
+    request a merge into an already-linked project member (needs their approval).
+    Admin-only, matching all other offline-member management."""
     feuser = request.feuser
     project = get_object_or_404(Project, uid=project_id, admin_feuser=feuser)
-    dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_group=project)
-    email = request.POST.get("email", "").strip()
-    if not email:
-        return redirect("projects:project_detail", project_id=project_id)
-    outcome, obj = ProjectService.send_group_dummy_merge_invite(project, feuser, dummy, email)
-    if outcome == "demo_restricted":
-        django_messages.error(request, "Demo accounts cannot send invitations.")
-    elif outcome == "invitee_is_demo":
-        django_messages.error(request, "That email address is not available.")
-    elif outcome == "registration_disabled":
-        django_messages.error(request, "That email address is not registered and registration is not enabled on this instance.")
-    elif outcome == "onboarding_no_email":
-        site_url = getattr(django_settings, "SITE_URL", "")
-        django_messages.info(request, f"Emailing is deactivated. Share this link: {site_url}/register/")
-    elif outcome in ("onboarding", "invite"):
-        django_messages.success(request, f"Merge invitation sent to {email}.")
-    return redirect("projects:project_detail", project_id=project_id)
+    dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_group=project, is_archive=False)
+
+    if project.archived:
+        django_messages.error(request, "Cannot merge offline members in an archived project.")
+        return redirect("projects:project_settings", project_id=project_id)
+
+    if feuser.is_demo:
+        django_messages.error(request, "Demo accounts cannot merge buddies.")
+        return redirect("projects:project_settings", project_id=project_id)
+
+    target_key = request.POST.get("target_key", "").strip()
+    if target_key == "self":
+        outcome = ProjectService.merge_group_dummy_into_self(project, feuser, dummy)
+        if outcome == "already_pending":
+            django_messages.error(request, f"\"{dummy.display_name}\" has a pending merge request. Revoke it first if you want to merge into yourself.")
+        else:
+            django_messages.success(request, f"Merged \"{dummy.display_name}\" into yourself.")
+        return redirect("projects:project_settings", project_id=project_id)
+
+    if len(target_key) < 2 or not target_key[1:].isdigit():
+        return redirect("projects:project_settings", project_id=project_id)
+    kind, target_id = target_key[0], int(target_key[1:])
+
+    if kind == "d":
+        target = get_object_or_404(DummyUser, uid=target_id, owning_group=project, is_archive=False)
+        if target.pk == dummy.pk:
+            return redirect("projects:project_settings", project_id=project_id)
+        outcome = ProjectService.merge_group_dummy_into_dummy_now(project, dummy, target)
+        if outcome == "already_pending":
+            django_messages.error(request, f"\"{dummy.display_name}\" has a pending merge request. Revoke it first if you want to merge into someone else.")
+        else:
+            django_messages.success(request, f"Merged \"{dummy.display_name}\" into {target.display_name}.")
+    elif kind == "f":
+        target_feuser = get_object_or_404(FeUser, pk=target_id, is_active=True)
+        outcome, obj = ProjectService.request_group_merge_with_feuser(feuser, project, dummy, target_feuser)
+        if outcome == "not_member":
+            django_messages.error(request, "You can only request a merge with someone who is already a member of this project.")
+        elif outcome == "self":
+            django_messages.error(request, "You cannot merge into yourself.")
+        elif outcome == "already_pending":
+            django_messages.error(request, f"\"{dummy.display_name}\" already has a pending merge request. Revoke it first if you want to send a new one.")
+        elif outcome == "demo_restricted":
+            django_messages.error(request, "Demo accounts cannot send merge requests.")
+        elif outcome == "target_is_demo":
+            django_messages.error(request, "Demo accounts cannot be merge targets.")
+        elif outcome == "invite":
+            django_messages.success(request, f"Merge request sent to {_display_name(target_feuser)}.")
+    return redirect("projects:project_settings", project_id=project_id)
 
 
 @feuser_required

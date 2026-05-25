@@ -53,7 +53,7 @@ class DummyMergeInviteAdmin(admin.ModelAdmin):
 
 @admin.register(BuddyOnboardingInvite)
 class BuddyOnboardingInviteAdmin(admin.ModelAdmin):
-    list_display = ["inviting_feuser", "invitee_email", "dummy", "group", "created_at", "expires_at"]
+    list_display = ["inviting_feuser", "invitee_email", "group", "created_at", "expires_at"]
     search_fields = ["invitee_email", "inviting_feuser__email"]
 
 

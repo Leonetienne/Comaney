@@ -43,30 +43,36 @@ class BuddyArchiveService:
 
     @staticmethod
     @transaction.atomic
-    def merge_dummy_into_archive(dummy: DummyUser, archive: DummyUser) -> None:
+    def merge_dummy_into_dummy(source: DummyUser, target: DummyUser) -> None:
         """
-        Transfer all expense references from dummy to archive.
+        Transfer all expense references from source to target.
 
-        BuddySpending rows: if archive already participates in the same expense,
+        BuddySpending rows: if target already participates in the same expense,
         add the share (percentage); otherwise reassign the row. Other participants
         are never touched.
 
-        Upfront-payer expenses: simply point upfront_payee_dummy to archive.
+        Upfront-payer expenses: point upfront_payee_dummy to target. If target
+        already had an explicit participation row on that same expense, it is
+        dropped - the new payer's implicit share absorbs it, mirroring the
+        analogous guard in transfer_upfront_payer_to_feuser.
+
+        target need not be the special Achim Archive dummy - this is also used
+        to merge one regular offline member directly into another.
         """
         from budget.models import Expense
 
-        buddy_name = dummy.display_name
+        buddy_name = source.display_name
 
-        for bs in BuddySpending.objects.filter(participant_dummy=dummy).select_related("expense"):
+        for bs in BuddySpending.objects.filter(participant_dummy=source).select_related("expense"):
             existing = BuddySpending.objects.filter(
-                participant_dummy=archive, expense_id=bs.expense_id
+                participant_dummy=target, expense_id=bs.expense_id
             ).first()
             if existing:
                 existing.share_percent += bs.share_percent
                 existing.save(update_fields=["share_percent"])
                 bs.delete()
             else:
-                bs.participant_dummy = archive
+                bs.participant_dummy = target
                 bs.save(update_fields=["participant_dummy"])
             suffix = f"\nOriginal participant was: {buddy_name}"
             expense = bs.expense
@@ -74,12 +80,106 @@ class BuddyArchiveService:
                 expense.note = (expense.note + suffix).strip()
                 expense.save(update_fields=["note"])
 
-        for expense in Expense.objects.filter(upfront_payee_dummy=dummy).select_related():
-            expense.upfront_payee_dummy = archive
-            suffix = f"\nArchived from: {buddy_name}"
+        for expense in Expense.objects.filter(upfront_payee_dummy=source).select_related():
+            expense.upfront_payee_dummy = target
+            suffix = f"\nOriginally paid by: {buddy_name}"
             if suffix not in expense.note:
                 expense.note = (expense.note + suffix).strip()
             expense.save(update_fields=["upfront_payee_dummy", "note"])
+            BuddySpending.objects.filter(expense=expense, participant_dummy=target).delete()
+
+    @staticmethod
+    @transaction.atomic
+    def transfer_dummy_participation_to_feuser(dummy: DummyUser, feuser) -> None:
+        """
+        Transfer all BuddySpending rows where dummy participates to feuser.
+
+        If feuser already participates in the same expense, the shares are
+        summed into that existing row instead of creating a duplicate row for
+        the same participant on the same expense.
+
+        If feuser is that expense's own owner (e.g. a project merge target
+        who happens to have paid for that particular expense, or a
+        self-merge), the row is dropped instead of reassigned - the expense
+        owner is never an explicit participant; their implicit share absorbs
+        it, same as the equivalent guard in transfer_upfront_payer_to_feuser.
+        """
+        buddy_name = dummy.display_name
+
+        for bs in BuddySpending.objects.filter(participant_dummy=dummy).select_related("expense"):
+            expense = bs.expense
+            if expense.owning_feuser_id == feuser.pk:
+                bs.delete()
+            else:
+                existing = BuddySpending.objects.filter(
+                    participant_feuser=feuser, expense_id=bs.expense_id
+                ).first()
+                if existing:
+                    existing.share_percent += bs.share_percent
+                    existing.save(update_fields=["share_percent"])
+                    bs.delete()
+                else:
+                    bs.participant_dummy = None
+                    bs.participant_feuser = feuser
+                    bs.save(update_fields=["participant_dummy", "participant_feuser"])
+            suffix = f"\nOriginal participant was: {buddy_name}"
+            if suffix not in expense.note:
+                expense.note = (expense.note + suffix).strip()
+                expense.save(update_fields=["note"])
+
+    @staticmethod
+    @transaction.atomic
+    def transfer_upfront_payer_to_feuser(dummy: DummyUser, feuser) -> None:
+        """
+        Transfer all expenses where dummy is the upfront payer to feuser becoming
+        the real owner.
+
+        feuser may already hold an explicit BuddySpending row on one of these
+        expenses (from before they were connected to the payer). The expense
+        owner is never an explicit participant, so that stale row is removed;
+        its share is absorbed into feuser's implicit owner share.
+        """
+        from budget.models import Expense
+        from .expense import BuddyExpenseService
+
+        for exp in Expense.objects.filter(upfront_payee_dummy=dummy, is_dummy=True):
+            exp.owning_feuser = feuser
+            exp.is_dummy = False
+            exp.upfront_payee_dummy = None
+            BuddyExpenseService.reconcile_categories_tags(exp, feuser)
+            exp.save()
+            BuddySpending.objects.filter(expense=exp, participant_feuser=feuser).delete()
+
+    @staticmethod
+    @transaction.atomic
+    def merge_dummy_into_self(dummy: DummyUser, feuser) -> None:
+        """
+        Merge a dummy directly into its own owner ("self-merge").
+
+        Every BuddySpending row for a personal dummy already lives on an
+        expense owned by that same feuser, so transferring participation
+        (as transfer_dummy_participation_to_feuser does for a different
+        target) would create an explicit owner-as-participant row, which is
+        invalid. The row is dropped instead - the owner's implicit share
+        silently absorbs it, which is exactly what "no longer a buddy
+        expense" means.
+
+        Upfront-payer expenses go through the existing
+        transfer_upfront_payer_to_feuser unchanged - feuser becoming the
+        real owner of an expense their own dummy used to front is already
+        correct there.
+        """
+        buddy_name = dummy.display_name
+
+        for bs in BuddySpending.objects.filter(participant_dummy=dummy).select_related("expense"):
+            expense = bs.expense
+            bs.delete()
+            suffix = f"\nOriginal participant was: {buddy_name}"
+            if suffix not in expense.note:
+                expense.note = (expense.note + suffix).strip()
+                expense.save(update_fields=["note"])
+
+        BuddyArchiveService.transfer_upfront_payer_to_feuser(dummy, feuser)
 
     @staticmethod
     def archive_has_expenses(archive: DummyUser) -> bool:

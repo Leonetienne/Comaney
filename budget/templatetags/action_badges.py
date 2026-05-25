@@ -138,8 +138,11 @@ def _count_buddy_actions(feuser) -> int:
         invitee_email=feuser.email,
         expires_at__gt=now,
     ).count()
+    # Project-scoped merge requests are counted under the "projects" badge instead,
+    # since they're surfaced on the project's settings page, not here.
     merge_in = DummyMergeInvite.objects.filter(
         invited_feuser=feuser,
+        dummy__owning_group__isnull=True,
         expires_at__gt=now,
     ).count()
     return incoming + merge_in
@@ -186,13 +189,20 @@ def _count_buddy_expense_actions(feuser) -> int:
 def _count_project_actions(feuser) -> int:
     from django.utils import timezone
     from budget.models import Expense
-    from buddies.models import Project, ProjectInvite, ProjectMember
+    from buddies.models import DummyMergeInvite, Project, ProjectInvite, ProjectMember
     now = timezone.now()
     # Incoming project invites
     invite_count = ProjectInvite.objects.filter(
         invitee_email=feuser.email,
         expires_at__gt=now,
     ).count()
+    # Incoming project-scoped offline-member merge requests
+    merge_in_count = DummyMergeInvite.objects.filter(
+        invited_feuser=feuser,
+        dummy__owning_group__isnull=False,
+        expires_at__gt=now,
+    ).count()
+    invite_count += merge_in_count
     # Non-archived projects where feuser is a member
     member_project_ids = list(
         ProjectMember.objects.filter(feuser=feuser, group__archived=False)

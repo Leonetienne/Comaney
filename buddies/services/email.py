@@ -113,8 +113,6 @@ class BuddyEmailService:
             ctx={
                 "invite": invite,
                 "inviter_name": _display_name(invite.inviting_feuser),
-                "dummy_name": (invite.dummy.display_name + " (offline member)") if invite.dummy_id else None,
-                "is_merge": bool(invite.dummy_id),
                 "is_group": True,
                 "group_name": invite.group.name if invite.group_id else None,
                 "register_url": register_url,
@@ -163,12 +161,12 @@ class BuddyEmailService:
         is_group_merge = group is not None
         inviting_name = _display_name(invite.inviting_feuser)
         subject = (
-            f"{inviting_name} wants to add you to the group \"{group.name}\" on Comaney"
+            f"{inviting_name} wants to merge an offline member's history into your account on Comaney"
             if is_group_merge else
             f"{inviting_name} wants to link your account with their buddy record on Comaney"
         )
         message = (
-            f"{inviting_name} wants to add you to the project \"{group.name}\"."
+            f"{inviting_name} wants to merge an offline member's expense history into your account in the project \"{group.name}\"."
             if is_group_merge else
             f"{inviting_name} wants to link your account with their buddy record."
         )
@@ -195,21 +193,14 @@ class BuddyEmailService:
         """Recipient is not yet registered; email only, no DB record."""
         site_url = getattr(settings, "SITE_URL", "")
         register_url = f"{site_url}/register/"
-        is_merge = invite.dummy_id is not None
         inviter_name = _display_name(invite.inviting_feuser)
-        subject = (
-            f"{inviter_name} wants to link a buddy record with your account on Comaney"
-            if is_merge else
-            f"{inviter_name} invited you to be spending buddies on Comaney"
-        )
+        subject = f"{inviter_name} invited you to be spending buddies on Comaney"
         _send_raw(
             subject=subject,
             template="emails/buddy_onboarding_invite.html",
             ctx={
                 "invite": invite,
                 "inviter_name": inviter_name,
-                "dummy_name": (invite.dummy.display_name + " (offline member)") if is_merge else None,
-                "is_merge": is_merge,
                 "is_group": False,
                 "group_name": None,
                 "register_url": register_url,

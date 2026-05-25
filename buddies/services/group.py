@@ -18,7 +18,6 @@ from ..models import (
 )
 from ._helpers import _create_link, _display_name
 from .email import BuddyEmailService
-from .expense import BuddyExpenseService
 
 
 class ProjectService:
@@ -254,7 +253,7 @@ class ProjectService:
 
         if has_expenses:
             archive, created = BuddyArchiveService.get_or_create_group_archive(group)
-            BuddyArchiveService.merge_dummy_into_archive(dummy, archive)
+            BuddyArchiveService.merge_dummy_into_dummy(dummy, archive)
         else:
             created = False
 
@@ -268,54 +267,98 @@ class ProjectService:
 
     @staticmethod
     @transaction.atomic
-    def send_group_dummy_merge_invite(group, admin_feuser, dummy: DummyUser, target_email: str):
+    def merge_group_dummy_into_dummy_now(group, source: DummyUser, target: DummyUser):
         """
-        Invite a real user to take over a group dummy's history.
-        Also joins them to the group as a member.
-        Returns same tuple format as BuddyLifecycleService.send_merge_invite.
+        Immediately merge one offline project member into another. Irreversible.
+        Returns 'invalid_dummy' if either dummy does not belong to this group
+        or is the archive, 'already_pending' if source has an outstanding
+        merge request (revoke it first), otherwise 'ok'.
         """
-        from feusers.models import FeUser
+        for dummy in (source, target):
+            if dummy.owning_group_id != group.pk or dummy.is_archive:
+                return "invalid_dummy"
+
+        from django.utils import timezone
+        if DummyMergeInvite.objects.filter(dummy=source, expires_at__gt=timezone.now()).exists():
+            return "already_pending"
+
+        from .archive import BuddyArchiveService
+
+        BuddyArchiveService.merge_dummy_into_dummy(source, target)
+        source.delete()
+
+        # Roster changed (source member gone): reset scheduled spendings, same as
+        # any other project-membership change.
+        from budget.scheduled_assignment import reset_project_assignment_to_equal_shares
+        reset_project_assignment_to_equal_shares(group)
+        return "ok"
+
+    @staticmethod
+    @transaction.atomic
+    def merge_group_dummy_into_self(group, admin_feuser, dummy: DummyUser) -> str:
+        """
+        Merge a project offline member directly into the admin performing
+        the merge ("self-merge"). Immediate, like
+        merge_group_dummy_into_dummy_now - there's no second party to ask.
+        Otherwise reuses the exact same transfer primitives as accepting a
+        normal merge-into-member request: per merge-spec.md, project
+        self-merge behaves like any other merge. Returns 'already_pending'
+        if dummy has an outstanding merge request, otherwise 'ok'.
+        """
+        from django.utils import timezone
+
+        if DummyMergeInvite.objects.filter(dummy=dummy, expires_at__gt=timezone.now()).exists():
+            return "already_pending"
+
+        from .archive import BuddyArchiveService
+
+        BuddyArchiveService.transfer_upfront_payer_to_feuser(dummy, admin_feuser)
+        BuddyArchiveService.transfer_dummy_participation_to_feuser(dummy, admin_feuser)
+
+        dummy_member = BuddyGroupMember.objects.filter(group=group, dummy=dummy).first()
+        if dummy_member:
+            dummy_member.delete()
+        dummy.delete()
+
+        # Roster changed (dummy gone): reset scheduled spendings, same as any
+        # other project-membership change.
+        from budget.scheduled_assignment import reset_project_assignment_to_equal_shares
+        reset_project_assignment_to_equal_shares(group)
+        return "ok"
+
+    @staticmethod
+    @transaction.atomic
+    def request_group_merge_with_feuser(admin_feuser, group, dummy: DummyUser, target_feuser):
+        """
+        Ask an existing project member to approve merging a group dummy's
+        history into their account. Returns ('demo_restricted'|'self'|
+        'target_is_demo'|'not_member'|'already_pending'|'invalid_dummy'|
+        'invite', invite_or_None).
+        """
+        from django.utils import timezone
+
+        if dummy.owning_group_id != group.pk or dummy.is_archive:
+            return ("invalid_dummy", None)
 
         if admin_feuser.is_demo:
             return ("demo_restricted", None)
 
-        target_email = target_email.strip().lower()
-        try:
-            invited = FeUser.objects.get(email__iexact=target_email, is_active=True)
-        except FeUser.DoesNotExist:
-            invited = None
+        if target_feuser.pk == admin_feuser.pk:
+            return ("self", None)
 
-        if invited and invited.is_demo:
-            return ("invitee_is_demo", None)
+        if target_feuser.is_demo:
+            return ("target_is_demo", None)
 
-        if invited is None:
-            if settings.DISABLE_EMAILING:
-                if not settings.ENABLE_REGISTRATION:
-                    return ("registration_disabled", None)
-                ob = BuddyOnboardingInvite(
-                    inviting_feuser=admin_feuser,
-                    dummy=dummy,
-                    group=group,
-                    invitee_email=target_email,
-                )
-                ob.save()
-                return ("onboarding_no_email", ob)
-            if not settings.ENABLE_REGISTRATION:
-                return ("registration_disabled", None)
-            ob = BuddyOnboardingInvite(
-                inviting_feuser=admin_feuser,
-                dummy=dummy,
-                group=group,
-                invitee_email=target_email,
-            )
-            ob.save()
-            BuddyEmailService.send_group_onboarding_invite(ob)
-            return ("onboarding", ob)
+        if not BuddyGroupMember.objects.filter(group=group, feuser=target_feuser).exists():
+            return ("not_member", None)
+
+        if DummyMergeInvite.objects.filter(dummy=dummy, expires_at__gt=timezone.now()).exists():
+            return ("already_pending", None)
 
         invite = DummyMergeInvite(
             inviting_feuser=admin_feuser,
             dummy=dummy,
-            invited_feuser=invited,
+            invited_feuser=target_feuser,
         )
         invite.save()
         BuddyEmailService.send_merge_invite(invite)
@@ -326,10 +369,19 @@ class ProjectService:
     def accept_group_dummy_merge(token: str, accepting_feuser) -> bool:
         """
         Accept a DummyMergeInvite for a group dummy.
-        Transfers the dummy's expense history, adds the user to the group.
-        """
-        from budget.models import Expense
+        Transfers the dummy's expense history. accepting_feuser is already a
+        project member by construction (merge targets must already be a
+        member), so this never touches BuddyLink - merging an offline record
+        within a shared project must not create an unrelated personal buddy
+        connection between the admin and the member.
 
+        Re-checks that precondition (still a member, project not archived) at
+        accept time rather than trusting it from request time: up to 7 days
+        may have passed, during which the member could have left/been removed
+        or the project could have been archived. If either no longer holds,
+        accepting fails cleanly instead of re-adding a member who left or
+        mutating an archived project.
+        """
         try:
             invite = DummyMergeInvite.objects.select_related(
                 "dummy__owning_group", "inviting_feuser"
@@ -345,23 +397,17 @@ class ProjectService:
             return False
 
         dummy = invite.dummy
-        inviting_feuser = invite.inviting_feuser
         group = dummy.owning_group
 
-        for exp in Expense.objects.filter(upfront_payee_dummy=dummy, is_dummy=True):
-            exp.owning_feuser = accepting_feuser
-            exp.is_dummy = False
-            exp.upfront_payee_dummy = None
-            BuddyExpenseService.reconcile_categories_tags(exp, accepting_feuser)
-            exp.save()
+        if group and group.archived:
+            return False
 
-        BuddySpending.objects.filter(participant_dummy=dummy).update(
-            participant_dummy=None,
-            participant_feuser=accepting_feuser,
-        )
+        if group and not BuddyGroupMember.objects.filter(group=group, feuser=accepting_feuser).exists():
+            return False
 
-        if not BuddyLink.between(inviting_feuser, accepting_feuser):
-            _create_link(inviting_feuser, accepting_feuser)
+        from .archive import BuddyArchiveService
+        BuddyArchiveService.transfer_upfront_payer_to_feuser(dummy, accepting_feuser)
+        BuddyArchiveService.transfer_dummy_participation_to_feuser(dummy, accepting_feuser)
 
         if group:
             dummy_member = BuddyGroupMember.objects.filter(group=group, dummy=dummy).first()
@@ -403,7 +449,7 @@ class ProjectService:
                 personal_archive, _ = BuddyArchiveService.get_or_create_personal_archive(
                     admin_feuser
                 )
-                BuddyArchiveService.merge_dummy_into_archive(group_archive, personal_archive)
+                BuddyArchiveService.merge_dummy_into_dummy(group_archive, personal_archive)
             group_archive.delete()
 
         DummyUser.objects.filter(owning_group=group, is_archive=False).update(

@@ -250,7 +250,6 @@ def revoke_onboarding_invite(request, token):
         invite = BuddyOnboardingInvite.objects.get(
             token=token,
             inviting_feuser=request.feuser,
-            dummy__isnull=True,
             group__isnull=True,
         )
         invite.delete()
@@ -273,24 +272,55 @@ def kick_actual(request, link_id):
 
 @feuser_required
 @require_POST
-def send_merge_invite(request, dummy_id):
-    from django.conf import settings as django_settings
-    dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_feuser=request.feuser)
-    email = request.POST.get("email", "").strip()
-    if not email:
+def merge_dummy(request, dummy_id):
+    """Merge an offline buddy into another offline buddy (immediate) or
+    request a merge into an already-linked direct buddy (needs their approval)."""
+    from feusers.models import FeUser
+
+    feuser = request.feuser
+    dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_feuser=feuser, is_archive=False)
+
+    if feuser.is_demo:
+        django_messages.error(request, "Demo accounts cannot merge buddies.")
         return redirect("buddies:my_buddies")
-    outcome, obj = BuddyLifecycleService.send_merge_invite(request.feuser, dummy, email)
-    if outcome == "demo_restricted":
-        django_messages.error(request, "Demo accounts cannot send invitations.")
-    elif outcome == "invitee_is_demo":
-        django_messages.error(request, "That email address is not available.")
-    elif outcome == "registration_disabled":
-        django_messages.error(request, "That email address is not registered and registration is not enabled on this instance.")
-    elif outcome == "onboarding_no_email":
-        site_url = getattr(django_settings, "SITE_URL", "")
-        django_messages.info(request, f"Emailing is deactivated for this instance. Give this link to your friend: {site_url}/register/")
-    elif outcome == "onboarding":
-        django_messages.success(request, f"A registration invitation has been sent to {email}. They will be linked once they sign up.")
+
+    target_key = request.POST.get("target_key", "").strip()
+    if target_key == "self":
+        outcome = BuddyLifecycleService.merge_dummy_into_self(feuser, dummy)
+        if outcome == "already_pending":
+            django_messages.error(request, f"\"{dummy.display_name}\" has a pending merge request. Revoke it first if you want to merge into yourself.")
+        else:
+            django_messages.success(request, f"Merged \"{dummy.display_name}\" into yourself.")
+        return redirect("buddies:my_buddies")
+
+    if len(target_key) < 2 or not target_key[1:].isdigit():
+        return redirect("buddies:my_buddies")
+    kind, target_id = target_key[0], int(target_key[1:])
+
+    if kind == "d":
+        target = get_object_or_404(DummyUser, uid=target_id, owning_feuser=feuser, is_archive=False)
+        if target.pk == dummy.pk:
+            return redirect("buddies:my_buddies")
+        outcome = BuddyLifecycleService.merge_dummy_into_dummy_now(feuser, dummy, target)
+        if outcome == "already_pending":
+            django_messages.error(request, f"\"{dummy.display_name}\" has a pending merge request. Revoke it first if you want to merge into someone else.")
+        else:
+            django_messages.success(request, f"Merged \"{dummy.display_name}\" into {target.display_name}.")
+    elif kind == "f":
+        target_feuser = get_object_or_404(FeUser, pk=target_id, is_active=True)
+        outcome, obj = BuddyLifecycleService.request_merge_with_feuser(feuser, dummy, target_feuser)
+        if outcome == "not_linked":
+            django_messages.error(request, "You can only request a merge with someone who is already your buddy.")
+        elif outcome == "self":
+            django_messages.error(request, "You cannot merge into yourself.")
+        elif outcome == "already_pending":
+            django_messages.error(request, f"\"{dummy.display_name}\" already has a pending merge request. Revoke it first if you want to send a new one.")
+        elif outcome == "demo_restricted":
+            django_messages.error(request, "Demo accounts cannot send merge requests.")
+        elif outcome == "target_is_demo":
+            django_messages.error(request, "Demo accounts cannot be merge targets.")
+        elif outcome == "invite":
+            django_messages.success(request, f"Merge request sent to {_display_name(target_feuser)}.")
     return redirect("buddies:my_buddies")
 
 
@@ -301,16 +331,18 @@ def view_merge_invite(request, token):
             "inviting_feuser", "dummy__owning_group"
         ).get(token=token)
     except DummyMergeInvite.DoesNotExist:
-        return render(request, "buddies/invite_invalid.html", {"active_nav": "buddies"})
+        return render(request, "buddies/invite_invalid.html", {"active_nav": "buddies", "noun": "merge request"})
 
     if not invite.is_valid():
         invite.delete()
-        return render(request, "buddies/invite_invalid.html", {"active_nav": "buddies"})
+        return render(request, "buddies/invite_invalid.html", {"active_nav": "buddies", "noun": "merge request"})
 
     if invite.invited_feuser_id != request.feuser.pk:
         return render(request, "buddies/invite_wrong_account.html", {
             "active_nav": "buddies",
             "invite": invite,
+            "noun": "merge request",
+            "invitee_display": invite.invited_feuser.email,
         })
 
     return render(request, "buddies/merge_view.html", {
@@ -324,24 +356,58 @@ def view_merge_invite(request, token):
 @feuser_required
 @require_POST
 def accept_merge(request, token):
+    try:
+        invite = DummyMergeInvite.objects.select_related("dummy__owning_group").get(token=token)
+        project = invite.dummy.owning_group
+        dummy_name = invite.dummy.display_name
+    except DummyMergeInvite.DoesNotExist:
+        project = None
+        dummy_name = None
+
     ok = BuddyLifecycleService.accept_merge(token, request.feuser)
     if not ok:
-        return render(request, "buddies/invite_invalid.html", {"active_nav": "buddies"})
+        return render(request, "buddies/invite_invalid.html", {"active_nav": "buddies", "noun": "merge request"})
+
+    if project:
+        django_messages.success(request, f'"{dummy_name}"\'s history in "{project.name}" is now linked to your account.')
+        return redirect("projects:project_detail", project_id=project.uid)
     return redirect("buddies:buddies_page")
 
 
 @feuser_required
 @require_POST
 def decline_merge(request, token):
+    project = None
     try:
-        invite = DummyMergeInvite.objects.get(
+        invite = DummyMergeInvite.objects.select_related("dummy__owning_group").get(
             token=token,
             invited_feuser=request.feuser,
         )
+        project = invite.dummy.owning_group
         invite.delete()
     except DummyMergeInvite.DoesNotExist:
         pass
+    if project:
+        return redirect("projects:project_detail", project_id=project.uid)
     return redirect("buddies:buddies_page")
+
+
+@feuser_required
+@require_POST
+def revoke_merge_invite(request, token):
+    """Revoke an outgoing merge request. Works for both personal and project
+    dummies; redirects back to wherever that dummy is managed."""
+    try:
+        invite = DummyMergeInvite.objects.select_related("dummy__owning_group").get(
+            token=token, inviting_feuser=request.feuser,
+        )
+    except DummyMergeInvite.DoesNotExist:
+        return redirect("buddies:my_buddies")
+    project = invite.dummy.owning_group
+    BuddyLifecycleService.revoke_merge_invite(token, request.feuser)
+    if project:
+        return redirect("projects:project_settings", project_id=project.pk)
+    return redirect("buddies:my_buddies")
 
 
 @feuser_required

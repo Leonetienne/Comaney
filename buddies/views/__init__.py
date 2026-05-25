@@ -7,15 +7,8 @@ from .buddies import (
     add_dummy, kick_dummy, rename_dummy, personal_archive_wipe,
     invite_actual, send_buddy_invite, view_invite, accept_invite, decline_invite, revoke_invite, revoke_onboarding_invite,
     kick_actual,
-    send_merge_invite, view_merge_invite, accept_merge, decline_merge,
+    merge_dummy, view_merge_invite, accept_merge, decline_merge, revoke_merge_invite,
     dummy_picture,
-)
-from .groups import (
-    create_group, group_rename, group_picture,
-    group_invite_member, group_revoke_invite, group_remove_member,
-    group_add_dummy, group_rename_dummy, group_send_merge, group_archive_wipe,
-    group_transfer_admin, group_leave, group_dissolve,
-    view_group_invite, accept_group_invite, decline_group_invite,
 )
 from .expenses import (
     review_expense_as_owner,
@@ -43,7 +36,7 @@ from .projects import (
     project_export,
     project_rename, project_picture,
     project_invite_member, project_revoke_invite, project_remove_member,
-    project_add_dummy, project_rename_dummy, project_send_merge, project_archive_wipe,
+    project_add_dummy, project_rename_dummy, project_merge_dummy, project_archive_wipe,
     project_transfer_admin, project_leave, project_delete,
     project_archive, project_unarchive, reorder_projects,
     view_project_invite, accept_project_invite, decline_project_invite,

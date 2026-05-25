@@ -1,13 +1,13 @@
 {% extends "budget_base.html" %}
 
-{% block title %}Comaney - Invalid invitation{% endblock %}
+{% block title %}Comaney - Invalid {{ noun|default:"invitation" }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1>Invitation not found</h1>
+    <h1>{{ noun|default:"Invitation"|capfirst }} not found</h1>
 </div>
 <div class="form-wrap">
-    <p>This invitation link is invalid or has expired. Ask your buddy to send a new one.</p>
+    <p>This {{ noun|default:"invitation" }} link is invalid or has expired. Ask them to send a new one.</p>
     <div class="form-actions">
         <a href="{% url 'buddies:buddies_page' %}" class="btn btn-secondary">Go to Buddies</a>
     </div>

@@ -29,7 +29,7 @@ urlpatterns = [
     path("<int:project_id>/member/<int:member_id>/remove/", views.project_remove_member, name="project_remove_member"),
     path("<int:project_id>/add-dummy/", views.project_add_dummy, name="project_add_dummy"),
     path("<int:project_id>/dummy/<int:dummy_id>/rename/", views.project_rename_dummy, name="project_rename_dummy"),
-    path("<int:project_id>/dummy/<int:dummy_id>/send-merge/", views.project_send_merge, name="project_send_merge"),
+    path("<int:project_id>/dummy/<int:dummy_id>/merge/", views.project_merge_dummy, name="project_merge_dummy"),
     path("<int:project_id>/dummy/<int:dummy_id>/archive-wipe/", views.project_archive_wipe, name="project_archive_wipe"),
 
     # Project invite accept/decline

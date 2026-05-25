@@ -2,26 +2,26 @@
 
 {% block content %}
 {% if is_group_merge %}
-<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Group invitation and account merge</h2>
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Merge request</h2>
 <p style="color:#ccc;line-height:1.6;">
-    <strong style="color:#e0e0e0;">{{ inviting_name }}</strong> has tracked you as an offline member of the group "<strong style="color:#e0e0e0;">{{ group_name }}</strong>" under the name "<strong style="color:#e0e0e0;">{{ dummy_name }}</strong>" and would like to link that record to your account.
+    <strong style="color:#e0e0e0;">{{ inviting_name }}</strong> has been tracking an offline member of the project "<strong style="color:#e0e0e0;">{{ group_name }}</strong>" under the name "<strong style="color:#e0e0e0;">{{ dummy_name }}</strong>", and believes that's you. You're already a member of "{{ group_name }}" - accepting links that offline record to your real account instead of leaving it separate.
 </p>
 <p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
-    If you accept: you will be added to the group "<strong style="color:#ccc;">{{ group_name }}</strong>" as a full member, and all shared expense history recorded under "{{ dummy_name }}" will be transferred to your account. Categories and tags are matched by name; anything that doesn't match is dropped. You and {{ inviting_name }} will become actual spending buddies going forward.
+    If you accept: all shared expense history tracked under {{ inviting_name }}'s "{{ dummy_name }}" will be transferred to your account. Categories and tags are matched by name; anything that doesn't match is dropped.
 </p>
 {% else %}
-<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Account merge invitation</h2>
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Merge request</h2>
 <p style="color:#ccc;line-height:1.6;">
-    <strong style="color:#e0e0e0;">{{ inviting_name }}</strong> has been tracking shared expenses with an offline buddy named "<strong style="color:#e0e0e0;">{{ dummy_name }}</strong>" and believes that is you.
+    <strong style="color:#e0e0e0;">{{ inviting_name }}</strong> has been tracking shared expenses with an offline buddy named "<strong style="color:#e0e0e0;">{{ dummy_name }}</strong>", and believes that is you. You're already buddies with {{ inviting_name }} - accepting links that offline record to your real account instead of leaving it separate.
 </p>
 <p style="color:#aaa;font-size:0.9rem;line-height:1.5;">
-    If you accept, all shared expense history recorded under "{{ dummy_name }}" will be transferred to your account. Categories and tags are matched by name; anything that doesn't match is dropped. You and {{ inviting_name }} will become actual spending buddies going forward.
+    If you accept, all shared expense history tracked under {{ inviting_name }}'s "{{ dummy_name }}" will be transferred to your account. Categories and tags are matched by name; anything that doesn't match is dropped.
 </p>
 {% endif %}
 <div style="margin:28px 0;text-align:center;">
     <a href="{{ merge_url }}" style="display:inline-block;background:#e0e0e0;color:#141414;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;">Accept and merge</a>
 </div>
 <p style="color:#666;font-size:0.82rem;line-height:1.5;">
-    This invitation expires in 7 days. If this was not intended for you, ignore this email.
+    This request expires in 7 days. If this was not intended for you, ignore this email.
 </p>
 {% endblock %}

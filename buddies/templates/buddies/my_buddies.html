@@ -92,11 +92,25 @@
                 </div>
                 {% else %}
                 <form id="merge-form-{{ info.dummy.uid }}" method="post"
-                      action="{% url 'buddies:send_merge_invite' info.dummy.uid %}"
+                      action="{% url 'buddies:merge_dummy' info.dummy.uid %}"
+                      class="merge-dummy-form"
+                      data-source-name="{{ info.dummy.display_name|escapejs }}"
                       style="display:none;gap:6px;flex-wrap:wrap;align-items:center;">
                     {% csrf_token %}
-                    <input type="email" name="email" placeholder="Their email" class="input-inline" required>
-                    <button type="submit" class="btn btn-sm">Send</button>
+                    <select name="target_key" class="input-inline" required>
+                        <option value="self" data-kind="self">Yourself</option>
+                        <optgroup label="Offline buddies">
+                            {% for other in unified_debts %}{% if other.type == 'dummy' and other.dummy and not other.dummy.is_archive and other.dummy.uid != info.dummy.uid %}
+                            <option value="d{{ other.dummy.uid }}" data-kind="dummy">{{ other.display_name }}</option>
+                            {% endif %}{% endfor %}
+                        </optgroup>
+                        <optgroup label="Buddies">
+                            {% for other in unified_debts %}{% if other.type == 'feuser' and other.feuser %}
+                            <option value="f{{ other.feuser.pk }}" data-kind="feuser">{{ other.display_name }}</option>
+                            {% endif %}{% endfor %}
+                        </optgroup>
+                    </select>
+                    <button type="submit" class="btn btn-sm">Merge</button>
                     <button type="button" class="btn btn-sm btn-secondary"
                             onclick="document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='none';document.getElementById('ctx-wrap-{{ info.dummy.uid }}').style.display='inline-flex'">
                         Cancel
@@ -115,7 +129,7 @@
                                 onclick="openDummyPicModal(this)">Change photo</button>
                         {% if not request.feuser.is_demo %}
                         <button class="ctx-menu-item" id="merge-btn-{{ info.dummy.uid }}"
-                                onclick="document.getElementById('ctx-wrap-{{ info.dummy.uid }}').style.display='none';document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='flex'">Invite as user</button>
+                                onclick="document.getElementById('ctx-wrap-{{ info.dummy.uid }}').style.display='none';document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='flex'">Merge into&hellip;</button>
                         {% endif %}
                         <a href="{% url 'buddies:kick_dummy' info.dummy.uid %}" id="btn-kick-dummy-{{ info.dummy.uid }}" class="ctx-menu-item ctx-menu-item--danger">Remove</a>
                     </div>
@@ -130,17 +144,17 @@
 {% endif %}
 
 
-{% if group_invites_in or pending_invites_in or pending_invites_out or pending_onboarding_invites_out or merge_invites_in %}
+{% if group_invites_in or pending_invites_in or pending_invites_out or pending_onboarding_invites_out or merge_invites_in or merge_invites_out %}
 <section class="buddies-section" id="section-invites">
     <h2>Pending Invitations</h2>
 
     {% if group_invites_in %}
-    <h3>Group invitations</h3>
+    <h3>Project invitations</h3>
     {% for invite in group_invites_in %}
     <div class="invite-card">
-        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> ({{ invite.inviting_feuser.email }}) invited you to join the group <strong>{{ invite.group.name }}</strong>.</p>
+        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> ({{ invite.inviting_feuser.email }}) invited you to join the project <strong>{{ invite.group.name }}</strong>.</p>
         <div class="invite-actions">
-            <a href="{% url 'buddies:view_group_invite' invite.token %}" class="btn btn-sm">View invite</a>
+            <a href="{% url 'projects:view_project_invite' invite.token %}" class="btn btn-sm">View invite</a>
         </div>
     </div>
     {% endfor %}
@@ -169,7 +183,7 @@
     <h3>Offline record link requests</h3>
     {% for invite in merge_invites_in %}
     <div class="invite-card">
-        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> has you listed as an offline member{% if invite.dummy.owning_group %} of the group "<strong>{{ invite.dummy.owning_group.name }}</strong>"{% endif %} under the name "<strong>{{ invite.dummy.display_name }}</strong>". If you accept, all expense history under that entry will be linked to your real account{% if invite.dummy.owning_group %} and you will join the group{% endif %}.</p>
+        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> has you listed as an offline buddy under the name "<strong>{{ invite.dummy.display_name }}</strong>". You're already buddies - if you accept, all expense history under that entry will be linked to your real account.</p>
         <div class="invite-actions">
             <form method="post" action="{% url 'buddies:accept_merge' invite.token %}">
                 {% csrf_token %}
@@ -201,6 +215,19 @@
         <form method="post" action="{% url 'buddies:revoke_onboarding_invite' invite.token %}">
             {% csrf_token %}
             <button type="submit" id="btn-revoke-onboarding-invite-{{ invite.token }}" class="btn btn-sm btn-secondary">Revoke</button>
+        </form>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if merge_invites_out %}
+    <h3>Merge requests you sent</h3>
+    {% for invite in merge_invites_out %}
+    <div class="invite-card invite-card-outgoing">
+        <p>Sent to <strong>{{ invite.invited_feuser.first_name }} {{ invite.invited_feuser.last_name }}</strong> for "<strong>{{ invite.dummy.display_name }}</strong>". Expires {{ invite.expires_at|date:"N j, Y" }}.</p>
+        <form method="post" action="{% url 'buddies:revoke_merge_invite' invite.token %}">
+            {% csrf_token %}
+            <button type="submit" id="btn-revoke-merge-{{ invite.token }}" class="btn btn-sm btn-secondary">Revoke</button>
         </form>
     </div>
     {% endfor %}
@@ -336,4 +363,5 @@
 })();
 </script>
 {% include "partials/partnership_invite_js.html" %}
+{% include "partials/merge_dummy_js.html" %}
 {% endblock %}

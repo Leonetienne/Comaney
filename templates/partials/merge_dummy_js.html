@@ -1,0 +1,28 @@
+<script>
+(function () {
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form.classList || !form.classList.contains('merge-dummy-form')) return;
+        var select = form.querySelector('select[name="target_key"]');
+        var option = select ? select.options[select.selectedIndex] : null;
+        if (!option) return;
+        e.preventDefault();
+        var sourceName = form.dataset.sourceName;
+        var targetName = option.textContent.trim();
+        var message, okLabel;
+        if (option.dataset.kind === 'dummy') {
+            message = 'Merge "' + sourceName + '" into "' + targetName + '"? Their shared history will be combined into one entry. This cannot be undone.';
+            okLabel = 'Merge';
+        } else if (option.dataset.kind === 'self') {
+            message = 'Merge "' + sourceName + '" into yourself? Their shared history will be folded into your own account. This cannot be undone.';
+            okLabel = 'Merge';
+        } else {
+            message = 'Send a merge request to ' + targetName + '? If they approve, "' + sourceName + '"\'s history will be linked to their account.';
+            okLabel = 'Send request';
+        }
+        window.confirmDialog(message, okLabel).then(function () {
+            form.submit();
+        }).catch(function () {});
+    });
+})();
+</script>
