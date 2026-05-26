@@ -11,6 +11,7 @@
 {% endfor %}
 
 <div class="form-wrap">
+<div class="add-buddy-panel">
     <form method="post" novalidate>
         {% csrf_token %}
         {% if form_nonce %}<input type="hidden" name="form_nonce" value="{{ form_nonce }}">{% endif %}
@@ -94,6 +95,7 @@
             <a href="{% url 'budget:scheduled_list' %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
+</div>
 </div>
 <script>
 (function () {

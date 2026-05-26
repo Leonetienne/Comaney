@@ -24,6 +24,13 @@
 // ── Shared pill / label system ────────────────────────────────────────────────
 // Base: neutral chip. Modifiers: --accent, --warning, --rounded, --muted.
 
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .pill {
   display: inline-block;
   padding: 2px 8px;

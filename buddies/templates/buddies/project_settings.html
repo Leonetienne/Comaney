@@ -8,8 +8,10 @@
     <div class="group-hero-content">
         <div class="page-header">
             <h1>{{ project.name }}</h1>
-            {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
-            {% if project.archived %}<span class="pill pill--faded">Archived</span>{% endif %}
+            <div class="pills">
+                {% if is_admin %}<span class="pill">You are admin</span>{% endif %}
+                {% if project.archived %}<span class="pill pill--faded">Archived</span>{% endif %}
+            </div>
         </div>
         {% if project.description %}<p class="group-description">{{ project.description }}</p>{% endif %}
     </div>
