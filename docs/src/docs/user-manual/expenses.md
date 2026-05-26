@@ -13,6 +13,8 @@ When you add a new expense, you choose what kind it is:
 | **Savings deposit** | Money you move into savings. Comaney treats this like spending because the money leaves your day-to-day budget. |
 | **Savings withdrawal** | Money you take back from savings. Treated like income: it comes back into your budget. |
 
+Income and savings types are for your own personal tracking only. If you assign an expense to a buddy or a project, it must be type **Expense**: the shared cost calculation only works correctly for money that was actually spent.
+
 ## What information you can record
 
 | Field | Do I have to fill this in? | What it's for |
