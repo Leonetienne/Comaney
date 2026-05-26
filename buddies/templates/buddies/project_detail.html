@@ -59,6 +59,13 @@
 </div>
 {% endif %}
 
+{# ── Total project spending (always shown, all-time, independent of date range) ── #}
+<section class="buddies-section" id="section-total-spending">
+    <div class="buddies-section--surface">
+        <p class="page-subtitle" style="margin:0;">Total project spendings <strong id="proj-total-label">{{ currency }}0.00</strong></p>
+    </div>
+</section>
+
 {# ── Balances (hidden for solo projects) ────────────────────────────────── #}
 {% if not is_solo %}
 <section class="buddies-section" id="section-balances">
@@ -242,7 +249,6 @@
 <section class="buddies-section" id="section-spending-breakdown" style="display:none">
     <h2>Spending breakdown</h2>
     <div class="buddies-section--surface">
-    <p class="page-subtitle" style="margin:0 0 0.25rem;">Total group spending: <strong id="proj-total-label"></strong></p>
     <p class="font-sm text-muted" style="margin:0 0 1rem;">Each slice shows how much of the total each person paid upfront. This is not the same as debt: it does not account for who owes whom or who has already settled.</p>
     <div class="group-spending-wrap">
         <div id="group-spending-pie" class="group-spending-chart"></div>
@@ -411,12 +417,11 @@
     var CURRENCY = "{{ currency|escapejs }}";
     var _xhr = null;
 
-    function fetchCharts(from, to) {
+    function fetchCharts() {
         if (_xhr) _xhr.abort();
-        var params = new URLSearchParams({ date_from: from, date_to: to });
         var xhr = new XMLHttpRequest();
         _xhr = xhr;
-        xhr.open('GET', CHARTS_URL + '?' + params.toString(), true);
+        xhr.open('GET', CHARTS_URL, true);
         xhr.onload = function() {
             _xhr = null;
             if (xhr.status === 200) {
@@ -431,12 +436,13 @@
     function renderCharts(data) {
         var total = parseFloat(data.group_total_spending || '0');
 
+        var lbl = document.getElementById('proj-total-label');
+        if (lbl) lbl.textContent = CURRENCY + total.toFixed(2);
+
         var pieSect = document.getElementById('section-spending-breakdown');
         if (pieSect) {
             if (total > 0.005) {
                 pieSect.style.display = '';
-                var lbl = document.getElementById('proj-total-label');
-                if (lbl) lbl.textContent = CURRENCY + total.toFixed(2);
                 if (window._renderPie) window._renderPie(data.spending_pie);
             } else {
                 pieSect.style.display = 'none';
@@ -457,16 +463,9 @@
         if (window.renderProjectCharts) window.renderProjectCharts();
     }
 
-    window.addEventListener('daterangechange', function(e) {
-        fetchCharts(e.detail.from, e.detail.to);
-    });
-
-    document.addEventListener('DOMContentLoaded', function() {
-        if (window._dateRange) {
-            var cur = window._dateRange.get();
-            fetchCharts(cur.from, cur.to);
-        }
-    });
+    // Charts cover the project's entire history; they don't depend on the
+    // date-range picker, so they're fetched once on load only.
+    document.addEventListener('DOMContentLoaded', fetchCharts);
 })();
 </script>
 

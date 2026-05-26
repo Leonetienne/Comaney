@@ -402,24 +402,17 @@ def project_detail(request, project_id):
     ctx.update(_date_range_presets_context(feuser))
     return render(request, "buddies/project_detail.html", ctx)
 
-def _compute_project_charts(feuser, project, start_date, end_date):
+def _compute_project_charts(feuser, project):
     """
     Compute spending pie, spending-over-time, and tag-dist for a project.
-    If start_date/end_date are provided, only approved expenses in that range
-    are included. Returns a dict ready for JSON serialization.
+    All charts and totals cover the project's entire history, independent of
+    the date-range picker used elsewhere on the page. Returns a dict ready
+    for JSON serialization.
     """
     breakdown = BuddyQueryService.get_group_full_breakdown(feuser, project)
     overlay_notes, overlay_tags = _fetch_overlay_notes(feuser, breakdown)
 
     approved_expenses = [e for e in breakdown["expenses"] if e["expense"].buddy_approved]
-
-    # Apply date filter to approved expenses
-    if start_date and end_date:
-        def _in_range(ed):
-            exp = ed["expense"]
-            d = exp.date_due if exp.date_due else exp.date_created.date()
-            return start_date <= d <= end_date
-        approved_expenses = [ed for ed in approved_expenses if _in_range(ed)]
 
     # Pie chart: member spending
     graph_nodes = []
@@ -436,13 +429,17 @@ def _compute_project_charts(feuser, project, start_date, end_date):
         })
 
     member_spending: dict = {}
+    for ed in approved_expenses:
+        if ed["expense"].is_buddies_settlement:
+            continue
+        pk = ed["payer_key"]
+        member_spending[pk] = member_spending.get(pk, Decimal("0")) + ed["total"]
+
     project_total = Decimal("0")
     for ed in approved_expenses:
         if ed["expense"].is_buddies_settlement:
             continue
         project_total += ed["total"]
-        pk = ed["payer_key"]
-        member_spending[pk] = member_spending.get(pk, Decimal("0")) + ed["total"]
 
     spending_pie = [
         {
@@ -548,7 +545,7 @@ def _compute_project_charts(feuser, project, start_date, end_date):
 
 @feuser_required
 def project_charts_data(request, project_id):
-    """AJAX endpoint: returns chart data for a project, filtered by date range."""
+    """AJAX endpoint: returns all-time chart data for a project."""
     feuser = request.feuser
     project = get_object_or_404(
         Project.objects.prefetch_related("members__feuser", "members__dummy"),
@@ -556,19 +553,7 @@ def project_charts_data(request, project_id):
         members__feuser=feuser,
     )
 
-    start_date = None
-    end_date = None
-    date_from_raw = request.GET.get("date_from")
-    date_to_raw   = request.GET.get("date_to")
-    if date_from_raw and date_to_raw:
-        try:
-            from datetime import date as _date_cls
-            start_date = _date_cls.fromisoformat(date_from_raw)
-            end_date   = _date_cls.fromisoformat(date_to_raw)
-        except ValueError:
-            pass
-
-    data = _compute_project_charts(feuser, project, start_date, end_date)
+    data = _compute_project_charts(feuser, project)
     return JsonResponse(data)
 
 
