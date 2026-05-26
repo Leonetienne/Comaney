@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from budget.models import Category, Tag
+from budget.models import Category, Tag, TransactionType
 from .utils import _err
 
 
@@ -190,6 +190,11 @@ def _apply_expense_fields(obj, data, feuser, creating=False):
         else:
             obj.category = None
 
+    if obj.pk and obj.type != TransactionType.EXPENSE and (
+        obj.project_id or obj.is_dummy or obj.buddy_spendings.exists()
+    ):
+        return 'Buddy and project expenses must be type "expense".'
+
     return None
 
 
@@ -268,6 +273,9 @@ def _apply_scheduled_fields(obj, data, feuser, creating=False):
                 return f"Category {data['category_id']} not found."
         else:
             obj.category = None
+
+    if obj.pk and obj.type != TransactionType.EXPENSE and obj.assign_buddy_mode:
+        return 'Buddy and project scheduled expenses must be type "expense".'
 
     return None
 

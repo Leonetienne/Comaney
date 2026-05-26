@@ -197,9 +197,29 @@ def express_creation(request):
 
                     buddy = _parse_buddy_item(item, feuser)
 
+                    project = None
+                    if not buddy:
+                        project_uid = item.get("project_uid")
+                        if project_uid:
+                            from buddies.models import Project
+                            try:
+                                project = Project.objects.get(
+                                    uid=project_uid, members__feuser=feuser, archived=False
+                                )
+                            except Project.DoesNotExist:
+                                pass
+
+                    # Buddy/project assignment only makes sense for type=expense (see
+                    # budget/expense_factory.py); the preview UI lets the AI/user pick
+                    # type and assignment independently, so force it here rather than
+                    # reject the whole batch.
+                    item_type = TransactionType(item["type"])
+                    if (buddy or project) and item_type != TransactionType.EXPENSE:
+                        item_type = TransactionType.EXPENSE
+
                     common_kwargs = dict(
                         title=item["title"],
-                        type=TransactionType(item["type"]),
+                        type=item_type,
                         value=Decimal(item["value"]),
                         payee=item.get("payee", ""),
                         note=item.get("note", ""),
@@ -232,16 +252,6 @@ def express_creation(request):
                         from buddies.services import BuddyEmailService
                         BuddyEmailService.notify_expense_created(expense, feuser)
                     else:
-                        project = None
-                        project_uid = item.get("project_uid")
-                        if project_uid:
-                            from buddies.models import Project
-                            try:
-                                project = Project.objects.get(
-                                    uid=project_uid, members__feuser=feuser, archived=False
-                                )
-                            except Project.DoesNotExist:
-                                pass
                         create_expense(owning_feuser=feuser, project=project, **common_kwargs)
                     count += 1
                 if not context.get("ai_error"):

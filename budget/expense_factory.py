@@ -30,6 +30,9 @@ def create_expense(
     buddy_group=None,  # legacy alias for project
     buddy_spendings: Optional[list[dict]] = None,
 ) -> Expense:
+    is_buddy_expense = bool(project or buddy_group or buddy_spendings or is_dummy)
+    if is_buddy_expense and type != TransactionType.EXPENSE:
+        raise ValueError("Buddy and project expenses must be type=EXPENSE.")
     expense = Expense.objects.create(
         owning_feuser=owning_feuser,
         title=title,

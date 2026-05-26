@@ -2,6 +2,7 @@ import json
 import secrets
 from datetime import date
 
+from django.contrib import messages
 from django.core.management import call_command
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,7 +12,7 @@ from ..date_utils import current_financial_month, financial_year_range
 from ..decorators import feuser_required
 from ..forms import ScheduledExpenseForm
 from ..models import Expense, ScheduledExpense
-from .expenses import _buddy_context, _parse_buddy_post
+from .expenses import BUDDY_TYPE_CONFLICT_MSG, _buddy_context, _buddy_render_context_from_post, _parse_buddy_post
 
 
 def _generate_and_notify(scheduled: ScheduledExpense, feuser) -> None:
@@ -114,6 +115,8 @@ def scheduled_create(request):
             form.save_m2m()
             _generate_and_notify(obj, feuser)
             return redirect("budget:scheduled_list")
+        elif buddy and buddy.get("type_conflict"):
+            messages.error(request, BUDDY_TYPE_CONFLICT_MSG)
     else:
         form = ScheduledExpenseForm(
             feuser=feuser,
@@ -123,16 +126,23 @@ def scheduled_create(request):
     form_nonce = secrets.token_hex(32)
     request.session["scheduled_create_nonce"] = form_nonce
 
+    if request.method == "POST":
+        buddy_render_ctx = _buddy_render_context_from_post(buddy, feuser)
+    else:
+        buddy_render_ctx = {
+            "is_buddy_expense": False,
+            "existing_mode": "single",
+            "existing_upfront_type": "me",
+            "existing_upfront_id": feuser.pk,
+            "existing_spendings_json": "[]",
+            "existing_group_id": None,
+        }
+
     return render(request, "budget/scheduled_form.html", {
         "active_nav": "scheduled",
         "form": form,
         "form_nonce": form_nonce,
-        "is_buddy_expense": False,
-        "existing_mode": "single",
-        "existing_upfront_type": "me",
-        "existing_upfront_id": feuser.pk,
-        "existing_spendings_json": "[]",
-        "existing_group_id": None,
+        **buddy_render_ctx,
         **_buddy_context(feuser),
     })
 
@@ -151,14 +161,21 @@ def scheduled_edit(request, uid):
             form.save_m2m()
             _generate_and_notify(obj, feuser)
             return redirect("budget:scheduled_list")
+        elif buddy and buddy.get("type_conflict"):
+            messages.error(request, BUDDY_TYPE_CONFLICT_MSG)
     else:
         form = ScheduledExpenseForm(instance=obj, feuser=feuser)
+
+    if request.method == "POST":
+        buddy_render_ctx = _buddy_render_context_from_post(buddy, feuser)
+    else:
+        buddy_render_ctx = _existing_assignment_ctx(obj)
 
     return render(request, "budget/scheduled_form.html", {
         "active_nav": "scheduled",
         "form": form,
         "scheduled": obj,
-        **_existing_assignment_ctx(obj),
+        **buddy_render_ctx,
         **_buddy_context(feuser),
     })
 

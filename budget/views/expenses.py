@@ -80,6 +80,7 @@ def _parse_buddy_post(post, feuser):
 
     from buddies.models import Project, DummyUser
     from feusers.models import FeUser as FU
+    from ..models import TransactionType
 
     mode = post.get("buddy_mode", "single")
     upfront_type = post.get("buddy_upfront_type", "me")
@@ -90,7 +91,14 @@ def _parse_buddy_post(post, feuser):
         "upfront_dummy": None,
         "group": None,
         "valid": True,
+        "type_conflict": False,
     }
+
+    # Buddy/project expenses participate in the shared debt graph, which only
+    # makes sense for type=EXPENSE (income/savings would invert who owes whom).
+    if post.get("type") != TransactionType.EXPENSE:
+        result["valid"] = False
+        result["type_conflict"] = True
 
     if upfront_type == "feuser":
         try:
@@ -135,6 +143,41 @@ def _parse_buddy_post(post, feuser):
         result["valid"] = False
 
     return result
+
+
+BUDDY_TYPE_CONFLICT_MSG = (
+    'Buddy and project expenses must be type "Expense". '
+    "Change the type back to Expense, or remove the assignment, then save again."
+)
+
+
+def _buddy_render_context_from_post(buddy, feuser) -> dict:
+    """Rebuild the expense-assignment template context from a just-submitted
+    (and rejected) buddy POST, so a failed submission doesn't appear to silently
+    reset the user's project/buddy selection."""
+    if not buddy:
+        return {
+            "is_buddy_expense": False,
+            "existing_mode": "single",
+            "existing_upfront_type": "me",
+            "existing_upfront_id": feuser.pk,
+            "existing_spendings_json": "[]",
+            "existing_group_id": "",
+        }
+    if buddy["upfront_type"] == "feuser" and buddy.get("upfront_feuser"):
+        upfront_id = buddy["upfront_feuser"].pk
+    elif buddy["upfront_type"] == "dummy" and buddy.get("upfront_dummy"):
+        upfront_id = buddy["upfront_dummy"].pk
+    else:
+        upfront_id = feuser.pk
+    return {
+        "is_buddy_expense": True,
+        "existing_mode": buddy["mode"],
+        "existing_upfront_type": buddy["upfront_type"],
+        "existing_upfront_id": upfront_id,
+        "existing_spendings_json": safe_json(buddy.get("spendings") or []),
+        "existing_group_id": buddy["group"].pk if buddy.get("group") else "",
+    }
 
 
 def _existing_buddy_json(expense) -> str:
@@ -316,31 +359,39 @@ def expense_create(request):
                 return HttpResponseRedirect(back) if back else redirect("buddies:buddy_summary")
             back = _safe_back_url(request.POST.get("back", ""))
             return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
+        elif buddy and buddy.get("type_conflict"):
+            messages.error(request, BUDDY_TYPE_CONFLICT_MSG)
     else:
         form = ExpenseForm(feuser=feuser, initial={"type": "expense", "settled": True, "notify": True})
 
     form_nonce = secrets.token_hex(32)
     request.session["expense_create_nonce"] = form_nonce
 
-    preselect_project_id = ""
-    raw_pid = request.GET.get("project", "")
-    if raw_pid:
-        try:
-            pid = int(raw_pid)
-            from buddies.models import Project
-            if Project.objects.filter(uid=pid, members__feuser=feuser, archived=False).exists():
-                preselect_project_id = pid
-        except (ValueError, TypeError):
-            pass
+    if request.method == "POST":
+        buddy_render_ctx = _buddy_render_context_from_post(buddy, feuser)
+    else:
+        preselect_project_id = ""
+        raw_pid = request.GET.get("project", "")
+        if raw_pid:
+            try:
+                pid = int(raw_pid)
+                from buddies.models import Project
+                if Project.objects.filter(uid=pid, members__feuser=feuser, archived=False).exists():
+                    preselect_project_id = pid
+            except (ValueError, TypeError):
+                pass
+        buddy_render_ctx = {
+            "existing_group_id": preselect_project_id,
+            "is_buddy_expense": bool(preselect_project_id),
+            "existing_mode": "group" if preselect_project_id else "single",
+        }
 
     return render(request, "budget/expense_form.html", {
         "active_nav": "expenses",
         "form": form,
         "form_nonce": form_nonce,
         "back_url": _safe_back_url(request.GET.get("back", "")),
-        "existing_group_id": preselect_project_id,
-        "is_buddy_expense": bool(preselect_project_id),
-        "existing_mode": "group" if preselect_project_id else "single",
+        **buddy_render_ctx,
         **_buddy_context(feuser),
     })
 
@@ -473,33 +524,36 @@ def expense_edit(request, uid):
                 set_initial_notification_class(expense)
             back = _safe_back_url(request.POST.get("back", ""))
             return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
+        elif buddy and buddy.get("type_conflict"):
+            messages.error(request, BUDDY_TYPE_CONFLICT_MSG)
     else:
         form = ExpenseForm(instance=expense, feuser=form_feuser)
 
-    # Determine current upfront payer for pre-population
-    if expense.is_dummy and expense.upfront_payee_dummy_id:
-        existing_upfront_type = "dummy"
-        existing_upfront_id = expense.upfront_payee_dummy_id
-    elif not expense.is_dummy and expense.buddy_spendings.exists():
-        existing_upfront_type = "me"
-        existing_upfront_id = form_feuser.pk
+    if request.method == "POST":
+        buddy_render_ctx = _buddy_render_context_from_post(buddy, feuser)
     else:
-        existing_upfront_type = "me"
-        existing_upfront_id = form_feuser.pk
-
-    is_buddy_expense = expense.buddy_spendings.exists() or expense.is_dummy or bool(expense.project_id)
+        # Determine current upfront payer for pre-population
+        if expense.is_dummy and expense.upfront_payee_dummy_id:
+            existing_upfront_type = "dummy"
+            existing_upfront_id = expense.upfront_payee_dummy_id
+        else:
+            existing_upfront_type = "me"
+            existing_upfront_id = form_feuser.pk
+        buddy_render_ctx = {
+            "is_buddy_expense": expense.buddy_spendings.exists() or expense.is_dummy or bool(expense.project_id),
+            "existing_upfront_type": existing_upfront_type,
+            "existing_upfront_id": existing_upfront_id,
+            "existing_spendings_json": _existing_buddy_json(expense),
+            "existing_mode": "group" if expense.project_id else "single",
+            "existing_group_id": expense.project_id or "",
+        }
 
     return render(request, "budget/expense_form.html", {
         "active_nav": "expenses",
         "form": form,
         "expense": expense,
         "back_url": request.GET.get("back", ""),
-        "is_buddy_expense": is_buddy_expense,
-        "existing_upfront_type": existing_upfront_type,
-        "existing_upfront_id": existing_upfront_id,
-        "existing_spendings_json": _existing_buddy_json(expense),
-        "existing_mode": "group" if expense.project_id else "single",
-        "existing_group_id": expense.project_id or "",
+        **buddy_render_ctx,
         **_buddy_context(feuser),
     })
 

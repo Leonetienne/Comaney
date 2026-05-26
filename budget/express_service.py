@@ -194,6 +194,8 @@ Each item in the "items" array must have exactly these keys:
 Only use category_uid, tag_uids, and project_uid values that appear in the lists below.
 If the user describes a lump sum for categorically different things, split by category/tag group.
 Default type to "expense" unless the description clearly indicates income or savings movement.
+If an item is assigned to a project (project_uid is set), its type MUST be "expense": project costs are
+shared expenses, never income or savings movements for the group. Never combine a non-"expense" type with a project_uid.
 
 {catalog}"""
 
@@ -373,6 +375,11 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
         project_uid = raw.get("project_uid")
         if project_uid not in valid_project_uids:
             project_uid = None
+
+        # Project expenses only make sense as type=expense (see budget/expense_factory.py);
+        # the AI is told this, but force it rather than trust it.
+        if project_uid is not None and tx_type != "expense":
+            tx_type = "expense"
 
         date_due = None
         date_due_raw = raw.get("date_due")

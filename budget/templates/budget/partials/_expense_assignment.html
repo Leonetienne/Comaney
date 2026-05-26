@@ -23,7 +23,7 @@ window.BUDDY_EXPENSE_CONFIG = {
 <script src="{% static 'dist/buddy_expense.js' %}" defer></script>
 
 {# ── Assignment tab group ──────────────────────────────────────────── #}
-<div class="mt-md">
+<div class="mt-md" id="expense-assignment-block">
     <label class="form-label">Expense assignment</label>
     <div class="assign-tab-group" id="assign-tab-group">
         <button type="button" class="assign-tab" data-assign="none" id="assign-none">None</button>
@@ -107,8 +107,36 @@ window.BUDDY_EXPENSE_CONFIG = {
     var slidersEl    = document.getElementById('buddy-sliders');
     var equalBtn     = document.getElementById('buddy-equal-btn');
     var section      = document.getElementById('buddy-payment-section');
+    var assignBlock  = document.getElementById('expense-assignment-block');
+    var typeSelect   = document.getElementById('{{ form.type.id_for_label }}');
 
     var projectsData = window.BUDDY_EXPENSE_CONFIG ? window.BUDDY_EXPENSE_CONFIG.groupsData : [];
+
+    // ── Type <-> assignment mutual lock ─────────────────────────────────────
+    // Buddy/project expenses only make sense for type=Expense (see budget/expense_factory.py).
+    // Changing type away from Expense forces assignment off; having an assignment
+    // active locks the type dropdown to Expense so the two can never conflict.
+    function applyAssignmentGate() {
+        if (!typeSelect) return;
+        var locked = !!(cb && cb.checked);
+        Array.from(typeSelect.options).forEach(function (opt) {
+            opt.disabled = locked && opt.value !== 'expense';
+        });
+    }
+
+    function applyTypeGate() {
+        if (!typeSelect || !assignBlock) return;
+        if (typeSelect.value !== 'expense') {
+            if (cb && cb.checked) activateTab('none');
+            assignBlock.style.display = 'none';
+        } else {
+            assignBlock.style.display = '';
+        }
+    }
+
+    if (typeSelect) {
+        typeSelect.addEventListener('change', applyTypeGate);
+    }
 
     // ── Determine initial tab from pre-filled state ──────────────────────────
     var initAssign = 'none';
@@ -148,6 +176,7 @@ window.BUDDY_EXPENSE_CONFIG = {
             updateProjectImage();
             checkSolo();
         }
+        applyAssignmentGate();
     }
 
     tabs.forEach(function (tab) {
@@ -240,6 +269,8 @@ window.BUDDY_EXPENSE_CONFIG = {
             updateProjectImage();
             checkSolo();
         }
+        applyTypeGate();
+        applyAssignmentGate();
     }, 0);
 })();
 </script>

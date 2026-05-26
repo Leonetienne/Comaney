@@ -5,6 +5,10 @@
 {% block content %}
 <h1>{% if expense %}Edit expense{% else %}New expense{% endif %}</h1>
 
+{% for message in messages %}
+<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
+{% endfor %}
+
 <div class="form-wrap">
 {% if expense and expense.is_dummy %}
 <div class="info-box mb-md">
