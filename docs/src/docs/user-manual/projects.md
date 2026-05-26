@@ -79,6 +79,20 @@ You can log expenses on their behalf and settle their share yourself. You can al
 !!! note
     Adding an offline member to a solo project makes it a multi-member project. The debt diagram and settlement tools become visible.
 
+## Merging an offline member
+
+Admin only. You can combine an offline member's history with another entry in the project, either because two entries turn out to be the same person, or because that person now has a real Comaney account and is already a member.
+
+1. On the project's **Manage** page, click **···** next to the offline member and choose **Merge into...**.
+2. Pick a target from the list: another offline member, or a real member who has already joined the project.
+3. Click **Merge** and confirm.
+
+If you picked another offline member, the merge happens right away and cannot be undone: the shared expense history of both entries is combined, and the one you started from disappears.
+
+If you picked a real member, they get an email and a notification asking them to approve it. The request shows up for them on this same Manage page. Once they accept, the offline member's expense history moves to their account and the offline entry disappears.
+
+If you pick **Yourself**, the merge also happens right away, with no approval needed - useful when an offline member turns out to have been you all along. The offline entry disappears and its expense history becomes attributed to you directly.
+
 ## Connecting with a fellow member
 
 Any member, not just the admin, can click the **···** menu next to another real member's name on the Manage tab to:

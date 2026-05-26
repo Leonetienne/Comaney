@@ -13,7 +13,7 @@ An offline buddy is someone who does not use Comaney. You just give them a name.
 
 The buddy appears in your list straight away.
 
-**Want to link their Comaney account later?** If the person eventually signs up, you can connect their account to the existing entry so the full expense history carries over. See [Upgrading an offline buddy](#upgrading-an-offline-buddy-to-a-connected-user) below.
+**Want to link their Comaney account later?** If the person eventually signs up, you can connect their account to the existing entry so the full expense history carries over. See [Merging an offline buddy into another connection](#merging-an-offline-buddy-into-another-connection) below.
 
 ## Inviting another Comaney user
 
@@ -44,18 +44,30 @@ If you already share a project with someone, you can invite them as a direct bud
 
 This works for any member, not just the project admin. The option only appears if you are not already buddies and you do not already have a pending invite to them. The same menu may also offer **Invite as partner** - see [Catalog Partnerships](../catalog-partnerships.md).
 
-## Upgrading an offline buddy to a connected user
+## Merging an offline buddy into another connection
 
-Once an offline buddy has a Comaney account, you can link it to their existing entry so the full shared expense history moves to their real account.
+You can combine an offline buddy's history with another entry, either because they turn out to be the same person as someone else, or because they now have a real Comaney account.
 
-**For a personal offline buddy:**
+**Merging two offline buddies together:**
 
-1. On **My Buddies**, find the offline buddy and click **Invite as user**.
-2. Enter their email address and click **Send**.
+1. On **My Buddies**, click **···** next to the offline buddy and choose **Merge into...**.
+2. Pick the other offline buddy from the list and click **Merge**.
+3. Confirm. This happens right away and cannot be undone: the shared expense history of both entries is combined into the one you merged into, and the one you started from disappears.
 
-**For an offline project member** (admin only):
+**Merging an offline buddy into a real Comaney account:**
 
-1. On the project page, find the offline member and click **Invite to merge**.
-2. Enter their email address and click **Send**.
+This only works once the person is already connected to you, either as a direct buddy (see [Inviting another Comaney user](#inviting-another-comaney-user) above) or as a fellow project member.
 
-In both cases, they receive an email. When they accept the link in that email, their account is connected, all expense history transfers over, and the offline entry is replaced by a real connection.
+1. On **My Buddies**, click **···** next to the offline buddy and choose **Merge into...**.
+2. Pick the connected person from the list and click **Merge**.
+3. Confirm. They receive an email and a notification asking them to approve the merge. Once they accept, the offline buddy's expense history moves to their real account and the offline entry disappears.
+
+**Merging an offline buddy into yourself:**
+
+Sometimes you realize the expenses you tracked under an offline buddy were actually your own all along.
+
+1. On **My Buddies**, click **···** next to the offline buddy and choose **Merge into...**.
+2. Pick **Yourself** from the list and click **Merge**.
+3. Confirm. This happens right away, with no approval needed. The offline buddy disappears, and any expenses you had split with them become fully yours - they stop being shared at all.
+
+**For an offline project member** (admin only): the same **Merge into...** option appears on the project's **Manage** page, listing the project's other offline members and its real members. If you choose a real member, the pending request shows up for them on that same project page, not on My Buddies.
