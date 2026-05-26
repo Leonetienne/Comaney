@@ -451,8 +451,12 @@ class TestConsentSetAtRecorded:
 
 
 def _is_403(driver):
-    src = driver.page_source
-    return "403" in src or "Forbidden" in src or "locked" in src.lower()
+    """The participant-approve/reject endpoints return a plain HttpResponseForbidden
+    with exactly this body when the 24-hour consent lock blocks the request. Matching
+    that exact text (instead of generic substrings like "403" or "locked") avoids false
+    positives from unrelated content on a successful, fully-rendered redirect target
+    page (e.g. a random CSRF token or primary key that happens to contain "403")."""
+    return "Decision is locked after 24 hours." in driver.page_source
 
 
 def _post_to_endpoint(driver, url):

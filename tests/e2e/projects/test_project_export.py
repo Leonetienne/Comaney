@@ -4,14 +4,13 @@ Project data export (ZIP):
 - Contains meta.csv, members.csv, expenses.csv, participation_matrix.csv
 - meta.csv lists project settings (never date-filtered)
 - members.csv lists the member roster (never date-filtered)
-- expenses.csv lists expenses logged within the selected date range
-- participation_matrix.csv has one row per expense within that range, with
-  each participant's share in percent (payer's implicit share included)
+- expenses.csv lists the project's entire expense history (all-time)
+- participation_matrix.csv has one row per expense, with each participant's
+  share in percent (payer's implicit share included)
 - Any project member (not just the admin) can export
 - Non-members and unauthenticated requests are denied
-- expenses.csv/participation_matrix.csv respect an explicit date_from/date_to
-  range; with no params given, they default to the current financial month
-  (NOT all-time -- that is only the case for the account-wide export)
+- Projects have no date-range picker, so expenses.csv/participation_matrix.csv
+  always cover all-time data; any date_from/date_to params passed are ignored
 """
 import io
 import time
@@ -117,11 +116,12 @@ class TestProjectExport:
         assert row[ctx["b_id"]] == "25.000", "Participant share_percent missing/incorrect"
         assert row["self"] == "75.000", "Payer's implicit share missing/incorrect"
 
-    def test_date_range_filters_expenses_but_not_meta_or_members(self, driver, w, ctx):
-        """An explicit date_from/date_to must exclude out-of-range expenses from
-        expenses.csv and participation_matrix.csv, but meta.csv/members.csv must
-        always reflect the full, unfiltered project (settings/roster aren't
-        time-scoped)."""
+    def test_export_is_always_all_time(self, driver, w, ctx):
+        """expenses.csv and participation_matrix.csv always cover the
+        project's entire history. Projects have no date-range picker, so
+        omitting date params (the normal case) exports all-time data, and
+        passing date_from/date_to anyway (e.g. a stale bookmarked link) must
+        have no effect either."""
         old_exp_id = int(_shell(
             f"from budget.models import Expense; "
             f"from feusers.models import FeUser; "
@@ -132,55 +132,22 @@ class TestProjectExport:
             f"print(e.pk)"
         ))
         try:
-            # A far-future-only range must exclude both the old expense and
-            # today's ExportMatrixExpense (created via the ctx fixture, date_due unset).
-            resp = _get_export(driver, ctx["gid"], date_from="2099-01-01", date_to="2099-12-31")
-            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                expenses_csv = _read_csv(zf, "expenses.csv")
-                matrix_rows = [l.split(",")[0] for l in _read_csv(zf, "participation_matrix.csv").splitlines()[1:]]
-                meta_csv = _read_csv(zf, "meta.csv")
-                members_csv = _read_csv(zf, "members.csv")
-
-            assert "OldRangeExpense" not in expenses_csv, "Out-of-range expense leaked into expenses.csv"
-            assert "ExportMatrixExpense" not in expenses_csv, "In-range-but-unrelated expense leaked into expenses.csv"
-            assert str(old_exp_id) not in matrix_rows, "Out-of-range expense leaked into participation_matrix.csv"
-            assert "Export Test Project" in meta_csv, "meta.csv must not be affected by date filtering"
-            assert ctx["b"]["email"] in members_csv, "members.csv must not be affected by date filtering"
-
-            # A wide range covering 2000 must include the old expense again,
-            # in both expenses.csv and participation_matrix.csv.
-            wide_resp = _get_export(driver, ctx["gid"], date_from="1999-01-01", date_to="2099-12-31")
-            with zipfile.ZipFile(io.BytesIO(wide_resp.content)) as zf:
-                wide_expenses_csv = _read_csv(zf, "expenses.csv")
-                wide_matrix_rows = [l.split(",")[0] for l in _read_csv(zf, "participation_matrix.csv").splitlines()[1:]]
-            assert "OldRangeExpense" in wide_expenses_csv, "Wide range must include the old expense"
-            assert str(old_exp_id) in wide_matrix_rows, "Wide range must include the old expense in the matrix"
-        finally:
-            _shell(f"from budget.models import Expense; Expense.objects.filter(pk={old_exp_id}).delete()")
-
-    def test_no_date_params_defaults_to_current_month_not_all_time(self, driver, w, ctx):
-        """Omitting date_from/date_to entirely must NOT silently export all-time
-        data: it must fall back to the current financial month, exactly like the
-        date-range nav's own default. An old expense must still be excluded."""
-        old_exp_id = int(_shell(
-            f"from budget.models import Expense; "
-            f"from feusers.models import FeUser; "
-            f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
-            f"e = Expense.objects.create(owning_feuser=a, title='NoParamsOldExpense', "
-            f"  type='expense', value='10.00', date_due='2000-01-01', "
-            f"  settled=True, buddy_approved=True, project_id={ctx['gid']}); "
-            f"print(e.pk)"
-        ))
-        try:
+            # No date params at all: the old expense from 2000 must still appear.
             resp = _get_export(driver, ctx["gid"])
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 expenses_csv = _read_csv(zf, "expenses.csv")
-            assert "NoParamsOldExpense" not in expenses_csv, (
-                "No date params must default to the current month, not all-time"
-            )
-            assert "ExportMatrixExpense" in expenses_csv, (
-                "Today's expense (date_due unset) must still appear under the default current-month range"
-            )
+                matrix_rows = [l.split(",")[0] for l in _read_csv(zf, "participation_matrix.csv").splitlines()[1:]]
+            assert "OldRangeExpense" in expenses_csv, "Export must cover all-time, including the old expense"
+            assert "ExportMatrixExpense" in expenses_csv, "Today's expense must also be present"
+            assert str(old_exp_id) in matrix_rows, "Old expense must appear in the participation matrix"
+
+            # A far-future-only date range must have no effect: date params
+            # passed to the export endpoint are ignored.
+            resp2 = _get_export(driver, ctx["gid"], date_from="2099-01-01", date_to="2099-12-31")
+            with zipfile.ZipFile(io.BytesIO(resp2.content)) as zf:
+                expenses_csv2 = _read_csv(zf, "expenses.csv")
+            assert "OldRangeExpense" in expenses_csv2, "Date params must be ignored; old expense must still appear"
+            assert "ExportMatrixExpense" in expenses_csv2, "Date params must be ignored; today's expense must still appear"
         finally:
             _shell(f"from budget.models import Expense; Expense.objects.filter(pk={old_exp_id}).delete()")
 
