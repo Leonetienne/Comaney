@@ -18,7 +18,6 @@ from django.views.decorators.http import require_POST
 from budget.decorators import feuser_required
 from budget.models import Expense
 from budget.query_parser import apply_query, has_date_filter
-from budget.views._period import _date_range_presets_context, resolve_date_range
 from feusers.models import FeUser
 from ..models import Project, ProjectInvite, ProjectMember, BuddySpending, DummyUser
 from ..services import BuddyArchiveService, ProjectService, ProjectExportService, BuddyQueryService, _display_name
@@ -396,18 +395,15 @@ def project_detail(request, project_id):
         "has_multiple_members": len(breakdown["member_map"]) > 1,
         "currency": feuser.currency,
         "project_url": project_url,
-        "initial_date_from": request.GET.get("date_from", ""),
-        "initial_date_to":   request.GET.get("date_to", ""),
     }
-    ctx.update(_date_range_presets_context(feuser))
     return render(request, "buddies/project_detail.html", ctx)
 
 def _compute_project_charts(feuser, project):
     """
     Compute spending pie, spending-over-time, and tag-dist for a project.
-    All charts and totals cover the project's entire history, independent of
-    the date-range picker used elsewhere on the page. Returns a dict ready
-    for JSON serialization.
+    All charts and totals cover the project's entire history (all-time);
+    projects have no date-range picker. Returns a dict ready for JSON
+    serialization.
     """
     breakdown = BuddyQueryService.get_group_full_breakdown(feuser, project)
     overlay_notes, overlay_tags = _fetch_overlay_notes(feuser, breakdown)
@@ -569,7 +565,8 @@ def project_expense_list_partial(request, project_id):
     """
     Returns an HTML fragment with the filtered expense list sections
     (pending + approved) for a project. Used by the filter controls
-    on the project detail page via XHR.
+    on the project detail page via XHR. Always covers the project's
+    entire history (all-time); projects have no date-range picker.
     """
     feuser = request.feuser
     project = get_object_or_404(
@@ -584,17 +581,6 @@ def project_expense_list_partial(request, project_id):
     i_paid = request.GET.get("i_paid") == "1"
     sort_by = request.GET.get("sort_by", "date")
     sort_dir = request.GET.get("sort_dir", "desc")
-
-    start_date = None
-    end_date   = None
-    date_from_raw = request.GET.get("date_from", "").strip()
-    date_to_raw   = request.GET.get("date_to", "").strip()
-    if date_from_raw and date_to_raw:
-        try:
-            start_date = date.fromisoformat(date_from_raw)
-            end_date   = date.fromisoformat(date_to_raw)
-        except ValueError:
-            pass
 
     # Build effective query string including hide_recurring toggle
     effective_q = q
@@ -620,12 +606,6 @@ def project_expense_list_partial(request, project_id):
 
     if matching_pks is not None:
         expenses_data = [ed for ed in expenses_data if ed["expense"].pk in matching_pks]
-    if start_date and end_date:
-        def _in_range(ed):
-            exp = ed["expense"]
-            d = exp.date_due if exp.date_due else exp.date_created.date()
-            return start_date <= d <= end_date
-        expenses_data = [ed for ed in expenses_data if _in_range(ed)]
     if i_paid:
         expenses_data = [ed for ed in expenses_data if ed["payer_is_me"]]
 
@@ -681,11 +661,10 @@ def project_settings(request, project_id):
 @feuser_required
 def project_export(request, project_id):
     """
-    Export project data for the currently selected date range as a
-    downloadable ZIP of CSV files: meta.csv (project settings, never
-    date-filtered), members.csv (the member roster, never date-filtered),
-    expenses.csv and participation_matrix.csv (scoped to the date range),
-    and any pictures. See ProjectExportService.write_project_csvs.
+    Export the project's entire history (all-time, no date range) as a
+    downloadable ZIP of CSV files: meta.csv (project settings), members.csv
+    (the member roster), expenses.csv and participation_matrix.csv, and any
+    pictures. See ProjectExportService.write_project_csvs.
     """
     feuser = request.feuser
     project = get_object_or_404(
@@ -693,15 +672,14 @@ def project_export(request, project_id):
         uid=project_id,
         members__feuser=feuser,
     )
-    start_date, end_date = resolve_date_range(request, feuser)
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        ProjectExportService.write_project_csvs(zf, project, feuser, start_date=start_date, end_date=end_date)
+        ProjectExportService.write_project_csvs(zf, project, feuser)
 
     _name_slug = re.sub(r"[^A-Za-z0-9]+", "_", project.name).strip("_")
     _name_part = f"_{_name_slug}" if _name_slug else ""
-    filename = f"project_export{_name_part}_{start_date.isoformat()}_to_{end_date.isoformat()}.zip"
+    filename = f"project_export{_name_part}.zip"
     response = HttpResponse(buf.getvalue(), content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response

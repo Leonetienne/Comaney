@@ -42,8 +42,6 @@
     <a href="{% url 'projects:project_settings' project_id=project.uid %}" class="project-tab">Manage</a>
 </nav>
 
-{% include "partials/_date_range_nav.html" %}
-
 {% if not project.archived %}
 <a href="{% url 'budget:expense_create' %}?project={{ project.uid }}&back={{ request.path|urlencode }}" class="fab-new-expense" title="New expense">+</a>
 {% endif %}
@@ -676,18 +674,6 @@
 
 <script>
 (function () {
-    var exportLink    = document.getElementById('proj-export-link');
-    var exportBaseUrl = exportLink ? exportLink.getAttribute('href') : '';
-
-    function updateExportHref() {
-        if (!exportLink) return;
-        var dr = window._dateRange ? window._dateRange.get() : { from: '', to: '' };
-        var params = new URLSearchParams({ date_from: dr.from, date_to: dr.to });
-        exportLink.href = exportBaseUrl + '?' + params.toString();
-    }
-    updateExportHref();
-    window.addEventListener('daterangechange', updateExportHref);
-
     var container   = document.getElementById('proj-exp-list-container');
     var partialUrl  = container.dataset.partialUrl;
     var searchEl    = document.getElementById('proj-exp-search');
@@ -702,15 +688,12 @@
 
     function fetchList() {
         if (currentXhr) { currentXhr.abort(); }
-        var dr = window._dateRange ? window._dateRange.get() : { from: '', to: '' };
         var params = new URLSearchParams({
             q:             searchEl.value,
             hide_recurring: hideRecEl.checked ? '1' : '0',
             i_paid:        iPaidEl.checked ? '1' : '0',
             sort_by:       sortByEl.value,
             sort_dir:      sortDirEl.value,
-            date_from:     dr.from,
-            date_to:       dr.to,
         });
         container.setAttribute('data-loading', '');
         var xhr = new XMLHttpRequest();
@@ -742,10 +725,7 @@
     iPaidEl.addEventListener('change', fetchList);
     sortByEl.addEventListener('change', fetchList);
     sortDirEl.addEventListener('change', fetchList);
-    window.addEventListener('daterangechange', fetchList);
 
-    // Initial fetch so the list reflects the active date range (localStorage or URL)
-    // from the very first page load — the server renders all expenses without filtering.
     document.addEventListener('DOMContentLoaded', fetchList);
 })();
 </script>
