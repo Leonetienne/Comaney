@@ -58,9 +58,11 @@ comaney/       Settings, root urls, middleware
 **Notification classes** (ordered): `"" < soon < tomorrow < today < late < settled`; each sent at most once per expense.
 
 ## Tests
-**Unit** (no Docker): `venv/bin/pytest tests/unit/ -v`
+- Always run tests with `-v` and pipe through `tee logfile.log`
 
-**E2E** (Selenium + live stack at :8080, Mailpit at :8030): `pytest -sx`
+**Unit** (no Docker): `venv/bin/pytest tests/unit/ -v | tee logfile.log`
+
+**E2E** (Selenium + live stack at :8080, Mailpit at :8030): `pytest -sxv | tee logfile.log`
 - E2E tests numbered by prefix; `ctx` dict is session-scoped shared state
 - `run_cmd("management_command")` executes via docker exec into `comaney-web-1`
 - NEVER use `WebDriverWait` / `w.until()` after browser actions; always `time.sleep()` then assert
