@@ -570,3 +570,64 @@ class TestExpressProjectUidConfirm:
         match = next((e for e in expenses if e["title"] == "ExpressNoProjUID"), None)
         assert match is not None, "Expense must appear in the API"
         assert match.get("project") is None, "Expense without project_uid must not have a project"
+
+
+# ---------------------------------------------------------------------------
+# Confirm: a non-expense type combined with buddy/project assignment must be
+# forced to "expense" rather than rejecting the whole batch (see
+# budget/expense_factory.py for why income/savings can't carry an assignment).
+# ---------------------------------------------------------------------------
+
+class TestExpressForcedExpenseType:
+    """A type!=expense item with a project_uid or buddy_payment must save as
+    type=expense instead of failing the confirm step."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        c = setup_user(driver, w, first_name="Forced", last_name="Express")
+        _set_fake_api_key(c["email"])
+        dummy_id = _create_dummy(c["email"], "Forced Dummy")
+        me_pk = _get_pk(c["email"])
+        project_uid = int(_shell(
+            f"from buddies.services import ProjectService; "
+            f"from feusers.models import FeUser; "
+            f"u = FeUser.objects.get(email='{c['email']}'); "
+            f"g = ProjectService.create_group(u, 'Forced Type Project'); "
+            f"print(g.uid)"
+        ))
+        c["dummy_id"] = dummy_id
+        c["me_pk"] = me_pk
+        c["project_uid"] = project_uid
+        yield c
+        cleanup_user(c["email"])
+
+    def test_income_with_project_uid_is_forced_to_expense(self, driver, w, ctx):
+        item = _base_item(title="ForcedProjIncome", type="income", project_uid=ctx["project_uid"])
+        resp = _submit_confirm(driver, [item])
+        assert resp.status_code in (200, 302), f"Confirm must succeed (forced, not rejected): {resp.status_code}"
+        resp2 = api_get("/api/v1/expenses/", ctx, params={"q": "ForcedProjIncome"})
+        expenses = resp2.json().get("expenses", [])
+        match = next((e for e in expenses if e["title"] == "ForcedProjIncome"), None)
+        assert match is not None, "Expense must be saved (not dropped by a batch failure)"
+        assert match["type"] == "expense", f"Project expense must be forced to type=expense, got {match['type']!r}"
+        assert match.get("project") is not None, "Project assignment must still be applied"
+
+    def test_income_with_buddy_payment_is_forced_to_expense(self, driver, w, ctx):
+        item = _base_item(
+            title="ForcedBuddyIncome",
+            type="savings_dep",
+            buddy_payment=True,
+            buddy_mode="single",
+            project_id=None,
+            buddy_upfront_type="me",
+            buddy_upfront_id=ctx["me_pk"],
+            buddy_spendings=[{"type": "dummy", "id": ctx["dummy_id"], "share_percent": 50.0}],
+        )
+        resp = _submit_confirm(driver, [item])
+        assert resp.status_code in (200, 302), f"Confirm must succeed (forced, not rejected): {resp.status_code}"
+        resp2 = api_get("/api/v1/expenses/", ctx, params={"q": "ForcedBuddyIncome"})
+        expenses = resp2.json().get("expenses", [])
+        match = next((e for e in expenses if e["title"] == "ForcedBuddyIncome"), None)
+        assert match is not None, "Expense must be saved (not dropped by a batch failure)"
+        assert match["type"] == "expense", f"Buddy expense must be forced to type=expense, got {match['type']!r}"
+        assert match["buddy_participants"], "Buddy participants must still be applied"

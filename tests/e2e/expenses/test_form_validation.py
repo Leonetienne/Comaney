@@ -11,6 +11,9 @@ import requests
 import pytest
 
 from helpers import BASE_URL, session_cookies, setup_user, cleanup_user
+from bhelpers import _create_group, _shell
+
+BUDDY_TYPE_CONFLICT_TEXT = "must be type"  # rendered HTML-escapes the quotes around "Expense"
 
 
 LONG_128  = "x" * 129
@@ -135,6 +138,117 @@ class TestExpenseFormValidation:
         assert resp.status_code == 200
 
 
+def _expense_count(email: str) -> int:
+    return int(_shell(
+        f"from feusers.models import FeUser; from budget.models import Expense; "
+        f"u = FeUser.objects.get(email='{email}'); "
+        f"print(Expense.objects.filter(owning_feuser=u).count())"
+    ))
+
+
+def _scheduled_count(email: str) -> int:
+    return int(_shell(
+        f"from feusers.models import FeUser; from budget.models import ScheduledExpense; "
+        f"u = FeUser.objects.get(email='{email}'); "
+        f"print(ScheduledExpense.objects.filter(owning_feuser=u).count())"
+    ))
+
+
+BASE_PROJECT_BUDDY_FIELDS = {
+    "buddy_payment": "1",
+    "buddy_mode": "group",
+    "buddy_spendings_json": "[]",
+}
+
+
+class TestProjectExpenseTypeValidation:
+    """Project expenses must stay type=EXPENSE: income/savings would invert
+    the shared debt calculation (see analysis on the project's income handling)."""
+
+    @pytest.fixture(scope="class")
+    def project_id(self, driver, w, ctx):
+        return int(_create_group(ctx["email"], "Type Validation Project"))
+
+    def test_income_is_rejected(self, driver, w, ctx, project_id):
+        s = _session(driver)
+        before = _expense_count(ctx["email"])
+        resp = _form_post(s, "/budget/expenses/new/", {
+            **BASE_EXPENSE, **BASE_PROJECT_BUDDY_FIELDS,
+            "type": "income", "project_id": str(project_id),
+        })
+        assert resp.status_code == 200, "Form must re-render, not redirect, when rejected"
+        assert _expense_count(ctx["email"]) == before, "No expense must be created"
+        assert BUDDY_TYPE_CONFLICT_TEXT in resp.text, "A clear error must explain the rejection"
+        assert re.search(rf"existingGroupId:\s*{project_id}\b", resp.text), (
+            "The project selection must be preserved on the re-rendered form, not silently cleared"
+        )
+        assert "initAssign = 'project';" in resp.text, (
+            "The Project assignment tab must still be marked active on re-render"
+        )
+
+    def test_savings_deposit_is_rejected(self, driver, w, ctx, project_id):
+        s = _session(driver)
+        before = _expense_count(ctx["email"])
+        resp = _form_post(s, "/budget/expenses/new/", {
+            **BASE_EXPENSE, **BASE_PROJECT_BUDDY_FIELDS,
+            "type": "savings_dep", "project_id": str(project_id),
+        })
+        assert resp.status_code == 200
+        assert _expense_count(ctx["email"]) == before
+
+    def test_expense_is_accepted(self, driver, w, ctx, project_id):
+        s = _session(driver)
+        before = _expense_count(ctx["email"])
+        resp = _form_post(s, "/budget/expenses/new/", {
+            **BASE_EXPENSE, **BASE_PROJECT_BUDDY_FIELDS,
+            "type": "expense", "project_id": str(project_id),
+        })
+        assert resp.status_code == 302, "Valid project expense must redirect on success"
+        assert _expense_count(ctx["email"]) == before + 1
+
+
+class TestProjectExpenseEditTypeValidation:
+    """Editing an existing project expense to a non-expense type must be
+    rejected the same way creation is, with the assignment preserved on screen
+    and the underlying record left untouched."""
+
+    @pytest.fixture(scope="class")
+    def project_id(self, driver, w, ctx):
+        return int(_create_group(ctx["email"], "Edit Type Validation Project"))
+
+    @pytest.fixture(scope="class")
+    def expense_uid(self, driver, w, ctx, project_id):
+        s = _session(driver)
+        resp = _form_post(s, "/budget/expenses/new/", {
+            **BASE_EXPENSE, **BASE_PROJECT_BUDDY_FIELDS,
+            "type": "expense", "project_id": str(project_id), "title": "EditTypeValExpense",
+        })
+        assert resp.status_code == 302, "Setup: valid project expense must be created"
+        return int(_shell(
+            f"from feusers.models import FeUser; from budget.models import Expense; "
+            f"u = FeUser.objects.get(email='{ctx['email']}'); "
+            f"print(Expense.objects.get(owning_feuser=u, title='EditTypeValExpense').uid)"
+        ))
+
+    def test_edit_to_income_is_rejected(self, driver, w, ctx, project_id, expense_uid):
+        s = _session(driver)
+        resp = _form_post(s, f"/budget/expenses/{expense_uid}/edit/", {
+            **BASE_EXPENSE, **BASE_PROJECT_BUDDY_FIELDS,
+            "type": "income", "project_id": str(project_id), "title": "EditTypeValExpense",
+        })
+        assert resp.status_code == 200, "Edit must re-render, not redirect, when rejected"
+        assert BUDDY_TYPE_CONFLICT_TEXT in resp.text, "A clear error must explain the rejection"
+        assert re.search(rf"existingGroupId:\s*{project_id}\b", resp.text), (
+            "The project assignment must still show as selected on the re-rendered edit form"
+        )
+        state = _shell(
+            f"from budget.models import Expense; "
+            f"e = Expense.objects.get(uid={expense_uid}); "
+            f"print(e.type + '|' + str(e.project_id))"
+        )
+        assert state == f"expense|{project_id}", f"Underlying record must be left unchanged, got {state!r}"
+
+
 class TestScheduledFormValidation:
 
     def test_title_too_long(self, driver, w, ctx):
@@ -163,6 +277,35 @@ class TestScheduledFormValidation:
         data = {k: v for k, v in BASE_SCHEDULED.items() if k != "repeat_every_unit"}
         resp = _form_post(s, "/budget/scheduled/new/", data)
         assert resp.status_code == 200
+
+
+class TestScheduledProjectTypeValidation:
+    """Same EXPENSE-only rule applies to scheduled (recurring) project expenses,
+    since _parse_buddy_post is shared between the expense and scheduled forms."""
+
+    @pytest.fixture(scope="class")
+    def project_id(self, driver, w, ctx):
+        return int(_create_group(ctx["email"], "Scheduled Type Validation Project"))
+
+    def test_income_is_rejected(self, driver, w, ctx, project_id):
+        s = _session(driver)
+        before = _scheduled_count(ctx["email"])
+        resp = _form_post(s, "/budget/scheduled/new/", {
+            **BASE_SCHEDULED, **BASE_PROJECT_BUDDY_FIELDS,
+            "type": "income", "project_id": str(project_id),
+        })
+        assert resp.status_code == 200
+        assert _scheduled_count(ctx["email"]) == before
+
+    def test_expense_is_accepted(self, driver, w, ctx, project_id):
+        s = _session(driver)
+        before = _scheduled_count(ctx["email"])
+        resp = _form_post(s, "/budget/scheduled/new/", {
+            **BASE_SCHEDULED, **BASE_PROJECT_BUDDY_FIELDS,
+            "type": "expense", "project_id": str(project_id),
+        })
+        assert resp.status_code == 302
+        assert _scheduled_count(ctx["email"]) == before + 1
 
 
 class TestProfileFormValidation:

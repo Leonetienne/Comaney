@@ -158,12 +158,18 @@ class TestSpendingOverTimeOldProject:
         _create_solo_expense_on_date(admin["email"], gid, "Old Expense A", first_date)
         _create_solo_expense_on_date(admin["email"], gid, "Old Expense B", last_date)
         uid = _get_group_uid(gid)
-        yield {"admin": admin, "gid": gid, "uid": uid, "last_date": last_date}
+        yield {"admin": admin, "gid": gid, "uid": uid, "first_date": first_date, "last_date": last_date}
         cleanup_user(admin["email"])
 
     def test_chart_last_label_is_last_expense_date_not_today(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        # The date-range picker defaults to the current financial month (shared
+        # site-wide), which would exclude these ~400-day-old expenses entirely.
+        # Pass an explicit range covering them through today via URL params
+        # (date-range.js reads date_from/date_to from the URL first) so the
+        # chart actually has data to prove it stops at the last expense.
+        today = date.today().isoformat()
+        driver.get(_url(f"/projects/{ctx['uid']}/?date_from={ctx['first_date']}&date_to={today}"))
         time.sleep(1)
         labels = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.spendingOverTime; "
