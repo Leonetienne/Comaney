@@ -1,6 +1,6 @@
 """
 Group invite accept/decline: invitor receives email notification.
-Group dummy merge for non-registered users: onboarding email mentions the group.
+Group invite to an unregistered email: onboarding invite is sent without error.
 Group member removal: removed member receives email notification.
 """
 import time
@@ -108,43 +108,42 @@ class TestGroupInviteDeclineNotifiesAdmin:
 
 
 # ---------------------------------------------------------------------------
-# Group dummy merge onboarding email mentions the group name
+# Inviting an unregistered email to a project sends an onboarding invite
+# without crashing (regression: BuddyOnboardingInvite.dummy was removed but
+# BuddyEmailService.send_group_onboarding_invite still referenced it).
 # ---------------------------------------------------------------------------
 
-class TestGroupDummyMergeOnboardingEmailMentionsGroup:
-    """Admin sends merge invite for a group dummy to an unregistered email.
-    The onboarding email must mention the group name."""
+class TestGroupInviteOnboarding:
+    """Admin invites an email that isn't registered; an onboarding invite email
+    is sent and the settings page reflects success, not a server error."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
-        a = setup_user(driver, w, first_name="Merge", last_name="Admin")
-        group_id = _create_group(a["email"], "Merge Notify Group")
-        dummy_uid = _shell(
-            f"from buddies.services import BuddyGroupService; "
-            f"from feusers.models import FeUser; from buddies.models import Project; "
-            f"admin = FeUser.objects.get(email='{a['email']}'); "
-            f"g = Project.objects.get(pk={group_id}); "
-            f"d = BuddyGroupService.create_group_dummy(g, admin, 'Offline Gary'); "
-            f"print(d.uid)"
-        )
-        yield {"a": a, "group_id": int(group_id), "dummy_uid": dummy_uid.strip()}
+        a = setup_user(driver, w, first_name="Pia", last_name="ProjInviter")
+        group_id = _create_group(a["email"], "Onboarding Invite Group")
+        yield {"a": a, "group_id": int(group_id), "nonexistent_email": f"nobody-{a['email']}"}
         cleanup_user(a["email"])
 
-    def test_onboarding_invite_email_mentions_group(self, driver, w, ctx):
-        target_email = f"newuser-{ctx['dummy_uid']}@example.test"
+    def test_invite_nonexistent_email_does_not_error(self, driver, w, ctx):
         seen_before = mailpit_seen_ids()
-        _shell(
-            f"from buddies.services import BuddyGroupService; "
-            f"from feusers.models import FeUser; "
-            f"from buddies.models import Project, DummyUser; "
-            f"admin = FeUser.objects.get(email='{ctx['a']['email']}'); "
-            f"g = Project.objects.get(pk={ctx['group_id']}); "
-            f"d = DummyUser.objects.get(uid='{ctx['dummy_uid']}'); "
-            f"BuddyGroupService.send_group_dummy_merge_invite(g, admin, d, '{target_email}')"
+        _login_as(driver, ctx["a"])
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+        time.sleep(1)
+        inp = driver.find_element(
+            By.XPATH, "//button[@id='btn-group-invite']/preceding-sibling::input[@name='email']")
+        driver.execute_script("arguments[0].value = arguments[1];", inp, ctx["nonexistent_email"])
+        driver.find_element(By.ID, "btn-group-invite").click()
+        time.sleep(1)
+        assert "A registration and project invitation has been sent to" in driver.page_source
+        ctx["seen_before"] = seen_before
+
+    def test_onboarding_email_is_sent(self, driver, w, ctx):
+        body = fetch_email(
+            ctx["nonexistent_email"],
+            "invited you to join their project",
+            ignore_ids=ctx["seen_before"],
         )
-        body = fetch_email(target_email, "invited you to join their project", ignore_ids=seen_before)
-        assert "Merge Notify Group" in body
-        assert "Offline Gary" in body
+        assert "Pia" in body or "ProjInviter" in body
 
 
 # ---------------------------------------------------------------------------

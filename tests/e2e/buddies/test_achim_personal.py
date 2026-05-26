@@ -135,7 +135,7 @@ class TestAchimPersonalWipe:
             f"BuddySpending.objects.create(expense=e, participant_dummy=d, "
             f"  share_percent=Decimal('50')); "
             f"archive, _ = BuddyArchiveService.get_or_create_personal_archive(u); "
-            f"BuddyArchiveService.merge_dummy_into_archive(d, archive); "
+            f"BuddyArchiveService.merge_dummy_into_dummy(d, archive); "
             f"d.delete(); "
             f"print('ok')"
         )

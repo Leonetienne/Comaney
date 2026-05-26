@@ -154,7 +154,7 @@ class TestWrongAccountMergeInvite:
         # A opens merge link that is meant for B
         driver.get(_url(f"/buddies/merge/{ctx['token']}/"))
         time.sleep(1)
-        assert "Invitation for a different account" in driver.page_source, \
+        assert "Merge request for a different account" in driver.page_source, \
             "Opening a merge invite for a different account must show invite_wrong_account page"
 
 

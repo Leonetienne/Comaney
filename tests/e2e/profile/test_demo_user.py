@@ -367,7 +367,7 @@ class TestDemoUserServerEnforcement:
         assert "Demo accounts cannot invite buddies" in r.text or r.status_code in (403, 400)
 
     def test_cannot_send_personal_merge_invite(self, demo_ctx):
-        """Demo user cannot use 'invite as user' on their personal offline buddy."""
+        """Demo user cannot use 'merge into...' on their personal offline buddy."""
         dummy_id = _shell(
             f"from feusers.models import FeUser; from buddies.models import DummyUser; "
             f"u = FeUser.objects.get(email='{demo_ctx['email']}'); "
@@ -376,53 +376,13 @@ class TestDemoUserServerEnforcement:
         try:
             s = _http_session(demo_ctx["email"], demo_ctx["password"])
             csrf = _get_csrf(s, "/buddies/my-buddies/")
-            r = s.post(_url(f"/buddies/dummy/{dummy_id}/send-merge/"), data={
+            r = s.post(_url(f"/buddies/dummy/{dummy_id}/merge/"), data={
                 "csrfmiddlewaretoken": csrf,
-                "email": f"victim.{uuid.uuid4().hex[:6]}@example.com",
+                "target_key": f"f{uuid.uuid4().int % 100000}",
             }, allow_redirects=True, timeout=10)
-            assert "Demo accounts cannot send invitations" in r.text or r.status_code in (403, 400)
+            assert "Demo accounts cannot merge buddies" in r.text or r.status_code in (403, 400)
         finally:
             _shell(f"from buddies.models import DummyUser; DummyUser.objects.filter(uid={dummy_id}).delete()")
-
-    def test_cannot_invite_via_group_endpoint(self, demo_ctx):
-        """Demo user cannot invite anyone via the /buddies/groups/<id>/invite/ endpoint."""
-        group_id = _shell(
-            f"from feusers.models import FeUser; from buddies.services import ProjectService; "
-            f"u = FeUser.objects.get(email='{demo_ctx['email']}'); "
-            f"g = ProjectService.create_group(u, 'DemoGroupInviteTest'); print(g.uid)"
-        )
-        try:
-            s = _http_session(demo_ctx["email"], demo_ctx["password"])
-            csrf = _get_csrf(s, "/buddies/my-buddies/")
-            r = s.post(_url(f"/buddies/groups/{group_id}/invite/"), data={
-                "csrfmiddlewaretoken": csrf,
-                "email": f"victim.{uuid.uuid4().hex[:6]}@example.com",
-            }, allow_redirects=True, timeout=10)
-            assert "Demo accounts cannot invite group members" in r.text or r.status_code in (403, 400)
-        finally:
-            _shell(f"from buddies.models import Project; Project.objects.filter(uid={group_id}).delete()")
-
-    def test_cannot_send_group_merge_invite(self, demo_ctx):
-        """Demo user cannot use 'invite as user' on a group's offline member."""
-        ids = _shell(
-            f"from feusers.models import FeUser; from buddies.services import ProjectService; "
-            f"from buddies.models import DummyUser; "
-            f"u = FeUser.objects.get(email='{demo_ctx['email']}'); "
-            f"g = ProjectService.create_group(u, 'DemoGroupMergeTest'); "
-            f"d = DummyUser.objects.create(display_name='OfflineGroupPal', owning_group=g); "
-            f"print(g.uid, d.uid)"
-        )
-        group_id, dummy_id = ids.split()
-        try:
-            s = _http_session(demo_ctx["email"], demo_ctx["password"])
-            csrf = _get_csrf(s, "/buddies/my-buddies/")
-            r = s.post(_url(f"/buddies/groups/{group_id}/dummy/{dummy_id}/send-merge/"), data={
-                "csrfmiddlewaretoken": csrf,
-                "email": f"victim.{uuid.uuid4().hex[:6]}@example.com",
-            }, allow_redirects=True, timeout=10)
-            assert "Demo accounts cannot send invitations" in r.text or r.status_code in (403, 400)
-        finally:
-            _shell(f"from buddies.models import Project; Project.objects.filter(uid={group_id}).delete()")
 
     def test_cannot_invite_project_member(self, demo_ctx):
         """Demo user cannot invite anyone to a project via /projects/<id>/invite/."""
@@ -443,7 +403,7 @@ class TestDemoUserServerEnforcement:
             _shell(f"from buddies.models import Project; Project.objects.filter(uid={project_id}).delete()")
 
     def test_cannot_send_project_merge_invite(self, demo_ctx):
-        """Demo user cannot use 'invite as user' on a project's offline member."""
+        """Demo user cannot use 'merge into...' on a project's offline member."""
         ids = _shell(
             f"from feusers.models import FeUser; from buddies.services import ProjectService; "
             f"from buddies.models import DummyUser; "
@@ -456,11 +416,11 @@ class TestDemoUserServerEnforcement:
         try:
             s = _http_session(demo_ctx["email"], demo_ctx["password"])
             csrf = _get_csrf(s, f"/projects/{project_id}/settings/")
-            r = s.post(_url(f"/projects/{project_id}/dummy/{dummy_id}/send-merge/"), data={
+            r = s.post(_url(f"/projects/{project_id}/dummy/{dummy_id}/merge/"), data={
                 "csrfmiddlewaretoken": csrf,
-                "email": f"victim.{uuid.uuid4().hex[:6]}@example.com",
+                "target_key": f"f{uuid.uuid4().int % 100000}",
             }, allow_redirects=True, timeout=10)
-            assert "Demo accounts cannot send invitations" in r.text or r.status_code in (403, 400)
+            assert "Demo accounts cannot merge buddies" in r.text or r.status_code in (403, 400)
         finally:
             _shell(f"from buddies.models import Project; Project.objects.filter(uid={project_id}).delete()")
 
@@ -515,29 +475,127 @@ class TestDemoUserServerEnforcement:
         finally:
             _shell(f"from buddies.models import Project; Project.objects.filter(uid={project_id}).delete()")
 
-    def test_real_user_cannot_invite_demo_to_group(self, demo_ctx, real_ctx):
-        group_id = _shell(
-            f"from feusers.models import FeUser; from buddies.services import ProjectService; "
+    def test_real_user_cannot_send_merge_request_to_demo(self, demo_ctx, real_ctx):
+        """A real user cannot target a demo account via 'merge into...' on a personal offline buddy."""
+        dummy_id = _shell(
+            f"from feusers.models import FeUser; from buddies.models import DummyUser; "
             f"u = FeUser.objects.get(email='{real_ctx['email']}'); "
-            f"g = ProjectService.create_group(u, 'RealUserPenTestGroup'); print(g.uid)"
+            f"d = DummyUser.objects.create(display_name='RealUserOfflinePal', owning_feuser=u); print(d.uid)"
         )
         try:
+            demo_pk = _shell(
+                f"from feusers.models import FeUser; "
+                f"print(FeUser.objects.get(email='{demo_ctx['email']}').pk)"
+            )
             s = _http_session(real_ctx["email"], real_ctx["password"])
             csrf = _get_csrf(s, "/buddies/my-buddies/")
-            r = s.post(_url(f"/buddies/groups/{group_id}/invite/"), data={
+            r = s.post(_url(f"/buddies/dummy/{dummy_id}/merge/"), data={
                 "csrfmiddlewaretoken": csrf,
-                "email": demo_ctx["email"],
+                "target_key": f"f{demo_pk}",
             }, allow_redirects=True, timeout=10)
-            assert "not available" in r.text.lower() or r.status_code in (403, 400)
-            member_exists = _shell(
-                f"from feusers.models import FeUser; from buddies.models import Project, BuddyGroupMember; "
-                f"demo = FeUser.objects.get(email='{demo_ctx['email']}'); "
-                f"g = Project.objects.get(uid={group_id}); "
-                f"print(BuddyGroupMember.objects.filter(group=g, feuser=demo).exists())"
+            assert "cannot be merge targets" in r.text.lower() or r.status_code in (403, 400)
+            invite_exists = _shell(
+                f"from buddies.models import DummyMergeInvite; "
+                f"print(DummyMergeInvite.objects.filter(dummy_id={dummy_id}).exists())"
             )
-            assert member_exists == "False", "Demo user was added to a group"
+            assert invite_exists == "False", "A merge invite was created targeting a demo account"
         finally:
-            _shell(f"from buddies.models import Project; Project.objects.filter(uid={group_id}).delete()")
+            _shell(f"from buddies.models import DummyUser; DummyUser.objects.filter(uid={dummy_id}).delete()")
+
+    def test_real_user_cannot_send_merge_request_to_demo_in_project(self, demo_ctx, real_ctx):
+        """A project admin cannot target a demo account via 'merge into...' on an offline project member."""
+        ids = _shell(
+            f"from feusers.models import FeUser; from buddies.services import ProjectService; "
+            f"from buddies.models import DummyUser; "
+            f"u = FeUser.objects.get(email='{real_ctx['email']}'); "
+            f"g = ProjectService.create_group(u, 'RealUserMergeDemoTargetProject'); "
+            f"d = DummyUser.objects.create(display_name='ProjectOfflinePal', owning_group=g); "
+            f"print(g.uid, d.uid)"
+        )
+        project_id, dummy_id = ids.split()
+        try:
+            demo_pk = _shell(
+                f"from feusers.models import FeUser; "
+                f"print(FeUser.objects.get(email='{demo_ctx['email']}').pk)"
+            )
+            s = _http_session(real_ctx["email"], real_ctx["password"])
+            csrf = _get_csrf(s, f"/projects/{project_id}/settings/")
+            r = s.post(_url(f"/projects/{project_id}/dummy/{dummy_id}/merge/"), data={
+                "csrfmiddlewaretoken": csrf,
+                "target_key": f"f{demo_pk}",
+            }, allow_redirects=True, timeout=10)
+            assert "cannot be merge targets" in r.text.lower() or r.status_code in (403, 400)
+            invite_exists = _shell(
+                f"from buddies.models import DummyMergeInvite; "
+                f"print(DummyMergeInvite.objects.filter(dummy_id={dummy_id}).exists())"
+            )
+            assert invite_exists == "False", "A merge invite was created targeting a demo account"
+        finally:
+            _shell(f"from buddies.models import Project; Project.objects.filter(uid={project_id}).delete()")
+
+    def test_demo_user_cannot_send_merge_request_to_real_user(self, demo_ctx, real_ctx):
+        """
+        Service-layer defense in depth: request_merge_with_feuser must reject a
+        demo sender on its own merits, not just rely on the view's early
+        'if feuser.is_demo' redirect (buddies/views/buddies.py merge_dummy).
+        Called directly so the guard is proven even with a real, valid target.
+        """
+        dummy_id = _shell(
+            f"from feusers.models import FeUser; from buddies.models import DummyUser; "
+            f"u = FeUser.objects.get(email='{demo_ctx['email']}'); "
+            f"d = DummyUser.objects.create(display_name='DemoServiceLayerPal', owning_feuser=u); print(d.uid)"
+        )
+        try:
+            outcome = _shell(
+                f"from feusers.models import FeUser; from buddies.models import DummyUser; "
+                f"from buddies.services import BuddyLifecycleService; "
+                f"demo = FeUser.objects.get(email='{demo_ctx['email']}'); "
+                f"real = FeUser.objects.get(email='{real_ctx['email']}'); "
+                f"d = DummyUser.objects.get(uid={dummy_id}); "
+                f"outcome, _ = BuddyLifecycleService.request_merge_with_feuser(demo, d, real); "
+                f"print(outcome)"
+            )
+            assert outcome.strip() == "demo_restricted", f"Expected demo sender to be rejected, got: {outcome}"
+            invite_exists = _shell(
+                f"from buddies.models import DummyMergeInvite; "
+                f"print(DummyMergeInvite.objects.filter(dummy_id={dummy_id}).exists())"
+            )
+            assert invite_exists == "False", "A merge invite was created by a demo sender"
+        finally:
+            _shell(f"from buddies.models import DummyUser; DummyUser.objects.filter(uid={dummy_id}).delete()")
+
+    def test_demo_admin_cannot_send_merge_request_to_real_user_in_project(self, demo_ctx, real_ctx):
+        """Same service-layer defense in depth as above, for the project-scoped
+        request_group_merge_with_feuser (buddies/views/projects.py project_merge_dummy)."""
+        ids = _shell(
+            f"from feusers.models import FeUser; from buddies.services import ProjectService; "
+            f"from buddies.models import DummyUser; "
+            f"u = FeUser.objects.get(email='{demo_ctx['email']}'); "
+            f"g = ProjectService.create_group(u, 'DemoAdminServiceLayerProject'); "
+            f"d = DummyUser.objects.create(display_name='DemoServiceLayerProjectPal', owning_group=g); "
+            f"print(g.uid, d.uid)"
+        )
+        project_id, dummy_id = ids.split()
+        try:
+            outcome = _shell(
+                f"from feusers.models import FeUser; from buddies.models import Project, DummyUser; "
+                f"from buddies.services import ProjectService; "
+                f"demo = FeUser.objects.get(email='{demo_ctx['email']}'); "
+                f"real = FeUser.objects.get(email='{real_ctx['email']}'); "
+                f"g = Project.objects.get(uid={project_id}); "
+                f"d = DummyUser.objects.get(uid={dummy_id}); "
+                f"outcome, _ = ProjectService.request_group_merge_with_feuser(demo, g, d, real); "
+                f"print(outcome)"
+            )
+            assert outcome.strip() == "demo_restricted", f"Expected demo admin to be rejected, got: {outcome}"
+            invite_exists = _shell(
+                f"from buddies.models import DummyMergeInvite; "
+                f"print(DummyMergeInvite.objects.filter(dummy_id={dummy_id}).exists())"
+            )
+            assert invite_exists == "False", "A merge invite was created by a demo admin"
+        finally:
+            _shell(f"from buddies.models import Project; Project.objects.filter(uid={project_id}).delete()")
+
 
 
 # ---------------------------------------------------------------------------

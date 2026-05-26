@@ -90,7 +90,7 @@ class TestAchimGroupCreated:
 
     def test_offline_otto_gone(self, driver, w, ctx):
         # Check the member-list cards specifically. The expense note written by
-        # merge_dummy_into_archive ("Original participant was: Offline Otto") is
+        # merge_dummy_into_dummy ("Original participant was: Offline Otto") is
         # rendered in a collapsed DOM section, so page_source always contains the
         # name; what matters is that no member card still lists Otto.
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
@@ -152,7 +152,7 @@ class TestAchimGroupWipe:
             f"BuddySpending.objects.create(expense=e, participant_dummy=d, "
             f"  share_percent=Decimal('50')); "
             f"archive, _ = BuddyArchiveService.get_or_create_group_archive(g); "
-            f"BuddyArchiveService.merge_dummy_into_archive(d, archive); "
+            f"BuddyArchiveService.merge_dummy_into_dummy(d, archive); "
             f"d.delete(); "
             f"print('ok')"
         )
