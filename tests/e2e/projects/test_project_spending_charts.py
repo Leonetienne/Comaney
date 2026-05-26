@@ -163,13 +163,10 @@ class TestSpendingOverTimeOldProject:
 
     def test_chart_last_label_is_last_expense_date_not_today(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        # The date-range picker defaults to the current financial month (shared
-        # site-wide), which would exclude these ~400-day-old expenses entirely.
-        # Pass an explicit range covering them through today via URL params
-        # (date-range.js reads date_from/date_to from the URL first) so the
-        # chart actually has data to prove it stops at the last expense.
-        today = date.today().isoformat()
-        driver.get(_url(f"/projects/{ctx['uid']}/?date_from={ctx['first_date']}&date_to={today}"))
+        # Charts cover the project's entire history regardless of the
+        # date-range picker (which only affects the expense list/export),
+        # so these ~400-day-old expenses must still show up on the chart.
+        driver.get(_url(f"/projects/{ctx['uid']}/"))
         time.sleep(1)
         labels = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.spendingOverTime; "
@@ -182,6 +179,91 @@ class TestSpendingOverTimeOldProject:
         )
         assert date.today().isoformat() not in labels, \
             "Chart must not include today's date when no expense was made today"
+
+
+class TestProjectTotalSpendingLabel:
+    """The 'Total project spendings' label lives in its own always-visible surface
+    near the top of the page (not inside the pie chart section, which is hidden
+    for solo projects) and must reflect the project's all-time total, not just
+    the expenses within the currently selected date range."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        admin  = setup_user(driver, w, first_name="TotalLabel", last_name="Admin")
+        member = setup_user(None, None, first_name="TotalLabel", last_name="Member")
+        gid = int(_create_group(admin["email"], "TotalLabel Group"))
+        _add_group_member(gid, member["email"])
+        # Old expense, far outside the default (current financial month) date range.
+        old_date = (date.today() - timedelta(days=400)).isoformat()
+        _create_solo_expense_on_date(admin["email"], gid, "Old Expense", old_date, value="100.00")
+        # Recent expense, inside the default date range.
+        _create_group_expense(
+            admin_email=admin["email"],
+            participant_email=member["email"],
+            group_id=gid,
+            title="Recent Expense",
+            value="20.00",
+            share="50.0",
+        )
+        uid = _get_group_uid(gid)
+        yield {"admin": admin, "member": member, "gid": gid, "uid": uid}
+        cleanup_user(admin["email"])
+        cleanup_user(member["email"])
+
+    def test_total_label_is_all_time_not_range_filtered(self, driver, w, ctx):
+        _login_as(driver, ctx["admin"])
+        # Default date range (current financial month) excludes the 400-day-old expense.
+        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        time.sleep(1)
+        label_text = driver.find_element(By.ID, "proj-total-label").text
+        assert "120.00" in label_text, (
+            "Total project spendings must include all-time expenses (100.00 + 20.00 = 120.00), "
+            f"even when the selected date range excludes the old expense, got '{label_text}'"
+        )
+
+    def test_total_label_wording(self, driver, w, ctx):
+        assert "Total project spendings" in driver.page_source, \
+            "Label must say 'Total project spendings', not the deprecated 'Total group spending'"
+        assert "Total group spending" not in driver.page_source, \
+            "Deprecated 'Total group spending' wording must not appear (groups were renamed to projects)"
+
+    def test_total_label_not_inside_pie_section(self, driver, w, ctx):
+        in_own_section = driver.execute_script(
+            "var lbl = document.getElementById('proj-total-label'); "
+            "var pie = document.getElementById('section-spending-breakdown'); "
+            "var own = document.getElementById('section-total-spending'); "
+            "return !!(lbl && own && own.contains(lbl) && !(pie && pie.contains(lbl)));"
+        )
+        assert in_own_section, \
+            "proj-total-label must live in its own always-visible section, not inside the pie chart section"
+
+
+class TestProjectTotalSpendingLabelSoloProject:
+    """The always-visible total spending surface must also appear for solo
+    projects, which never show the pie chart section."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        admin = setup_user(driver, w, first_name="SoloTotal", last_name="Admin")
+        gid = int(_create_group(admin["email"], "SoloTotal Project"))
+        old_date = (date.today() - timedelta(days=400)).isoformat()
+        _create_solo_expense_on_date(admin["email"], gid, "Old Solo Expense", old_date, value="60.00")
+        uid = _get_group_uid(gid)
+        yield {"admin": admin, "gid": gid, "uid": uid}
+        cleanup_user(admin["email"])
+
+    def test_total_label_visible_for_solo_project(self, driver, w, ctx):
+        _login_as(driver, ctx["admin"])
+        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        time.sleep(1)
+        section = driver.find_element(By.ID, "section-total-spending")
+        assert section.is_displayed(), \
+            "Total project spendings section must be visible for solo projects too"
+        label_text = driver.find_element(By.ID, "proj-total-label").text
+        assert "60.00" in label_text, (
+            "Solo project's total label must include the all-time total (60.00) "
+            f"even though the old expense is outside the default date range, got '{label_text}'"
+        )
 
 
 class TestTagDistributionChart:
