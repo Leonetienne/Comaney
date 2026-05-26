@@ -4,6 +4,7 @@ project detail page. Both charts use Chart.js via project_charts.js and
 are visible regardless of whether the project is solo or multi-member.
 """
 import time
+from datetime import date, timedelta
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -125,6 +126,56 @@ class TestSpendingOverTimeChart:
             "return c ? c.offsetHeight : 0;"
         )
         assert height > 0, "proj-spending-line canvas must have non-zero height after Chart.js renders"
+
+
+def _create_solo_expense_on_date(owner_email: str, group_id: int, title: str,
+                                  date_due: str, value: str = "50.00") -> str:
+    """Create an approved project expense with an explicit date_due (YYYY-MM-DD)."""
+    return _shell(
+        f"from budget.models import Expense; "
+        f"from buddies.models import Project, BuddySpending; "
+        f"from feusers.models import FeUser; from decimal import Decimal; "
+        f"a = FeUser.objects.get(email='{owner_email}'); "
+        f"g = Project.objects.get(pk={group_id}); "
+        f"e = Expense.objects.create(owning_feuser=a, title='{title}', "
+        f"  type='expense', value=Decimal('{value}'), settled=False, "
+        f"  buddy_approved=True, project=g, date_due='{date_due}'); "
+        f"BuddySpending.objects.create(expense=e, participant_feuser=a, share_percent=Decimal('100')); "
+        f"print(e.pk)"
+    )
+
+
+class TestSpendingOverTimeOldProject:
+    """On an old project, the chart's x-axis must span first-to-last expense date,
+    not first expense to today (which used to stretch the line flat for old projects)."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        admin = setup_user(driver, w, first_name="OldLine", last_name="Admin")
+        gid = int(_create_group(admin["email"], "OldLine Project"))
+        first_date = (date.today() - timedelta(days=400)).isoformat()
+        last_date = (date.today() - timedelta(days=390)).isoformat()
+        _create_solo_expense_on_date(admin["email"], gid, "Old Expense A", first_date)
+        _create_solo_expense_on_date(admin["email"], gid, "Old Expense B", last_date)
+        uid = _get_group_uid(gid)
+        yield {"admin": admin, "gid": gid, "uid": uid, "last_date": last_date}
+        cleanup_user(admin["email"])
+
+    def test_chart_last_label_is_last_expense_date_not_today(self, driver, w, ctx):
+        _login_as(driver, ctx["admin"])
+        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        time.sleep(1)
+        labels = driver.execute_script(
+            "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.spendingOverTime; "
+            "return d ? d.labels : [];"
+        )
+        assert labels, "spendingOverTime must have labels for an old project with expenses"
+        assert labels[-1] == ctx["last_date"], (
+            f"Last chart label must be the last expense date ({ctx['last_date']}), "
+            f"not today, got {labels[-1]}"
+        )
+        assert date.today().isoformat() not in labels, \
+            "Chart must not include today's date when no expense was made today"
 
 
 class TestTagDistributionChart:
