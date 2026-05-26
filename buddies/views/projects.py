@@ -468,8 +468,8 @@ def _compute_project_charts(feuser, project, start_date, end_date):
             dated.append((d, ed["payer_key"], float(ed["total"])))
 
         first_dt = min(r[0] for r in dated)
-        today_dt = date.today()
-        total_days = (today_dt - first_dt).days
+        last_dt = max(r[0] for r in dated)
+        total_days = (last_dt - first_dt).days
         span = total_days + 1
         n_steps = min(100, span)
 
