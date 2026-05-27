@@ -107,5 +107,9 @@ When adding any new feature: if it sends email, modifies another user's data, or
 | `DEFAULT_FROM_EMAIL` | sender address |
 | `AI_TRIAL_API_KEY` / `AI_TRIAL_USAGE_LIMIT` | shared trial key (cents) |
 | `SITE_URL` | used in email links |
+| `ALLOWED_HOSTS` | comma-separated; `*` only under DEBUG, empty (must configure) in prod |
+| `SECURE_SSL_REDIRECT` | prod only; `TRUE` (default) redirects HTTP to HTTPS |
+| `SECURE_HSTS_SECONDS` | prod only; HSTS max-age, default `31536000` |
+| `TRUST_PROXY_SSL_HEADER` | prod only; `TRUE` trusts `X-Forwarded-Proto` from a proxy |
 | `APP_VERSION` | shown in footer |
 | `GUNICORN_WORKERS` | default 1 |

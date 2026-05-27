@@ -71,6 +71,9 @@ services:
       SITE_URL: "https://budget.example.com"
       ALLOWED_HOSTS: "budget.example.com"
       CSRF_TRUSTED_ORIGINS: "https://budget.example.com"
+      SECURE_SSL_REDIRECT: "TRUE"
+      SECURE_HSTS_SECONDS: "31536000"
+      TRUST_PROXY_SSL_HEADER: "TRUE"
       ENABLE_REGISTRATION: "FALSE"
       EMAIL_HOST: "smtp.example.com"
       EMAIL_PORT: 587
@@ -98,6 +101,16 @@ volumes:
   mariadb_data:
   comaney_data:
 ```
+
+## Transport security behind a reverse proxy
+
+When `DEBUG` is off, Comaney automatically marks its session and CSRF cookies as `Secure` (HTTPS only) and enables HSTS. Three environment variables let you match this to your proxy setup:
+
+- `SECURE_SSL_REDIRECT` (default `TRUE`): redirects HTTP to HTTPS. Set it to `FALSE` if your proxy already forces HTTPS, to avoid a redirect loop.
+- `SECURE_HSTS_SECONDS` (default `31536000`): how long browsers remember to use HTTPS only. Set to `0` to disable.
+- `TRUST_PROXY_SSL_HEADER` (default off): set to `TRUE` when TLS terminates at a trusted proxy that sets `X-Forwarded-Proto`. Only enable it when the proxy strips any client-supplied value of that header.
+
+Because `ALLOWED_HOSTS` no longer falls back to a wildcard in production, you **must** set it to your real domain(s) or the app will reject every request.
 
 ## The /data volume
 

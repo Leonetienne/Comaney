@@ -37,7 +37,7 @@ Set to `TRUE` to enable Django debug mode. In debug mode:
 
 ### `ALLOWED_HOSTS`
 
-**Default:** `*` (any host)
+**Default:** `*` (any host) in development (`DEBUG=TRUE`); **empty** (must be configured) in production.
 
 A comma-separated list of hostnames that the Django application will accept requests for. Example:
 
@@ -45,7 +45,7 @@ A comma-separated list of hostnames that the Django application will accept requ
 ALLOWED_HOSTS: "budget.example.com,www.budget.example.com"
 ```
 
-In production, this should list only your actual domain(s). An overly permissive `*` is acceptable on a closed private network but should be tightened for public-facing deployments.
+In production, this should list only your actual domain(s). The wildcard `*` is no longer the production fallback: if you leave this unset while `DEBUG` is off, Django will reject every request until you configure a host, so this must be set for any public-facing deployment.
 
 ---
 
@@ -60,6 +60,46 @@ CSRF_TRUSTED_ORIGINS: "https://budget.example.com"
 ```
 
 Without this, every form submission (login, expense creation, etc.) will fail with a CSRF verification error when accessed over HTTPS through a proxy.
+
+---
+
+## Transport security
+
+These settings only take effect in production (`DEBUG=FALSE`); local HTTP development is never affected. When production mode is active, `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE` are always turned on so session and CSRF cookies are only ever sent over HTTPS.
+
+### `SECURE_SSL_REDIRECT`
+
+**Default:** `TRUE`
+
+When `TRUE`, plain HTTP requests are redirected to HTTPS. Set this to `FALSE` if your reverse proxy already forces HTTPS and you want to avoid a redirect loop.
+
+```
+SECURE_SSL_REDIRECT: "TRUE"
+```
+
+---
+
+### `SECURE_HSTS_SECONDS`
+
+**Default:** `31536000` (one year)
+
+How long (in seconds) browsers should remember to only reach the site over HTTPS (HTTP Strict Transport Security). Subdomains and preload are enabled alongside it. Set to `0` to disable HSTS.
+
+```
+SECURE_HSTS_SECONDS: "31536000"
+```
+
+---
+
+### `TRUST_PROXY_SSL_HEADER`
+
+**Default:** *(unset; not trusted)*
+
+Set to `TRUE` only when TLS terminates at a trusted reverse proxy that sets the `X-Forwarded-Proto` header. This lets Django recognise proxied requests as secure. Never enable it unless the proxy strips any client-supplied `X-Forwarded-Proto`, otherwise a client could spoof HTTPS.
+
+```
+TRUST_PROXY_SSL_HEADER: "TRUE"
+```
 
 ---
 
