@@ -102,6 +102,70 @@ class BuddyExpenseService:
         BuddySpending.objects.bulk_create(rows)
 
     @staticmethod
+    def _spending_key(bs):
+        """Identity key for a BuddySpending row, independent of its share/state."""
+        if bs.participant_feuser_id:
+            return ("feuser", bs.participant_feuser_id)
+        return ("dummy", bs.participant_dummy_id)
+
+    @staticmethod
+    def spend_signature(expense) -> dict:
+        """
+        {(type, id): share_percent} for every current BuddySpending row.
+
+        Used to detect whether the set of participants or any of their shares
+        changed across an owner edit, which invalidates existing approvals.
+        """
+        return {
+            BuddyExpenseService._spending_key(bs): bs.share_percent
+            for bs in expense.buddy_spendings.all()
+        }
+
+    @staticmethod
+    def snapshot_approvals(expense) -> dict:
+        """{(type, id): (approval_state, consent_set_at)} for current rows."""
+        return {
+            BuddyExpenseService._spending_key(bs): (bs.approval_state, bs.consent_set_at)
+            for bs in expense.buddy_spendings.all()
+        }
+
+    @staticmethod
+    def restore_approvals(expense, snapshot: dict):
+        """
+        Re-apply previously recorded approval decisions onto freshly recreated
+        rows, matched by participant identity.
+
+        set_buddy_spendings always deletes and recreates rows, which resets every
+        approval to neutral. When an owner edit did not touch any
+        approval-invalidating field, callers use this to keep each participant's
+        existing decision (and its timestamp) alive.
+        """
+        for bs in expense.buddy_spendings.all():
+            key = BuddyExpenseService._spending_key(bs)
+            if key in snapshot:
+                state, consent = snapshot[key]
+                if bs.approval_state != state or bs.consent_set_at != consent:
+                    bs.approval_state = state
+                    bs.consent_set_at = consent
+                    bs.save(update_fields=["approval_state", "consent_set_at"])
+
+    @staticmethod
+    def reset_participant_approvals(expense):
+        """
+        Reset every participant's approval decision on an expense: state back to
+        neutral and the last-set date cleared. Called when an owner edit changes
+        the title, value, participants or shares, so each participant must give
+        their consent again.
+        """
+        from django.utils import timezone
+
+        expense.buddy_spendings.all().update(
+            approval_state=BuddySpending.APPROVAL_NEUTRAL,
+            consent_set_at=None,
+            last_mod=timezone.now(),
+        )
+
+    @staticmethod
     def reconcile_categories_tags(expense, target_feuser):
         """
         Match expense's category and tags to target_feuser's sets by title.

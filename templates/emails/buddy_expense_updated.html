@@ -6,6 +6,15 @@
   <strong style="color:#e0e0e0;">{{ actor_name }}</strong> made changes to a shared expense you participate in.
 </p>
 
+{% if changes.approval_reset %}
+<div style="background:#3a2e12;border:1px solid #7a5c1a;border-radius:8px;padding:14px 16px;margin:16px 0;">
+  <p style="margin:0;font-size:0.9rem;color:#f0c869;line-height:1.5;">
+    Because the details of this expense changed, your approval has been reset.
+    Please review the updated expense and approve or reject it again.
+  </p>
+</div>
+{% endif %}
+
 {% if changes.title_changed or changes.value_changed or changes.participants_added or changes.participants_removed %}
 <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px 16px;margin:16px 0;">
   <p style="margin:0 0 10px;font-size:0.82rem;color:#777;text-transform:uppercase;letter-spacing:0.05em;">What changed</p>
@@ -92,4 +101,15 @@
   </tr>
   {% endfor %}
 </table>
+
+{% if changes.approval_reset %}
+<p style="color:#aaa;font-size:0.9rem;line-height:1.5;margin:20px 0 8px;">
+  Do you still agree with this expense? Please record your decision again:
+</p>
+<div style="margin:16px 0;display:flex;gap:12px;">
+  <a href="{{ approve_url }}" style="display:inline-block;background:#2da44e;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">Approve</a>
+  <a href="{{ reject_url }}" style="display:inline-block;background:#cf222e;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">Reject</a>
+</div>
+<p style="color:#777;font-size:0.8rem;">You can also change your decision later from the expense page.</p>
+{% endif %}
 {% endblock %}

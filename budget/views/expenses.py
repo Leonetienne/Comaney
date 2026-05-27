@@ -451,6 +451,19 @@ def expense_edit(request, uid):
             .select_related("participant_feuser")
             .filter(participant_feuser__isnull=False)
         }
+        # Signature (participants + shares) and approval decisions before editing,
+        # so we can tell whether this edit invalidates participants' approvals.
+        from buddies.services import BuddyExpenseService as _BES
+        from buddies.models import BuddySpending as _BS
+        _old_spend_sig = _BES.spend_signature(expense)
+        _old_approvals = _BES.snapshot_approvals(expense)
+        # Participants who had actually approved (state APPROVED) before this edit.
+        # Only these are told their approval was reset; a neutral participant had
+        # nothing to reset.
+        _prev_approved_pks = {
+            pid for (ptype, pid), (state, _c) in _old_approvals.items()
+            if ptype == "feuser" and state == _BS.APPROVAL_APPROVED
+        }
         form = ExpenseForm(request.POST, instance=expense, feuser=form_feuser)
         buddy = _parse_buddy_post(request.POST, feuser)
         if form.is_valid() and (buddy is None or buddy["valid"]):
@@ -483,19 +496,37 @@ def expense_edit(request, uid):
                             expense.save(update_fields=["buddy_approved"])
                     if new_type == "feuser" and new_feuser:
                         BuddyEmailService.send_expense_approval_request(expense, feuser)
+                        # Ownership changed hands: every remaining participant's
+                        # approval no longer applies.
+                        BuddyExpenseService.reset_participant_approvals(expense)
                         BuddyEmailService.notify_expense_updated(
                             expense, feuser, _old_title, _old_value, _old_participants,
                             extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
+                            reset_participant_pks=_prev_approved_pks,
                         )
                         # Expense now belongs to other user; redirect without further editing
                         return redirect("budget:expenses_list")
                 # Skip for settlements: creditor share must not change
+                approval_reset = False
                 if not expense.is_buddies_settlement:
                     _apply_solo_spendings(expense, buddy, feuser)
                     BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"], acting_feuser=feuser)
+                    # Editing the title, value, participants or shares invalidates
+                    # every participant's approval; anything else keeps them.
+                    approval_reset = (
+                        payer_changed
+                        or _old_title != expense.title
+                        or _old_value != expense.value
+                        or _old_spend_sig != BuddyExpenseService.spend_signature(expense)
+                    )
+                    if approval_reset:
+                        BuddyExpenseService.reset_participant_approvals(expense)
+                    else:
+                        BuddyExpenseService.restore_approvals(expense, _old_approvals)
                 BuddyEmailService.notify_expense_updated(
                     expense, feuser, _old_title, _old_value, _old_participants,
                     extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
+                    reset_participant_pks=(_prev_approved_pks if approval_reset else set()),
                 )
                 if expense.project:
                     expense.project.update_lastmod()

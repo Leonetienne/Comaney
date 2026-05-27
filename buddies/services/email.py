@@ -654,6 +654,9 @@ class BuddyEmailService:
         share_percent = bs.share_percent if bs else None
         share_value = (expense.value * share_percent / Decimal("100")) if share_percent is not None else None
         payer_row, participant_rows = BuddyEmailService._build_expense_rows(expense)
+        site_url = getattr(settings, "SITE_URL", "")
+        approve_url = f"{site_url}/buddies/expense/{expense.uid}/participant-approve/"
+        reject_url = f"{site_url}/buddies/expense/{expense.uid}/participant-reject/"
         _emit(
             recipient_feuser,
             type="expense_participation",
@@ -669,6 +672,8 @@ class BuddyEmailService:
                 "participant_rows": participant_rows,
                 "currency": currency,
                 "changes": changes,
+                "approve_url": approve_url,
+                "reject_url": reject_url,
             },
             related_expense=expense,
             related_project=expense.project if expense.project_id else None,
@@ -721,15 +726,19 @@ class BuddyEmailService:
     @staticmethod
     def notify_expense_updated(
         expense, actor_feuser, old_title, old_value, old_participants,
-        extra_notify_feuser=None,
+        extra_notify_feuser=None, reset_participant_pks=None,
     ):
         """
         High-level: notify participants of changes to a buddy expense.
 
         old_participants: {feuser_pk: (feuser, share_percent)} snapshot taken before editing.
         extra_notify_feuser: optional FeUser to also notify (e.g. expense owner in admin edits).
+        reset_participant_pks: feuser pks whose approval was actually cleared by this
+            edit (they had approved beforehand). Only these recipients see the
+            "your approval was reset" note in their update email.
         Skips settlement expenses.
         """
+        reset_participant_pks = reset_participant_pks or set()
         if getattr(expense, "is_buddies_settlement", False):
             return
 
@@ -754,8 +763,9 @@ class BuddyEmailService:
         title_changed = old_title != expense.title
         value_changed = old_value != expense.value
         buddy_changed = bool(added_pks or removed_pks or share_changed_pks)
+        any_reset = bool(reset_participant_pks)
 
-        if not (title_changed or value_changed or buddy_changed):
+        if not (title_changed or value_changed or buddy_changed or any_reset):
             return
 
         added_names = [_display_name(new_participants[pk][0]) for pk in added_pks]
@@ -784,9 +794,12 @@ class BuddyEmailService:
             feuser, _ = new_participants[pk]
             if feuser.pk == actor_feuser.pk:
                 continue
-            if title_changed or value_changed or pk in share_changed_pks or added_pks or removed_pks:
+            recipient_reset = pk in reset_participant_pks
+            if (title_changed or value_changed or pk in share_changed_pks
+                    or added_pks or removed_pks or recipient_reset):
                 BuddyEmailService.send_expense_updated_notice(
-                    expense, actor_feuser, feuser, currency, changes
+                    expense, actor_feuser, feuser, currency,
+                    {**changes, "approval_reset": recipient_reset},
                 )
 
         # Notify removed participants
