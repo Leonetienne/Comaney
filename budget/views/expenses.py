@@ -142,6 +142,20 @@ def _parse_buddy_post(post, feuser):
     if mode == "single" and len(result["spendings"]) > 1:
         result["valid"] = False
 
+    # Authorization: every referenced upfront payer / participant must be within
+    # the acting user's connected set (buddy, project member, or owned/project
+    # dummy). Reject the whole submission otherwise (never trust POST-supplied ids).
+    if result["valid"]:
+        from buddies.services import BuddyExpenseService
+        if not BuddyExpenseService.validate_buddy_identities(
+            feuser,
+            group=result["group"],
+            upfront_feuser=result["upfront_feuser"],
+            upfront_dummy=result["upfront_dummy"],
+            spendings=result["spendings"],
+        ):
+            result["valid"] = False
+
     return result
 
 
@@ -313,7 +327,7 @@ def expense_create(request):
                 BuddyExpenseService.reconcile_categories_tags(expense, other)
                 expense.save(update_fields=["category"])
                 _apply_solo_spendings(expense, buddy, feuser)
-                BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
+                BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"], acting_feuser=feuser)
                 create_participant_overlays(expense)
                 BuddyEmailService.send_expense_approval_request(expense, feuser)
                 BuddyEmailService.notify_expense_created(expense, feuser)
@@ -336,7 +350,7 @@ def expense_create(request):
                     from buddies.services import BuddyExpenseService, BuddyEmailService
                     from budget.services import create_participant_overlays
                     _apply_solo_spendings(expense, buddy, feuser)
-                    BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
+                    BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"], acting_feuser=feuser)
                     create_participant_overlays(expense)
                     BuddyEmailService.notify_expense_created(expense, feuser)
                     if expense.project:
@@ -477,7 +491,7 @@ def expense_edit(request, uid):
                 # Skip for settlements: creditor share must not change
                 if not expense.is_buddies_settlement:
                     _apply_solo_spendings(expense, buddy, feuser)
-                    BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"])
+                    BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"], acting_feuser=feuser)
                 BuddyEmailService.notify_expense_updated(
                     expense, feuser, _old_title, _old_value, _old_participants,
                     extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),

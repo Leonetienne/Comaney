@@ -423,7 +423,9 @@ def _parse_buddy_item(item: dict, feuser) -> dict | None:
     group = None
     if mode == "group" and group_id:
         try:
-            group = Project.objects.get(uid=group_id, members__feuser=feuser)
+            group = Project.objects.get(
+                uid=group_id, members__feuser=feuser, archived=False
+            )
         except Project.DoesNotExist:
             pass
 
@@ -441,6 +443,18 @@ def _parse_buddy_item(item: dict, feuser) -> dict | None:
             return None
 
     if not spendings:
+        return None
+
+    # Authorization: reject any upfront payer / participant not connected to the
+    # acting user (same central validator as the web create/edit path).
+    from buddies.services import BuddyExpenseService
+    if not BuddyExpenseService.validate_buddy_identities(
+        feuser,
+        group=group,
+        upfront_feuser=upfront_feuser,
+        upfront_dummy=upfront_dummy,
+        spendings=spendings,
+    ):
         return None
 
     return {

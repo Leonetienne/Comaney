@@ -12,12 +12,84 @@ class BuddyExpenseService:
     """Handles expense-level buddy operations."""
 
     @staticmethod
-    def set_buddy_spendings(expense, participants: list[dict]):
+    def authorized_identity_ids(feuser, group=None) -> tuple[set, set]:
+        """
+        Return (allowed_feuser_ids, allowed_dummy_ids): the identities `feuser`
+        is allowed to reference as an upfront payer or participant on a
+        buddy/project expense.
+
+        - FeUsers: current buddies, plus (in group mode) the project's real-user
+          members, plus the acting user themselves (they may be a participant).
+        - DummyUsers: offline buddies owned by feuser, plus (in group mode) the
+          project's offline members.
+        """
+        from .query import BuddyQueryService
+
+        allowed_feusers = {b.pk for b in BuddyQueryService.get_actual_buddies(feuser)}
+        allowed_feusers.add(feuser.pk)
+        allowed_dummies = set(
+            DummyUser.objects.filter(owning_feuser=feuser).values_list("pk", flat=True)
+        )
+        if group is not None:
+            allowed_feusers |= set(
+                group.members.filter(feuser__isnull=False).values_list("feuser_id", flat=True)
+            )
+            allowed_dummies |= set(
+                group.members.filter(dummy__isnull=False).values_list("dummy_id", flat=True)
+            )
+        return allowed_feusers, allowed_dummies
+
+    @staticmethod
+    def validate_buddy_identities(
+        feuser, group=None, upfront_feuser=None, upfront_dummy=None, spendings=None
+    ) -> bool:
+        """
+        Central authorization check for buddy/project expense submissions.
+
+        Returns True only if every referenced identity (the upfront payer and
+        each participant) is within `feuser`'s authorized set (see
+        authorized_identity_ids). An unknown/foreign id, or a participant row
+        with a missing/invalid id or type, rejects the whole submission.
+        """
+        allowed_feusers, allowed_dummies = BuddyExpenseService.authorized_identity_ids(
+            feuser, group
+        )
+        if upfront_feuser is not None and upfront_feuser.pk not in allowed_feusers:
+            return False
+        if upfront_dummy is not None and upfront_dummy.pk not in allowed_dummies:
+            return False
+        for p in spendings or []:
+            try:
+                pid = int(p["id"])
+                ptype = p["type"]
+            except (KeyError, TypeError, ValueError):
+                return False
+            if ptype == "feuser":
+                if pid not in allowed_feusers:
+                    return False
+            elif ptype == "dummy":
+                if pid not in allowed_dummies:
+                    return False
+            else:
+                return False
+        return True
+
+    @staticmethod
+    def set_buddy_spendings(expense, participants: list[dict], acting_feuser=None):
         """
         Replace all BuddySpending rows for an expense.
         participants: [{'type': 'feuser'|'dummy', 'id': int, 'share_percent': Decimal}, ...]
         The expense owner must NOT appear in participants for non-group expenses.
+
+        When `acting_feuser` is given, every participant id is re-validated
+        against that user's authorized set (defense in depth for the web/express
+        entry points); an unauthorized id raises ValueError rather than being
+        silently written.
         """
+        if acting_feuser is not None and not BuddyExpenseService.validate_buddy_identities(
+            acting_feuser, expense.project, spendings=participants
+        ):
+            raise ValueError("Unauthorized participant in buddy spendings")
         expense.buddy_spendings.all().delete()
         rows = []
         for p in participants:
