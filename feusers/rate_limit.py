@@ -1,35 +1,45 @@
-import threading
+"""Brute-force rate limiter for login / TOTP.
+
+State is kept in Django's cache framework so it is shared across all Gunicorn
+workers (and survives a single worker restart) rather than living in a
+process-local dict. Configure a shared backend (the DB cache backend is fine)
+via ``CACHES`` in settings; with the per-process default backend the limiter
+still works but only within one worker.
+
+Semantics are unchanged from the original in-memory version: at most
+``_MAX_ATTEMPTS`` failures are tolerated within a sliding ``_WINDOW`` (seconds).
+Because the store is shared between processes we key on wall-clock time
+(``time.time()``) rather than ``time.monotonic()``, whose zero point differs
+per process.
+"""
 import time
-from collections import defaultdict
+
+from django.core.cache import cache
 
 _WINDOW = 60
 _MAX_ATTEMPTS = 5
 
-_lock = threading.Lock()
-_attempts: dict[tuple[str, str], list[float]] = defaultdict(list)
+
+def _cache_key(kind: str, identifier: str) -> str:
+    return f"rl:{kind}:{identifier}"
 
 
-def _prune(key: tuple[str, str], now: float) -> None:
-    _attempts[key] = [t for t in _attempts[key] if now - t < _WINDOW]
+def _recent(kind: str, identifier: str, now: float) -> list[float]:
+    """Timestamps for this key that fall inside the current window."""
+    timestamps = cache.get(_cache_key(kind, identifier)) or []
+    return [t for t in timestamps if now - t < _WINDOW]
 
 
 def is_limited(kind: str, identifier: str) -> bool:
-    key = (kind, identifier)
-    now = time.monotonic()
-    with _lock:
-        _prune(key, now)
-        return len(_attempts[key]) >= _MAX_ATTEMPTS
+    return len(_recent(kind, identifier, time.time())) >= _MAX_ATTEMPTS
 
 
 def record_failure(kind: str, identifier: str) -> None:
-    key = (kind, identifier)
-    now = time.monotonic()
-    with _lock:
-        _prune(key, now)
-        _attempts[key].append(now)
+    now = time.time()
+    recent = _recent(kind, identifier, now)
+    recent.append(now)
+    cache.set(_cache_key(kind, identifier), recent, timeout=_WINDOW)
 
 
 def clear(kind: str, identifier: str) -> None:
-    key = (kind, identifier)
-    with _lock:
-        _attempts.pop(key, None)
+    cache.delete(_cache_key(kind, identifier))

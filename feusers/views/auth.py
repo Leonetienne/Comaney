@@ -218,7 +218,14 @@ def login_view(request):
     if request.method == "POST":
         form = LoginForm(request.POST)
         ip = request.META.get("REMOTE_ADDR", "")
-        if is_limited("login", ip):
+        # Throttle on two independent dimensions: the source IP and the submitted
+        # account. The per-account bucket holds regardless of source IP, so
+        # credential stuffing against one account from rotating IPs (or hidden
+        # behind a shared proxy address) is still bounded. The submitted email is
+        # read from the raw POST so the account bucket applies even before the
+        # form validates.
+        account = request.POST.get("email", "").lower().strip()
+        if is_limited("login", ip) or (account and is_limited("login-account", account)):
             error = "Too many failed attempts. Please wait a moment and try again."
         elif form.is_valid():
             email = form.cleaned_data["email"].lower().strip()
@@ -229,18 +236,22 @@ def login_view(request):
 
             if user is None or not user.check_password(form.cleaned_data["password"]):
                 record_failure("login", ip)
+                record_failure("login-account", email)
                 error = "Invalid email or password."
             elif not user.is_confirmed:
                 error = "Please confirm your email address first."
             elif user.is_demo and not settings.ENABLE_DEMO_USERS:
                 record_failure("login", ip)
+                record_failure("login-account", email)
                 error = "Invalid email or password."
             elif user.totp_enabled:
                 rl_clear("login", ip)
+                rl_clear("login-account", email)
                 request.session["totp_pending_id"] = user.pk
                 return redirect("totp_verify")
             else:
                 rl_clear("login", ip)
+                rl_clear("login-account", email)
                 _record_login(user)
                 request.session["feuser_id"] = user.pk
                 return redirect("landing_page")

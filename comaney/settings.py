@@ -79,6 +79,17 @@ DATABASES = {
     }
 }
 
+# Shared cache backend. Backs the brute-force rate limiter (feusers/rate_limit.py)
+# so attempt counters are shared across all Gunicorn workers instead of living in
+# each worker's memory. The DB cache backend reuses the existing MariaDB, so no
+# extra service is needed; the "comaney_cache" table is created by a migration.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "comaney_cache",
+    }
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
