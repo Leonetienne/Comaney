@@ -9,96 +9,10 @@
 
     <h1>Settings</h1>
 
-    <div class="settings-card" id="section-picture">
-        <div class="settings-card-head">
-            <h2 class="settings-card-title">Profile picture</h2>
-        </div>
-        <p id="ppic-success" class="success-msg" {% if success != "picture" and success != "picture_deleted" %}style="display:none;"{% endif %}>
-            {% if success == "picture" %}Profile picture updated.{% elif success == "picture_deleted" %}Profile picture removed.{% endif %}
-        </p>
-        <p id="ppic-error" class="error-msg" {% if not picture_error %}style="display:none;"{% endif %}>{{ picture_error }}</p>
-        <div class="ppic-settings-row">
-            <div id="ppic-preview-wrap">
-                {% if current_feuser.profile_picture %}
-                    <img id="ppic-preview-img" src="{{ current_feuser.ppic_url }}" class="user-avatar user-avatar--lg" alt="">
-                {% else %}
-                    <span id="ppic-preview-initials" class="user-avatar user-avatar--lg user-avatar--initials" style="background: {{ current_feuser.initials|avatar_color }};">{{ current_feuser.initials }}</span>
-                {% endif %}
-            </div>
-            <div class="ppic-settings-actions">
-                <label for="id_profile_picture" class="btn btn-secondary btn-sm" style="cursor:pointer;">Choose image</label>
-                <input type="file" id="id_profile_picture" accept="image/*" style="display:none;">
-                {% if current_feuser.profile_picture %}
-                <form method="post" novalidate id="ppic-delete-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="picture_delete">
-                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-                </form>
-                {% endif %}
-            </div>
-        </div>
-        <p class="in-page-tip" style="margin-top:12px;margin-bottom:0;">JPEG, PNG, GIF or WebP. Max 5 MB.</p>
-    </div>
-
     {% include "partials/_image_cropper.html" %}
 
-    <div class="settings-card" id="section-backdrop">
-        <div class="settings-card-head">
-            <h2 class="settings-card-title">Custom backdrop</h2>
-        </div>
-        <p class="in-page-tip">Upload an image to overlay on the background. It stays fixed while you scroll.</p>
-        {% if success == "backdrop" or success == "backdrop_settings" %}<p class="success-msg">Backdrop updated.</p>{% endif %}
-        {% if success == "backdrop_deleted" %}<p class="success-msg">Backdrop removed.</p>{% endif %}
-        {% if backdrop_error %}<p class="error-msg">{{ backdrop_error }}</p>{% endif %}
-        <div class="ppic-settings-actions">
-            <label for="id_custom_backdrop" class="btn btn-secondary btn-sm" style="cursor:pointer;">Choose image</label>
-            <form method="post" enctype="multipart/form-data" id="backdrop-upload-form">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="backdrop">
-                <input type="file" id="id_custom_backdrop" name="custom_backdrop" accept="image/*" style="display:none;">
-            </form>
-            {% if current_feuser.custom_backdrop %}
-            <form method="post" novalidate>
-                {% csrf_token %}
-                <input type="hidden" name="action" value="backdrop_delete">
-                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-            </form>
-            {% endif %}
-        </div>
-        <p class="in-page-tip" style="margin-top:12px;margin-bottom:0;">PNG, JPEG, WebP or GIF. Max 20 MB.</p>
-        {% if current_feuser.custom_backdrop %}
-        <form method="post" novalidate class="backdrop-settings-form">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="backdrop_settings">
-            <div class="backdrop-settings-row">
-                <div class="backdrop-settings-field">
-                    <label for="id_backdrop_mode">Mode</label>
-                    <select id="id_backdrop_mode" name="backdrop_mode" class="edit-input">
-                        <option value="cover" {% if current_feuser.backdrop_mode == "cover" %}selected{% endif %}>Cover</option>
-                        <option value="contain" {% if current_feuser.backdrop_mode == "contain" %}selected{% endif %}>Fit</option>
-                    </select>
-                </div>
-                <div class="backdrop-settings-field backdrop-settings-field--slider">
-                    <label for="id_backdrop_opacity">Opacity: <span id="backdrop-opacity-label">{{ current_feuser.backdrop_opacity }}</span>%</label>
-                    <input type="range" id="id_backdrop_opacity" name="backdrop_opacity" min="0" max="100" value="{{ current_feuser.backdrop_opacity }}" class="backdrop-opacity-slider">
-                </div>
-            </div>
-            <div class="backdrop-settings-field backdrop-settings-field--full">
-                <label for="id_backdrop_css">Extra backdrop styles</label>
-                <textarea id="id_backdrop_css" name="backdrop_css" class="backdrop-css-input" rows="4" placeholder="e.g. filter: blur(4px); transform: scale(1.05);">{{ current_feuser.backdrop_css }}</textarea>
-                <span class="form-hint-sm">CSS property declarations only, no selectors. Applied directly to the backdrop image.</span>
-            </div>
-            <div class="backdrop-settings-field backdrop-settings-field--full">
-                <label for="id_backdrop_css_mobile">Extra mobile backdrop styles</label>
-                <textarea id="id_backdrop_css_mobile" name="backdrop_css_mobile" class="backdrop-css-input" rows="4" placeholder="e.g. opacity: 0.3; object-position: center top;">{{ current_feuser.backdrop_css_mobile }}</textarea>
-                <span class="form-hint-sm">Applied inside a <code>@media (max-width: 768px)</code> block.</span>
-            </div>
-            <div class="form-actions" style="margin-top:12px;">
-                <button type="submit" class="btn">Save changes</button>
-            </div>
-        </form>
-        {% endif %}
-    </div>
+    <div class="settings-grid">
+    <div class="settings-col">
 
     <div class="settings-card" id="section-profile">
         <div class="settings-card-head">
@@ -130,6 +44,30 @@
                 <button type="submit" class="btn">Save changes</button>
             </div>
         </form>
+    </div>
+
+    <div class="settings-card" id="section-password">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Password</h2>
+        </div>
+        {% if success == "password" %}<p class="success-msg">Password updated.</p>{% endif %}
+        {% if current_feuser.is_demo %}
+        <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
+        <fieldset disabled style="border:none;padding:0;margin:0;">
+        {% endif %}
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="password">
+            {% for field in password_form %}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+            {% endfor %}
+            <div class="form-actions">
+                <button type="submit" class="btn">Update password</button>
+            </div>
+        </form>
+        {% if current_feuser.is_demo %}</fieldset>{% endif %}
     </div>
 
     <div class="settings-card" id="section-notifications">
@@ -210,25 +148,38 @@
         {% if current_feuser.is_demo %}</fieldset>{% endif %}
     </div>
 
-    <div class="settings-card" id="section-2fa">
+    </div>
+    <div class="settings-col">
+
+    <div class="settings-card" id="section-picture">
         <div class="settings-card-head">
-            <h2 class="settings-card-title">Two-factor authentication</h2>
-            {% if current_feuser.totp_enabled %}
-            <span class="settings-badge settings-badge--on">Enabled</span>
-            {% else %}
-            <span class="settings-badge settings-badge--off">Not enabled</span>
-            {% endif %}
+            <h2 class="settings-card-title">Profile picture</h2>
         </div>
-        {% if current_feuser.is_demo %}
-        <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
-        <button type="button" class="btn" disabled>Set up 2FA</button>
-        {% elif current_feuser.totp_enabled %}
-        <p class="in-page-tip">Your account is protected with an authenticator app.</p>
-        <a href="{% url 'totp_disable' %}" class="btn btn-danger btn-sm">Disable 2FA</a>
-        {% else %}
-        <p class="in-page-tip">Add an extra layer of security by requiring a one-time code from your authenticator app on each login.</p>
-        <a href="{% url 'totp_setup' %}" class="btn">Set up 2FA</a>
-        {% endif %}
+        <p id="ppic-success" class="success-msg" {% if success != "picture" and success != "picture_deleted" %}style="display:none;"{% endif %}>
+            {% if success == "picture" %}Profile picture updated.{% elif success == "picture_deleted" %}Profile picture removed.{% endif %}
+        </p>
+        <p id="ppic-error" class="error-msg" {% if not picture_error %}style="display:none;"{% endif %}>{{ picture_error }}</p>
+        <div class="ppic-settings-row">
+            <div id="ppic-preview-wrap">
+                {% if current_feuser.profile_picture %}
+                    <img id="ppic-preview-img" src="{{ current_feuser.ppic_url }}" class="user-avatar user-avatar--lg" alt="">
+                {% else %}
+                    <span id="ppic-preview-initials" class="user-avatar user-avatar--lg user-avatar--initials" style="background: {{ current_feuser.initials|avatar_color }};">{{ current_feuser.initials }}</span>
+                {% endif %}
+            </div>
+            <div class="ppic-settings-actions">
+                <label for="id_profile_picture" class="btn btn-secondary btn-sm" style="cursor:pointer;">Choose image</label>
+                <input type="file" id="id_profile_picture" accept="image/*" style="display:none;">
+                {% if current_feuser.profile_picture %}
+                <form method="post" novalidate id="ppic-delete-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="picture_delete">
+                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        <p class="in-page-tip" style="margin-top:12px;margin-bottom:0;">JPEG, PNG, GIF or WebP. Max 5 MB.</p>
     </div>
 
     <div class="settings-card" id="section-email">
@@ -266,28 +217,83 @@
         {% if current_feuser.is_demo %}</fieldset>{% endif %}
     </div>
 
-    <div class="settings-card" id="section-password">
+    <div class="settings-card" id="section-2fa">
         <div class="settings-card-head">
-            <h2 class="settings-card-title">Password</h2>
+            <h2 class="settings-card-title">Two-factor authentication</h2>
+            {% if current_feuser.totp_enabled %}
+            <span class="settings-badge settings-badge--on">Enabled</span>
+            {% else %}
+            <span class="settings-badge settings-badge--off">Not enabled</span>
+            {% endif %}
         </div>
-        {% if success == "password" %}<p class="success-msg">Password updated.</p>{% endif %}
         {% if current_feuser.is_demo %}
         <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
-        <fieldset disabled style="border:none;padding:0;margin:0;">
+        <button type="button" class="btn" disabled>Set up 2FA</button>
+        {% elif current_feuser.totp_enabled %}
+        <p class="in-page-tip">Your account is protected with an authenticator app.</p>
+        <a href="{% url 'totp_disable' %}" class="btn btn-danger btn-sm">Disable 2FA</a>
+        {% else %}
+        <p class="in-page-tip">Add an extra layer of security by requiring a one-time code from your authenticator app on each login.</p>
+        <a href="{% url 'totp_setup' %}" class="btn">Set up 2FA</a>
         {% endif %}
-        <form method="post" novalidate>
+    </div>
+
+    <div class="settings-card" id="section-backdrop">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Custom backdrop</h2>
+        </div>
+        <p class="in-page-tip">Upload an image to overlay on the background. It stays fixed while you scroll.</p>
+        {% if success == "backdrop" or success == "backdrop_settings" %}<p class="success-msg">Backdrop updated.</p>{% endif %}
+        {% if success == "backdrop_deleted" %}<p class="success-msg">Backdrop removed.</p>{% endif %}
+        {% if backdrop_error %}<p class="error-msg">{{ backdrop_error }}</p>{% endif %}
+        <div class="ppic-settings-actions">
+            <label for="id_custom_backdrop" class="btn btn-secondary btn-sm" style="cursor:pointer;">Choose image</label>
+            <form method="post" enctype="multipart/form-data" id="backdrop-upload-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="backdrop">
+                <input type="file" id="id_custom_backdrop" name="custom_backdrop" accept="image/*" style="display:none;">
+            </form>
+            {% if current_feuser.custom_backdrop %}
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="backdrop_delete">
+                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+            </form>
+            {% endif %}
+        </div>
+        <p class="in-page-tip" style="margin-top:12px;margin-bottom:0;">PNG, JPEG, WebP or GIF. Max 20 MB.</p>
+        {% if current_feuser.custom_backdrop %}
+        <form method="post" novalidate class="backdrop-settings-form">
             {% csrf_token %}
-            <input type="hidden" name="action" value="password">
-            {% for field in password_form %}
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
-            {% endfor %}
-            <div class="form-actions">
-                <button type="submit" class="btn">Update password</button>
+            <input type="hidden" name="action" value="backdrop_settings">
+            <div class="backdrop-settings-row">
+                <div class="backdrop-settings-field">
+                    <label for="id_backdrop_mode">Mode</label>
+                    <select id="id_backdrop_mode" name="backdrop_mode" class="edit-input">
+                        <option value="cover" {% if current_feuser.backdrop_mode == "cover" %}selected{% endif %}>Cover</option>
+                        <option value="contain" {% if current_feuser.backdrop_mode == "contain" %}selected{% endif %}>Fit</option>
+                    </select>
+                </div>
+                <div class="backdrop-settings-field backdrop-settings-field--slider">
+                    <label for="id_backdrop_opacity">Opacity: <span id="backdrop-opacity-label">{{ current_feuser.backdrop_opacity }}</span>%</label>
+                    <input type="range" id="id_backdrop_opacity" name="backdrop_opacity" min="0" max="100" value="{{ current_feuser.backdrop_opacity }}" class="backdrop-opacity-slider">
+                </div>
+            </div>
+            <div class="backdrop-settings-field backdrop-settings-field--full">
+                <label for="id_backdrop_css">Extra backdrop styles</label>
+                <textarea id="id_backdrop_css" name="backdrop_css" class="backdrop-css-input" rows="4" placeholder="e.g. filter: blur(4px); transform: scale(1.05);">{{ current_feuser.backdrop_css }}</textarea>
+                <span class="form-hint-sm">CSS property declarations only, no selectors. Applied directly to the backdrop image.</span>
+            </div>
+            <div class="backdrop-settings-field backdrop-settings-field--full">
+                <label for="id_backdrop_css_mobile">Extra mobile backdrop styles</label>
+                <textarea id="id_backdrop_css_mobile" name="backdrop_css_mobile" class="backdrop-css-input" rows="4" placeholder="e.g. opacity: 0.3; object-position: center top;">{{ current_feuser.backdrop_css_mobile }}</textarea>
+                <span class="form-hint-sm">Applied inside a <code>@media (max-width: 768px)</code> block.</span>
+            </div>
+            <div class="form-actions" style="margin-top:12px;">
+                <button type="submit" class="btn">Save changes</button>
             </div>
         </form>
-        {% if current_feuser.is_demo %}</fieldset>{% endif %}
+        {% endif %}
     </div>
 
     <div class="settings-card" id="section-apikey">
@@ -323,26 +329,27 @@
         {% endif %}
     </div>
 
-    <div class="settings-bottom-row">
-        <div class="settings-card" id="section-export">
-            <div class="settings-card-head">
-                <h2 class="settings-card-title">Export data</h2>
-            </div>
-            <p class="in-page-tip">Download all your data as a ZIP archive containing CSV files.</p>
-            <a href="{% url 'account_export' %}" class="btn btn-secondary btn-sm">Export as ZIP</a>
+    <div class="settings-card" id="section-export">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Export data</h2>
         </div>
+        <p class="in-page-tip">Download all your data as a ZIP archive containing CSV files.</p>
+        <a href="{% url 'account_export' %}" class="btn btn-secondary btn-sm">Export as ZIP</a>
+    </div>
 
-        <div class="settings-card settings-card--danger" id="section-danger">
-            <div class="settings-card-head">
-                <h2 class="settings-card-title">Danger zone</h2>
-            </div>
-            <p class="in-page-tip">Permanently delete your account and all associated data. This cannot be undone.</p>
-            {% if current_feuser.is_demo %}
-            <button type="button" class="btn btn-danger btn-sm" disabled title="Not available on demo accounts">Delete account</button>
-            {% else %}
-            <a href="{% url 'account_delete' %}" class="btn btn-danger btn-sm">Delete account</a>
-            {% endif %}
+    </div>
+    </div>
+
+    <div class="settings-card settings-card--danger" id="section-danger">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Danger zone</h2>
         </div>
+        <p class="in-page-tip">Permanently delete your account and all associated data. This cannot be undone.</p>
+        {% if current_feuser.is_demo %}
+        <button type="button" class="btn btn-danger btn-sm" disabled title="Not available on demo accounts">Delete account</button>
+        {% else %}
+        <a href="{% url 'account_delete' %}" class="btn btn-danger btn-sm">Delete account</a>
+        {% endif %}
     </div>
 
 </div>
