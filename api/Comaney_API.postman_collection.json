@@ -437,14 +437,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"value\": \"950.00\",\n  \"repeat_every_factor\": 1,\n  \"repeat_every_unit\": \"months\"\n}"
+              "raw": "{\n  \"value\": \"950.00\",\n  \"repeat_every_factor\": 1,\n  \"repeat_every_unit\": \"months\",\n  \"confirm_modify_schedule\": true\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/scheduled/{{scheduled_id}}/",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "scheduled", "{{scheduled_id}}", ""]
             },
-            "description": "Update any subset of scheduled expense fields."
+            "description": "Update any subset of scheduled expense fields. Changing repeat_every_factor/repeat_every_unit requires confirm_modify_schedule: true, and changing repeat_base_date/end_on requires confirm_modify_schedule_window: true - otherwise those fields are silently ignored, since changing them deletes/regenerates a year's worth of generated expenses."
           }
         },
         {

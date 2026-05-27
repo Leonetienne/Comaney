@@ -15,6 +15,7 @@ class Expense(OwnedModel):
     type = models.CharField(max_length=12, choices=TransactionType.choices)
     value = models.DecimalField(max_digits=12, decimal_places=2)
     date_due = models.DateField(null=True, blank=True, default=None)
+    scheduled_occurrence_date = models.DateField(null=True, blank=True, default=None)
     date_created = models.DateTimeField(auto_now_add=True)
     settled = models.BooleanField(default=True)
     deactivated = models.BooleanField(default=False)

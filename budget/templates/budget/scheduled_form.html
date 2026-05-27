@@ -12,7 +12,7 @@
 
 <div class="form-wrap">
 <div class="add-buddy-panel">
-    <form method="post" novalidate>
+    <form method="post" novalidate id="scheduled-form">
         {% csrf_token %}
         {% if form_nonce %}<input type="hidden" name="form_nonce" value="{{ form_nonce }}">{% endif %}
 
@@ -37,7 +37,14 @@
             </div>
         </div>
 
-        <div class="form-row-3 mt-1">
+        {% if scheduled %}
+        <label class="checkbox-inline mt-1">
+            <input type="checkbox" id="id_confirm_modify_schedule" name="confirm_modify_schedule"
+                   {% if request.POST.confirm_modify_schedule == 'on' %}checked{% endif %}>
+            Modify schedule
+        </label>
+        {% endif %}
+        <div class="form-row-3{% if not scheduled %} mt-1{% endif %}">
             <div class="col-span-2">
                 <label>Repeat</label>
                 <div class="flex-row-center mt-xs">
@@ -50,6 +57,13 @@
             </div>
         </div>
 
+        {% if scheduled %}
+        <label class="checkbox-inline">
+            <input type="checkbox" id="id_confirm_modify_schedule_window" name="confirm_modify_schedule_window"
+                   {% if request.POST.confirm_modify_schedule_window == 'on' %}checked{% endif %}>
+            Modify schedule time window
+        </label>
+        {% endif %}
         <div class="form-row">
             <div>
                 <label for="{{ form.repeat_base_date.id_for_label }}">{{ form.repeat_base_date.label }}</label>
@@ -63,16 +77,9 @@
             </div>
         </div>
 
-        <div class="form-row">
-            <div>
-                <label for="{{ form.category.id_for_label }}">{{ form.category.label }}</label>
-                {{ form.category }}
-                {% for e in form.category.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
-            </div>
-            <div class="flex-col-gap-sm">
-                <label class="checkbox-inline">{{ form.default_auto_settle_on_due_date }} {{ form.default_auto_settle_on_due_date.label }}</label>
-            </div>
-        </div>
+        <label for="{{ form.category.id_for_label }}">{{ form.category.label }}</label>
+        {{ form.category }}
+        {% for e in form.category.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
 
         <label>{{ form.tags.label }}</label>
         <div class="tag-cb-wrap">{{ form.tags }}</div>
@@ -81,6 +88,9 @@
         <label for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
         {{ form.note }}
         {% for e in form.note.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+
+        <label class="checkbox-inline">{{ form.default_auto_settle_on_due_date }} {{ form.default_auto_settle_on_due_date.label }}</label>
+        {% for e in form.default_auto_settle_on_due_date.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
 
         <label class="checkbox-inline">{{ form.deactivated }} {{ form.deactivated.label }}</label>
         {% for e in form.deactivated.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
@@ -121,4 +131,62 @@
     endEl.addEventListener('input', function () { errEl.style.display = 'none'; });
 })();
 </script>
+{% if scheduled %}
+<script>
+(function () {
+    const form = document.getElementById('scheduled-form');
+    const groupA = [
+        document.getElementById('{{ form.repeat_every_factor.id_for_label }}'),
+        document.getElementById('{{ form.repeat_every_unit.id_for_label }}'),
+    ];
+    const groupB = [
+        document.getElementById('{{ form.repeat_base_date.id_for_label }}'),
+        document.getElementById('{{ form.end_on.id_for_label }}'),
+    ];
+    const allLocked = groupA.concat(groupB);
+
+    allLocked.forEach(function (el) { el.dataset.originalValue = el.value; });
+
+    function wireGate(checkboxId, fields, message) {
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox.checked) {
+            // Redisplay after a validation error elsewhere: this gate was already confirmed.
+            fields.forEach(function (el) { el.disabled = false; });
+        }
+        checkbox.addEventListener('change', function () {
+            if (checkbox.checked) {
+                confirmDialog(message, 'Yes, continue').then(function () {
+                    fields.forEach(function (el) { el.disabled = false; });
+                }).catch(function () {
+                    checkbox.checked = false;
+                });
+            } else {
+                fields.forEach(function (el) {
+                    el.value = el.dataset.originalValue;
+                    el.disabled = true;
+                });
+            }
+        });
+    }
+
+    wireGate(
+        'id_confirm_modify_schedule',
+        groupA,
+        'Changing the schedule will delete and re-create ALL "{{ scheduled.title|escapejs }}" expenses of ' +
+        '{{ current_financial_year }}. All manual modifications are lost. Do you understand?'
+    );
+    wireGate(
+        'id_confirm_modify_schedule_window',
+        groupB,
+        'Changing the schedule\'s time window may create additional "{{ scheduled.title|escapejs }}" expenses ' +
+        '(if the window grows) or delete existing ones that now fall outside it, including already-settled ones ' +
+        '(if the window shrinks). Do you understand?'
+    );
+
+    form.addEventListener('submit', function () {
+        allLocked.forEach(function (el) { el.disabled = false; });
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

@@ -3,6 +3,7 @@ import json
 from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from budget.date_utils import current_financial_month, financial_year_range
 from budget.expense_factory import create_expense
@@ -71,7 +72,7 @@ def _apply_solo_spendings(expense, project, creator_feuser):
         )
 
 
-def _generate_with_assignment(scheduled: ScheduledExpense, feuser, occurrence: date) -> Expense:
+def _generate_with_assignment(scheduled: ScheduledExpense, feuser, occurrence: date, settled: bool = False) -> Expense:
     """Create an expense with buddy assignment applied from the scheduled template."""
     from buddies.services import BuddyExpenseService
     from budget.services import upsert_overlay, create_participant_overlays
@@ -85,11 +86,11 @@ def _generate_with_assignment(scheduled: ScheduledExpense, feuser, occurrence: d
 
     # Guard: if the referenced project/dummy was NULLed, fall back to plain expense
     if mode == 'group' and project is None:
-        return _generate_plain(scheduled, feuser, occurrence)
+        return _generate_plain(scheduled, feuser, occurrence, settled=settled)
     if mode == 'single' and upfront_type == 'dummy' and upfront_dummy is None:
-        return _generate_plain(scheduled, feuser, occurrence)
+        return _generate_plain(scheduled, feuser, occurrence, settled=settled)
     if mode == 'single' and upfront_type == 'feuser' and upfront_feuser is None:
-        return _generate_plain(scheduled, feuser, occurrence)
+        return _generate_plain(scheduled, feuser, occurrence, settled=settled)
 
     if upfront_type == 'feuser' and upfront_feuser:
         # Expense is owned by the other feuser, with feuser as initiator
@@ -103,10 +104,11 @@ def _generate_with_assignment(scheduled: ScheduledExpense, feuser, occurrence: d
             category=scheduled.category,
             tags=list(scheduled.tags.all()),
             date_due=occurrence,
-            settled=False,
+            settled=settled,
             auto_settle_on_due_date=scheduled.default_auto_settle_on_due_date,
             notify=scheduled.notify,
             source_scheduled=scheduled,
+            scheduled_occurrence_date=occurrence,
             buddy_approved=False,
             project=project,
         )
@@ -131,10 +133,11 @@ def _generate_with_assignment(scheduled: ScheduledExpense, feuser, occurrence: d
             category=scheduled.category,
             tags=list(scheduled.tags.all()),
             date_due=occurrence,
-            settled=False,
+            settled=settled,
             auto_settle_on_due_date=scheduled.default_auto_settle_on_due_date,
             notify=scheduled.notify,
             source_scheduled=scheduled,
+            scheduled_occurrence_date=occurrence,
             is_dummy=is_dummy,
             upfront_payee_dummy=upfront_dummy if is_dummy else None,
             project=project,
@@ -149,7 +152,7 @@ def _generate_with_assignment(scheduled: ScheduledExpense, feuser, occurrence: d
     return expense
 
 
-def _generate_plain(scheduled: ScheduledExpense, feuser, occurrence: date) -> Expense:
+def _generate_plain(scheduled: ScheduledExpense, feuser, occurrence: date, settled: bool = False) -> Expense:
     return create_expense(
         owning_feuser=feuser,
         title=scheduled.title,
@@ -160,10 +163,11 @@ def _generate_plain(scheduled: ScheduledExpense, feuser, occurrence: date) -> Ex
         category=scheduled.category,
         tags=list(scheduled.tags.all()),
         date_due=occurrence,
-        settled=False,
+        settled=settled,
         auto_settle_on_due_date=scheduled.default_auto_settle_on_due_date,
         notify=scheduled.notify,
         source_scheduled=scheduled,
+        scheduled_occurrence_date=occurrence,
     )
 
 
@@ -179,7 +183,8 @@ class Command(BaseCommand):
         user_email = options.get("user")
 
         self.stdout.write("Generating scheduled expenses…")
-        created = skipped = 0
+        created = skipped = pruned = 0
+        today = timezone.localdate()
 
         qs = (
             ScheduledExpense.objects
@@ -198,36 +203,37 @@ class Command(BaseCommand):
 
             feuser = scheduled.owning_feuser
             year = override_year or current_financial_month(feuser.month_start_day, feuser.month_start_prev)[0]
+
+            if override_year is None and scheduled.last_run == year:
+                continue
+
             start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
 
             occurrences = occurrences_in_range(scheduled, start, end)
             if scheduled.end_on:
                 occurrences = [d for d in occurrences if d <= scheduled.end_on]
+            occurrence_set = set(occurrences)
 
-            if not occurrences:
-                continue
-
-            existing_dates = set(
-                Expense.objects.filter(
+            existing = {
+                e.scheduled_occurrence_date: e
+                for e in Expense.objects.filter(
                     source_scheduled=scheduled,
-                    date_due__gte=start,
-                    date_due__lte=end,
-                ).values_list("date_due", flat=True)
-            )
-
-            if len(existing_dates) >= len(occurrences):
-                skipped += len(occurrences)
-                continue
+                    scheduled_occurrence_date__gte=start,
+                    scheduled_occurrence_date__lte=end,
+                )
+            }
 
             for occurrence in occurrences:
-                if occurrence in existing_dates:
+                if occurrence in existing:
                     skipped += 1
                     continue
 
+                settled = bool(scheduled.default_auto_settle_on_due_date and occurrence <= today)
+
                 if scheduled.assign_buddy_mode:
-                    expense = _generate_with_assignment(scheduled, feuser, occurrence)
+                    expense = _generate_with_assignment(scheduled, feuser, occurrence, settled=settled)
                 else:
-                    expense = _generate_plain(scheduled, feuser, occurrence)
+                    expense = _generate_plain(scheduled, feuser, occurrence, settled=settled)
 
                 from budget.notifications import set_initial_notification_class
                 from buddies.services.email import BuddyEmailService
@@ -238,6 +244,19 @@ class Command(BaseCommand):
                 created += 1
                 self.stdout.write(f"  + [{feuser.email}] {scheduled.title} on {occurrence}")
 
+            stale_dates = [d for d in existing if d not in occurrence_set]
+            if stale_dates:
+                stale_qs = Expense.objects.filter(
+                    source_scheduled=scheduled,
+                    scheduled_occurrence_date__in=stale_dates,
+                )
+                pruned += stale_qs.count()
+                stale_qs.delete()
+
+            if override_year is None:
+                scheduled.last_run = year
+                scheduled.save(update_fields=["last_run"])
+
         self.stdout.write(self.style.SUCCESS(
-            f"Done — {created} created, {skipped} already existed."
+            f"Done — {created} created, {skipped} already existed, {pruned} pruned."
         ))

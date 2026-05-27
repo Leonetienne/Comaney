@@ -84,6 +84,9 @@ class ScheduledExpenseForm(forms.ModelForm):
             self.fields["tags"].queryset = Tag.objects.filter(owning_feuser=feuser)
         if not self.instance.pk:
             self.fields["repeat_base_date"].initial = timezone.localdate()
+        else:
+            for name in ("repeat_every_factor", "repeat_every_unit", "repeat_base_date", "end_on"):
+                self.fields[name].widget.attrs["disabled"] = "disabled"
 
     def clean(self):
         cleaned = super().clean()

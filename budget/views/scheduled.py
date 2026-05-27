@@ -152,13 +152,44 @@ def scheduled_edit(request, uid):
     feuser = request.feuser
     obj = get_object_or_404(ScheduledExpense, uid=uid, owning_feuser=feuser)
     if request.method == "POST":
-        form = ScheduledExpenseForm(request.POST, instance=obj, feuser=feuser)
+        old_factor, old_unit = obj.repeat_every_factor, obj.repeat_every_unit
+        old_base, old_end = obj.repeat_base_date, obj.end_on
+        confirm_a = request.POST.get("confirm_modify_schedule") == "on"
+        confirm_b = request.POST.get("confirm_modify_schedule_window") == "on"
+
+        post_data = request.POST.copy()
+        if not confirm_a:
+            post_data["repeat_every_factor"] = old_factor
+            post_data["repeat_every_unit"] = old_unit
+        if not confirm_b:
+            post_data["repeat_base_date"] = old_base
+            post_data["end_on"] = old_end
+
+        form = ScheduledExpenseForm(post_data, instance=obj, feuser=feuser)
         buddy = _parse_buddy_post(request.POST, feuser)
         if form.is_valid() and (buddy is None or buddy["valid"]):
             obj = form.save(commit=False)
             _apply_assignment(obj, buddy)
             obj.save()
             form.save_m2m()
+
+            factor_unit_changed = (old_factor, old_unit) != (obj.repeat_every_factor, obj.repeat_every_unit)
+            window_changed = (old_base, old_end) != (obj.repeat_base_date, obj.end_on)
+
+            if confirm_a and factor_unit_changed:
+                year = current_financial_month(feuser.month_start_day, feuser.month_start_prev)[0]
+                start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
+                Expense.objects.filter(
+                    source_scheduled=obj,
+                    scheduled_occurrence_date__gte=start,
+                    scheduled_occurrence_date__lte=end,
+                ).delete()
+                obj.last_run = None
+                obj.save(update_fields=["last_run"])
+            elif confirm_b and window_changed:
+                obj.last_run = None
+                obj.save(update_fields=["last_run"])
+
             _generate_and_notify(obj, feuser)
             return redirect("budget:scheduled_list")
         elif buddy and buddy.get("type_conflict"):
@@ -175,6 +206,7 @@ def scheduled_edit(request, uid):
         "active_nav": "scheduled",
         "form": form,
         "scheduled": obj,
+        "current_financial_year": current_financial_month(feuser.month_start_day, feuser.month_start_prev)[0],
         **buddy_render_ctx,
         **_buddy_context(feuser),
     })

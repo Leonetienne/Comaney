@@ -21,6 +21,7 @@ class ScheduledExpense(OwnedModel):
     repeat_every_unit = models.CharField(max_length=10, choices=RepeatUnit.choices, blank=True)
     deactivated = models.BooleanField(default=False)
     notify = models.BooleanField(default=True, blank=True)
+    last_run = models.PositiveIntegerField(null=True, blank=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     last_mod = models.DateTimeField(default=timezone.now)
     # Expense assignment (mirrors the buddy fields on Expense)
