@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 
 from helpers import (
-    _url, fill, submit, wait_url, wait_text, server_today,
+    _url, click, fill, submit, wait_url, wait_text, server_today,
     api_get, api_post, api_delete,
     setup_user, cleanup_user,
 )
@@ -107,6 +107,33 @@ class TestScheduledAllFields:
         assert driver.find_element(By.ID, "id_default_auto_settle_on_due_date").is_selected()
         assert Select(driver.find_element(By.ID, "id_type")).first_selected_option.get_attribute("value") == "income"
         assert Select(driver.find_element(By.ID, "id_repeat_every_unit")).first_selected_option.get_attribute("value") == "weeks"
+
+        # Repeat fields are locked by default in edit mode
+        for locked_id in ("id_repeat_every_factor", "id_repeat_every_unit", "id_repeat_base_date", "id_end_on"):
+            assert driver.find_element(By.ID, locked_id).get_attribute("disabled")
+
+        # Confirming both gates unlocks the fields so they can be filled and submitted
+        click(w, By.ID, "id_confirm_modify_schedule")
+        w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
+        time.sleep(1)
+        click(w, By.ID, "id_confirm_modify_schedule_window")
+        w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
+        time.sleep(1)
+
+        new_base = "2020-01-01"
+        fill(w, By.ID, "id_repeat_every_factor", "3")
+        Select(driver.find_element(By.ID, "id_repeat_every_unit")).select_by_value("days")
+        driver.execute_script(f"document.getElementById('id_repeat_base_date').value = '{new_base}';")
+
+        submit(w)
+        time.sleep(2)
+
+        driver.get(_url(f"/budget/scheduled/{sid}/edit/"))
+        time.sleep(1)
+        assert driver.find_element(By.ID, "id_repeat_every_factor").get_attribute("value") == "3"
+        assert Select(driver.find_element(By.ID, "id_repeat_every_unit")).first_selected_option.get_attribute("value") == "days"
+        assert driver.find_element(By.ID, "id_repeat_base_date").get_attribute("value") == new_base
+
         api_delete(f"/api/v1/scheduled/{sid}/", ctx)
 
 
@@ -268,6 +295,7 @@ class TestScheduledImmediateGeneration:
             "repeat_every_factor": "1",
             "repeat_every_unit": "years",
             "repeat_base_date": today,
+            "confirm_modify_schedule_window": "on",
         }, allow_redirects=False)
 
         hits_after = [e for e in api_get("/api/v1/expenses/", ctx).json()["expenses"]

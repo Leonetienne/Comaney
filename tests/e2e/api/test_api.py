@@ -163,6 +163,13 @@ class TestApiScheduled:
         resp = api_patch(f"/api/v1/scheduled/{ctx['sched_id']}/", ctx,
                          json={"title": "API Scheduled Edited", "repeat_every_unit": "weeks"})
         assert resp.status_code == 200
+        # Unconfirmed: repeat_every_unit is a locked field, silently discarded.
+        assert resp.json()["title"] == "API Scheduled Edited"
+        assert resp.json()["repeat_every_unit"] == "months"
+
+        resp = api_patch(f"/api/v1/scheduled/{ctx['sched_id']}/", ctx,
+                         json={"repeat_every_unit": "weeks", "confirm_modify_schedule": True})
+        assert resp.status_code == 200
         assert resp.json()["repeat_every_unit"] == "weeks"
 
     def test_delete(self, driver, w, ctx):
