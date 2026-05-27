@@ -1132,7 +1132,7 @@ def project_picture(request, project_id):
                     bgpics_dir = settings.MEDIA_ROOT / "bgpics"
                     bgpics_dir.mkdir(exist_ok=True)
                     buf = io.BytesIO()
-                    img.save(buf, "WEBP", quality=82)
+                    img.save(buf, "WEBP", quality=88, method=6)
                     (bgpics_dir / f"{project.pk}.webp").write_bytes(buf.getvalue())
                     project.group_picture = True
                     project.save(update_fields=["group_picture"])

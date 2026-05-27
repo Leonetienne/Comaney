@@ -36,10 +36,12 @@
     var CX, CY;
     var CIRCLE_R;           // circle mode
     var CROP_W, CROP_H;     // rect mode
+    var EXPORT_SCALE = 1;   // preview stays this size; export is scaled up by this factor
 
     function setup(opts) {
         opts = opts || {};
         mode = (opts.shape === 'rect') ? 'rect' : 'circle';
+        EXPORT_SCALE = opts.exportScale || 1;
 
         if (mode === 'rect') {
             var ratio  = opts.aspectRatio || 3;
@@ -231,15 +233,17 @@
         var imgTop  = offsetY - h / 2;
 
         if (mode === 'rect') {
-            out.width  = CROP_W;
-            out.height = CROP_H;
+            var outW = CROP_W * EXPORT_SCALE;
+            var outH = CROP_H * EXPORT_SCALE;
+            out.width  = outW;
+            out.height = outH;
             var srcX = (CX - CROP_W / 2 - imgLeft) / scale;
             var srcY = (CY - CROP_H / 2 - imgTop)  / scale;
             var srcW = CROP_W / scale;
             var srcH = CROP_H / scale;
-            outCtx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, CROP_W, CROP_H);
+            outCtx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
         } else {
-            var outSize = CIRCLE_R * 2;
+            var outSize = CIRCLE_R * 2 * EXPORT_SCALE;
             out.width  = outSize;
             out.height = outSize;
             var srcX = (CX - CIRCLE_R - imgLeft) / scale;
@@ -252,7 +256,7 @@
         out.toBlob(function (blob) {
             if (doneCallback) doneCallback(blob);
             close();
-        }, 'image/jpeg', 0.88);
+        }, 'image/jpeg', 0.92);
 
         doneBtn.disabled = true;
         doneBtn.textContent = 'Processing…';
@@ -263,8 +267,10 @@
     window.ImageCropper = {
         /**
          * Open the cropper for the given File.
-         * opts (optional): { shape: 'rect', aspectRatio: 3, cropH: 140 }
+         * opts (optional): { shape: 'rect', aspectRatio: 3, cropH: 140, exportScale: 1 }
          *   Defaults to circle mode (profile picture behaviour).
+         *   exportScale keeps the on-screen preview small while exporting the
+         *   crop at a higher resolution (preview px * exportScale).
          */
         open: function (file, callback, opts) {
             setup(opts);
