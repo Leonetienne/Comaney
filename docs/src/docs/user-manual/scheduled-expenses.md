@@ -34,6 +34,15 @@ Fill in the same fields as a normal expense (title, type, value, payee, category
 
 If you want to stop new records from being generated temporarily, open the recurring expense and click **Deactivate**. Existing records that have already been created are not affected. You can reactivate the template at any time to resume generation.
 
+## Updating already-generated expenses
+
+Changing the template (for example raising the value after a pay rise) does not change records that were already generated; that keeps your past history intact. To apply the new details to existing records, open the recurring expense and click **Update expenses**. A list of records generated for the current financial year is shown, with each one selected by default.
+
+- **Select all** / **Deselect all** check or uncheck every record.
+- **Select unsettled** checks only the records you have not settled yet, so you can apply a change without touching ones already paid.
+
+Untick anything you want to leave as-is, then confirm to apply the template's current details to the selected records.
+
 ## Making a copy
 
 Open a recurring expense and click **Clone** to create an identical template. The copy gets "CLONE" added to the title. This is useful when you want a similar schedule with slightly different details.
