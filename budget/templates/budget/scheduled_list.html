@@ -76,6 +76,8 @@
             <div style="margin-bottom:8px;">
                 <a href="#" id="update-exp-select-all" style="font-size:0.85rem;">Select all</a>
                 <span style="margin:0 6px;color:var(--text-muted);">·</span>
+                <a href="#" id="update-exp-select-unsettled" style="font-size:0.85rem;">Select unsettled</a>
+                <span style="margin:0 6px;color:var(--text-muted);">·</span>
                 <a href="#" id="update-exp-deselect-all" style="font-size:0.85rem;">Deselect all</a>
             </div>
             <div id="update-exp-items" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:4px 0;"></div>
@@ -98,8 +100,9 @@
     var resultEl = document.getElementById('update-exp-result');
     var okBtn    = document.getElementById('update-exp-ok');
     var cancelBtn = document.getElementById('update-exp-cancel');
-    var selectAllLink   = document.getElementById('update-exp-select-all');
-    var deselectAllLink = document.getElementById('update-exp-deselect-all');
+    var selectAllLink      = document.getElementById('update-exp-select-all');
+    var selectUnsettledLink = document.getElementById('update-exp-select-unsettled');
+    var deselectAllLink    = document.getElementById('update-exp-deselect-all');
 
     var currentUrl = null;
 
@@ -144,7 +147,7 @@
             var row = document.createElement('label');
             row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);';
             row.innerHTML =
-                '<input type="checkbox" checked data-expense-id="' + e.id + '" style="flex-shrink:0;">' +
+                '<input type="checkbox" checked data-expense-id="' + e.id + '" data-settled="' + (e.settled ? '1' : '0') + '" style="flex-shrink:0;">' +
                 '<span style="min-width:88px;font-variant-numeric:tabular-nums;">' + (e.date_due || '—') + '</span>' +
                 '<span style="min-width:96px;text-align:right;font-variant-numeric:tabular-nums;">' + valueLabel + '</span>' +
                 '<span style="color:var(--text-muted);font-size:0.875rem;flex:1;">' + e.assignment + '</span>';
@@ -173,6 +176,14 @@
     deselectAllLink.addEventListener('click', function (ev) {
         ev.preventDefault();
         itemsEl.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = false; });
+        syncOkButton();
+    });
+
+    selectUnsettledLink.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        itemsEl.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
+            cb.checked = cb.dataset.settled === '0';
+        });
         syncOkButton();
     });
 

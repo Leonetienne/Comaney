@@ -247,6 +247,7 @@ def scheduled_update_expenses_api(request, uid):
                 "date_due": e.date_due.strftime("%Y-%m-%d") if e.date_due else None,
                 "value": str(e.value),
                 "assignment": _assignment_label(e),
+                "settled": e.settled,
             })
         return JsonResponse({"expenses": data, "currency": feuser.currency})
 
