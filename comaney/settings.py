@@ -22,16 +22,13 @@ if not ALLOWED_HOSTS:
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 
 if not DEBUG:
-    # Transport-security hardening, enabled only in production so local http dev still works.
+    # This app is always deployed behind a reverse proxy that terminates TLS and
+    # forwards plain HTTP to Gunicorn. It therefore never enforces or redirects to
+    # HTTPS itself: HTTP->HTTPS redirection and HSTS are the proxy's responsibility.
+    # We still mark the auth cookies Secure because the public edge (browser <->
+    # proxy) is always HTTPS, so the cookies must never travel over plaintext.
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "TRUE").upper() == "TRUE"
-    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "31536000"))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    # Only trust an X-Forwarded-Proto header when TLS terminates at a trusted reverse proxy.
-    if os.environ.get("TRUST_PROXY_SSL_HEADER", "").upper() == "TRUE":
-        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
