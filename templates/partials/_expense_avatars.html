@@ -5,7 +5,7 @@
         {% if payer_obj %}
         <span class="avatar-wrap">
             {% include 'partials/_avatar.html' with user_obj=payer_obj avatar_title=payer_name %}
-            {% if not exp.is_dummy %}
+            {% if not exp.is_dummy and not exp.is_buddies_settlement %}
             <span class="approval-badge {% if exp.buddy_approved %}approval-badge--approved{% else %}approval-badge--neutral{% endif %}" title="{% if exp.buddy_approved %}Payer confirmed{% else %}Awaiting payer confirmation{% endif %}">{% if exp.buddy_approved %}✓{% else %}?{% endif %}</span>
             {% endif %}
         </span>
@@ -16,7 +16,7 @@
         {% else %}
         <span class="avatar-wrap">
             {% include 'partials/_avatar.html' with user_obj=exp.owning_feuser avatar_title=exp.owning_feuser.first_name|add:" "|add:exp.owning_feuser.last_name %}
-            {% if not exp.is_dummy %}
+            {% if not exp.is_dummy and not exp.is_buddies_settlement %}
             <span class="approval-badge {% if exp.buddy_approved %}approval-badge--approved{% else %}approval-badge--neutral{% endif %}" title="{% if exp.buddy_approved %}Payer confirmed{% else %}Awaiting payer confirmation{% endif %}">{% if exp.buddy_approved %}✓{% else %}?{% endif %}</span>
             {% endif %}
         </span>
@@ -26,12 +26,14 @@
             {% if bs.participant_feuser %}
             <span class="avatar-wrap">
                 {% include 'partials/_avatar.html' with user_obj=bs.participant_feuser avatar_title=bs.participant_feuser.first_name|add:" "|add:bs.participant_feuser.last_name %}
+                {% if not exp.is_buddies_settlement %}
                 {% if bs.approval_state == 1 %}
                 <span class="approval-badge approval-badge--approved" title="Approved">✓</span>
                 {% elif bs.approval_state == 2 %}
                 <span class="approval-badge approval-badge--rejected" title="Rejected">✗</span>
                 {% else %}
                 <span class="approval-badge approval-badge--neutral" title="No decision yet">?</span>
+                {% endif %}
                 {% endif %}
             </span>
             {% elif bs.participant_dummy %}
