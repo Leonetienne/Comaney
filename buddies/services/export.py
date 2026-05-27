@@ -7,7 +7,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.db.models import Q
 
-from comaney.csv_export import write_model_csv
+from comaney.csv_export import _csv_safe, write_model_csv
 
 
 def _in_date_range(exp, start_date, end_date) -> bool:
@@ -126,13 +126,13 @@ class BuddyExportService:
             w.writerow([
                 "feuser",
                 _identity_id(feuser_obj=other),
-                f"{other.first_name} {other.last_name}".strip(),
-                other.email,
+                _csv_safe(f"{other.first_name} {other.last_name}".strip()),
+                _csv_safe(other.email),
                 link.created_at.isoformat(),
             ])
         for dummy in personal_dummies:
             w.writerow([
-                "dummy", _identity_id(dummy_obj=dummy), dummy.display_name, "",
+                "dummy", _identity_id(dummy_obj=dummy), _csv_safe(dummy.display_name), "",
                 dummy.created_at.isoformat(),
             ])
         zf.writestr(f"{prefix}direct-buddies.csv", p.getvalue())
@@ -195,8 +195,8 @@ class ProjectExportService:
         w = csv.writer(p)
         w.writerow(["field", "value"])
         w.writerow(["uid", project.pk])
-        w.writerow(["name", project.name])
-        w.writerow(["description", project.description])
+        w.writerow(["name", _csv_safe(project.name)])
+        w.writerow(["description", _csv_safe(project.description)])
         w.writerow(["admin_id", _identity_id(feuser_obj=project.admin_feuser, self_feuser=feuser)])
         w.writerow(["has_picture", project.group_picture])
         w.writerow(["created_at", project.created_at.isoformat()])
@@ -216,14 +216,14 @@ class ProjectExportService:
                 w.writerow([
                     "feuser",
                     _identity_id(feuser_obj=m.feuser, self_feuser=feuser),
-                    f"{m.feuser.first_name} {m.feuser.last_name}".strip(),
-                    m.feuser.email,
+                    _csv_safe(f"{m.feuser.first_name} {m.feuser.last_name}".strip()),
+                    _csv_safe(m.feuser.email),
                     m.feuser_id == project.admin_feuser_id,
                     m.joined_at.isoformat(),
                 ])
             else:
                 w.writerow([
-                    "dummy", _identity_id(dummy_obj=m.dummy), m.dummy.display_name, "",
+                    "dummy", _identity_id(dummy_obj=m.dummy), _csv_safe(m.dummy.display_name), "",
                     False, m.joined_at.isoformat(),
                 ])
         zf.writestr(f"{prefix}members.csv", p.getvalue())

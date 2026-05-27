@@ -4,6 +4,7 @@ import secrets
 import urllib.parse
 from datetime import date
 
+from comaney.csv_export import _csv_safe
 from comaney.json_utils import safe_json
 
 from django.contrib import messages
@@ -281,13 +282,13 @@ def expenses_export(request):
     for e in expenses:
         w.writerow([
             e.date_due or "",
-            e.title,
+            _csv_safe(e.title),
             e.type,
             e.value,
-            e.payee,
-            e.category.title if e.category else "",
-            "|".join(t.title for t in e.tags.all()),
-            e.note,
+            _csv_safe(e.payee),
+            _csv_safe(e.category.title if e.category else ""),
+            _csv_safe("|".join(t.title for t in e.tags.all())),
+            _csv_safe(e.note),
             e.settled,
         ])
     return response

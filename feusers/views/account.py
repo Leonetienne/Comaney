@@ -225,7 +225,7 @@ def account_export(request):
     from budget.models import Category, Dashboard, DashboardCard, Expense, ExpenseDataOverlay, ScheduledExpense, Tag
     from buddies.models import CatalogPartnershipMembership, Project
     from buddies.services import BuddyExportService, ProjectExportService
-    from comaney.csv_export import write_model_csv
+    from comaney.csv_export import _csv_safe, write_model_csv
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -250,7 +250,7 @@ def account_export(request):
                 value = ("********" + value[-4:]) if value else ""
             elif hasattr(value, "isoformat"):
                 value = value.isoformat()
-            w.writerow([field.name, value])
+            w.writerow([field.name, _csv_safe(value)])
         zf.writestr("profile.csv", p.getvalue())
 
         _TAG_IDS = ("tag_ids", lambda obj: ",".join(str(t.uid) for t in obj.tags.all()))
@@ -336,10 +336,10 @@ def account_export(request):
         for ov in overlays:
             w.writerow([
                 ov.expense_id,
-                ov.expense.title,
+                _csv_safe(ov.expense.title),
                 ov.category_id or "",
                 ",".join(str(t.uid) for t in ov.tags.all()),
-                "" if ov.note is None else ov.note,
+                "" if ov.note is None else _csv_safe(ov.note),
                 ov.last_mod.isoformat(),
             ])
         zf.writestr("expense_overlays.csv", p.getvalue())
@@ -376,7 +376,7 @@ def account_export(request):
             w = csv.writer(p)
             w.writerow(["partner_email", "joined_at"])
             for m in co_members:
-                w.writerow([m.feuser.email, m.joined_at.isoformat()])
+                w.writerow([_csv_safe(m.feuser.email), m.joined_at.isoformat()])
             zf.writestr("catalog_partnership.csv", p.getvalue())
         except CatalogPartnershipMembership.DoesNotExist:
             pass
