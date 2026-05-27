@@ -51,6 +51,9 @@ You can adjust the participants, percentages, and who paid, then save.
 You can only edit your own expenses or the ones of your offline buddies.
 Within a project, only the *project admin* can edit offline member expenses.
 
+!!! note
+    If you change the title, the amount, the participants, or their shares, everyone's earlier agreement (their approve or reject decision) is cleared, because the expense they agreed to is no longer the same. Each participant is asked to review and decide again, and the email they receive about the change tells them their previous decision was reset. Changing only a detail like the payee, note, category, or date leaves existing agreements untouched.
+
 ## Removing an expense from a project
 
 On a project's page, each expense in the breakdown has two possible actions (depending on your permissions):
