@@ -837,7 +837,7 @@
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 12px;
-  min-height: 160px;
+  height: 270px;
   position: relative;
   overflow: hidden;
   transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
@@ -873,11 +873,14 @@
 }
 
 .bgs-card-header {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 0.9rem 1.2rem 0.8rem;
   background: var(--bg-surface);
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  overflow: hidden;
   transition: background 0.22s ease;
 }
 
