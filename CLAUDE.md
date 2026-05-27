@@ -112,8 +112,15 @@ When adding any new feature: if it sends email, modifies another user's data, or
 | `AI_TRIAL_API_KEY` / `AI_TRIAL_USAGE_LIMIT` | shared trial key (cents) |
 | `SITE_URL` | used in email links |
 | `ALLOWED_HOSTS` | comma-separated; `*` only under DEBUG, empty (must configure) in prod |
-| `SECURE_SSL_REDIRECT` | prod only; `TRUE` (default) redirects HTTP to HTTPS |
-| `SECURE_HSTS_SECONDS` | prod only; HSTS max-age, default `31536000` |
-| `TRUST_PROXY_SSL_HEADER` | prod only; `TRUE` trusts `X-Forwarded-Proto` from a proxy |
 | `APP_VERSION` | shown in footer |
 | `GUNICORN_WORKERS` | default 1 |
+
+## Transport / TLS
+This app is ALWAYS deployed behind a reverse proxy that terminates TLS and forwards
+plain HTTP to Gunicorn. The app itself expects HTTP and does NOT enforce HTTPS in any
+way: it never redirects HTTP->HTTPS, never emits HSTS, and never inspects
+`X-Forwarded-Proto`. HTTP->HTTPS redirection and HSTS belong on the proxy, not here.
+Do not add `SECURE_SSL_REDIRECT`, `SECURE_HSTS_*`, or `SECURE_PROXY_SSL_HEADER`:
+enabling app-side HTTPS redirect behind an SSL-terminating proxy causes an infinite
+301 redirect loop. When `DEBUG` is off, the only transport hardening the app applies is
+marking the session and CSRF cookies `Secure` (safe because the public edge is HTTPS).
