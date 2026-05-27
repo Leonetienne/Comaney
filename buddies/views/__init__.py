@@ -34,7 +34,7 @@ from .partnership import (
 from .projects import (
     projects_list, create_project, project_detail, project_charts_data, project_expense_list_partial, project_settings,
     project_export,
-    project_rename, project_picture,
+    project_rename, project_picture, project_set_permission_laxity,
     project_invite_member, project_revoke_invite, project_remove_member,
     project_add_dummy, project_rename_dummy, project_merge_dummy, project_archive_wipe,
     project_transfer_admin, project_leave, project_delete,

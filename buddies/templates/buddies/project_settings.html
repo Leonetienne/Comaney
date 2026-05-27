@@ -267,16 +267,18 @@
 
     <div class="settings-list">
 
+        {% include "buddies/_project_edit_settings.html" %}
+
         <div class="settings-row">
-            <p class="settings-row__title">Rename project</p>
-            <p class="settings-row__desc">Update the project name and optional description.</p>
-            <form method="post" action="{% url 'projects:project_rename' project_id=project.uid %}" class="stacked-form">
+            <p class="settings-row__title">Who can edit cosmetics</p>
+            <p class="settings-row__desc">Choose who may change the project's name, description and picture. This is purely cosmetic: everything that actually manages the project stays admin only.</p>
+            <form method="post" action="{% url 'projects:project_set_permission_laxity' project_id=project.uid %}" class="stacked-form" id="permission-laxity-form">
                 {% csrf_token %}
-                <label for="project-rename-name">Project name</label>
-                <input type="text" id="project-rename-name" name="name" value="{{ project.name }}" maxlength="128" required>
-                <label for="project-rename-desc">Description <span class="text-muted font-xs">(optional)</span></label>
-                <textarea id="project-rename-desc" name="description" maxlength="500" rows="3">{{ project.description }}</textarea>
-                <button type="submit" id="btn-rename-project" class="btn mt-sm">Save</button>
+                <select name="permission_laxity" class="input-inline" id="select-permission-laxity">
+                    <option value="0"{% if project.permission_laxity == 0 %} selected{% endif %}>Admin only</option>
+                    <option value="1"{% if project.permission_laxity == 1 %} selected{% endif %}>Any member</option>
+                </select>
+                <button type="submit" id="btn-save-permission-laxity" class="btn mt-sm">Save</button>
             </form>
         </div>
 
@@ -295,108 +297,6 @@
             </form>
         </div>
         {% endif %}
-
-        <div class="settings-row">
-            <p class="settings-row__title">Project picture</p>
-            <p class="settings-row__desc">Shown as a background on the project card.</p>
-            <div class="project-pic-row">
-                <div id="project-pic-thumb-wrap">
-                    {% if project.group_picture %}
-                    <img src="/media/bgpics/{{ project.uid }}.webp" class="project-pic-thumb" id="project-pic-thumb" alt="">
-                    {% else %}
-                    <div class="project-pic-thumb project-pic-thumb--placeholder" id="project-pic-thumb">No picture</div>
-                    {% endif %}
-                </div>
-                <div class="project-pic-controls">
-                    <input type="file" name="group_picture" accept="image/*" id="project-pic-input" style="display:none;">
-                    <label for="project-pic-input" class="btn btn-secondary btn-sm" style="cursor:pointer;font-weight:normal;">Choose image</label>
-                    <form method="post" action="{% url 'projects:project_picture' project_id=project.uid %}" id="project-pic-delete-form">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="delete">
-                        <button type="submit" id="btn-delete-project-pic" class="btn btn-secondary btn-sm" style="font-weight:normal;{% if not project.group_picture %}display:none;{% endif %}">Remove picture</button>
-                    </form>
-                    <p id="project-pic-error" class="error-msg" style="display:none;margin:0;"></p>
-                </div>
-            </div>
-            <script>
-            (function () {
-                var input      = document.getElementById('project-pic-input');
-                var thumbWrap  = document.getElementById('project-pic-thumb-wrap');
-                var deleteBtn  = document.getElementById('btn-delete-project-pic');
-                var errorEl    = document.getElementById('project-pic-error');
-                var heroImg    = document.getElementById('group-hero-image');
-                var heroWrap   = heroImg ? heroImg.closest('.group-hero') : null;
-                var uploadUrl  = "{% url 'projects:project_picture' project_id=project.uid %}";
-
-                function getCsrf() {
-                    var m = document.cookie.match(/csrftoken=([^;]+)/);
-                    return m ? m[1] : '';
-                }
-
-                input.addEventListener('change', function () {
-                    var file = input.files[0];
-                    if (!file) return;
-                    input.value = '';
-
-                    window.ImageCropper.open(file, function (blob) {
-                        errorEl.style.display = 'none';
-
-                        var form = new FormData();
-                        form.append('csrfmiddlewaretoken', getCsrf());
-                        form.append('group_picture', blob, 'project.jpg');
-
-                        fetch(uploadUrl, {
-                            method: 'POST',
-                            body: form,
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        })
-                        .then(function (resp) {
-                            return resp.json().then(function (data) {
-                                return { ok: resp.ok, data: data };
-                            });
-                        })
-                        .then(function (result) {
-                            if (result.ok) {
-                                var blobUrl = URL.createObjectURL(blob);
-
-                                /* update settings thumbnail */
-                                var existing = thumbWrap.querySelector('img.project-pic-thumb');
-                                if (existing) {
-                                    existing.src = blobUrl;
-                                } else {
-                                    var newImg = document.createElement('img');
-                                    newImg.className = 'project-pic-thumb';
-                                    newImg.id = 'project-pic-thumb';
-                                    newImg.alt = '';
-                                    newImg.src = blobUrl;
-                                    thumbWrap.innerHTML = '';
-                                    thumbWrap.appendChild(newImg);
-                                }
-
-                                /* update hero banner */
-                                if (heroImg) {
-                                    heroImg.style.backgroundImage = 'url(' + blobUrl + ')';
-                                    heroImg.style.display = '';
-                                }
-                                if (heroWrap) {
-                                    heroWrap.classList.add('group-hero--has-bg');
-                                }
-
-                                deleteBtn.style.display = '';
-                            } else {
-                                errorEl.textContent = (result.data && result.data.error) || 'Upload failed.';
-                                errorEl.style.display = '';
-                            }
-                        })
-                        .catch(function () {
-                            errorEl.textContent = 'Upload failed. Please try again.';
-                            errorEl.style.display = '';
-                        });
-                    }, { shape: 'rect', aspectRatio: 3, cropH: 140, exportScale: 3 });
-                });
-            }());
-            </script>
-        </div>
 
         {% if not project.archived %}
         <div class="settings-row">
@@ -556,6 +456,16 @@
 
     </div>
 </section>
+
+{% if can_edit_details %}
+<section class="buddies-section">
+    <h2>Cosmetics</h2>
+    <p class="settings-row__desc mb-1">Your admin lets any member edit the project's name, description and picture.</p>
+    <div class="settings-list">
+        {% include "buddies/_project_edit_settings.html" %}
+    </div>
+</section>
+{% endif %}
 
 <section class="buddies-section">
     <h2>Membership</h2>

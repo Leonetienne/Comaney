@@ -17,6 +17,7 @@ urlpatterns = [
     path("<int:project_id>/export/", views.project_export, name="project_export"),
     path("<int:project_id>/rename/", views.project_rename, name="project_rename"),
     path("<int:project_id>/picture/", views.project_picture, name="project_picture"),
+    path("<int:project_id>/permission-laxity/", views.project_set_permission_laxity, name="project_set_permission_laxity"),
     path("<int:project_id>/archive/", views.project_archive, name="project_archive"),
     path("<int:project_id>/unarchive/", views.project_unarchive, name="project_unarchive"),
     path("<int:project_id>/delete/", views.project_delete, name="project_delete"),

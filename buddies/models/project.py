@@ -5,6 +5,16 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 
+# Who is allowed to manage a project's name, description and picture.
+PERMISSION_LAXITY_ADMIN_ONLY = 0  # only the admin can manage the project (default)
+PERMISSION_LAXITY_MEMBERS = 1  # any member may edit name, description and picture
+
+PERMISSION_LAXITY_CHOICES = [
+    (PERMISSION_LAXITY_ADMIN_ONLY, "Admin only"),
+    (PERMISSION_LAXITY_MEMBERS, "Any member"),
+]
+
+
 class Project(models.Model):
     uid = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=128)
@@ -13,6 +23,10 @@ class Project(models.Model):
         "feusers.FeUser", on_delete=models.CASCADE, related_name="administered_groups"
     )
     group_picture = models.BooleanField(default=False)
+    permission_laxity = models.PositiveSmallIntegerField(
+        default=PERMISSION_LAXITY_ADMIN_ONLY,
+        choices=PERMISSION_LAXITY_CHOICES,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     archived = models.BooleanField(default=False)
     last_mod = models.DateTimeField(default=timezone.now)
@@ -31,6 +45,18 @@ class Project(models.Model):
     def update_lastmod(self):
         self.last_mod = timezone.now()
         self.save(update_fields=["last_mod"])
+
+    def can_edit_details(self, feuser) -> bool:
+        """True if feuser may edit the project's name, description and picture.
+
+        The admin always may. Other members may only when the project's
+        permission_laxity is set to PERMISSION_LAXITY_MEMBERS.
+        """
+        if self.admin_feuser_id == feuser.pk:
+            return True
+        if self.permission_laxity == PERMISSION_LAXITY_MEMBERS:
+            return self.members.filter(feuser_id=feuser.pk).exists()
+        return False
 
     @property
     def is_solo(self) -> bool:

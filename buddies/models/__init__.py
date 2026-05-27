@@ -1,4 +1,10 @@
-from .project import Project, BuddyGroup  # noqa: F401
+from .project import (  # noqa: F401
+    Project,
+    BuddyGroup,
+    PERMISSION_LAXITY_ADMIN_ONLY,
+    PERMISSION_LAXITY_MEMBERS,
+    PERMISSION_LAXITY_CHOICES,
+)
 from .dummy_user import DummyUser  # noqa: F401
 from .project_member import ProjectMember, BuddyGroupMember  # noqa: F401
 from .invites import (  # noqa: F401

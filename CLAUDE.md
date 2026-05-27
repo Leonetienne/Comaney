@@ -41,7 +41,7 @@ comaney/       Settings, root urls, middleware
 
 ## Key conventions
 
-**Projects** (`buddies/`): renamed from "Buddy Groups"; DB aliases still exist. `Expense.project` FK links to project. Call `project.update_lastmod()` on every mutation. Solo projects hide debt graph, pie chart, and settlement sections. Archived projects block mutations except confirming in-flight settlements.
+**Projects** (`buddies/`): renamed from "Buddy Groups"; DB aliases still exist. `Expense.project` FK links to project. Call `project.update_lastmod()` on every mutation. Solo projects hide debt graph, pie chart, and settlement sections. Archived projects block mutations except confirming in-flight settlements. `Project.permission_laxity` (`PERMISSION_LAXITY_ADMIN_ONLY=0` default, `PERMISSION_LAXITY_MEMBERS=1`) governs who may edit name/description/picture: gate all three via `project.can_edit_details(feuser)` (admin always true; other members only when laxity is `MEMBERS`). Admin sets it via a dropdown on the Manage page (`project_set_permission_laxity` view, admin-only). Everything else (invites, transfer, archive, delete) stays admin-only.
 
 **Achim Archive**: removing a DummyUser merges their history into a special `is_archive=True` dummy instead of deleting it. Service: `BuddyArchiveService` in `buddies/services/archive.py`.
 

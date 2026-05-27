@@ -20,6 +20,7 @@ from budget.models import Expense
 from budget.query_parser import apply_query, has_date_filter
 from feusers.models import FeUser
 from ..models import Project, ProjectInvite, ProjectMember, BuddySpending, DummyUser
+from ..models import PERMISSION_LAXITY_CHOICES
 from ..services import BuddyArchiveService, ProjectService, ProjectExportService, BuddyQueryService, _display_name
 
 
@@ -649,6 +650,7 @@ def project_settings(request, project_id):
         "project": project,
         "group": project,
         "is_admin": is_admin,
+        "can_edit_details": project.can_edit_details(feuser),
         "feuser_members": feuser_members,
         "dummy_members": dummy_members,
         "pending_invites": pending_invites,
@@ -1088,9 +1090,33 @@ def decline_project_invite(request, token):
 
 @feuser_required
 @require_POST
-def project_rename(request, project_id):
+def project_set_permission_laxity(request, project_id):
+    """Admin sets who may edit the project's name, description and picture."""
     feuser = request.feuser
     project = get_object_or_404(Project, uid=project_id, admin_feuser=feuser)
+    raw = request.POST.get("permission_laxity", "")
+    valid = {choice[0] for choice in PERMISSION_LAXITY_CHOICES}
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = None
+    if value not in valid:
+        django_messages.error(request, "Invalid permission setting.")
+        return redirect("projects:project_settings", project_id=project_id)
+    project.permission_laxity = value
+    project.save(update_fields=["permission_laxity"])
+    project.update_lastmod()
+    return redirect("projects:project_settings", project_id=project_id)
+
+
+@feuser_required
+@require_POST
+def project_rename(request, project_id):
+    feuser = request.feuser
+    project = get_object_or_404(Project, uid=project_id, members__feuser=feuser)
+    if not project.can_edit_details(feuser):
+        django_messages.error(request, "You do not have permission to edit this project.")
+        return redirect("projects:project_settings", project_id=project_id)
     name = request.POST.get("name", "").strip()
     if not name:
         django_messages.error(request, "Project name cannot be empty.")
@@ -1111,7 +1137,13 @@ def project_picture(request, project_id):
     from PIL import Image
     import io
 
-    project = get_object_or_404(Project, uid=project_id, admin_feuser=request.feuser)
+    project = get_object_or_404(Project, uid=project_id, members__feuser=request.feuser)
+    if not project.can_edit_details(request.feuser):
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        if is_ajax:
+            return JsonResponse({"ok": False, "error": "You do not have permission to edit this project."}, status=403)
+        django_messages.error(request, "You do not have permission to edit this project.")
+        return redirect("projects:project_settings", project_id=project.uid)
 
     if request.method == "POST":
         action = request.POST.get("action")
