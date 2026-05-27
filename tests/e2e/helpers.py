@@ -136,6 +136,73 @@ def api_patch(path, ctx, json):        return api("PATCH",  path, ctx, json=json
 def api_delete(path, ctx):             return api("DELETE", path, ctx)
 
 
+# ── Raw HTTP (requests) session helpers for CSRF-protected form endpoints ─────
+# These drive the HTML/session-cookie endpoints directly, bypassing Selenium,
+# so security tests can script exact form POSTs (crafted payloads, repeated
+# login attempts, etc.). They are CSRF-aware: Django's referer check is only
+# enforced over HTTPS, so plain-http local requests just need the csrftoken
+# cookie echoed back in the csrfmiddlewaretoken field.
+
+def http_session() -> requests.Session:
+    """A fresh requests session for the session-cookie (HTML) endpoints."""
+    return requests.Session()
+
+
+def csrf_token(session: requests.Session, path: str = "/login/") -> str:
+    """GET `path` to prime the csrftoken cookie, then return its value."""
+    session.get(_url(path), timeout=10)
+    return session.cookies.get("csrftoken", "")
+
+
+def form_login(session: requests.Session, email: str, password: str,
+               *, follow: bool = False):
+    """Submit the HTML login form via a requests session (CSRF-aware).
+
+    Returns the POST response. For a non-2FA user a successful login redirects
+    to the landing page; for a TOTP-enabled user it redirects to /totp/verify/
+    and the session then carries the `totp_pending_id`."""
+    token = csrf_token(session, "/login/")
+    return session.post(
+        _url("/login/"),
+        data={"csrfmiddlewaretoken": token, "email": email, "password": password},
+        headers={"Referer": _url("/login/")},
+        allow_redirects=follow, timeout=10,
+    )
+
+
+def form_post(session: requests.Session, path: str, data: dict,
+              *, csrf_path: str = None, follow: bool = False):
+    """POST form-encoded `data` to `path` with a valid CSRF token.
+
+    `csrf_path` (defaults to `path`) is GET first so any per-view session state
+    (e.g. the expense form nonce) is established and its csrftoken captured. The
+    freshly primed csrftoken is injected as `csrfmiddlewaretoken`."""
+    get_resp = session.get(_url(csrf_path or path), timeout=10)
+    token = session.cookies.get("csrftoken", "")
+    payload = {"csrfmiddlewaretoken": token, **data}
+    post_resp = session.post(
+        _url(path), data=payload,
+        headers={"Referer": _url(csrf_path or path)},
+        allow_redirects=follow, timeout=10,
+    )
+    return post_resp, get_resp
+
+
+def create_confirmed_user(first_name: str = "", last_name: str = "") -> dict:
+    """Create an active, confirmed user via the create_user command (no browser,
+    no API key). Returns {"email", "password"}. Caller must cleanup_user()."""
+    email = f"sel.{uuid.uuid4().hex[:8]}@example.com"
+    cmd = ["docker", "exec", DOCKER_WEB, "python", "manage.py",
+           "create_user", email, "-p", PASSWORD]
+    if first_name:
+        cmd += ["--first-name", first_name]
+    if last_name:
+        cmd += ["--last-name", last_name]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+    assert result.returncode == 0, f"create_user failed:\n{result.stderr}"
+    return {"email": email, "password": PASSWORD}
+
+
 # ── Docker / management command helpers ───────────────────────────────────────
 
 def run_cmd(*args, timeout: int = 30) -> str:
