@@ -212,6 +212,18 @@ class TestDirectSettlement:
         assert inp.get_attribute("value") in ("", None), \
             "Amount input must be empty once the creditor has confirmed"
 
+    def test_settlement_card_has_no_approval_badges(self, driver, w, ctx):
+        # A settlement never uses the per-participant approval mechanism, so its
+        # avatar stack must not render any approval-state badge (checkmark / cross /
+        # question mark) for either the payer or the creditor.
+        rows = driver.find_elements(By.CSS_SELECTOR, ".bexp-breakdown-card")
+        settlement_rows = [r for r in rows if "Settlement to Beth" in r.text]
+        assert settlement_rows, \
+            "Approved settlement row must still be visible in the one-on-one expenses"
+        badges = settlement_rows[0].find_elements(By.CSS_SELECTOR, ".approval-badge")
+        assert not badges, \
+            "Settlement expense must not display any approval-state badge in the avatar stack"
+
 
 class TestDirectSettlementNoDebt:
     """When user has no direct debt, settle-up section must not appear."""
@@ -554,6 +566,19 @@ class TestGroupSettlementReviewFlow:
     def test_settlement_moves_to_expense_breakdown(self, driver, w, ctx):
         assert "Expense Breakdown" in driver.page_source, \
             "Approved settlement must now appear in the Expense Breakdown"
+
+    def test_settlement_card_has_no_approval_badges(self, driver, w, ctx):
+        # Settlements do not use per-participant approval, so the avatar stack of
+        # an approved settlement must not show any approval-state badge.
+        cards = driver.find_elements(
+            By.CSS_SELECTOR, "#proj-approved-section .bexp-breakdown-card"
+        )
+        settlement_cards = [c for c in cards if "Settlement" in c.text]
+        assert settlement_cards, \
+            "Approved settlement card must be visible in the breakdown"
+        badges = settlement_cards[0].find_elements(By.CSS_SELECTOR, ".approval-badge")
+        assert not badges, \
+            "Settlement expense must not display any approval-state badge in the avatar stack"
 
     def test_creditor_income_expense_created(self, driver, w, ctx):
         import requests
