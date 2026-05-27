@@ -6,6 +6,7 @@ Covers:
   2. All expenses are checked by default.
   3. Confirming the modal updates expense fields to match the scheduled expense.
   4. Deselecting an expense before confirming leaves that expense unchanged.
+  5. "Select unsettled" checks only not-yet-settled expenses.
 
 Run: pytest tests/e2e/test_scheduled_update_expenses.py -sx
 """
@@ -218,6 +219,89 @@ class TestUpdateExpensesModal:
 
         for e in _all_expenses(ctx):
             if e["id"] in {first_id, second_id}:
+                api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
+
+    def test_select_unsettled_only_checks_unsettled_expenses(self, driver, w, ctx):
+        """'Select unsettled' link checks only expenses that are not yet settled."""
+        title_before = "UE Unsettled Before"
+        title_after = "UE Unsettled After"
+
+        today = server_today()
+        year, month, day = today.split("-")
+        base_month = int(month) - 2
+        base_year = int(year)
+        if base_month < 1:
+            base_month += 12
+            base_year -= 1
+        base_date = f"{base_year}-{base_month:02d}-{day}"
+
+        sched_id = api_post("/api/v1/scheduled/", ctx, json={
+            "title": title_before,
+            "type": "expense",
+            "value": "30.00",
+            "repeat_every_factor": 1,
+            "repeat_every_unit": "months",
+            "repeat_base_date": base_date,
+        }).json()["id"]
+        time.sleep(1)
+
+        generated = _expenses_by_title(ctx, title_before)
+        if len(generated) < 2:
+            for e in generated:
+                api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+            api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
+            pytest.skip("Fewer than 2 generated expenses in range; skipping unsettled test")
+
+        generated.sort(key=lambda e: e.get("date_due") or "")
+        settled_id = generated[0]["id"]
+        unsettled_id = generated[1]["id"]
+
+        api_patch(f"/api/v1/expenses/{settled_id}/", ctx, json={"settled": True})
+        api_patch(f"/api/v1/expenses/{unsettled_id}/", ctx, json={"settled": False})
+        time.sleep(0.3)
+
+        api_patch(f"/api/v1/scheduled/{sched_id}/", ctx, json={
+            "title": title_after,
+            "type": "expense",
+            "value": "30.00",
+            "repeat_every_factor": 1,
+            "repeat_every_unit": "months",
+            "repeat_base_date": base_date,
+        })
+        time.sleep(0.5)
+
+        _open_update_modal(driver, w, sched_id)
+
+        checkboxes = w.until(lambda d: d.find_elements(
+            By.CSS_SELECTOR, "#update-exp-items input[type=checkbox]"))
+        assert len(checkboxes) >= 2
+
+        link = driver.find_element(By.ID, "update-exp-select-unsettled")
+        link.click()
+        time.sleep(0.3)
+
+        checked_ids = {
+            int(cb.get_attribute("data-expense-id"))
+            for cb in driver.find_elements(By.CSS_SELECTOR, "#update-exp-items input[type=checkbox]")
+            if cb.is_selected()
+        }
+        assert settled_id not in checked_ids, "Settled expense must not be checked"
+        assert unsettled_id in checked_ids, "Unsettled expense must be checked"
+
+        ok_btn = w.until(EC.element_to_be_clickable((By.ID, "update-exp-ok")))
+        ok_btn.click()
+        time.sleep(1.5)
+
+        driver.find_element(By.ID, "update-exp-cancel").click()
+        time.sleep(0.3)
+
+        all_by_id = {e["id"]: e for e in _all_expenses(ctx)}
+        assert all_by_id[settled_id]["title"] == title_before, "Settled expense must not be updated"
+        assert all_by_id[unsettled_id]["title"] == title_after, "Unsettled expense must be updated"
+
+        for e in _all_expenses(ctx):
+            if e["id"] in {settled_id, unsettled_id}:
                 api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
         api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
 
