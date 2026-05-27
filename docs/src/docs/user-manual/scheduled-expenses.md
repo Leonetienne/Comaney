@@ -30,6 +30,20 @@ Fill in the same fields as a normal expense (title, type, value, payee, category
 | Quarterly insurance premium | 01 Jan 2025 | 3 | months |
 | Annual membership fee | 15 Mar 2025 | 1 | years |
 
+## Changing the repeat pattern or time window
+
+Comaney only generates each recurring expense's records once per financial year, so editing the repeat pattern (**Repeat every**) or the time window (**Repeat base date**, **End on**) after creation needs special care: it can affect records that were already generated.
+
+For this reason, those fields are locked when editing an existing recurring expense. To change them:
+
+1. Tick **Modify schedule** (for the repeat pattern) or **Modify schedule time window** (for the base date / end date).
+2. Confirm the warning that appears. It explains what will happen:
+    - Changing the **repeat pattern** deletes and re-creates every record generated for the current financial year, including ones you already settled.
+    - Changing the **time window** only adjusts the edges: records that now fall outside the window are deleted (even if settled), and any newly-in-range dates are generated. Records inside the window are left untouched.
+3. Edit the fields and save.
+
+If you don't tick the checkbox, those fields stay as they were, even if you try to change them.
+
 ## Pausing a recurring expense
 
 If you want to stop new records from being generated temporarily, open the recurring expense and click **Deactivate**. Existing records that have already been created are not affected. You can reactivate the template at any time to resume generation.

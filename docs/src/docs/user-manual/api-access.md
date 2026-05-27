@@ -56,6 +56,8 @@ When listing expenses, you can pass these parameters:
 | Update a template | PATCH | `/api/v1/scheduled/<id>/` |
 | Delete a template | DELETE | `/api/v1/scheduled/<id>/` |
 
+Changing how often a template repeats (`repeat_every_factor`, `repeat_every_unit`) or the time window it covers (`repeat_base_date`, `end_on`) reshapes a year's worth of already-generated expenses, so those changes only take effect if you include a matching confirmation flag in the same request: `confirm_modify_schedule: true` for the repeat pattern, `confirm_modify_schedule_window: true` for the time window. Without the flag, those fields are left unchanged and every other field in the request still updates normally.
+
 ### Categories
 
 | Action | Method | Path |
