@@ -3,7 +3,12 @@ from datetime import date
 
 from django.utils.safestring import mark_safe
 
-from ..date_utils import current_financial_month, financial_month_range, financial_year_range
+from ..date_utils import (
+    current_financial_month,
+    financial_month_range,
+    financial_year_range,
+    year_in_range,
+)
 
 
 def _get_period_mode(request) -> str:
@@ -13,7 +18,7 @@ def _get_period_mode(request) -> str:
 def _get_year(request, start_day: int = 1, prev_month: bool = False) -> int:
     try:
         year = int(request.GET["year"])
-        if year < 1:
+        if not year_in_range(year):
             raise ValueError
     except (KeyError, ValueError, TypeError):
         return current_financial_month(start_day, prev_month)[0]
@@ -42,7 +47,7 @@ def _get_month(request, start_day: int = 1, prev_month: bool = False) -> tuple[i
     try:
         year = int(request.GET["year"])
         month = int(request.GET["month"])
-        if not (1 <= month <= 12):
+        if not (1 <= month <= 12) or not year_in_range(year):
             raise ValueError
     except (KeyError, ValueError, TypeError):
         return current_financial_month(start_day, prev_month)

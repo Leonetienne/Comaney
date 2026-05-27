@@ -1,6 +1,17 @@
 import calendar
 from datetime import date, timedelta
 
+# Bounds for a user-supplied financial year. Python's date() only accepts
+# years 1-9999; the financial range math touches year ± 1, so we keep a
+# one-year margin at each end to stay safely inside that range.
+MIN_YEAR = 2
+MAX_YEAR = 9998
+
+
+def year_in_range(year: int) -> bool:
+    """True if `year` is a financial year we can safely turn into dates."""
+    return MIN_YEAR <= year <= MAX_YEAR
+
 
 def financial_month_range(year: int, month: int, start_day: int, prev_month: bool) -> tuple[date, date]:
     """Return (start, end) for the financial month labelled (year, month).

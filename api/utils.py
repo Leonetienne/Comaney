@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from django.middleware.csrf import CsrfViewMiddleware
 from django.views.decorators.csrf import csrf_exempt
 
-from budget.date_utils import current_financial_month
+from budget.date_utils import current_financial_month, year_in_range
 from .auth import get_api_user
 
 
@@ -50,10 +50,14 @@ def _parse_month(request, feuser):
     cur_year, cur_month = current_financial_month(feuser.month_start_day, feuser.month_start_prev)
     try:
         year = int(request.GET["year"])
+        if not year_in_range(year):
+            raise ValueError
     except (KeyError, ValueError):
         year = cur_year
     try:
         month = int(request.GET["month"])
+        if not (1 <= month <= 12):
+            raise ValueError
     except (KeyError, ValueError):
         month = cur_month
     return year, month
