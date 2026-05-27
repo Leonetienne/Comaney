@@ -61,10 +61,12 @@ comaney/       Settings, root urls, middleware
 
 ## Tests
 - Always run tests with `-v` and pipe through `tee logfile.log`
+- Only ever pass `-v`. NEVER use `-x`: it stops at the first failure, which hides
+  the full picture and breaks expected-to-fail regression runs.
 
 **Unit** (no Docker): `venv/bin/pytest tests/unit/ -v | tee logfile.log`
 
-**E2E** (Selenium + live stack at :8080, Mailpit at :8030): `pytest -sxv | tee logfile.log`
+**E2E** (Selenium + live stack at :8080, Mailpit at :8030): `pytest -v | tee logfile.log`
 - E2E tests numbered by prefix; `ctx` dict is session-scoped shared state
 - `run_cmd("management_command")` executes via docker exec into `comaney-web-1`
 - NEVER use `WebDriverWait` / `w.until()` after browser actions; always `time.sleep()` then assert
