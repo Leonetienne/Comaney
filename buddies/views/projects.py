@@ -1064,10 +1064,23 @@ def view_project_invite(request, token):
             "invite": invite,
         })
 
+    project = invite.group
+    member_qs = (
+        project.members.select_related("feuser", "dummy")
+        .all()
+    )
+    feuser_members = [m for m in member_qs if m.feuser_id]
+    dummy_members = [
+        m for m in member_qs if m.dummy_id and not m.dummy.is_archive
+    ]
+
     return render(request, "buddies/project_invite_view.html", {
         "active_nav": "buddies",
         "invite": invite,
         "inviter_name": _display_name(invite.inviting_feuser),
+        "project": project,
+        "feuser_members": feuser_members,
+        "dummy_members": dummy_members,
     })
 
 

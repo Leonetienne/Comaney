@@ -6,7 +6,42 @@
 <div class="form-wrap form-wrap--centered">
     <h1>You're invited!</h1>
     <p><strong>{{ inviter_name }}</strong> has invited you to join the project <strong>{{ invite.group.name }}</strong> on Comaney.</p>
+
+    {% if project.description %}
+    <p class="group-description project-invite-description">{{ project.description }}</p>
+    {% endif %}
+
+    {% if project.group_picture %}
+    <div class="project-invite-image" style="background-image: url('/media/bgpics/{{ project.uid }}.webp')"></div>
+    {% endif %}
+
     <p class="text-subtle font-sm">Accepting also connects you as spending buddies with {{ inviter_name }} if you aren't already.</p>
+
+    {% if feuser_members or dummy_members %}
+    <div class="project-invite-members">
+        <p class="project-invite-members__label">Your friends are already here:</p>
+        <ul class="project-invite-members__list">
+            {% for m in feuser_members %}
+            <li class="project-invite-member">
+                {% include 'partials/_avatar.html' with user_obj=m.feuser %}
+                <span class="project-invite-member__name">
+                    {{ m.feuser.first_name }} {{ m.feuser.last_name }}
+                    {% if m.feuser.pk == project.admin_feuser_id %}<span class="pill">Admin</span>{% endif %}
+                </span>
+            </li>
+            {% endfor %}
+            {% for m in dummy_members %}
+            <li class="project-invite-member">
+                {% include 'partials/_avatar.html' with user_obj=m.dummy %}
+                <span class="project-invite-member__name">
+                    {{ m.dummy.display_name }}
+                    <span class="pill">Offline member</span>
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
     <div class="invite-actions mt-lg">
         <form method="post" action="{% url 'projects:accept_project_invite' invite.token %}">
