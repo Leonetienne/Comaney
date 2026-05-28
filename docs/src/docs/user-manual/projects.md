@@ -54,6 +54,20 @@ Every project has one admin. The admin is the only person who can:
 
 The admin label appears next to your name on the project page.
 
+## Who can edit cosmetics
+
+By default, only the admin can change the project's name, description, and picture. If you would like everyone in the project to be able to update these, the admin can loosen this on the **Manage** page.
+
+1. On the project's **Manage** page, find **Who can edit cosmetics**.
+2. Choose from the dropdown:
+   - **Admin only** (the default): only the admin can edit the name, description, and picture.
+   - **Any member**: every member can edit the name, description, and picture.
+3. Your choice is saved as soon as you pick it.
+
+This setting is purely cosmetic: it only covers the name, description, and picture. Everything that actually manages the project — inviting or removing members, transferring admin rights, archiving, and deleting — always stays admin only.
+
+When you choose **Any member**, other members see a **Cosmetics** area on their Manage page where they can make these changes.
+
 ## Inviting members
 
 Admin only.
