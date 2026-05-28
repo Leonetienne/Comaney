@@ -65,41 +65,9 @@ Without this, every form submission (login, expense creation, etc.) will fail wi
 
 ## Transport security
 
-These settings only take effect in production (`DEBUG=FALSE`); local HTTP development is never affected. When production mode is active, `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE` are always turned on so session and CSRF cookies are only ever sent over HTTPS.
+Comaney is designed to run behind a reverse proxy that terminates HTTPS and forwards plain HTTP to the app. The app speaks HTTP and does not enforce HTTPS itself: it never redirects HTTP to HTTPS and never sends HSTS. Handle HTTPS redirection and HSTS on your proxy instead (see the "Transport security behind a reverse proxy" section of the deployment guide).
 
-### `SECURE_SSL_REDIRECT`
-
-**Default:** `TRUE`
-
-When `TRUE`, plain HTTP requests are redirected to HTTPS. Set this to `FALSE` if your reverse proxy already forces HTTPS and you want to avoid a redirect loop.
-
-```
-SECURE_SSL_REDIRECT: "TRUE"
-```
-
----
-
-### `SECURE_HSTS_SECONDS`
-
-**Default:** `31536000` (one year)
-
-How long (in seconds) browsers should remember to only reach the site over HTTPS (HTTP Strict Transport Security). Subdomains and preload are enabled alongside it. Set to `0` to disable HSTS.
-
-```
-SECURE_HSTS_SECONDS: "31536000"
-```
-
----
-
-### `TRUST_PROXY_SSL_HEADER`
-
-**Default:** *(unset; not trusted)*
-
-Set to `TRUE` only when TLS terminates at a trusted reverse proxy that sets the `X-Forwarded-Proto` header. This lets Django recognise proxied requests as secure. Never enable it unless the proxy strips any client-supplied `X-Forwarded-Proto`, otherwise a client could spoof HTTPS.
-
-```
-TRUST_PROXY_SSL_HEADER: "TRUE"
-```
+There are therefore no HTTPS environment variables to set on the app. The only transport hardening it applies automatically in production (`DEBUG=FALSE`) is turning on `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE`, so the login and CSRF cookies are only ever sent over the encrypted connection to your proxy. Local HTTP development (`DEBUG=TRUE`) is never affected.
 
 ---
 

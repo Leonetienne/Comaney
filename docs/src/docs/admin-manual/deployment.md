@@ -71,9 +71,6 @@ services:
       SITE_URL: "https://budget.example.com"
       ALLOWED_HOSTS: "budget.example.com"
       CSRF_TRUSTED_ORIGINS: "https://budget.example.com"
-      SECURE_SSL_REDIRECT: "TRUE"
-      SECURE_HSTS_SECONDS: "31536000"
-      TRUST_PROXY_SSL_HEADER: "TRUE"
       ENABLE_REGISTRATION: "FALSE"
       EMAIL_HOST: "smtp.example.com"
       EMAIL_PORT: 587
@@ -104,11 +101,35 @@ volumes:
 
 ## Transport security behind a reverse proxy
 
-When `DEBUG` is off, Comaney automatically marks its session and CSRF cookies as `Secure` (HTTPS only) and enables HSTS. Three environment variables let you match this to your proxy setup:
+Comaney is built to run behind a reverse proxy (nginx, Traefik, Caddy, etc.) that terminates HTTPS and forwards plain HTTP to the app on port 8000. The app speaks HTTP and never tries to enforce HTTPS on its own: it does not redirect HTTP to HTTPS, and it does not send HSTS. Those two jobs belong to your proxy, which is the only part of the stack that actually sees the TLS connection.
 
-- `SECURE_SSL_REDIRECT` (default `TRUE`): redirects HTTP to HTTPS. Set it to `FALSE` if your proxy already forces HTTPS, to avoid a redirect loop.
-- `SECURE_HSTS_SECONDS` (default `31536000`): how long browsers remember to use HTTPS only. Set to `0` to disable.
-- `TRUST_PROXY_SSL_HEADER` (default off): set to `TRUE` when TLS terminates at a trusted proxy that sets `X-Forwarded-Proto`. Only enable it when the proxy strips any client-supplied value of that header.
+This means you do not set any HTTPS-related environment variables on the app. Enabling app-side HTTPS redirection while sitting behind a proxy that already terminates TLS creates an endless redirect loop (the browser and the app bounce the same request back and forth), which is why the app deliberately leaves all of that to the proxy.
+
+When `DEBUG` is off, the one thing the app still does for you is mark its login (session) and CSRF cookies as `Secure`, so browsers only ever send them over the encrypted connection to your proxy. Nothing to configure for that; it is automatic.
+
+Configure HTTPS redirection and HSTS on the proxy itself. For example, in nginx:
+
+```nginx
+server {
+    listen 80;
+    server_name budget.example.com;
+    return 301 https://$host$request_uri;   # HTTP -> HTTPS redirect lives here
+}
+
+server {
+    listen 443 ssl;
+    server_name budget.example.com;
+    # ... your TLS certificate directives ...
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;  # HSTS lives here
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
 
 Because `ALLOWED_HOSTS` no longer falls back to a wildcard in production, you **must** set it to your real domain(s) or the app will reject every request.
 
