@@ -558,6 +558,21 @@
     margin: 0 0 0.65rem;
     line-height: 1.5;
   }
+
+  // Keep setting dropdowns (cosmetics permission, transfer admin) sized to
+  // their content instead of stretching across the whole panel.
+  select.input-inline {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 12rem;
+    max-width: 22rem;
+  }
+}
+
+// "Send invite" and "Add" (add-members block) share one width so the two
+// rows line up instead of each button hugging its own label.
+.add-member-btn {
+  min-width: 8.5rem;
 }
 
 // ── Project picture upload row ────────────────────────────────────────────────
@@ -582,12 +597,23 @@
 .project-pic-controls {
   flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
   text-align: center;
   gap: 0.4rem;
 
   form { margin: 0; }
+
+  // Use flex centering on both controls so the label-based "Choose image"
+  // and the form <button> share the exact same text baseline.
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .error-msg { flex-basis: 100%; }
 }
 
 .project-pic-thumb {

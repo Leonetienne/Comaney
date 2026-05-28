@@ -6,6 +6,10 @@
   color: #fff;
   border: 1px solid transparent;
   border-radius: 6px;
+  // Inherit the page font: <button> elements otherwise fall back to the UA
+  // button font, which throws the text baseline off when a <label> and a
+  // <button> sit side by side (e.g. the project picture controls).
+  font-family: inherit;
   font-size: 0.95rem;
   line-height: 1.2;
   cursor: pointer;

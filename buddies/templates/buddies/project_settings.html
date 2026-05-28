@@ -201,13 +201,13 @@
                 <p class="settings-row__desc" style="opacity:.5;">Not available on demo accounts.</p>
                 <div class="inline-form">
                     <input type="email" placeholder="Email address" disabled class="input-inline">
-                    <button type="button" class="btn" disabled>Send invite</button>
+                    <button type="button" class="btn add-member-btn" disabled>Send invite</button>
                 </div>
                 {% else %}
                 <form method="post" action="{% url 'projects:project_invite_member' project_id=group.uid %}" class="inline-form">
                     {% csrf_token %}
                     <input type="email" name="email" placeholder="Email address" required class="input-inline">
-                    <button type="submit" id="btn-group-invite" class="btn">Send invite</button>
+                    <button type="submit" id="btn-group-invite" class="btn add-member-btn">Send invite</button>
                 </form>
                 {% endif %}
             </div>
@@ -218,7 +218,7 @@
                 <form method="post" action="{% url 'projects:project_add_dummy' project_id=group.uid %}" class="inline-form">
                     {% csrf_token %}
                     <input type="text" name="display_name" placeholder="Display name" maxlength="128" required class="input-inline">
-                    <button type="submit" id="btn-group-add-dummy" class="btn">Add</button>
+                    <button type="submit" id="btn-group-add-dummy" class="btn add-member-btn">Add</button>
                 </form>
             </div>
 
