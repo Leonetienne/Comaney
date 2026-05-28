@@ -105,6 +105,16 @@ class TestGroupInviteAccept:
         assert "Group invitations" in driver.page_source
         assert "Invite Test Group" in driver.page_source
 
+    def test_c_sees_existing_members_on_invite_screen(self, driver, w, ctx):
+        driver.get(ctx["group_invite_link"])
+        time.sleep(1)
+        assert "Your friends are already here" in driver.page_source
+        # The admin (Gina InvAdmin) is already a member and must be listed.
+        member_names = driver.find_elements(
+            By.CSS_SELECTOR, ".project-invite-member__name")
+        assert any("Gina" in el.text for el in member_names), \
+            "Existing admin should appear in the invite screen member list"
+
     def test_c_accepts_group_invite_via_link(self, driver, w, ctx):
         driver.get(ctx["group_invite_link"])
         time.sleep(1)
