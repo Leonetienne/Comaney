@@ -47,6 +47,11 @@
     var existingMode        = cfg.existingMode;
     var existingGroupId     = cfg.existingGroupId;
     var buddySummaryUrl     = cfg.urlBuddySummary;
+    // When true, an existing (saved or just-submitted) participant selection must
+    // be respected as-is, even when it is empty. This distinguishes editing an
+    // expense deliberately saved with zero participants from a fresh form where
+    // pre-checking every member is a convenience.
+    var respectExisting     = cfg.respectExistingParticipants === true;
 
     var currentMode    = 'single';
     var currentGroupId = null;
@@ -241,7 +246,10 @@
     // ── Form submit guard ──────────────────────────────────────────────────
 
     theForm.addEventListener('submit', function (e) {
-        if (cb.checked && participants.length === 0) {
+        // A direct buddy expense (single mode) always needs one participant.
+        // A project expense (group mode) may have zero: the payer then covers
+        // the whole cost alone, which the backend accepts. Only block single mode.
+        if (cb.checked && participants.length === 0 && currentMode !== 'group') {
             e.preventDefault();
             noParticipantsErr.style.display = 'block';
             return;
@@ -387,7 +395,10 @@
 
     function rebuildSliders() {
         slidersEl.innerHTML = '';
-        if (participants.length === 0) { slidersEl.style.display = 'none'; return; }
+        // No participants (e.g. the last one was just unchecked): hide the sliders
+        // and serialize the now-empty list so the hidden input reflects it. Without
+        // this, the stale participant JSON would still be submitted.
+        if (participants.length === 0) { slidersEl.style.display = 'none'; serializeJSON(); return; }
         slidersEl.style.display = 'block';
 
         var payerRow = document.createElement('div');
@@ -598,7 +609,8 @@
 
         updateParticipantsLabel();
         buildPayerOptions();
-        var preCheckAll = effectiveMode === 'group' && existingGroupId !== null && existingSpendings.length === 0;
+        var preCheckAll = effectiveMode === 'group' && existingGroupId !== null
+            && existingSpendings.length === 0 && !respectExisting;
         buildParticipantCheckboxes(preCheckAll);
 
         // Restore payer selection

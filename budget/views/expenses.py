@@ -178,6 +178,9 @@ def _buddy_render_context_from_post(buddy, feuser) -> dict:
             "existing_upfront_id": feuser.pk,
             "existing_spendings_json": "[]",
             "existing_group_id": "",
+            # A re-rendered submission carries the user's explicit participant
+            # choice (even if empty); never auto-check all members over it.
+            "respect_existing_participants": True,
         }
     if buddy["upfront_type"] == "feuser" and buddy.get("upfront_feuser"):
         upfront_id = buddy["upfront_feuser"].pk
@@ -192,6 +195,7 @@ def _buddy_render_context_from_post(buddy, feuser) -> dict:
         "existing_upfront_id": upfront_id,
         "existing_spendings_json": safe_json(buddy.get("spendings") or []),
         "existing_group_id": buddy["group"].pk if buddy.get("group") else "",
+        "respect_existing_participants": True,
     }
 
 
@@ -592,6 +596,9 @@ def expense_edit(request, uid):
             "existing_spendings_json": _existing_buddy_json(expense),
             "existing_mode": "group" if expense.project_id else "single",
             "existing_group_id": expense.project_id or "",
+            # Editing a saved expense: keep its participant selection as-is (a
+            # zero-participant project expense must not re-check every member).
+            "respect_existing_participants": True,
         }
 
     return render(request, "budget/expense_form.html", {

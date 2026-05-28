@@ -16,6 +16,7 @@ window.BUDDY_EXPENSE_CONFIG = {
     existingSpendings: {{ existing_spendings_json|default:"[]"|safe }},
     existingMode:      "{{ existing_mode|default:'single' }}",
     existingGroupId:   {{ existing_group_id|default:"null" }},
+    respectExistingParticipants: {% if respect_existing_participants %}true{% else %}false{% endif %},
     urlBuddySummary:   "{% url 'buddies:buddy_summary' %}",
     currencySymbol:    "{{ request.feuser.currency|escapejs }}",
 };
@@ -219,27 +220,12 @@ window.BUDDY_EXPENSE_CONFIG = {
         if (isSolo) {
             var jsonIn = document.getElementById('buddy-spendings-json');
             if (jsonIn) jsonIn.value = '[]';
-            var frm = cb ? cb.closest('form') : null;
-            if (frm) frm.dataset.soloProject = '1';
-        } else {
-            var frm2 = cb ? cb.closest('form') : null;
-            if (frm2) delete frm2.dataset.soloProject;
         }
     }
 
-    // Override the submit guard for solo/project expenses (buddy_expense.js runs first via defer)
-    setTimeout(function () {
-        var frm = cb ? cb.closest('form') : null;
-        if (!frm) return;
-        frm.addEventListener('submit', function (e) {
-            var projectTabActive = !!document.querySelector('#assign-tab-group .assign-tab--active[data-assign="project"]');
-            if ((frm.dataset.soloProject === '1' || projectTabActive) && cb && cb.checked) {
-                e.stopImmediatePropagation();
-                var errEl = document.getElementById('buddy-no-participants-error');
-                if (errEl) errEl.style.display = 'none';
-            }
-        }, true);
-    }, 0);
+    // Note: zero-participant project expenses (payer covers the cost alone) are
+    // allowed by buddy_expense.js's own submit guard, which only requires a
+    // participant in single (direct buddy) mode.
 
     if (groupSel) {
         groupSel.addEventListener('change', function () {

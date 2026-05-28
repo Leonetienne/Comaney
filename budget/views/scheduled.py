@@ -79,6 +79,9 @@ def _existing_assignment_ctx(obj: ScheduledExpense) -> dict:
         'existing_upfront_id': upfront_id,
         'existing_spendings_json': obj.assign_spendings_json or '[]',
         'existing_group_id': obj.assign_project_id if obj.assign_buddy_mode == 'group' else None,
+        # Editing a saved schedule: respect its stored participant selection
+        # (including an empty one) instead of pre-checking every member.
+        'respect_existing_participants': True,
     }
 
 
