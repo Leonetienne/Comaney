@@ -27,7 +27,52 @@
             <td>{{ expense.project.name }}</td>
         </tr>
         {% endif %}
+        {% if preview %}
+        {% if expense.payee %}
+        <tr>
+            <td>Paid to</td>
+            <td>{{ expense.payee }}</td>
+        </tr>
+        {% endif %}
+        {% if expense.date_due %}
+        <tr>
+            <td>Date</td>
+            <td>{{ expense.date_due|date:"N j, Y" }}</td>
+        </tr>
+        {% endif %}
+        {% if preview.note %}
+        <tr>
+            <td>Note</td>
+            <td>{{ preview.note }}</td>
+        </tr>
+        {% endif %}
+        {% endif %}
     </table>
+
+    {% if preview %}
+    <h2 class="settle-subhead">Who pays what</h2>
+    <table class="bexp-breakdown-table mb-lg">
+        <thead>
+            <tr><th>Person</th><th class="text-right">Share</th><th class="text-right">Amount</th><th>Role</th></tr>
+        </thead>
+        <tbody>
+            <tr class="{% if preview.payer_is_me %}bexp-row-me{% endif %}">
+                <td>{{ preview.payer_name }}</td>
+                <td class="text-right">{{ preview.payer_percent|floatformat:1 }}%</td>
+                <td class="text-right">{{ preview.currency }}{{ preview.payer_amount|floatformat:2 }}</td>
+                <td><span class="pill">Paid</span></td>
+            </tr>
+            {% for s in preview.participant_shares %}
+            <tr class="{% if s.is_me %}bexp-row-me{% endif %}">
+                <td>{{ s.name }}</td>
+                <td class="text-right">{{ s.percent|floatformat:1 }}%</td>
+                <td class="text-right">{{ preview.currency }}{{ s.amount|floatformat:2 }}</td>
+                <td><span class="pill">Owes</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
 
     <div class="action-row">
         <form method="post" action="{% if approve_url %}{{ approve_url }}{% else %}{% url 'buddies:approve_settlement_as_creditor' expense.uid %}{% endif %}">

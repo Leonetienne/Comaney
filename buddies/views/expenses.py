@@ -9,6 +9,44 @@ from ..models import Project, BuddyGroup, BuddySpending
 from ..services import BuddyEmailService, BuddyLifecycleService
 
 
+def _build_expense_preview(expense, viewer):
+    """Payer + participant share rows for the expense review/preview screen."""
+    from decimal import Decimal
+
+    offline_label = "(offline member)" if expense.project_id else "(offline buddy)"
+    fu = expense.owning_feuser
+    payer_name = f"{fu.first_name} {fu.last_name}".strip() or fu.email
+
+    participant_shares = []
+    total_pct = Decimal("0")
+    for bs in expense.buddy_spendings.all():
+        if bs.participant_feuser_id:
+            pf = bs.participant_feuser
+            name = f"{pf.first_name} {pf.last_name}".strip() or pf.email
+            is_me = pf.pk == viewer.pk
+        else:
+            name = f"{bs.participant_dummy.display_name} {offline_label}"
+            is_me = False
+        total_pct += bs.share_percent
+        participant_shares.append({
+            "name": name,
+            "is_me": is_me,
+            "percent": bs.share_percent,
+            "amount": expense.value * bs.share_percent / 100,
+        })
+
+    payer_pct = Decimal("100") - total_pct
+    return {
+        "currency": fu.currency,
+        "note": expense.note,
+        "payer_name": payer_name,
+        "payer_is_me": fu.pk == viewer.pk,
+        "payer_percent": payer_pct,
+        "payer_amount": expense.value * payer_pct / 100,
+        "participant_shares": participant_shares,
+    }
+
+
 @feuser_required
 def review_expense_as_owner(request, expense_id):
     """
@@ -34,10 +72,11 @@ def review_expense_as_owner(request, expense_id):
     return render(request, "buddies/confirm_settlement.html", {
         "active_nav": "buddies",
         "expense": expense,
+        "preview": _build_expense_preview(expense, request.feuser),
         "approve_url": approve_url,
         "reject_url": reject_url,
         "page_title": "Review shared expense",
-        "confirm_question": "Did you actually pay for this expense upfront? Confirming accepts it into the group.",
+        "confirm_question": "Did you actually pay for this expense? Confirming accepts it into the group.",
         "approve_label": "Yes, I paid this",
         "reject_label": "I did not pay this",
         "reject_confirm_text": "Reject this expense? Your participation will be removed and shares redistributed.",
