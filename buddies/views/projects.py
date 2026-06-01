@@ -113,7 +113,12 @@ def _annotate_expense_permissions(feuser, project, breakdown, is_admin, overlay_
                 )
                 if not can_delete_approved:
                     exp_data["can_delete"] = False
-            exp_data["can_unlink"] = is_feuser_direct_owner or is_admin
+            # An owner who has not yet confirmed the expense is theirs cannot
+            # unlink it: the expense is not approved, so unlinking makes no sense.
+            exp_data["can_unlink"] = (
+                (is_feuser_direct_owner and not exp_data["owner_approval_needed"])
+                or is_admin
+            )
             if exp.is_buddies_settlement:
                 exp_data["can_edit"] = (
                     is_settlement_to_project_dummy

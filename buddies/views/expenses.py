@@ -376,6 +376,18 @@ def group_expense_unlink(request, group_id, expense_id):
         django_messages.error(request, "You do not have permission to unlink this expense.")
         return redirect("projects:project_detail", project_id=group_id)
 
+    # An owner who has not yet confirmed the expense is theirs cannot unlink it:
+    # the expense is still awaiting their approval, so unlinking makes no sense.
+    owner_approval_pending = (
+        is_feuser_direct_owner
+        and not is_admin
+        and not expense.buddy_approved
+        and not expense.is_buddies_settlement
+    )
+    if owner_approval_pending:
+        django_messages.error(request, "Approve this expense before unlinking it.")
+        return redirect("projects:project_detail", project_id=group_id)
+
     notify_feusers = set()
     if is_admin and not is_feuser_direct_owner:
         if not expense.is_dummy:
