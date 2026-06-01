@@ -100,11 +100,16 @@ class TestGroupRenameAdmin:
 
 
 # ---------------------------------------------------------------------------
-# Non-admin member is rejected (404)
+# Non-admin member is rejected (redirect with error, no change applied)
 # ---------------------------------------------------------------------------
 
 class TestGroupRenameNonAdminRejected:
-    """A non-admin group member posting to the rename endpoint gets 404."""
+    """A non-admin group member posting to the rename endpoint is rejected.
+
+    With the default 'Admin only' permission laxity, a member is a legitimate
+    member of the project but lacks edit rights, so the endpoint redirects them
+    back to the settings page with an error message (302) and applies no change.
+    """
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -124,7 +129,9 @@ class TestGroupRenameNonAdminRejected:
             f"/projects/{ctx['group_id']}/rename/",
             {"name": "Hacked Name", "description": ""},
         )
-        assert resp.status_code == 404
+        # Denied members are redirected back to settings with an error message;
+        # the accompanying test verifies the name was left unchanged.
+        assert resp.status_code == 302
 
     def test_group_name_unchanged_in_database(self, driver, w, ctx):
         name = _shell(

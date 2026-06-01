@@ -119,7 +119,12 @@ class TestGroupPicture:
     # ── non-admin picture endpoint rejects ───────────────────────────────────
 
     def test_non_admin_picture_endpoint_rejects(self, driver, w, ctx):
-        """POSTing to the picture endpoint as a non-admin must be rejected (404)."""
+        """POSTing to the picture endpoint as a non-admin must be rejected.
+
+        With the default 'Admin only' permission laxity, a plain member lacks
+        edit rights: a non-AJAX POST is redirected back to the settings page
+        with an error message (302) and no picture change is applied.
+        """
         import uuid
         member_email = f"nonamin-ep-{uuid.uuid4().hex[:8]}@test.invalid"
         _shell(
@@ -144,8 +149,15 @@ class TestGroupPicture:
             allow_redirects=False,
             timeout=10,
         )
-        assert resp.status_code == 404, \
-            f"Non-admin POST to picture endpoint should return 404, got {resp.status_code}"
+        assert resp.status_code == 302, \
+            f"Non-admin POST to picture endpoint should redirect (302), got {resp.status_code}"
+        # The rejection must not have created a picture for the group.
+        has_pic = _shell(
+            f"from buddies.models import Project; "
+            f"print(Project.objects.get(pk={gid}).group_picture)"
+        )
+        assert has_pic == "False", \
+            f"Non-admin POST must not set a group picture, got group_picture={has_pic}"
 
         _shell(f"from feusers.models import FeUser; FeUser.objects.get(email='{member_email}').delete()")
         _login_as(driver, ctx["admin"])
