@@ -876,6 +876,16 @@ confirmForm.addEventListener('submit', function (e) {
         }).catch(function () {});
     }
 });
+
+// ── Scroll to the Save button once the preview is ready ──────────────────────
+(function () {
+    var actions = document.querySelector('.confirm-actions');
+    if (actions) {
+        requestAnimationFrame(function () {
+            actions.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        });
+    }
+})();
 {% endif %}
 </script>
 {% endblock %}
