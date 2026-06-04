@@ -153,7 +153,19 @@ def _default_agent_config(feuser) -> AgentConfig:
 # Express-creation constants and helpers
 # ---------------------------------------------------------------------------
 
-_SMART_CREATE_SYSTEM = """You are a financial data-entry assistant for a budgeting app.
+# ---------------------------------------------------------------------------
+# System prompt, assembled from independent feature blocks.
+#
+# Each block is self-contained and describes exactly one capability plus the
+# item keys it introduces. _build_smart_create_system() joins the enabled
+# blocks and appends the catalog. Keeping features in separate blocks (rather
+# than one monolithic string) lets us later switch individual capabilities off
+# without disturbing the rest: drop a block and the AI stops emitting its keys.
+# The base block is always required; it defines the response envelope and the
+# keys every item must have.
+# ---------------------------------------------------------------------------
+
+_SMART_CREATE_BASE = """You are a financial data-entry assistant for a budgeting app.
 The user may provide an image (receipt, invoice, order confirmation, etc.), a text description, or both.
 Your job is to extract expense and income items and return a single JSON object.
 
@@ -176,12 +188,12 @@ Response format — your entire response must be one of these two JSON objects, 
 Only produce one of the following two json formats as your ENTIRE message:
 
 Success:
-{{"result": "good", "items": [ ... ]}}
+{"result": "good", "items": [ ... ]}
 
 Failure (Use ONLY when the input contains no financial information you can extract. Never ask questions. Make the msg sound cute-ish and friendly, maybe a bit insecure. Add cute emoticons such as >.< >_< <_< >_> ^_^ ^.^ ^^ :3 :>. But NEVER use emojis! Cut the response short, it is shown as a small error message.):
-{{"result": "fail", "msg": "ahh - how am i supposed to know what your drill cost >.<"}}
+{"result": "fail", "msg": "ahh - how am i supposed to know what your drill cost >.<"}
 
-Each item in the "items" array must have exactly these keys:
+Each item in the "items" array must have exactly these base keys (feature sections below may add more optional keys):
     "title"        — collective name for the group, as short as possible (1-3 words)
     "type"         — "expense", "income", "savings_dep", or "savings_wit"
     "value"        — positive decimal, sum of all merged line items in this group
@@ -189,15 +201,49 @@ Each item in the "items" array must have exactly these keys:
     "date_due"     — ISO date string YYYY-MM-DD if the purchase/transaction date is known or can be inferred (e.g. "yesterday", "last Tuesday", a printed date on a receipt or invoice), otherwise null
     "category_uid" — integer uid from the Categories list below, or null if none fits
     "tag_uids"     — array of integer uids from the Tags list below (can be [])
-    "project_uid"  — integer uid from the Projects list below if this expense clearly belongs to one of the listed projects, or null if it is a personal expense
     "note"         — any extra context worth keeping, or ""
-Only use category_uid, tag_uids, and project_uid values that appear in the lists below.
+Only use category_uid and tag_uids values that appear in the lists below.
 If the user describes a lump sum for categorically different things, split by category/tag group.
-Default type to "expense" unless the description clearly indicates income or savings movement.
-If an item is assigned to a project (project_uid is set), its type MUST be "expense": project costs are
-shared expenses, never income or savings movements for the group. Never combine a non-"expense" type with a project_uid.
+Default type to "expense" unless the description clearly indicates income or savings movement."""
 
-{catalog}"""
+_SMART_CREATE_PROJECTS = """Assigning an expense to a shared project:
+    "project_uid"  — integer uid from the Projects list below if this expense clearly belongs to one of the listed projects, or null if it is a personal expense
+Only use project_uid values that appear in the Projects list below.
+If an item is assigned to a project (project_uid is set), its type MUST be "expense": project costs are
+shared expenses, never income or savings movements for the group. Never combine a non-"expense" type with a project_uid."""
+
+_SMART_CREATE_PROJECT_PARTICIPANTS = """Adjusting who shares a project expense:
+    "project_participants" — OPTIONAL, only meaningful when project_uid is set; omit it (or use []) unless the user says otherwise. By default every project member shares the cost equally, so you only need this to record exceptions the user mentions. It is a list of override entries, each: {"name": <exact member name from that project's "members" list>, "included": true|false, "share_percent": <number 0-100, or null>}. Set "included": false to drop a member from sharing entirely (e.g. "Robbie does not participate"). To pin a member to a specific share, use "included": true with "share_percent" set (e.g. "Robbie is on us, set him to 0%" -> {"name": "Robbie", "included": true, "share_percent": 0}). Members you do not list keep an equal share of whatever percentage is left over. Never invent a name that is not in that project's "members" list."""
+
+_SMART_CREATE_PROJECT_PAYER = """Recording who paid a project expense upfront:
+    "project_payer" — OPTIONAL, only meaningful when project_uid is set. The exact member name (from that project's "members" list) of whoever paid the bill upfront. Omit it or use null when the current user paid, which is the default. Set it when the user says someone else covered the cost (e.g. "Volker paid for the campsite" -> "Volker Sauerbier"). The upfront payer is not one of the shared participants; the remaining members split the cost. Never invent a name that is not in that project's "members" list."""
+
+_SMART_CREATE_DIRECT_BUDDY = """Sharing an expense one-on-one with a direct buddy (NOT a project):
+    "buddy_name" — OPTIONAL. The exact name (from the Direct buddies list below) of the one person this expense is shared with one-on-one, or null for a personal expense. Use this only for a two-person split with a single buddy; use project_uid instead when the cost belongs to a shared project. An item is EITHER a project expense (project_uid) OR a direct buddy expense (buddy_name), NEVER both.
+    "buddy_payer" — OPTIONAL, only meaningful when buddy_name is set. Who paid the bill upfront: omit it or use null when the current user paid (the default), or set it to the buddy's name when the buddy covered the cost (e.g. "Volker paid, I owe him half").
+    "buddy_share_percent" — OPTIONAL, only meaningful when buddy_name is set. The buddy's share of the total cost as a number 0-100 (regardless of who paid). Omit it for an equal 50/50 split. Example: "dinner was 40, but 30 of it was mine" -> the buddy's share is 25.
+If buddy_name is set, the item's type MUST be "expense". Never invent a name that is not in the Direct buddies list below."""
+
+# Ordered feature blocks. The base is mandatory; the rest can be dropped later
+# to switch a capability off. _build_smart_create_system() joins them in order.
+_SMART_CREATE_BLOCKS = [
+    _SMART_CREATE_BASE,
+    _SMART_CREATE_PROJECTS,
+    _SMART_CREATE_PROJECT_PARTICIPANTS,
+    _SMART_CREATE_PROJECT_PAYER,
+    _SMART_CREATE_DIRECT_BUDDY,
+]
+
+
+def _build_smart_create_system(catalog: str, blocks: list[str] | None = None) -> str:
+    """Assemble the smart-create system prompt from feature blocks + catalog.
+
+    Pass a subset of _SMART_CREATE_BLOCKS as ``blocks`` to disable capabilities
+    (the base block should always be included).
+    """
+    if blocks is None:
+        blocks = _SMART_CREATE_BLOCKS
+    return "\n\n".join(blocks) + "\n\n" + catalog
 
 _ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 _IMAGE_MAX_PX = 1600
@@ -229,6 +275,7 @@ def _prepare_image(image_file) -> tuple[str, str]:
 
 def _build_catalog(feuser) -> str:
     from buddies.models import Project
+    from buddies.services import BuddyQueryService
     categories = list(Category.objects.filter(owning_feuser=feuser).values("uid", "title"))
     tags = list(Tag.objects.filter(owning_feuser=feuser).values("uid", "title"))
     projects_qs = (
@@ -237,9 +284,29 @@ def _build_catalog(feuser) -> str:
         .distinct()
         .values("uid", "name", "description")
     )
+    # Member display names per project, matching exactly what the express-creation
+    # UI uses (so the AI can name a member and have participation overrides applied).
+    members_by_project = {
+        p["id"]: [m["name"] for m in p["members"]]
+        for p in BuddyQueryService.projects_data_for_expense_form(feuser)
+    }
     projects = [
-        {"uid": p["uid"], "name": p["name"], "description": p["description"] or ""}
+        {
+            "uid": p["uid"],
+            "name": p["name"],
+            "description": p["description"] or "",
+            "members": members_by_project.get(p["uid"], []),
+        }
         for p in projects_qs
+    ]
+    # Direct (one-on-one) buddies, matching the names the express-creation UI
+    # uses, so the AI can name a buddy and have the assignment applied.
+    direct_buddies = [
+        {"name": f"{b.first_name} {b.last_name}".strip() or b.email}
+        for b in BuddyQueryService.get_actual_buddies(feuser)
+    ] + [
+        {"name": d.display_name + " (offline buddy)"}
+        for d in BuddyQueryService.get_dummy_buddies(feuser)
     ]
     parts = [
         f"Categories:\n{json.dumps(categories, ensure_ascii=False)}",
@@ -247,8 +314,15 @@ def _build_catalog(feuser) -> str:
     ]
     if projects:
         parts.append(
-            f"Projects (assign each expense to one of these if it clearly belongs to a shared project, otherwise null):\n"
+            f"Projects (assign each expense to one of these if it clearly belongs to a shared project, otherwise null).\n"
+            f"\"members\" lists everyone who shares that project's costs; use their exact names in project_participants:\n"
             f"{json.dumps(projects, ensure_ascii=False)}"
+        )
+    if direct_buddies:
+        parts.append(
+            f"Direct buddies (people you split one-on-one expenses with, NOT projects). "
+            f"Use buddy_name to share an expense with one of these:\n"
+            f"{json.dumps(direct_buddies, ensure_ascii=False)}"
         )
     return "\n\n".join(parts)
 
@@ -328,6 +402,75 @@ def _call_claude(
 # Validation
 # ---------------------------------------------------------------------------
 
+def _sanitize_project_participants(raw_participants, project_uid) -> list[dict]:
+    """
+    Sanitize the AI's per-member participation overrides for a project expense.
+    Returns [] unless a project is assigned and the input is a well-formed list.
+    Each kept entry has: name (non-empty str), included (bool), and optionally
+    share_percent (float clamped to 0..100). The express-creation UI consumes these
+    to pre-select participants / preset shares before the user confirms.
+    """
+    if project_uid is None or not isinstance(raw_participants, list):
+        return []
+    cleaned = []
+    for rp in raw_participants:
+        if not isinstance(rp, dict):
+            continue
+        name = str(rp.get("name", "")).strip()
+        if not name:
+            continue
+        included = rp.get("included", True)
+        if not isinstance(included, bool):
+            included = True
+        entry = {"name": name[:255], "included": included}
+        share = rp.get("share_percent")
+        if share is not None:
+            try:
+                share = float(share)
+            except (TypeError, ValueError):
+                share = None
+            if share is not None:
+                entry["share_percent"] = max(0.0, min(100.0, share))
+        cleaned.append(entry)
+    return cleaned
+
+
+def _sanitize_project_payer(raw_payer, project_uid) -> str | None:
+    """
+    Sanitize the AI's upfront-payer name for a project expense. Returns None
+    unless a project is assigned and a non-empty name string was provided (the
+    default None means the current user paid). The express-creation UI matches
+    this name against the project's members to preset the payer dropdown.
+    """
+    if project_uid is None or not isinstance(raw_payer, str):
+        return None
+    payer = raw_payer.strip()
+    return payer[:255] if payer else None
+
+
+def _sanitize_direct_buddy(raw_name, raw_payer, raw_share, project_uid) -> tuple[str | None, str | None, float | None]:
+    """
+    Sanitize the AI's one-on-one direct-buddy assignment. Returns
+    (buddy_name, buddy_payer, buddy_share_percent). Direct buddy and project
+    assignment are mutually exclusive, so everything is dropped when a project
+    is set. buddy_name is None for a personal expense; buddy_payer is None when
+    the current user paid (default); buddy_share_percent is the buddy's share
+    (0..100) or None for an equal split. The express-creation UI matches the
+    names against the user's actual buddies to preset the Direct Buddy section.
+    """
+    if project_uid is not None or not isinstance(raw_name, str) or not raw_name.strip():
+        return None, None, None
+    name = raw_name.strip()[:255]
+    payer = raw_payer.strip()[:255] if isinstance(raw_payer, str) and raw_payer.strip() else None
+    share = None
+    if raw_share is not None:
+        try:
+            share = max(0.0, min(100.0, float(raw_share)))
+        except (TypeError, ValueError):
+            share = None
+    return name, payer, share
+
+
 def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
     """Validate and sanitise parsed items against the user's actual categories/tags/projects."""
     from buddies.models import Project
@@ -376,9 +519,14 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
         if project_uid not in valid_project_uids:
             project_uid = None
 
-        # Project expenses only make sense as type=expense (see budget/expense_factory.py);
-        # the AI is told this, but force it rather than trust it.
-        if project_uid is not None and tx_type != "expense":
+        buddy_name, buddy_payer, buddy_share = _sanitize_direct_buddy(
+            raw.get("buddy_name"), raw.get("buddy_payer"),
+            raw.get("buddy_share_percent"), project_uid,
+        )
+
+        # Project and direct-buddy expenses only make sense as type=expense (see
+        # budget/expense_factory.py); the AI is told this, but force it rather than trust it.
+        if (project_uid is not None or buddy_name is not None) and tx_type != "expense":
             tx_type = "expense"
 
         date_due = None
@@ -401,6 +549,15 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
             "tag_uids":       tag_uids,
             "tag_titles":     [tag_map[u] for u in tag_uids],
             "project_uid":    project_uid,
+            "project_participants": _sanitize_project_participants(
+                raw.get("project_participants"), project_uid
+            ),
+            "project_payer": _sanitize_project_payer(
+                raw.get("project_payer"), project_uid
+            ),
+            "buddy_name":          buddy_name,
+            "buddy_payer":         buddy_payer,
+            "buddy_share_percent": buddy_share,
         })
 
     return items, errors

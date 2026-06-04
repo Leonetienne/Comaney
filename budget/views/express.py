@@ -10,8 +10,8 @@ from ..decorators import feuser_required
 from ..express_service import (
     AIInvalidResponseError,
     AIRefusalError,
-    _SMART_CREATE_SYSTEM,
     _build_catalog,
+    _build_smart_create_system,
     _call_claude,
     _parse_buddy_item,
     _prepare_image,
@@ -83,7 +83,7 @@ def express_creation(request):
                 catalog = _build_catalog(feuser)
                 custom = feuser.ai_custom_instructions.strip()
                 extra = f"\n\nUser's custom instructions (follow these when assigning categories/tags):\n{custom}" if custom else ""
-                system_prompt = _SMART_CREATE_SYSTEM.format(catalog=catalog) + extra
+                system_prompt = _build_smart_create_system(catalog) + extra
                 today_str = timezone.localdate().isoformat()
                 description_with_date = f"[Today's date: {today_str}]\n\n{description}" if description else f"[Today's date: {today_str}]"
                 try:
