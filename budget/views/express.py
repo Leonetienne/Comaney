@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from ..decorators import feuser_required
@@ -49,6 +50,7 @@ def express_creation(request):
         "ai_error_overloaded": False,
         "ai_error_detail":    "",
         "created_count":      None,
+        "view_expenses_url":  None,
         "categories":         categories,
         "tags":               tags,
         "is_trial":           is_trial,
@@ -163,6 +165,10 @@ def express_creation(request):
                 category_cache: dict[int, Category] = {}
                 tag_cache: dict[int, Tag] = {}
                 count = 0
+                # Track where each saved expense landed so the success banner's
+                # "View expenses" link can jump to the most relevant place:
+                # ("buddy", None) = direct buddy; ("project", uid); ("personal", None).
+                created_targets: list[tuple[str, int | None]] = []
                 for idx, item in enumerate(all_items):
                     if idx not in selected_indices:
                         continue
@@ -253,14 +259,38 @@ def express_creation(request):
                         BuddyEmailService.notify_expense_created(expense, feuser)
                     else:
                         create_expense(owning_feuser=feuser, project=project, **common_kwargs)
+
+                    if buddy:
+                        grp = buddy["group"]
+                        created_targets.append(("project", grp.uid) if grp else ("buddy", None))
+                    elif project:
+                        created_targets.append(("project", project.uid))
+                    else:
+                        created_targets.append(("personal", None))
                     count += 1
                 if not context.get("ai_error"):
-                    return redirect(f"{request.path}?created={count}")
+                    redirect_url = f"{request.path}?created={count}"
+                    kinds = {t[0] for t in created_targets}
+                    if created_targets and kinds == {"buddy"}:
+                        redirect_url += "&view=buddies"
+                    elif created_targets and kinds == {"project"}:
+                        project_ids = {t[1] for t in created_targets}
+                        if len(project_ids) == 1:
+                            redirect_url += f"&view=project&pid={project_ids.pop()}"
+                    return redirect(redirect_url)
                 context["created_count"] = count
             except Exception as exc:
                 context["ai_error"] = f"Could not save expenses: {exc}"
 
     if not context["created_count"] and request.GET.get("created", "").isdigit():
         context["created_count"] = int(request.GET["created"])
+
+    view = request.GET.get("view")
+    if view == "buddies":
+        context["view_expenses_url"] = reverse("buddies:buddy_summary")
+    elif view == "project" and request.GET.get("pid", "").isdigit():
+        context["view_expenses_url"] = reverse(
+            "projects:project_detail", args=[int(request.GET["pid"])]
+        )
 
     return render(request, "budget/express_creation.html", context)

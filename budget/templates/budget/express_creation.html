@@ -53,7 +53,7 @@ window.BUDDY_EXPENSE_CONFIG = {
     {% if created_count is not None %}
     <div class="success-banner">
         ✓ {{ created_count }} expense{{ created_count|pluralize }} saved.
-        <a href="{% url 'budget:expenses_list' %}">View expenses →</a>
+        <a href="{% if view_expenses_url %}{{ view_expenses_url }}{% else %}{% url 'budget:expenses_list' %}{% endif %}">View expenses →</a>
     </div>
     {% endif %}
 
