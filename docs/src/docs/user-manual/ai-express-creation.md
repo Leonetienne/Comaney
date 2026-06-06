@@ -38,21 +38,38 @@ Combine grocery items into one expense unless they belong to different categorie
 
 The AI will follow these instructions every time.
 
-## Project assignment
+## Project and buddy assignment
 
-If you have projects set up, the AI will suggest which project each expense belongs to, based on the project name and description. You can review and change the assignment in each card using the **Expense assignment** tabs:
+If you have projects or buddies set up, the AI will suggest how each expense should be shared, based on your description and the project or buddy names. You can review and change the assignment in each card using the **Expense assignment** tabs:
 
-- **None**: personal expense, not linked to any project.
-- **Direct Buddy**: a direct one-on-one buddy payment.
+- **None**: personal expense, not shared with anyone.
+- **Direct Buddy**: a one-on-one split with a single buddy.
 - **Project**: assign to a shared project. For projects with multiple members, you can also set the upfront payer and split shares.
 
-The AI will never assign a project without a strong reason.
+The AI will never share an expense without a strong reason.
+
+### Sharing one-on-one with a buddy
+
+If you mention splitting something with one person, the AI can set up a direct buddy expense for you. For example, "Split the taxi with Kevin, 20 in total" shares it evenly with Kevin. You can also tell the AI who paid and how to split it:
+
+- **Say who paid.** "Kevin paid for our lunch, 30, I owe him half" records Kevin as the one who paid upfront. If you don't say, the app assumes you paid.
+- **Set the split.** "Dinner was 40, but only 10 of it was Kevin's" gives Kevin a smaller share. Without a hint, it's split evenly.
+
+### Telling the AI who shares a project expense
+
+When an expense belongs to a project, everyone in that project shares the cost equally by default. You can tell the AI about exceptions right in your description, and it will set them up for you to review:
+
+- **Leave someone out.** "We ordered takeout for the summer vacation trip, but Robbie doesn't join in" leaves Robbie out of the split; the others share equally.
+- **Give someone a set share.** "Dinner for the trip, but Robbie is on us, put him at 0%" keeps Robbie on the expense at 0%, and the rest split what's left.
+- **Say who paid.** "Robbie paid for the group dinner on the trip" sets Robbie as the person who paid upfront; everyone else shares what they owe. If you don't mention anyone, the app assumes you paid.
+
+You can always adjust who paid, who shares, and by how much before saving.
 
 ## Privacy
 
 Photos and descriptions you submit are sent to Anthropic's AI service for processing. Do not upload documents containing sensitive personal data such as identity card numbers or passport scans.
 
-The data transmitted to Anthropic includes only your list of tags, categories, projects (names and descriptions), your custom instruction, your expense description and/or receipt picture.
+The data transmitted to Anthropic includes only your list of tags, categories, projects (names, descriptions, and the names of their members), the names of your buddies, your custom instruction, your expense description and/or receipt picture.
 Comaney will never transmit your existing transactions.
 
 ## AI Licensing

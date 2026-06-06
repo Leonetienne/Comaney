@@ -21,6 +21,12 @@ Cases covered:
   5. Direct Buddy: Volker pays, me gets 40%
   6. Project: Volker pays, Andreas deselected, me gets 55%
   7. Project: me pays, Andreas deselected, Volker gets 45%
+  8. AI participation: description drops Andreas -> Andreas excluded from split
+  9. AI participation: description pins Andreas to 0% -> Andreas kept at 0%
+ 10. View-expenses link: all-project batch -> links to /projects/<uid>/
+ 11. View-expenses link: all-direct-buddy batch -> links to /buddies/summary/
+ 12. AI upfront payer: description says Volker paid -> Volker is the payer
+ 13. AI direct buddy: description shares one-on-one with Kevin -> direct buddy expense
 """
 import os
 import re
@@ -88,6 +94,16 @@ def _expense_spendings(title: str, owner_email: str) -> list[dict]:
         f"print(json.dumps(rows))"
     )
     return _json.loads(result)
+
+
+def _expense_upfront_dummy_pk(title: str, owner_email: str) -> int | None:
+    result = _shell(
+        f"from budget.models import Expense; from feusers.models import FeUser; "
+        f"u = FeUser.objects.get(email='{owner_email}'); "
+        f"e = Expense.objects.filter(title__startswith='{title}', owning_feuser=u).first(); "
+        f"print(e.upfront_payee_dummy_id if e and e.upfront_payee_dummy_id else 'None')"
+    )
+    return None if result == "None" else int(result)
 
 
 def _expense_in_api(title_prefix: str, ctx: dict) -> bool:
@@ -272,6 +288,35 @@ def _confirm(driver) -> None:
         f"Confirm did not reach success state. URL: {driver.current_url}"
 
 
+def _view_expenses_href(driver) -> str:
+    """Read the href of the success banner's 'View expenses' link."""
+    return driver.find_element(
+        By.CSS_SELECTOR, ".success-banner a"
+    ).get_attribute("href")
+
+
+def _project_tab_active(card) -> bool:
+    return "assign-tab--active" in card.find_element(
+        By.CSS_SELECTOR, ".pcard-assign-project"
+    ).get_attribute("class")
+
+
+def _buddy_tab_active(card) -> bool:
+    els = card.find_elements(By.CSS_SELECTOR, ".pcard-assign-buddy")
+    return bool(els) and "assign-tab--active" in els[0].get_attribute("class")
+
+
+def _keep_only_first_card(driver) -> None:
+    """Deselect every card but the first, so the saved batch is exactly one
+    expense regardless of whether the AI split the description into several."""
+    cards = driver.find_elements(By.CSS_SELECTOR, ".preview-card")
+    for card in cards[1:]:
+        cb = card.find_element(By.CSS_SELECTOR, "input[name=selected]")
+        if cb.is_selected():
+            driver.execute_script("arguments[0].click();", cb)
+    time.sleep(0.3)
+
+
 # ---------------------------------------------------------------------------
 # Module-scoped shared test data (UI setup only)
 # ---------------------------------------------------------------------------
@@ -289,12 +334,16 @@ def ctx(driver, w):
     _ui_add_dummy(driver, c["project_uid"], "Andreas Krawall")
     # Personal offline buddy required for the Direct Buddy tab to appear
     _ui_add_personal_dummy(driver, "Volker Sauerbier")
+    # A personal-only buddy who is NOT in any project, so the AI can assign a
+    # direct buddy expense unambiguously (Volker also being a project member).
+    _ui_add_personal_dummy(driver, "Kevin Klobrille")
 
     # Shell: read-only, needed for assertion lookups
     c["me_pk"] = _get_pk(c["email"])
     c["dummy1_pk"] = _get_dummy_pk(c["project_uid"], "Volker Sauerbier")
     c["dummy2_pk"] = _get_dummy_pk(c["project_uid"], "Andreas Krawall")
     c["personal_dummy1_pk"] = _get_personal_dummy_pk(c["email"], "Volker Sauerbier")
+    c["personal_kevin_pk"] = _get_personal_dummy_pk(c["email"], "Kevin Klobrille")
 
     yield c
     cleanup_user(c["email"])
@@ -452,3 +501,149 @@ class TestExpressProjectPayment:
         s = spendings[0]
         assert s["type"] == "dummy" and s["id"] == ctx["dummy1_pk"]
         assert abs(s["share"] - 45.0) < 0.01, f"Expected 45%, got {s['share']}"
+
+
+# ---------------------------------------------------------------------------
+# 8 + 9: AI-supplied participation overrides (no manual UI participant edits)
+# ---------------------------------------------------------------------------
+
+class TestExpressAiParticipation:
+    """The AI encodes participation exceptions straight from the description.
+
+    These drive only the parse + confirm; the participant selection / shares
+    must come from the AI's project_participants output, applied automatically
+    when the project card opens.
+    """
+
+    def test_ai_excludes_member(self, driver, w, ctx):
+        """Case 8: 'Andreas macht nicht mit' -> Andreas dropped from the split."""
+        desc = ("Campingausruestung fuer das Schanzenfest 2026, 60 Euro. "
+                "Andreas macht bei dieser Ausgabe nicht mit, alle anderen teilen sich das.")
+        if not _ui_parse(driver, desc):
+            pytest.skip("AI unavailable")
+        card = _first_card(driver)
+        title = _card_title(card)
+        if not _project_tab_active(card):
+            pytest.skip("AI did not assign the project; participation override not applicable")
+        _confirm(driver)
+
+        assert _expense_project_name(title, ctx["email"]) == "Schanzenfest 2026"
+        spendings = _expense_spendings(title, ctx["email"])
+        ids = {(s["type"], s["id"]) for s in spendings}
+        assert ("dummy", ctx["dummy2_pk"]) not in ids, \
+            f"Andreas should be excluded by the AI, got {spendings}"
+        assert ("dummy", ctx["dummy1_pk"]) in ids, \
+            f"Volker should still share the cost, got {spendings}"
+
+    def test_ai_pins_member_to_zero(self, driver, w, ctx):
+        """Case 9: 'Andreas geht auf uns, 0%' -> Andreas kept, share 0."""
+        desc = ("Verpflegung fuers Schanzenfest 2026, 60 Euro. "
+                "Andreas geht auf uns, setz seinen Anteil auf 0 Prozent.")
+        if not _ui_parse(driver, desc):
+            pytest.skip("AI unavailable")
+        card = _first_card(driver)
+        title = _card_title(card)
+        if not _project_tab_active(card):
+            pytest.skip("AI did not assign the project; participation override not applicable")
+        _confirm(driver)
+
+        assert _expense_project_name(title, ctx["email"]) == "Schanzenfest 2026"
+        spendings = _expense_spendings(title, ctx["email"])
+        andreas = next(
+            (s for s in spendings if s["type"] == "dummy" and s["id"] == ctx["dummy2_pk"]),
+            None,
+        )
+        assert andreas is not None, \
+            f"Andreas should still be a participant at 0%, got {spendings}"
+        assert abs(andreas["share"]) < 0.01, \
+            f"Andreas should be pinned to 0%, got {andreas['share']}"
+
+    def test_ai_sets_upfront_payer(self, driver, w, ctx):
+        """Case 12: 'Volker hat bezahlt' -> Volker is the upfront payer."""
+        desc = ("Volker hat die Campingausruestung fuers Schanzenfest 2026 bezahlt, "
+                "60 Euro. Wir teilen uns die Kosten.")
+        if not _ui_parse(driver, desc):
+            pytest.skip("AI unavailable")
+        card = _first_card(driver)
+        title = _card_title(card)
+        if not _project_tab_active(card):
+            pytest.skip("AI did not assign the project; payer override not applicable")
+        _confirm(driver)
+
+        assert _expense_project_name(title, ctx["email"]) == "Schanzenfest 2026"
+        # A dummy-paid expense is owned by me but does not show in the regular list.
+        assert not _expense_in_api(title, ctx), \
+            f"Dummy-payer project expense must not appear in the expense API (title={title!r})"
+        assert _expense_upfront_dummy_pk(title, ctx["email"]) == ctx["dummy1_pk"], \
+            "Volker should be recorded as the upfront payer"
+        spendings = _expense_spendings(title, ctx["email"])
+        ids = {(s["type"], s["id"]) for s in spendings}
+        assert ("dummy", ctx["dummy1_pk"]) not in ids, \
+            f"The payer (Volker) must not also be a participant, got {spendings}"
+
+
+# ---------------------------------------------------------------------------
+# 13: AI-assigned direct (one-on-one) buddy expense
+# ---------------------------------------------------------------------------
+
+class TestExpressAiDirectBuddy:
+    """The AI can route an expense to a one-on-one direct buddy from the text."""
+
+    def test_ai_assigns_direct_buddy(self, driver, w, ctx):
+        """Case 13: 'mit Kevin geteilt' -> direct buddy expense with Kevin."""
+        desc = ("Ich war mit Kevin Klobrille zu zweit Kaffee trinken, 8 Euro. "
+                "Ich habe bezahlt, wir teilen uns die Kosten 50/50. "
+                "Das hat nichts mit dem Schanzenfest zu tun.")
+        if not _ui_parse(driver, desc):
+            pytest.skip("AI unavailable")
+        card = _first_card(driver)
+        title = _card_title(card)
+        if not _buddy_tab_active(card):
+            pytest.skip("AI did not assign a direct buddy")
+        _confirm(driver)
+
+        # A direct buddy expense is personal (no project) and I am the payer.
+        assert _expense_project_name(title, ctx["email"]) is None
+        spendings = _expense_spendings(title, ctx["email"])
+        kevin = next(
+            (s for s in spendings if s["type"] == "dummy" and s["id"] == ctx["personal_kevin_pk"]),
+            None,
+        )
+        assert kevin is not None, \
+            f"Kevin should be the shared direct buddy, got {spendings}"
+        assert kevin["share"] > 0, f"Kevin should owe a share, got {spendings}"
+
+
+# ---------------------------------------------------------------------------
+# 10 + 11: "View expenses" success-link routing
+# ---------------------------------------------------------------------------
+
+class TestExpressViewExpensesLink:
+    """The success banner routes to the most relevant place for the batch."""
+
+    def test_all_project_links_to_project(self, driver, w, ctx):
+        """Case 10: a single project expense -> link points to /projects/<uid>/."""
+        if not _ui_parse(driver, "Stromgenerator 60 Euro"):
+            pytest.skip("AI unavailable")
+        card = _first_card(driver)
+        _keep_only_first_card(driver)
+        _click_tab(driver, card, ".pcard-assign-project")
+        time.sleep(0.5)
+        _confirm(driver)
+        href = _view_expenses_href(driver)
+        assert href.rstrip("/").endswith(f"/projects/{ctx['project_uid']}"), \
+            f"Expected the project detail link, got {href!r}"
+
+    def test_all_direct_buddy_links_to_summary(self, driver, w, ctx):
+        """Case 11: a single direct-buddy expense -> link points to /buddies/summary/."""
+        if not _ui_parse(driver, "Pizza 30 Euro"):
+            pytest.skip("AI unavailable")
+        card = _first_card(driver)
+        _keep_only_first_card(driver)
+        _click_tab(driver, card, ".pcard-assign-buddy")
+        _set_payer(driver, card, "Me (")
+        _select_single_buddy(driver, card, "Volker")
+        _confirm(driver)
+        href = _view_expenses_href(driver)
+        assert href.rstrip("/").endswith("/buddies/summary"), \
+            f"Expected the buddy summary link, got {href!r}"

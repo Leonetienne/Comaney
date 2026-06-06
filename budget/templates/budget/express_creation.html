@@ -713,12 +713,126 @@ function initCardBuddy(cardEl) {
         var per=+(100/(parts.length+1)).toFixed(3); parts.forEach(function(p){p.share=per;}); refreshSliders();
     });
 
+    // ── Apply AI-suggested participation overrides (project expenses) ─────────
+    // The AI may drop a member from sharing ("included": false) or pin a share
+    // ("share_percent"). Members it doesn't mention split the remainder equally,
+    // and the payer (me) always takes the implicit leftover.
+    function normName(s) { return String(s || '').trim().toLowerCase(); }
+    // Compare on the base name, ignoring any trailing "(offline ...)" label, so
+    // the catalog's "(offline buddy)" still matches the UI's "(offline member)".
+    function nameMatches(a, b) {
+        var na = normName(String(a || '').replace(/\s*\([^)]*\)\s*$/, ''));
+        var nb = normName(String(b || '').replace(/\s*\([^)]*\)\s*$/, ''));
+        if (!na || !nb) return false;
+        return na === nb || na.indexOf(nb) === 0 || nb.indexOf(na) === 0;
+    }
+    // Set the upfront payer to an AI-named project member (default stays "me").
+    function applyAiPayer() {
+        var name = null;
+        try { name = (_previewPayload[parseInt(cardEl.dataset.idx, 10)] || {}).project_payer; } catch (_) {}
+        if (!name || !payerSel || mode !== 'group') return;
+        var grp = groups.find(function(g) { return g.id === groupId; });
+        if (!grp) return;
+        var member = grp.members.find(function(m) { return nameMatches(m.name, name); });
+        if (!member) return;
+        var val = member.is_me ? ('me:' + ME_PK) : (member.type + ':' + member.id);
+        var exists = Array.prototype.some.call(payerSel.options, function(o) { return o.value === val; });
+        if (exists && payerSel.value !== val) {
+            payerSel.value = val;
+            payerSel.dispatchEvent(new Event('change'));
+        }
+    }
+    function applyAiParticipants() {
+        var spec = null;
+        try { spec = (_previewPayload[parseInt(cardEl.dataset.idx, 10)] || {}).project_participants; } catch (_) {}
+        if (!spec || !spec.length || !partEl || mode !== 'group') return;
+
+        // Match a member's display name to an override, tolerating the dummy
+        // "(offline member)" suffix and first-name-only references either way.
+        function findOverride(memberName) {
+            for (var i = 0; i < spec.length; i++) {
+                var o = spec[i]; if (!o || !o.name) continue;
+                if (nameMatches(memberName, o.name)) return o;
+            }
+            return null;
+        }
+
+        // 1. Drop excluded members from the participant checkboxes.
+        partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
+            var o = findOverride(lbl.dataset.name);
+            if (o && o.included === false) {
+                var inp = lbl.querySelector('input'); if (inp) inp.checked = false;
+            }
+        });
+        syncParts();
+        if (!parts.length) { rebuildSliders(); return; }
+
+        // 2. Pin explicit shares; split the remainder among the rest (+ payer).
+        var explicitTotal = 0, autoCount = 1; // payer is one implicit auto-share
+        parts.forEach(function(p) {
+            var o = findOverride(p.name);
+            if (o && typeof o.share_percent === 'number') {
+                p.share = o.share_percent; p._explicit = true; explicitTotal += o.share_percent;
+            } else { p._explicit = false; autoCount++; }
+        });
+        var leftover = Math.max(0, 100 - explicitTotal);
+        var perAuto = +(leftover / autoCount).toFixed(3);
+        parts.forEach(function(p) { if (!p._explicit) p.share = perAuto; });
+        clamp();
+        rebuildSliders();
+    }
+
+    // ── Apply an AI-suggested one-on-one direct buddy assignment ─────────────
+    // buddy_share_percent is always the buddy's portion of the total, whoever
+    // paid. Returns true when a matching buddy was found and applied.
+    function applyAiBuddy() {
+        var item = {};
+        try { item = _previewPayload[parseInt(cardEl.dataset.idx, 10)] || {}; } catch (_) {}
+        if (!item.buddy_name || !singles.length) return false;
+        var b = singles.find(function(s) { return nameMatches(s.name, item.buddy_name); });
+        if (!b) return false;
+
+        activateTab('buddy');  // mode single, payer defaults to me, empty participant
+        var buddyVal = b.type + ':' + b.id;
+        var buddyPaid = item.buddy_payer && nameMatches(b.name, item.buddy_payer);
+        var buddyShare = (typeof item.buddy_share_percent === 'number') ? item.buddy_share_percent : null;
+
+        if (buddyPaid) {
+            // Buddy fronted the money -> buddy is the payer, I become the participant.
+            if (payerSel && Array.prototype.some.call(payerSel.options, function(o) { return o.value === buddyVal; })) {
+                payerSel.value = buddyVal;
+                payerSel.dispatchEvent(new Event('change'));
+            }
+            // parts is now [me]; my share is whatever the buddy does not take.
+            if (buddyShare !== null && parts.length === 1) {
+                parts[0].share = Math.max(0, Math.min(100, 100 - buddyShare));
+                refreshSliders();
+            }
+        } else {
+            // I paid -> select the buddy as the participant who owes their share.
+            var sel = partEl ? partEl.querySelector('.buddy-participant-select') : null;
+            if (sel && Array.prototype.some.call(sel.options, function(o) { return o.value === buddyVal; })) {
+                sel.value = buddyVal;
+                sel.dispatchEvent(new Event('change'));
+            }
+            if (buddyShare !== null && parts.length === 1) {
+                parts[0].share = Math.max(0, Math.min(100, buddyShare));
+                refreshSliders();
+            }
+        }
+        return true;
+    }
+
     // ── Initialize from AI suggestion ────────────────────────────────────────
     var initProjectUid = parseInt(cardEl.dataset.projectUid) || null;
     if (initProjectUid && groups.some(function(g) { return g.id === initProjectUid; })) {
         if (grpSel) grpSel.value = String(initProjectUid);
         groupId = initProjectUid;
         activateTab('project');
+        applyAiPayer();
+        applyAiParticipants();
+    } else if (applyAiBuddy()) {
+        // Direct buddy assignment handled above.
     } else {
         activateTab('none');
     }
@@ -755,6 +869,9 @@ function initCardBuddy(cardEl) {
 
 {% if preview_items %}
 var _cardBuddy = {};
+// Parsed once so each card can read its AI-suggested participation overrides.
+var _previewPayload = [];
+try { _previewPayload = JSON.parse(document.getElementById('preview_json_input').value); } catch (_) {}
 {% if buddy_actual or buddy_dummy or buddy_groups %}
 document.querySelectorAll('.preview-card[data-idx]').forEach(function(card) {
     var inst = initCardBuddy(card);
