@@ -574,9 +574,10 @@ function initCardBuddy(cardEl) {
             partEl.appendChild(wrap);
         } else {
             var grp = groups.find(function(g) { return g.id === groupId; });
-            (grp ? grp.members.filter(function(m) { return !m.is_me; }) : []).forEach(function(item) {
+            (grp ? grp.members : []).forEach(function(item, memberIdx) {
+                if (item.is_me) return;
                 var lbl = document.createElement('label'); lbl.className = 'checkbox-inline buddy-participant-cb';
-                lbl.dataset.type = item.type; lbl.dataset.id = String(item.id); lbl.dataset.name = item.name;
+                lbl.dataset.type = item.type; lbl.dataset.id = String(item.id); lbl.dataset.name = item.name; lbl.dataset.idx = memberIdx;
                 lbl.dataset.ppicUrl = item.ppicUrl||''; lbl.dataset.initials = item.initials||''; lbl.dataset.avatarColor = item.avatarColor||'';
                 var inp = document.createElement('input'); inp.type = 'checkbox'; if (preCheck) inp.checked = true;
                 inp.addEventListener('change', function() { syncParts(); rebuildSliders(); });
@@ -608,14 +609,16 @@ function initCardBuddy(cardEl) {
     function syncParts() {
         if (!payerSel) return;
         var pt = payerSel.value.split(':')[0], checked = [];
+        var grpForIdx = mode === 'group' ? groups.find(function(g) { return g.id === groupId; }) : null;
+        var meIdx = grpForIdx ? grpForIdx.members.findIndex(function(m) { return m.is_me; }) : -1;
         if (pt !== 'me') {
             var em = parts.find(function(p) { return p.type === 'feuser' && p.id === ME_PK; });
-            checked.push({type:'feuser', id:ME_PK, name:ME_NAME, share:em?em.share:0, ppicUrl:ME_PPIC_URL, initials:ME_INITIALS, avatarColor:ME_AVATAR_COLOR});
+            checked.push({type:'feuser', id:ME_PK, name:ME_NAME, idx:meIdx, share:em?em.share:0, ppicUrl:ME_PPIC_URL, initials:ME_INITIALS, avatarColor:ME_AVATAR_COLOR});
             if (mode !== 'single') partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
                 if (lbl.style.display === 'none') return;
                 if (lbl.querySelector('input').checked) {
                     var ex = parts.find(function(p) { return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id; });
-                    checked.push({type:lbl.dataset.type, id:parseInt(lbl.dataset.id), name:lbl.dataset.name, share:ex?ex.share:0, ppicUrl:lbl.dataset.ppicUrl||'', initials:lbl.dataset.initials||'', avatarColor:lbl.dataset.avatarColor||''});
+                    checked.push({type:lbl.dataset.type, id:parseInt(lbl.dataset.id), name:lbl.dataset.name, idx:parseInt(lbl.dataset.idx, 10), share:ex?ex.share:0, ppicUrl:lbl.dataset.ppicUrl||'', initials:lbl.dataset.initials||'', avatarColor:lbl.dataset.avatarColor||''});
                 }
             });
         } else if (mode === 'single') {
@@ -630,7 +633,7 @@ function initCardBuddy(cardEl) {
                 if (lbl.style.display === 'none') return;
                 if (lbl.querySelector('input').checked) {
                     var ex = parts.find(function(p) { return p.type === lbl.dataset.type && String(p.id) === lbl.dataset.id; });
-                    checked.push({type:lbl.dataset.type, id:parseInt(lbl.dataset.id), name:lbl.dataset.name, share:ex?ex.share:0, ppicUrl:lbl.dataset.ppicUrl||'', initials:lbl.dataset.initials||'', avatarColor:lbl.dataset.avatarColor||''});
+                    checked.push({type:lbl.dataset.type, id:parseInt(lbl.dataset.id), name:lbl.dataset.name, idx:parseInt(lbl.dataset.idx, 10), share:ex?ex.share:0, ppicUrl:lbl.dataset.ppicUrl||'', initials:lbl.dataset.initials||'', avatarColor:lbl.dataset.avatarColor||''});
                 }
             });
         }
@@ -716,24 +719,17 @@ function initCardBuddy(cardEl) {
     // ── Apply AI-suggested participation overrides (project expenses) ─────────
     // The AI may drop a member from sharing ("included": false) or pin a share
     // ("share_percent"). Members it doesn't mention split the remainder equally,
-    // and the payer (me) always takes the implicit leftover.
-    function normName(s) { return String(s || '').trim().toLowerCase(); }
-    // Compare on the base name, ignoring any trailing "(offline ...)" label, so
-    // the catalog's "(offline buddy)" still matches the UI's "(offline member)".
-    function nameMatches(a, b) {
-        var na = normName(String(a || '').replace(/\s*\([^)]*\)\s*$/, ''));
-        var nb = normName(String(b || '').replace(/\s*\([^)]*\)\s*$/, ''));
-        if (!na || !nb) return false;
-        return na === nb || na.indexOf(nb) === 0 || nb.indexOf(na) === 0;
-    }
-    // Set the upfront payer to an AI-named project member (default stays "me").
+    // and the payer (me) always takes the implicit leftover. Members are
+    // referenced by "idx" (position in that project's members list), never by
+    // name, so matching is exact array-index lookup, not fuzzy text matching.
+    // Set the upfront payer to an AI-referenced project member (default stays "me").
     function applyAiPayer() {
-        var name = null;
-        try { name = (_previewPayload[parseInt(cardEl.dataset.idx, 10)] || {}).project_payer; } catch (_) {}
-        if (!name || !payerSel || mode !== 'group') return;
+        var idx = null;
+        try { idx = (_previewPayload[parseInt(cardEl.dataset.idx, 10)] || {}).project_payer; } catch (_) {}
+        if (typeof idx !== 'number' || !payerSel || mode !== 'group') return;
         var grp = groups.find(function(g) { return g.id === groupId; });
         if (!grp) return;
-        var member = grp.members.find(function(m) { return nameMatches(m.name, name); });
+        var member = grp.members[idx];
         if (!member) return;
         var val = member.is_me ? ('me:' + ME_PK) : (member.type + ':' + member.id);
         var exists = Array.prototype.some.call(payerSel.options, function(o) { return o.value === val; });
@@ -747,19 +743,17 @@ function initCardBuddy(cardEl) {
         try { spec = (_previewPayload[parseInt(cardEl.dataset.idx, 10)] || {}).project_participants; } catch (_) {}
         if (!spec || !spec.length || !partEl || mode !== 'group') return;
 
-        // Match a member's display name to an override, tolerating the dummy
-        // "(offline member)" suffix and first-name-only references either way.
-        function findOverride(memberName) {
+        function findOverride(memberIdx) {
             for (var i = 0; i < spec.length; i++) {
-                var o = spec[i]; if (!o || !o.name) continue;
-                if (nameMatches(memberName, o.name)) return o;
+                var o = spec[i];
+                if (o && o.idx === memberIdx) return o;
             }
             return null;
         }
 
         // 1. Drop excluded members from the participant checkboxes.
         partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
-            var o = findOverride(lbl.dataset.name);
+            var o = findOverride(parseInt(lbl.dataset.idx, 10));
             if (o && o.included === false) {
                 var inp = lbl.querySelector('input'); if (inp) inp.checked = false;
             }
@@ -770,7 +764,7 @@ function initCardBuddy(cardEl) {
         // 2. Pin explicit shares; split the remainder among the rest (+ payer).
         var explicitTotal = 0, autoCount = 1; // payer is one implicit auto-share
         parts.forEach(function(p) {
-            var o = findOverride(p.name);
+            var o = findOverride(p.idx);
             if (o && typeof o.share_percent === 'number') {
                 p.share = o.share_percent; p._explicit = true; explicitTotal += o.share_percent;
             } else { p._explicit = false; autoCount++; }
@@ -784,17 +778,18 @@ function initCardBuddy(cardEl) {
 
     // ── Apply an AI-suggested one-on-one direct buddy assignment ─────────────
     // buddy_share_percent is always the buddy's portion of the total, whoever
-    // paid. Returns true when a matching buddy was found and applied.
+    // paid. buddy_idx is a position in the singles list (never a name). Returns
+    // true when a matching buddy was found and applied.
     function applyAiBuddy() {
         var item = {};
         try { item = _previewPayload[parseInt(cardEl.dataset.idx, 10)] || {}; } catch (_) {}
-        if (!item.buddy_name || !singles.length) return false;
-        var b = singles.find(function(s) { return nameMatches(s.name, item.buddy_name); });
+        if (typeof item.buddy_idx !== 'number' || !singles.length) return false;
+        var b = singles[item.buddy_idx];
         if (!b) return false;
 
         activateTab('buddy');  // mode single, payer defaults to me, empty participant
         var buddyVal = b.type + ':' + b.id;
-        var buddyPaid = item.buddy_payer && nameMatches(b.name, item.buddy_payer);
+        var buddyPaid = item.buddy_paid === true;
         var buddyShare = (typeof item.buddy_share_percent === 'number') ? item.buddy_share_percent : null;
 
         if (buddyPaid) {

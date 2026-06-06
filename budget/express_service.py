@@ -213,16 +213,16 @@ If an item is assigned to a project (project_uid is set), its type MUST be "expe
 shared expenses, never income or savings movements for the group. Never combine a non-"expense" type with a project_uid."""
 
 _SMART_CREATE_PROJECT_PARTICIPANTS = """Adjusting who shares a project expense:
-    "project_participants" — OPTIONAL, only meaningful when project_uid is set; omit it (or use []) unless the user says otherwise. By default every project member shares the cost equally, so you only need this to record exceptions the user mentions. It is a list of override entries, each: {"name": <exact member name from that project's "members" list>, "included": true|false, "share_percent": <number 0-100, or null>}. Set "included": false to drop a member from sharing entirely (e.g. "Robbie does not participate"). To pin a member to a specific share, use "included": true with "share_percent" set (e.g. "Robbie is on us, set him to 0%" -> {"name": "Robbie", "included": true, "share_percent": 0}). Members you do not list keep an equal share of whatever percentage is left over. Never invent a name that is not in that project's "members" list."""
+    "project_participants" — OPTIONAL, only meaningful when project_uid is set; omit it (or use []) unless the user says otherwise. By default every project member shares the cost equally, so you only need this to record exceptions the user mentions. It is a list of override entries, each: {"idx": <member idx from that project's "members" list>, "included": true|false, "share_percent": <number 0-100, or null>}. Set "included": false to drop a member from sharing entirely (e.g. "Robbie does not participate"). To pin a member to a specific share, use "included": true with "share_percent" set (e.g. "Robbie is on us, set him to 0%" -> {"idx": 2, "included": true, "share_percent": 0} if Robbie is idx 2). Members you do not list keep an equal share of whatever percentage is left over. Only use idx values that appear in that project's "members" list; never invent one."""
 
 _SMART_CREATE_PROJECT_PAYER = """Recording who paid a project expense upfront:
-    "project_payer" — OPTIONAL, only meaningful when project_uid is set. The exact member name (from that project's "members" list) of whoever paid the bill upfront. Omit it or use null when the current user paid, which is the default. Set it when the user says someone else covered the cost (e.g. "Volker paid for the campsite" -> "Volker Sauerbier"). The upfront payer is not one of the shared participants; the remaining members split the cost. Never invent a name that is not in that project's "members" list."""
+    "project_payer" — OPTIONAL, only meaningful when project_uid is set. The idx (from that project's "members" list) of whoever paid the bill upfront. Omit it or use null when the current user paid, which is the default. Set it when the user says someone else covered the cost (e.g. "Volker paid for the campsite" -> {"project_payer": 1} if Volker is idx 1). The upfront payer is not one of the shared participants; the remaining members split the cost. Only use an idx that appears in that project's "members" list; never invent one."""
 
 _SMART_CREATE_DIRECT_BUDDY = """Sharing an expense one-on-one with a direct buddy (NOT a project):
-    "buddy_name" — OPTIONAL. The exact name (from the Direct buddies list below) of the one person this expense is shared with one-on-one, or null for a personal expense. Use this only for a two-person split with a single buddy; use project_uid instead when the cost belongs to a shared project. An item is EITHER a project expense (project_uid) OR a direct buddy expense (buddy_name), NEVER both.
-    "buddy_payer" — OPTIONAL, only meaningful when buddy_name is set. Who paid the bill upfront: omit it or use null when the current user paid (the default), or set it to the buddy's name when the buddy covered the cost (e.g. "Volker paid, I owe him half").
-    "buddy_share_percent" — OPTIONAL, only meaningful when buddy_name is set. The buddy's share of the total cost as a number 0-100 (regardless of who paid). Omit it for an equal 50/50 split. Example: "dinner was 40, but 30 of it was mine" -> the buddy's share is 25.
-If buddy_name is set, the item's type MUST be "expense". Never invent a name that is not in the Direct buddies list below."""
+    "buddy_idx" — OPTIONAL. The idx (from the Direct buddies list below) of the one person this expense is shared with one-on-one, or null for a personal expense. Use this only for a two-person split with a single buddy; use project_uid instead when the cost belongs to a shared project. An item is EITHER a project expense (project_uid) OR a direct buddy expense (buddy_idx), NEVER both.
+    "buddy_paid" — OPTIONAL, only meaningful when buddy_idx is set. true if the buddy paid the bill upfront, false or omitted when the current user paid (the default) (e.g. "Volker paid, I owe him half" -> "buddy_paid": true).
+    "buddy_share_percent" — OPTIONAL, only meaningful when buddy_idx is set. The buddy's share of the total cost as a number 0-100 (regardless of who paid). Omit it for an equal 50/50 split. Example: "dinner was 40, but 30 of it was mine" -> the buddy's share is 25.
+If buddy_idx is set, the item's type MUST be "expense". Only use an idx that appears in the Direct buddies list below; never invent one."""
 
 # Ordered feature blocks. The base is mandatory; the rest can be dropped later
 # to switch a capability off. _build_smart_create_system() joins them in order.
@@ -284,10 +284,11 @@ def _build_catalog(feuser) -> str:
         .distinct()
         .values("uid", "name", "description")
     )
-    # Member display names per project, matching exactly what the express-creation
-    # UI uses (so the AI can name a member and have participation overrides applied).
+    # Per-project members, indexed 0..N-1 for this request only. The AI refers to
+    # a member by "idx" (never a name), so it can only ever point at a position
+    # in this exact list -- it has no way to spell an id that isn't a member.
     members_by_project = {
-        p["id"]: [m["name"] for m in p["members"]]
+        p["id"]: [{"idx": i, "name": m["name"]} for i, m in enumerate(p["members"])]
         for p in BuddyQueryService.projects_data_for_expense_form(feuser)
     }
     projects = [
@@ -299,15 +300,16 @@ def _build_catalog(feuser) -> str:
         }
         for p in projects_qs
     ]
-    # Direct (one-on-one) buddies, matching the names the express-creation UI
-    # uses, so the AI can name a buddy and have the assignment applied.
-    direct_buddies = [
-        {"name": f"{b.first_name} {b.last_name}".strip() or b.email}
+    # Direct (one-on-one) buddies, indexed the same way as project members, in
+    # the same order the express-creation UI lists them.
+    direct_buddy_names = [
+        f"{b.first_name} {b.last_name}".strip() or b.email
         for b in BuddyQueryService.get_actual_buddies(feuser)
     ] + [
-        {"name": d.display_name + " (offline buddy)"}
+        d.display_name + " (offline buddy)"
         for d in BuddyQueryService.get_dummy_buddies(feuser)
     ]
+    direct_buddies = [{"idx": i, "name": n} for i, n in enumerate(direct_buddy_names)]
     parts = [
         f"Categories:\n{json.dumps(categories, ensure_ascii=False)}",
         f"Tags:\n{json.dumps(tags, ensure_ascii=False)}",
@@ -315,13 +317,13 @@ def _build_catalog(feuser) -> str:
     if projects:
         parts.append(
             f"Projects (assign each expense to one of these if it clearly belongs to a shared project, otherwise null).\n"
-            f"\"members\" lists everyone who shares that project's costs; use their exact names in project_participants:\n"
+            f"\"members\" lists everyone who shares that project's costs; use each member's \"idx\" (never their name) in project_participants/project_payer:\n"
             f"{json.dumps(projects, ensure_ascii=False)}"
         )
     if direct_buddies:
         parts.append(
             f"Direct buddies (people you split one-on-one expenses with, NOT projects). "
-            f"Use buddy_name to share an expense with one of these:\n"
+            f"Use a buddy's \"idx\" (never their name) as buddy_idx to share an expense with one of these:\n"
             f"{json.dumps(direct_buddies, ensure_ascii=False)}"
         )
     return "\n\n".join(parts)
@@ -402,13 +404,77 @@ def _call_claude(
 # Validation
 # ---------------------------------------------------------------------------
 
-def _sanitize_project_participants(raw_participants, project_uid) -> list[dict]:
+def _handle_invalid_ai_reference(kind: str, context, value) -> None:
+    """
+    Drop an idx the AI made up that doesn't resolve to a real catalog entry
+    (out of range, wrong type, etc). Silently dropping it is correct for now;
+    this is the single choke point to swap in more graceful handling later
+    (e.g. reporting the bad idx back to the AI on a correction turn) without
+    touching any of the call sites below.
+    """
+    _log.warning("AI express: dropped invalid %s %r (context=%r)", kind, value, context)
+
+
+def _handle_share_sum_mismatch(project_uid, total: float) -> None:
+    """
+    The AI pinned a share_percent for every included participant (no member
+    left to auto-absorb the remainder) and they don't sum to 100. Scaling
+    them proportionally is the correct behavior for now; this is the single
+    choke point to swap in more graceful handling later (e.g. a correction
+    turn) without touching the caller.
+    """
+    _log.warning(
+        "AI express: scaling project_participants shares for project %r (sum=%.2f)",
+        project_uid, total,
+    )
+
+
+def _normalize_participant_shares(cleaned: list[dict], project_uid, member_count: int) -> list[dict]:
+    """
+    Enforce that pinned shares (included=True entries with an explicit
+    share_percent) add up to 100 whenever there is no unpinned member left to
+    absorb the difference. If exactly one participant is included overall,
+    their share is trivially the whole expense. Otherwise, when the pinned
+    entries don't cover every included participant, a leftover member still
+    absorbs the gap so a sum under 100 is valid as-is; a sum over 100 is
+    never valid (it overcommits shares that don't exist) and is scaled down.
+    """
+    mentioned = {e["idx"] for e in cleaned}
+    included_idxs = {e["idx"] for e in cleaned if e["included"]} | (set(range(member_count)) - mentioned)
+    pinned = [e for e in cleaned if e["included"] and "share_percent" in e]
+
+    if len(included_idxs) == 1:
+        only_idx = next(iter(included_idxs))
+        for e in pinned:
+            if e["idx"] == only_idx:
+                e["share_percent"] = 100.0
+        return cleaned
+
+    if not pinned:
+        return cleaned
+
+    total = sum(e["share_percent"] for e in pinned)
+    if total <= 0:
+        return cleaned
+
+    full_coverage = {e["idx"] for e in pinned} == included_idxs
+    if total > 100 or (full_coverage and total < 100):
+        _handle_share_sum_mismatch(project_uid, total)
+        scale = 100.0 / total
+        for e in pinned:
+            e["share_percent"] = e["share_percent"] * scale
+    return cleaned
+
+
+def _sanitize_project_participants(raw_participants, project_uid, member_count: int) -> list[dict]:
     """
     Sanitize the AI's per-member participation overrides for a project expense.
     Returns [] unless a project is assigned and the input is a well-formed list.
-    Each kept entry has: name (non-empty str), included (bool), and optionally
-    share_percent (float clamped to 0..100). The express-creation UI consumes these
-    to pre-select participants / preset shares before the user confirms.
+    Each kept entry has: idx (int, referring to that project's "members" list
+    for this request), included (bool), and optionally share_percent (float
+    clamped to 0..100, then normalized to sum to 100 -- see
+    _normalize_participant_shares). The express-creation UI consumes these to
+    pre-select participants / preset shares before the user confirms.
     """
     if project_uid is None or not isinstance(raw_participants, list):
         return []
@@ -416,13 +482,14 @@ def _sanitize_project_participants(raw_participants, project_uid) -> list[dict]:
     for rp in raw_participants:
         if not isinstance(rp, dict):
             continue
-        name = str(rp.get("name", "")).strip()
-        if not name:
+        idx = rp.get("idx")
+        if not isinstance(idx, int) or isinstance(idx, bool) or not (0 <= idx < member_count):
+            _handle_invalid_ai_reference("project_participants idx", project_uid, idx)
             continue
         included = rp.get("included", True)
         if not isinstance(included, bool):
             included = True
-        entry = {"name": name[:255], "included": included}
+        entry = {"idx": idx, "included": included}
         share = rp.get("share_percent")
         if share is not None:
             try:
@@ -432,43 +499,50 @@ def _sanitize_project_participants(raw_participants, project_uid) -> list[dict]:
             if share is not None:
                 entry["share_percent"] = max(0.0, min(100.0, share))
         cleaned.append(entry)
-    return cleaned
+    return _normalize_participant_shares(cleaned, project_uid, member_count)
 
 
-def _sanitize_project_payer(raw_payer, project_uid) -> str | None:
+def _sanitize_project_payer(raw_payer, project_uid, member_count: int) -> int | None:
     """
-    Sanitize the AI's upfront-payer name for a project expense. Returns None
-    unless a project is assigned and a non-empty name string was provided (the
-    default None means the current user paid). The express-creation UI matches
-    this name against the project's members to preset the payer dropdown.
+    Sanitize the AI's upfront-payer idx for a project expense. Returns None
+    unless a project is assigned and a valid member idx was provided (the
+    default None means the current user paid). The express-creation UI looks
+    this idx up in the project's members list to preset the payer dropdown.
     """
-    if project_uid is None or not isinstance(raw_payer, str):
+    if project_uid is None:
         return None
-    payer = raw_payer.strip()
-    return payer[:255] if payer else None
+    if not isinstance(raw_payer, int) or isinstance(raw_payer, bool):
+        return None
+    if not (0 <= raw_payer < member_count):
+        _handle_invalid_ai_reference("project_payer idx", project_uid, raw_payer)
+        return None
+    return raw_payer
 
 
-def _sanitize_direct_buddy(raw_name, raw_payer, raw_share, project_uid) -> tuple[str | None, str | None, float | None]:
+def _sanitize_direct_buddy(raw_idx, raw_paid, raw_share, project_uid, buddy_count: int) -> tuple[int | None, bool, float | None]:
     """
     Sanitize the AI's one-on-one direct-buddy assignment. Returns
-    (buddy_name, buddy_payer, buddy_share_percent). Direct buddy and project
+    (buddy_idx, buddy_paid, buddy_share_percent). Direct buddy and project
     assignment are mutually exclusive, so everything is dropped when a project
-    is set. buddy_name is None for a personal expense; buddy_payer is None when
-    the current user paid (default); buddy_share_percent is the buddy's share
-    (0..100) or None for an equal split. The express-creation UI matches the
-    names against the user's actual buddies to preset the Direct Buddy section.
+    is set. buddy_idx is None for a personal expense (or an out-of-range idx);
+    buddy_paid is True only when the AI explicitly says the buddy paid (default
+    False, current user paid); buddy_share_percent is the buddy's share
+    (0..100) or None for an equal split. The express-creation UI looks buddy_idx
+    up in the user's direct-buddy list to preset the Direct Buddy section.
     """
-    if project_uid is not None or not isinstance(raw_name, str) or not raw_name.strip():
-        return None, None, None
-    name = raw_name.strip()[:255]
-    payer = raw_payer.strip()[:255] if isinstance(raw_payer, str) and raw_payer.strip() else None
+    if project_uid is not None or not isinstance(raw_idx, int) or isinstance(raw_idx, bool):
+        return None, False, None
+    if not (0 <= raw_idx < buddy_count):
+        _handle_invalid_ai_reference("buddy_idx", "direct_buddy", raw_idx)
+        return None, False, None
+    paid = raw_paid is True
     share = None
     if raw_share is not None:
         try:
             share = max(0.0, min(100.0, float(raw_share)))
         except (TypeError, ValueError):
             share = None
-    return name, payer, share
+    return raw_idx, paid, share
 
 
 def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
@@ -484,6 +558,15 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
         Project.objects.filter(members__feuser=feuser, archived=False)
         .distinct()
         .values_list("uid", flat=True)
+    )
+    from buddies.services import BuddyQueryService
+    member_counts_by_project = {
+        p["id"]: len(p["members"])
+        for p in BuddyQueryService.projects_data_for_expense_form(feuser)
+    }
+    buddy_count = (
+        len(list(BuddyQueryService.get_actual_buddies(feuser)))
+        + len(list(BuddyQueryService.get_dummy_buddies(feuser)))
     )
     category_map = {
         c["uid"]: c["title"]
@@ -518,15 +601,16 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
         project_uid = raw.get("project_uid")
         if project_uid not in valid_project_uids:
             project_uid = None
+        member_count = member_counts_by_project.get(project_uid, 0) if project_uid is not None else 0
 
-        buddy_name, buddy_payer, buddy_share = _sanitize_direct_buddy(
-            raw.get("buddy_name"), raw.get("buddy_payer"),
-            raw.get("buddy_share_percent"), project_uid,
+        buddy_idx, buddy_paid, buddy_share = _sanitize_direct_buddy(
+            raw.get("buddy_idx"), raw.get("buddy_paid"),
+            raw.get("buddy_share_percent"), project_uid, buddy_count,
         )
 
         # Project and direct-buddy expenses only make sense as type=expense (see
         # budget/expense_factory.py); the AI is told this, but force it rather than trust it.
-        if (project_uid is not None or buddy_name is not None) and tx_type != "expense":
+        if (project_uid is not None or buddy_idx is not None) and tx_type != "expense":
             tx_type = "expense"
 
         date_due = None
@@ -550,13 +634,13 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
             "tag_titles":     [tag_map[u] for u in tag_uids],
             "project_uid":    project_uid,
             "project_participants": _sanitize_project_participants(
-                raw.get("project_participants"), project_uid
+                raw.get("project_participants"), project_uid, member_count
             ),
             "project_payer": _sanitize_project_payer(
-                raw.get("project_payer"), project_uid
+                raw.get("project_payer"), project_uid, member_count
             ),
-            "buddy_name":          buddy_name,
-            "buddy_payer":         buddy_payer,
+            "buddy_idx":           buddy_idx,
+            "buddy_paid":          buddy_paid,
             "buddy_share_percent": buddy_share,
         })
 
