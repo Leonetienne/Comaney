@@ -6,6 +6,7 @@ User lifecycle: each test file creates its own user via setup_user(), and
 cleans up via cleanup_user().  cleanup_user() uses docker exec so it is
 safe regardless of browser state (TOTP enabled, logged out, etc.).
 """
+import os
 import re
 import subprocess
 import time
@@ -23,6 +24,16 @@ TIMEOUT     = 60
 CLICK_PACE  = 0.15
 DOCKER_WEB  = "comaney-web-1"
 SUBMIT_BTN  = "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)"
+
+# Dedicated Anthropic key for e2e test accounts, so AI spend during test runs
+# is billed and monitored separately from the app's shared trial key. Set on
+# every test account immediately at creation time (see ai_test_api_key_args()).
+AI_API_KEY_TESTS = os.environ.get("AI_API_KEY_TESTS", "")
+
+
+def ai_test_api_key_args() -> list:
+    """--anthropic-api-key args to pass to the create_user command, if configured."""
+    return ["--anthropic-api-key", AI_API_KEY_TESTS] if AI_API_KEY_TESTS else []
 
 
 def _url(path: str) -> str:
@@ -198,6 +209,7 @@ def create_confirmed_user(first_name: str = "", last_name: str = "") -> dict:
         cmd += ["--first-name", first_name]
     if last_name:
         cmd += ["--last-name", last_name]
+    cmd += ai_test_api_key_args()
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
     assert result.returncode == 0, f"create_user failed:\n{result.stderr}"
     return {"email": email, "password": PASSWORD}
@@ -285,6 +297,7 @@ def setup_user(driver, w, first_name: str = "", last_name: str = "") -> dict:
         cmd += ["--first-name", first_name]
     if last_name:
         cmd += ["--last-name", last_name]
+    cmd += ai_test_api_key_args()
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
     assert result.returncode == 0, f"create_user failed:\n{result.stderr}"
 

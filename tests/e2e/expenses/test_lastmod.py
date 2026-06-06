@@ -9,7 +9,7 @@ import uuid
 
 import pytest
 
-from helpers import DOCKER_WEB, run_cmd
+from helpers import DOCKER_WEB, ai_test_api_key_args, run_cmd
 
 
 # ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ def _mk_email() -> str:
 
 
 def _create_user(email: str) -> None:
-    run_cmd("create_user", email, "-p", "TestPass123!")
+    run_cmd("create_user", email, "-p", "TestPass123!", *ai_test_api_key_args())
 
 
 def _delete_user(email: str) -> None:

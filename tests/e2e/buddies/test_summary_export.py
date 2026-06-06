@@ -27,7 +27,7 @@ import zipfile
 
 import requests
 
-from helpers import _url, setup_user, cleanup_user, session_cookies, run_cmd
+from helpers import _url, setup_user, cleanup_user, session_cookies, run_cmd, ai_test_api_key_args
 from bhelpers import (
     _shell, _create_buddy_link, _get_pk,
     _create_personal_expense_with_buddy,
@@ -234,7 +234,7 @@ class TestBuddySummaryExport:
     def test_project_expense_excluded_from_export(self, driver, w):
         a = setup_user(driver, w, first_name="Proj", last_name="ExclTest")
         admin_email = "summary_export_proj_admin@example.com"
-        run_cmd("create_user", admin_email, "-p", "testpass123")
+        run_cmd("create_user", admin_email, "-p", "testpass123", *ai_test_api_key_args())
         proj_pk = None
         try:
             proj_pk = int(_create_group(admin_email, "SummaryExportExclProject"))

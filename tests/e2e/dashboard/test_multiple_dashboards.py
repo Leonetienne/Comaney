@@ -22,7 +22,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from helpers import (
     _url, wait_text, session_cookies, BASE_URL,
-    setup_user, cleanup_user,
+    setup_user, cleanup_user, ai_test_api_key_args,
 )
 
 DASHBOARDS_URL = BASE_URL + "/budget/dashboards/"
@@ -155,7 +155,8 @@ def ctx2(driver, w):
     email = "sel.pt." + uuid.uuid4().hex[:8] + "@example.com"
     pw = "S3l3n!umTest"
     subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "create_user", email, "-p", pw],
+        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "create_user", email, "-p", pw,
+         *ai_test_api_key_args()],
         check=True, capture_output=True, timeout=15,
     )
     yield {"email": email, "password": pw}

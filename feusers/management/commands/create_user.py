@@ -17,6 +17,7 @@ class Command(BaseCommand):
         parser.add_argument("--last-name", default=None, help="Last name (prompted if omitted in interactive mode).")
         parser.add_argument("--demo", action="store_true", default=False, help="Mark the account as a demo user.")
         parser.add_argument("--ai-trial-budget", type=int, default=None, metavar="CENTS", help="Override AI trial budget limit in cents.")
+        parser.add_argument("--anthropic-api-key", default=None, metavar="KEY", help="Set the user's own Anthropic API key.")
 
     def handle(self, *args, **options):
         email = options["email"].strip().lower()
@@ -50,6 +51,7 @@ class Command(BaseCommand):
             is_confirmed=True,
             is_demo=options["demo"],
             special_ai_trial_budget=options["ai_trial_budget"],
+            anthropic_api_key=options["anthropic_api_key"] or "",
             app_v_created_at=settings.APP_VERSION,
         )
         user.set_password(password)

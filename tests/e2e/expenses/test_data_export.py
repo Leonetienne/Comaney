@@ -30,7 +30,7 @@ from helpers import (
     _url, fill,
     api_post, api_patch, api_delete, server_today,
     session_cookies, setup_user, cleanup_user,
-    run_cmd,
+    run_cmd, ai_test_api_key_args,
 )
 from bhelpers import _get_pk, _create_group, _add_group_member, _create_group_expense
 
@@ -168,7 +168,7 @@ class TestDataExport:
         owner's raw owning_feuser_id, same column scheme as expenses.csv), and
         must NOT appear in own expenses.csv."""
         owner_email = "export_owner_buddy@example.com"
-        run_cmd("create_user", owner_email, "-p", "testpass123")
+        run_cmd("create_user", owner_email, "-p", "testpass123", *ai_test_api_key_args())
         owner_pk = int(_get_pk(owner_email))
         try:
             participant_pk = int(_shell(
@@ -218,7 +218,7 @@ class TestDataExport:
         both directions of a direct-buddy relationship, like the Buddy Expenses
         page does), with ctx user's own raw owning_feuser_id."""
         buddy_email = "export_buddy_of_owner@example.com"
-        run_cmd("create_user", buddy_email, "-p", "testpass123")
+        run_cmd("create_user", buddy_email, "-p", "testpass123", *ai_test_api_key_args())
         ctx_pk = int(_get_pk(ctx["email"]))
         try:
             buddy_pk = int(_shell(
@@ -303,7 +303,7 @@ class TestDataExport:
         participant here, so it shows up as "self"; the buddy who owns the
         expense keeps their u-<pk> id."""
         owner_email = "export_owner_matrix@example.com"
-        run_cmd("create_user", owner_email, "-p", "testpass123")
+        run_cmd("create_user", owner_email, "-p", "testpass123", *ai_test_api_key_args())
         owner_pk = int(_get_pk(owner_email))
         try:
             participant_pk = int(_shell(
@@ -355,7 +355,7 @@ class TestDataExport:
         must NOT appear in direct-buddy-expenses.csv: it is already covered by the
         nested projects/<uid>/ export."""
         admin_email = "export_project_admin_excl@example.com"
-        run_cmd("create_user", admin_email, "-p", "testpass123")
+        run_cmd("create_user", admin_email, "-p", "testpass123", *ai_test_api_key_args())
         proj_pk = None
         try:
             proj_pk = int(_create_group(admin_email, "BuddyExclusionProject"))
@@ -477,7 +477,7 @@ class TestDataExport:
     def test_buddies_expenses_no_category_tag_columns(self, driver, w, ctx):
         """direct-buddy-expenses.csv must not expose the expense owner's category_id or tag_ids."""
         owner_email = "export_owner_bcat@example.com"
-        run_cmd("create_user", owner_email, "-p", "testpass123")
+        run_cmd("create_user", owner_email, "-p", "testpass123", *ai_test_api_key_args())
         try:
             participant_pk = int(_shell(
                 f"from feusers.models import FeUser; "
@@ -531,7 +531,7 @@ class TestDataExport:
         tag_id = r.json()["id"]
 
         owner_email = "export_owner_overlay@example.com"
-        run_cmd("create_user", owner_email, "-p", "testpass123")
+        run_cmd("create_user", owner_email, "-p", "testpass123", *ai_test_api_key_args())
         try:
             participant_pk = int(_shell(
                 f"from feusers.models import FeUser; "
@@ -576,7 +576,7 @@ class TestDataExport:
         """direct-buddies.csv must contain entries for confirmed buddy
         connections, even without any shared expense."""
         buddy_email = "export_buddy_real@example.com"
-        run_cmd("create_user", buddy_email, "-p", "testpass123")
+        run_cmd("create_user", buddy_email, "-p", "testpass123", *ai_test_api_key_args())
         try:
             link_pk = int(_shell(
                 f"from feusers.models import FeUser; "
@@ -603,7 +603,7 @@ class TestDataExport:
         full export nested under projects/<uid>/: meta.csv, members.csv,
         expenses.csv, participation_matrix.csv."""
         admin_email = "export_project_admin@example.com"
-        run_cmd("create_user", admin_email, "-p", "testpass123")
+        run_cmd("create_user", admin_email, "-p", "testpass123", *ai_test_api_key_args())
         proj_pk = None
         try:
             proj_pk = int(_shell(
@@ -646,7 +646,7 @@ class TestDataExport:
         the page-level project/buddy-summary exports which respect a selected
         date range."""
         admin_email = "export_old_data_admin@example.com"
-        run_cmd("create_user", admin_email, "-p", "testpass123")
+        run_cmd("create_user", admin_email, "-p", "testpass123", *ai_test_api_key_args())
         proj_pk = None
         old_buddy_exp_id = None
         try:

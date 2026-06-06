@@ -71,6 +71,7 @@ comaney/       Settings, root urls, middleware
 **E2E** (Selenium + live stack at :8080, Mailpit at :8030): `pytest -v | tee logfile.log`
 - E2E tests numbered by prefix; `ctx` dict is session-scoped shared state
 - `run_cmd("management_command")` executes via docker exec into `comaney-web-1`
+- `AI_API_KEY_TESTS` env var (host side, read by `tests/e2e/helpers.py`): if set, every test account created via `setup_user`/`create_confirmed_user`/`ai_test_api_key_args()` call sites gets it as its own `anthropic_api_key` at creation time, so AI spend during e2e runs is billed on a dedicated key instead of the app's shared trial key. Demo-account creations (`--demo`) and `test_management_commands.py`/`test_demo_user.py` deliberately skip this (it would interfere with trial-budget behavior they test).
 - NEVER use `WebDriverWait` / `w.until()` after browser actions; always `time.sleep()` then assert
 - UI assertions: must verify via UI (not just API) when the test is about what the user sees
 - Pure algorithm logic with no Django/DB: goes in `tests/unit/`
@@ -89,7 +90,7 @@ The demo banner (shown at every login, must be accepted) and all server-side blo
 When adding any new feature: if it sends email, modifies another user's data, or lets a user meaningfully alter their own identity/credentials, block it for demo users — both in the view (redirect/403) and in the UI (disabled/hidden).
 
 ## Management commands
-- `create_user <email> [-p pw] [--demo] [--ai-trial-budget CENTS]`
+- `create_user <email> [-p pw] [--demo] [--ai-trial-budget CENTS] [--anthropic-api-key KEY]`
 - `set_user_password <email> [-p pw]`
 - `remove_user_2fa <email>`
 - `delete_user <email> [--yes]`
