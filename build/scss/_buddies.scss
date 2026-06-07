@@ -712,6 +712,14 @@
 // Draggable non-archived cards
 #projects-sortable .bgs-card:not(.bgs-card--archived) {
   cursor: grab;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#projects-sortable .bgs-card--dragging {
+  opacity: 0.5;
 }
 
 .buddy-participants-row {

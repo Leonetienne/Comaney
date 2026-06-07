@@ -107,6 +107,17 @@
 
     var dragId = null;
 
+    function reorder(fromCard, toCard) {
+        var cards = Array.from(list.querySelectorAll('.bgs-card:not(.bgs-card--archived)'));
+        var fromIdx = cards.indexOf(fromCard);
+        var toIdx   = cards.indexOf(toCard);
+        if (fromIdx < toIdx) {
+            list.insertBefore(fromCard, toCard.nextSibling);
+        } else {
+            list.insertBefore(fromCard, toCard);
+        }
+    }
+
     list.querySelectorAll('.bgs-card:not(.bgs-card--archived)').forEach(function (card) {
         card.setAttribute('draggable', 'true');
 
@@ -136,17 +147,81 @@
             var fromCard = list.querySelector('[data-project-id="' + fromId + '"]');
             if (!fromCard) return;
 
-            // Reorder: insert fromCard before or after this card depending on position
-            var cards = Array.from(list.querySelectorAll('.bgs-card:not(.bgs-card--archived)'));
-            var fromIdx = cards.indexOf(fromCard);
-            var toIdx   = cards.indexOf(card);
-            if (fromIdx < toIdx) {
-                list.insertBefore(fromCard, card.nextSibling);
-            } else {
-                list.insertBefore(fromCard, card);
-            }
-
+            reorder(fromCard, card);
             saveOrder();
+        });
+
+        // Touch support: HTML5 drag-and-drop above has no touch equivalent, so
+        // without this, a long-press on a card falls through to the browser's
+        // native text-selection/context menu instead of starting a drag.
+        var longPressTimer = null;
+        var touchDragging = false;
+        var touchStartX = 0;
+        var touchStartY = 0;
+        var justDragged = false;
+        var LONG_PRESS_MS = 300;
+        var MOVE_CANCEL_PX = 10;
+
+        function startTouchDrag() {
+            touchDragging = true;
+            dragId = card.dataset.projectId;
+            card.classList.add('bgs-card--dragging');
+        }
+
+        function endTouchDrag(shouldSave) {
+            clearTimeout(longPressTimer);
+            if (touchDragging) {
+                card.classList.remove('bgs-card--dragging');
+                justDragged = true;
+                if (shouldSave) saveOrder();
+            }
+            touchDragging = false;
+            dragId = null;
+        }
+
+        card.addEventListener('touchstart', function (e) {
+            if (e.touches.length !== 1) return;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            clearTimeout(longPressTimer);
+            longPressTimer = setTimeout(startTouchDrag, LONG_PRESS_MS);
+        }, { passive: true });
+
+        card.addEventListener('touchmove', function (e) {
+            var touch = e.touches[0];
+            if (!touchDragging) {
+                var dx = Math.abs(touch.clientX - touchStartX);
+                var dy = Math.abs(touch.clientY - touchStartY);
+                if (dx > MOVE_CANCEL_PX || dy > MOVE_CANCEL_PX) {
+                    clearTimeout(longPressTimer);
+                }
+                return;
+            }
+            e.preventDefault();
+            var target = document.elementFromPoint(touch.clientX, touch.clientY);
+            var overCard = target && target.closest('.bgs-card:not(.bgs-card--archived)');
+            if (overCard && overCard !== card && list.contains(overCard)) {
+                reorder(card, overCard);
+            }
+        });
+
+        card.addEventListener('touchend', function () {
+            endTouchDrag(true);
+        });
+
+        card.addEventListener('touchcancel', function () {
+            endTouchDrag(false);
+        });
+
+        card.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+        });
+
+        card.addEventListener('click', function (e) {
+            if (justDragged) {
+                justDragged = false;
+                e.preventDefault();
+            }
         });
     });
 
