@@ -105,6 +105,104 @@ class TestReorderEndpoint:
         assert r.status_code == 200
 
 
+class TestTouchDragReorder:
+    """Long-press + drag on touch devices reorders projects (mobile fix:
+    HTML5 drag-and-drop has no touch equivalent, so without the touch
+    handlers a long-press fell through to the native context menu)."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Touch", last_name="Dragger")
+        # A brand-new user gets the getting-started intro modal on first page
+        # load (see tests/e2e/profile/test_intros.py); its full-screen backdrop
+        # would otherwise absorb every touch point in this test's coordinate-
+        # based dispatch, so mark it seen up front like an already-onboarded user.
+        _shell(
+            f"from django.utils import timezone; from feusers.models import FeUser; "
+            f"u = FeUser.objects.get(email='{a['email']}'); "
+            f"u.intro_seen_at = timezone.now(); u.save(update_fields=['intro_seen_at'])"
+        )
+        g1 = _create_group(a["email"], "Touch Project 1")
+        g2 = _create_group(a["email"], "Touch Project 2")
+        # Pin a known starting order (g1 before g2) so the drag direction below
+        # is deterministic regardless of natural creation-order sorting.
+        _post_json(_url("/projects/reorder/"), {"order": [int(g1), int(g2)]}, a)
+        yield {"a": a, "g1": int(g1), "g2": int(g2)}
+        cleanup_user(a["email"])
+
+    def test_long_press_drag_reorders_cards(self, driver, w, ctx):
+        driver.get(_url("/projects/"))
+        time.sleep(1)
+
+        cards = driver.find_elements(By.CSS_SELECTOR, ".bgs-card")
+        ids = [c.get_attribute("data-project-id") for c in cards]
+        assert ids.index(str(ctx["g1"])) < ids.index(str(ctx["g2"])), "fixture did not pin g1 before g2"
+
+        first_card = cards[ids.index(str(ctx["g1"]))]
+        second_card = cards[ids.index(str(ctx["g2"]))]
+        r1, r2 = first_card.rect, second_card.rect
+        x1, y1 = r1["x"] + r1["width"] / 2, r1["y"] + r1["height"] / 2
+        x2, y2 = r2["x"] + r2["width"] / 2, r2["y"] + r2["height"] / 2
+
+        # Plain Chrome ignores CDP-dispatched touch events unless the page is
+        # actually reporting as a touch device; without this, dispatchTouchEvent
+        # is a silent no-op and no touchstart/touchmove/touchend listener fires.
+        driver.execute_cdp_cmd("Emulation.setTouchEmulationEnabled", {"enabled": True, "maxTouchPoints": 1})
+        driver.execute_cdp_cmd("Emulation.setEmitTouchEventsForMouse", {"enabled": False})
+        try:
+            driver.execute_cdp_cmd("Input.dispatchTouchEvent", {
+                "type": "touchStart",
+                "touchPoints": [{"x": x1, "y": y1}],
+            })
+            time.sleep(0.45)  # exceed the 300ms long-press threshold to enter drag mode
+            driver.execute_cdp_cmd("Input.dispatchTouchEvent", {
+                "type": "touchMove",
+                "touchPoints": [{"x": x2, "y": y2}],
+            })
+            time.sleep(0.2)
+            driver.execute_cdp_cmd("Input.dispatchTouchEvent", {
+                "type": "touchEnd",
+                "touchPoints": [],
+            })
+            time.sleep(1)
+        finally:
+            driver.execute_cdp_cmd("Emulation.setTouchEmulationEnabled", {"enabled": False})
+
+        ids_after = [
+            c.get_attribute("data-project-id")
+            for c in driver.find_elements(By.CSS_SELECTOR, ".bgs-card")
+        ]
+        assert ids_after.index(str(ctx["g2"])) < ids_after.index(str(ctx["g1"])), (
+            "long-press touch drag did not reorder the cards"
+        )
+
+        sort1 = _shell(
+            f"from buddies.models import ProjectMember; "
+            f"from feusers.models import FeUser; "
+            f"u = FeUser.objects.get(email='{ctx['a']['email']}'); "
+            f"print(ProjectMember.objects.get(feuser=u, group_id={ctx['g1']}).sorting)"
+        )
+        sort2 = _shell(
+            f"from buddies.models import ProjectMember; "
+            f"from feusers.models import FeUser; "
+            f"u = FeUser.objects.get(email='{ctx['a']['email']}'); "
+            f"print(ProjectMember.objects.get(feuser=u, group_id={ctx['g2']}).sorting)"
+        )
+        assert int(sort2) < int(sort1), "drag was not persisted via the reorder endpoint"
+
+    def test_long_press_suppresses_native_context_menu(self, driver, w, ctx):
+        driver.get(_url("/projects/"))
+        time.sleep(1)
+        card = driver.find_element(By.CSS_SELECTOR, ".bgs-card:not(.bgs-card--archived)")
+        not_shown = driver.execute_script(
+            "var ev = new MouseEvent('contextmenu', {bubbles: true, cancelable: true}); "
+            "var dispatched = arguments[0].dispatchEvent(ev); "
+            "return !dispatched;",
+            card,
+        )
+        assert not_shown, "contextmenu was not prevented on a draggable card"
+
+
 class TestUpdateLastmod:
     """Project.update_lastmod() sets last_mod to now and persists it."""
 
