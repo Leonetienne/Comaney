@@ -273,9 +273,15 @@ def _prepare_image(image_file) -> tuple[str, str]:
     return _base64.b64encode(buf.getvalue()).decode("utf-8"), "image/jpeg"
 
 
-def _build_catalog(feuser) -> str:
+def _build_catalog(feuser, projects_data: list, single_buddies: list) -> str:
+    """
+    projects_data / single_buddies must be the exact same lists passed to the
+    express-creation template (budget/views/expenses.py::_buddy_context), so the
+    "idx" the AI is given always lines up with the widget's own member/buddy
+    arrays -- re-querying independently here could return a different row
+    order and silently point the AI's idx at the wrong person.
+    """
     from buddies.models import Project
-    from buddies.services import BuddyQueryService
     categories = list(Category.objects.filter(owning_feuser=feuser).values("uid", "title"))
     tags = list(Tag.objects.filter(owning_feuser=feuser).values("uid", "title"))
     projects_qs = (
@@ -289,7 +295,7 @@ def _build_catalog(feuser) -> str:
     # in this exact list -- it has no way to spell an id that isn't a member.
     members_by_project = {
         p["id"]: [{"idx": i, "name": m["name"]} for i, m in enumerate(p["members"])]
-        for p in BuddyQueryService.projects_data_for_expense_form(feuser)
+        for p in projects_data
     }
     projects = [
         {
@@ -302,14 +308,7 @@ def _build_catalog(feuser) -> str:
     ]
     # Direct (one-on-one) buddies, indexed the same way as project members, in
     # the same order the express-creation UI lists them.
-    direct_buddy_names = [
-        f"{b.first_name} {b.last_name}".strip() or b.email
-        for b in BuddyQueryService.get_actual_buddies(feuser)
-    ] + [
-        d.display_name + " (offline buddy)"
-        for d in BuddyQueryService.get_dummy_buddies(feuser)
-    ]
-    direct_buddies = [{"idx": i, "name": n} for i, n in enumerate(direct_buddy_names)]
+    direct_buddies = [{"idx": i, "name": b["name"]} for i, b in enumerate(single_buddies)]
     parts = [
         f"Categories:\n{json.dumps(categories, ensure_ascii=False)}",
         f"Tags:\n{json.dumps(tags, ensure_ascii=False)}",
@@ -545,8 +544,14 @@ def _sanitize_direct_buddy(raw_idx, raw_paid, raw_share, project_uid, buddy_coun
     return raw_idx, paid, share
 
 
-def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
-    """Validate and sanitise parsed items against the user's actual categories/tags/projects."""
+def _validate_items(raw_items: list, feuser, projects_data: list, single_buddies: list) -> tuple[list[dict], list[str]]:
+    """
+    Validate and sanitise parsed items against the user's actual categories/tags/projects.
+
+    projects_data / single_buddies must be the exact same lists passed to
+    _build_catalog() for this request, so idx range-checks agree with the idx
+    the AI was actually given (see _build_catalog's docstring).
+    """
     from buddies.models import Project
     valid_category_uids = set(
         Category.objects.filter(owning_feuser=feuser).values_list("uid", flat=True)
@@ -559,15 +564,8 @@ def _validate_items(raw_items: list, feuser) -> tuple[list[dict], list[str]]:
         .distinct()
         .values_list("uid", flat=True)
     )
-    from buddies.services import BuddyQueryService
-    member_counts_by_project = {
-        p["id"]: len(p["members"])
-        for p in BuddyQueryService.projects_data_for_expense_form(feuser)
-    }
-    buddy_count = (
-        len(list(BuddyQueryService.get_actual_buddies(feuser)))
-        + len(list(BuddyQueryService.get_dummy_buddies(feuser)))
-    )
+    member_counts_by_project = {p["id"]: len(p["members"]) for p in projects_data}
+    buddy_count = len(single_buddies)
     category_map = {
         c["uid"]: c["title"]
         for c in Category.objects.filter(owning_feuser=feuser).values("uid", "title")

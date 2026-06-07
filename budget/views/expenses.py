@@ -46,6 +46,15 @@ def _apply_solo_spendings(expense, buddy, creator_feuser):
 
 
 def _buddy_context(feuser) -> dict:
+    """
+    Build the buddy/project widget config for the expense form.
+
+    projects_data / single_buddies are also returned raw (not just JSON-encoded)
+    so express_service._build_catalog()/​_validate_items() can enumerate the exact
+    same list this request is about to render into the widget's JS config.
+    Querying it twice would risk two different row orderings breaking the
+    idx-based correspondence between the AI's catalog and the widget's arrays.
+    """
     from buddies.services import BuddyQueryService
     actual = list(BuddyQueryService.get_actual_buddies(feuser))
     dummy = list(BuddyQueryService.get_dummy_buddies(feuser))
@@ -57,13 +66,14 @@ def _buddy_context(feuser) -> dict:
     ]
     # Only active (non-archived) projects appear in the expense form dropdown
     projects = BuddyQueryService.get_active_projects_for_feuser(feuser)
+    projects_data = BuddyQueryService.projects_data_for_expense_form(feuser)
     return {
         "buddy_actual": actual,
         "buddy_dummy": dummy,
         "buddy_groups": projects,
-        "projects_data_json": safe_json(
-            BuddyQueryService.projects_data_for_expense_form(feuser)
-        ),
+        "projects_data": projects_data,
+        "single_buddies_data": single_buddies,
+        "projects_data_json": safe_json(projects_data),
         "single_buddies_json": safe_json(single_buddies),
     }
 

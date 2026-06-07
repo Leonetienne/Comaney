@@ -80,7 +80,10 @@ def express_creation(request):
                 context["ai_error"] = "Please enter a description or attach an image."
                 context["ai_error_is_validation"] = True
             else:
-                catalog = _build_catalog(feuser)
+                # Reuse this same request's buddy-widget data (context["projects_data"]/
+                # ["single_buddies_data"]) for the catalog, so the AI's idx values always
+                # line up with the widget's own member/buddy arrays -- see _build_catalog.
+                catalog = _build_catalog(feuser, context["projects_data"], context["single_buddies_data"])
                 custom = feuser.ai_custom_instructions.strip()
                 extra = f"\n\nUser's custom instructions (follow these when assigning categories/tags):\n{custom}" if custom else ""
                 system_prompt = _build_smart_create_system(catalog) + extra
@@ -91,7 +94,9 @@ def express_creation(request):
                         api_key, system_prompt, description_with_date,
                         image_b64=image_b64, image_type=image_type,
                     )
-                    items, errors = _validate_items(raw_items, feuser)
+                    items, errors = _validate_items(
+                        raw_items, feuser, context["projects_data"], context["single_buddies_data"]
+                    )
                     if errors:
                         context["ai_error"] = " | ".join(errors)
                     if items:

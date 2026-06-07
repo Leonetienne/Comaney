@@ -107,8 +107,24 @@ def _expense_upfront_dummy_pk(title: str, owner_email: str) -> int | None:
 
 
 def _expense_in_api(title_prefix: str, ctx: dict) -> bool:
+    """
+    True if the most recently created expense matching this title prefix appears
+    in the regular expense API. Scoped to that one expense's id (not just any
+    title match) because several test cases in this module create similarly
+    AI-titled "Camping..." expenses against the same shared ctx user -- an
+    older, unrelated, still-visible expense with a coincidentally matching
+    title would otherwise produce a false positive here.
+    """
+    eid = _shell(
+        f"from budget.models import Expense; from feusers.models import FeUser; "
+        f"u = FeUser.objects.get(email='{ctx['email']}'); "
+        f"e = Expense.objects.filter(title__startswith='{title_prefix}', owning_feuser=u).first(); "
+        f"print(e.uid if e else 'None')"
+    )
+    if eid == "None":
+        return False
     expenses = api_get("/api/v1/expenses/", ctx, params={"q": title_prefix}).json().get("expenses", [])
-    return any(e["title"].startswith(title_prefix) for e in expenses)
+    return any(e["id"] == int(eid) for e in expenses)
 
 
 # ---------------------------------------------------------------------------
