@@ -245,6 +245,23 @@ def _build_smart_create_system(catalog: str, blocks: list[str] | None = None) ->
         blocks = _SMART_CREATE_BLOCKS
     return "\n\n".join(blocks) + "\n\n" + catalog
 
+
+def _select_smart_create_blocks(projects_data: list, single_buddies: list) -> list[str]:
+    """Pick which feature blocks apply, based on what this feuser actually has.
+
+    Must be called with the same projects_data/single_buddies lists used to build
+    the catalog, so "has a project"/"has a buddy" matches what the AI can reference.
+    """
+    blocks = [_SMART_CREATE_BASE]
+    if projects_data:
+        blocks.append(_SMART_CREATE_PROJECTS)
+        if any(len(p["members"]) > 1 for p in projects_data):
+            blocks.append(_SMART_CREATE_PROJECT_PARTICIPANTS)
+            blocks.append(_SMART_CREATE_PROJECT_PAYER)
+    if single_buddies:
+        blocks.append(_SMART_CREATE_DIRECT_BUDDY)
+    return blocks
+
 _ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 _IMAGE_MAX_PX = 1600
 _IMAGE_QUALITY = 82

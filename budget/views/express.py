@@ -15,6 +15,7 @@ from ..express_service import (
     _call_claude,
     _parse_buddy_item,
     _prepare_image,
+    _select_smart_create_blocks,
     _trial_state,
     _validate_items,
 )
@@ -84,9 +85,10 @@ def express_creation(request):
                 # ["single_buddies_data"]) for the catalog, so the AI's idx values always
                 # line up with the widget's own member/buddy arrays -- see _build_catalog.
                 catalog = _build_catalog(feuser, context["projects_data"], context["single_buddies_data"])
+                blocks = _select_smart_create_blocks(context["projects_data"], context["single_buddies_data"])
                 custom = feuser.ai_custom_instructions.strip()
                 extra = f"\n\nUser's custom instructions (follow these when assigning categories/tags):\n{custom}" if custom else ""
-                system_prompt = _build_smart_create_system(catalog) + extra
+                system_prompt = _build_smart_create_system(catalog, blocks) + extra
                 today_str = timezone.localdate().isoformat()
                 description_with_date = f"[Today's date: {today_str}]\n\n{description}" if description else f"[Today's date: {today_str}]"
                 try:
