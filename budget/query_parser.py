@@ -214,44 +214,50 @@ def _payee_q(val: str) -> Q:
 
 
 def _tag_q(val: str, model=None, feuser=None) -> Q:
-    """tag=<none|substring> — also checks overlay tags for feuser."""
+    """tag=<none|substring> — matches only tags visible to feuser: the
+    expense's own tags when feuser owns it, otherwise feuser's overlay tags
+    (never the owner's tags on a foreign expense)."""
     if val == 'none':
-        # No direct tags AND no overlay tags for feuser
-        q = Q(tags__isnull=True)
+        # Own expenses: no direct tags. Foreign expenses: no overlay tags for feuser.
+        q = Q(owning_feuser=feuser, tags__isnull=True)
         if feuser is not None and model is not None:
-            q &= ~Q(pk__in=model.objects.filter(
+            q |= ~Q(pk__in=model.objects.filter(
                 data_overlays__feuser=feuser,
                 data_overlays__tags__isnull=False,
-            ).values('pk'))
+            ).values('pk')) & ~Q(owning_feuser=feuser)
         return q
     # Substring: pk__in to avoid JOIN fanout on M2M tags
     if model is not None:
-        q = Q(pk__in=model.objects.filter(tags__title__icontains=val).values('pk'))
+        q = Q(pk__in=model.objects.filter(
+            owning_feuser=feuser, tags__title__icontains=val,
+        ).values('pk'))
         if feuser is not None:
             q |= Q(pk__in=model.objects.filter(
                 data_overlays__feuser=feuser,
                 data_overlays__tags__title__icontains=val,
-            ).values('pk'))
+            ).exclude(owning_feuser=feuser).values('pk'))
         return q
-    return Q(tags__title__icontains=val)
+    return Q(owning_feuser=feuser, tags__title__icontains=val)
 
 
 def _cat_q(val: str, model=None, feuser=None) -> Q:
-    """cat=<none|substring> — also checks overlay category for feuser."""
+    """cat=<none|substring> — matches only the category visible to feuser: the
+    expense's own category when feuser owns it, otherwise feuser's overlay
+    category (never the owner's category on a foreign expense)."""
     if val == 'none':
-        q = Q(category__isnull=True)
+        q = Q(owning_feuser=feuser, category__isnull=True)
         if feuser is not None and model is not None:
-            q &= ~Q(pk__in=model.objects.filter(
+            q |= ~Q(pk__in=model.objects.filter(
                 data_overlays__feuser=feuser,
                 data_overlays__category__isnull=False,
-            ).values('pk'))
+            ).values('pk')) & ~Q(owning_feuser=feuser)
         return q
-    q = Q(category__title__icontains=val)
+    q = Q(owning_feuser=feuser, category__title__icontains=val)
     if feuser is not None and model is not None:
         q |= Q(pk__in=model.objects.filter(
             data_overlays__feuser=feuser,
             data_overlays__category__title__icontains=val,
-        ).values('pk'))
+        ).exclude(owning_feuser=feuser).values('pk'))
     return q
 
 
