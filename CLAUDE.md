@@ -17,6 +17,7 @@
   - `dashboard.js`: Alpine.js v3 + Chart.js
 - Build assets: `build/build-assets.sh` (Docker container, never run npm directly on host)
 - CSS theming: CSS custom properties (`--var`) only, never SCSS `$vars` (breaks dark mode)
+- Run `docker-compose up -d` to start the stack but it should already be running at http://localhost:8080
 
 ## Auth
 - Custom `FeUser` model, not `django.contrib.auth.User`
