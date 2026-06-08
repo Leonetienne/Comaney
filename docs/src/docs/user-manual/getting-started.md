@@ -97,7 +97,7 @@ A project groups a set of expenses under one name so you can see the total at a 
 
 ### Logging expenses in a project
 
-Create a new expense as usual and set **Expense assignment** to **Project**, then pick the project from the dropdown. Or, on the project page itself, use the **+** button as a shortcut.
+Create a new expense as usual and set **Expense assignment** to **Project**, then pick the project from the dropdown. Or, on the project page itself, use the **+** button as a shortcut: it lets you create the expense manually or hand the whole project over to AI Express Creation.
 
 ### Solo projects: track costs for yourself
 

@@ -33,7 +33,7 @@ Income and savings types are for your own personal tracking only. If you assign 
 
 ## Adding a new expense
 
-1. Click **Expenses** in the navigation, then click **New expense**.
+1. Click **Expenses** in the navigation, then click the **+** button and choose **Create manually**.
 2. Fill in the title, choose the type, and enter the value.
 3. Fill in any other fields you want to track.
 4. Click **Save**.
