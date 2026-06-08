@@ -1,0 +1,39 @@
+<script>var webauthnOptions = {{ webauthn_options_json|safe }};</script>
+<p class="error-msg" id="webauthn-js-error" style="display:none;"></p>
+<form method="post" novalidate id="webauthn-login-form">
+    {% csrf_token %}
+    <input type="hidden" name="credential_json" id="id_credential_json">
+    {% if confirm_method %}
+    <input type="hidden" name="confirm_method" value="{{ confirm_method }}">
+    <input type="hidden" name="confirm_factor_id" value="{{ confirm_factor.pk }}">
+    {% endif %}
+    <div class="form-actions">
+        <button type="button" class="btn btn-full" id="webauthn-login-btn">Use security key</button>
+    </div>
+</form>
+
+{% include "feusers/partials/_webauthn_js.html" %}
+<script>
+(function() {
+    const rawOptions = webauthnOptions;
+    const btn = document.getElementById('webauthn-login-btn');
+    const errEl = document.getElementById('webauthn-js-error');
+    btn.addEventListener('click', async function() {
+        errEl.style.display = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Waiting for your security key…';
+        try {
+            const cred = await navigator.credentials.get({
+                publicKey: webauthnPrepareGetOptions(JSON.parse(JSON.stringify(rawOptions))),
+            });
+            document.getElementById('id_credential_json').value = JSON.stringify(webauthnCredentialToJSON(cred, false));
+            document.getElementById('webauthn-login-form').submit();
+        } catch (err) {
+            errEl.textContent = 'We could not verify your security key (' + err.message + '). Please try again.';
+            errEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Use security key';
+        }
+    });
+})();
+</script>

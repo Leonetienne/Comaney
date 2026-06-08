@@ -1,12 +1,12 @@
-import hashlib
-import secrets
-
+"""TOTP ("Authenticator App") second-factor setup. Login verification,
+removal, and recovery are handled generically in feusers/views/twofa.py; this
+module only builds and confirms a new TOTPFactor."""
 from django.shortcuts import redirect, render
-from django.utils import timezone
 
-from ..models import FeUser
-from ..rate_limit import clear as rl_clear, is_limited, record_failure
-from ..utils import _get_session_feuser, _record_login
+from ..models import TOTPFactor
+from ..second_factor_registry import get_all_factors
+from ..second_factor_service import generate_recovery_code, register_factor
+from ..utils import _get_session_feuser
 
 
 def _totp_qr_b64(uri: str) -> str:
@@ -31,6 +31,7 @@ def totp_setup(request):
 
     import pyotp
     error = None
+    is_first_factor = not get_all_factors(feuser)
 
     if request.method == "POST":
         code   = request.POST.get("code", "").strip()
@@ -39,18 +40,17 @@ def totp_setup(request):
             return redirect("totp_setup")
         totp = pyotp.TOTP(secret)
         if totp.verify(code, valid_window=1):
-            raw = secrets.token_hex(5).upper()
-            recovery_code = f"{raw[:5]}-{raw[5:]}"
-            feuser.totp_secret        = secret
-            feuser.totp_enabled       = True
-            feuser.totp_recovery_hash = hashlib.sha256(raw.encode()).hexdigest()
-            feuser.save(update_fields=["totp_secret", "totp_enabled", "totp_recovery_hash"])
+            label = request.POST.get("label", "").strip() or "Authenticator App"
+            factor = TOTPFactor(feuser=feuser, secret=secret, label=label)
+            make_primary = request.POST.get("make_primary") == "1"
+            first = register_factor(factor, make_primary=make_primary)
             del request.session["totp_setup_secret"]
+            recovery_code = generate_recovery_code(feuser) if first else None
             return render(request, "feusers/totp_setup.html", {
                 "recovery_code": recovery_code,
                 "done": True,
             })
-        error = "Invalid code — please try again."
+        error = "Invalid code: please try again."
     else:
         secret = pyotp.random_base32()
         request.session["totp_setup_secret"] = secret
@@ -61,108 +61,5 @@ def totp_setup(request):
         "qr_b64": _totp_qr_b64(uri),
         "secret": secret,
         "error": error,
+        "is_first_factor": is_first_factor,
     })
-
-
-def totp_disable(request):
-    feuser = _get_session_feuser(request)
-    if not feuser or not feuser.totp_enabled:
-        return redirect("profile")
-
-    import pyotp
-    recovery_mode = request.GET.get("recovery") == "1" or request.POST.get("recovery_mode") == "1"
-    rl_key = str(feuser.pk)
-    error = None
-    if request.method == "POST":
-        if recovery_mode:
-            if is_limited("totp", rl_key):
-                error = "Too many failed attempts. Please wait a moment and try again."
-            else:
-                recovery = request.POST.get("recovery", "").strip().upper().replace("-", "")
-                digest   = hashlib.sha256(recovery.encode()).hexdigest()
-                if feuser.totp_recovery_hash and secrets.compare_digest(digest, feuser.totp_recovery_hash):
-                    rl_clear("totp", rl_key)
-                    feuser.totp_secret        = ""
-                    feuser.totp_enabled       = False
-                    feuser.totp_recovery_hash = ""
-                    feuser.save(update_fields=["totp_secret", "totp_enabled", "totp_recovery_hash"])
-                    return redirect("profile")
-                record_failure("totp", rl_key)
-                error = "Invalid recovery code."
-        else:
-            code = request.POST.get("code", "").strip()
-            if pyotp.TOTP(feuser.totp_secret).verify(code, valid_window=1):
-                feuser.totp_secret  = ""
-                feuser.totp_enabled = False
-                feuser.save(update_fields=["totp_secret", "totp_enabled"])
-                return redirect("profile")
-            error = "Invalid code."
-    return render(request, "feusers/totp_verify.html", {
-        "error": error,
-        "disable_mode": True,
-        "recovery_mode": recovery_mode,
-    })
-
-
-def totp_verify(request):
-    pending_id = request.session.get("totp_pending_id")
-    if not pending_id:
-        return redirect("login")
-
-    import pyotp
-    rl_key = str(pending_id)
-    error = None
-    if request.method == "POST":
-        if is_limited("totp", rl_key):
-            error = "Too many failed attempts. Please wait a moment and try again."
-        else:
-            try:
-                user = FeUser.objects.get(pk=pending_id, is_active=True, totp_enabled=True)
-            except FeUser.DoesNotExist:
-                return redirect("login")
-
-            code = request.POST.get("code", "").strip()
-            if pyotp.TOTP(user.totp_secret).verify(code, valid_window=1):
-                rl_clear("totp", rl_key)
-                _record_login(user)
-                del request.session["totp_pending_id"]
-                request.session["feuser_id"] = user.pk
-                return redirect("landing_page")
-            record_failure("totp", rl_key)
-            error = "Invalid code — please try again."
-
-    return render(request, "feusers/totp_verify.html", {"error": error})
-
-
-def totp_verify_recovery(request):
-    pending_id = request.session.get("totp_pending_id")
-    if not pending_id:
-        return redirect("login")
-
-    rl_key = str(pending_id)
-    error = None
-    if request.method == "POST":
-        if is_limited("totp", rl_key):
-            error = "Too many failed attempts. Please wait a moment and try again."
-        else:
-            try:
-                user = FeUser.objects.get(pk=pending_id, is_active=True, totp_enabled=True)
-            except FeUser.DoesNotExist:
-                return redirect("login")
-
-            recovery = request.POST.get("recovery", "").strip().upper().replace("-", "")
-            digest   = hashlib.sha256(recovery.encode()).hexdigest()
-            if user.totp_recovery_hash and secrets.compare_digest(digest, user.totp_recovery_hash):
-                rl_clear("totp", rl_key)
-                user.totp_secret        = ""
-                user.totp_enabled       = False
-                user.totp_recovery_hash = ""
-                user.last_login         = timezone.now()
-                user.save(update_fields=["totp_secret", "totp_enabled", "totp_recovery_hash", "last_login"])
-                del request.session["totp_pending_id"]
-                request.session["feuser_id"] = user.pk
-                return redirect("landing_page")
-            record_failure("totp", rl_key)
-            error = "Invalid recovery code."
-
-    return render(request, "feusers/totp_verify.html", {"error": error, "recovery_mode": True})

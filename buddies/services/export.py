@@ -85,6 +85,59 @@ def _build_participation_matrix_csv(expenses, self_feuser=None) -> str:
     return p.getvalue()
 
 
+_APPROVAL_LABELS = {0: "neutral", 1: "approved", 2: "rejected"}
+
+
+def _build_approval_matrix_csvs(expenses, self_feuser=None) -> tuple[str, str]:
+    """Build two participant-approval matrices for non-settlement expenses
+    with at least one participant: approval state (neutral/approved/rejected)
+    and the timestamp each participant last set that state. Rows are expenses
+    (by id), columns are participants identified the same way as
+    _build_participation_matrix_csv. Unlike the participation matrix, the
+    payer never gets a column here: only participants have an approval state.
+    Settlement expenses are excluded, since their confirmation flow is a
+    separate mechanism (Expense.buddy_approved), not per-participant consent.
+
+    `expenses` must be an iterable of Expense objects with
+    prefetch_related("buddy_spendings__participant_feuser",
+    "buddy_spendings__participant_dummy") already applied."""
+    state_rows = []
+    ts_rows = []
+    columns = []
+    seen_columns = set()
+    for exp in expenses:
+        if exp.is_buddies_settlement:
+            continue
+        states = {}
+        timestamps = {}
+        for bs in exp.buddy_spendings.all():
+            col = (
+                _identity_id(feuser_obj=bs.participant_feuser, self_feuser=self_feuser)
+                if bs.participant_feuser_id
+                else _identity_id(dummy_obj=bs.participant_dummy)
+            )
+            states[col] = _APPROVAL_LABELS.get(bs.approval_state, bs.approval_state)
+            timestamps[col] = bs.consent_set_at.isoformat() if bs.consent_set_at else ""
+            if col not in seen_columns:
+                seen_columns.add(col)
+                columns.append(col)
+        if states:
+            state_rows.append((exp.pk, states))
+            ts_rows.append((exp.pk, timestamps))
+
+    columns.sort()
+
+    def _write(rows) -> str:
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["expense_id"] + columns)
+        for expense_id, values in rows:
+            w.writerow([expense_id] + [values.get(col, "") for col in columns])
+        return p.getvalue()
+
+    return _write(state_rows), _write(ts_rows)
+
+
 class BuddyExportService:
     """Builds the direct-buddy data export: direct-buddies.csv (the combined
     real-user + offline buddy roster), direct-buddy-expenses.csv (all
@@ -156,6 +209,10 @@ class BuddyExportService:
             f"{prefix}direct-buddy-expense-participation.csv",
             _build_participation_matrix_csv(qs, self_feuser=feuser),
         )
+
+        approval_csv, approval_ts_csv = _build_approval_matrix_csvs(qs, self_feuser=feuser)
+        zf.writestr(f"{prefix}direct-buddy-expense-approval-matrix.csv", approval_csv)
+        zf.writestr(f"{prefix}direct-buddy-expense-approval-timestamps.csv", approval_ts_csv)
 
         # --------------------------------------------------------------
         # Pictures: personal offline buddies' photos.
@@ -261,6 +318,27 @@ class ProjectExportService:
             f"{prefix}participation_matrix.csv",
             _build_participation_matrix_csv(matrix_qs, self_feuser=feuser),
         )
+
+        approval_csv, approval_ts_csv = _build_approval_matrix_csvs(matrix_qs, self_feuser=feuser)
+        zf.writestr(f"{prefix}approval_matrix.csv", approval_csv)
+        zf.writestr(f"{prefix}approval_matrix_timestamps.csv", approval_ts_csv)
+
+        # --------------------------------------------------------------
+        # pending_payer_confirmations.csv: expenses in this project where
+        # `feuser` was designated as the upfront payer by someone else and
+        # hasn't yet confirmed they actually paid. Never date-filtered,
+        # like meta.csv/members.csv: it's a pending-action list, not history.
+        # --------------------------------------------------------------
+        from .query import BuddyQueryService
+
+        p = io.StringIO()
+        write_model_csv(
+            p,
+            BuddyQueryService.pending_expense_owner_confirmations(feuser, project=project).prefetch_related("tags"),
+            skip={"owning_feuser", "project"},
+            extra=[("tag_ids", lambda obj: ",".join(str(t.uid) for t in obj.tags.all()))],
+        )
+        zf.writestr(f"{prefix}pending_payer_confirmations.csv", p.getvalue())
 
         # --------------------------------------------------------------
         # Pictures: the project's cover image, and offline members' photos.

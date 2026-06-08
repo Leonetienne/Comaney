@@ -87,4 +87,26 @@
   }
 }
 
+// Small icon inside a .btn (e.g. the 2FA method icons). Source images are
+// black-on-transparent; solid-color buttons (the default pink .btn) have
+// white text, so the icon inverts to match regardless of color scheme.
+// .btn-secondary uses the page text color instead, which only flips in
+// dark mode, so its icon follows that same dark-mode-only filter.
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+  margin-right: 6px;
+  object-fit: contain;
+  filter: invert(1);
+
+  .btn-secondary & {
+    filter: none;
+
+    @media (prefers-color-scheme: dark) {
+      filter: invert(1);
+    }
+  }
+}
+
 @keyframes btn-spin { to { transform: rotate(360deg); } }

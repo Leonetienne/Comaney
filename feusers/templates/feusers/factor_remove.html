@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load second_factor_tags %}
+{% block title %}Comaney – Remove second factor{% endblock %}
+{% block main_class %}page-narrow{% endblock %}
+
+{% block content %}
+{% if recovery_mode %}
+<h1>Recovery code</h1>
+<p class="auth-hint">Enter your recovery code to remove "{{ target_label|default:target_display_name }}". This removes every second-factor method on your account, not just this one.</p>
+{% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
+<form method="post" novalidate autocomplete="off">
+    {% csrf_token %}
+    <input type="hidden" name="recovery_mode" value="1">
+    <label for="id_recovery">Recovery code</label>
+    <input id="id_recovery" name="recovery" type="text" placeholder="XXXXX-XXXXX"
+           maxlength="11" autofocus autocomplete="off" class="input-mono"
+           oninput="
+             let v = this.value.toUpperCase().replace(/[^0-9A-F]/g,'');
+             this.value = v.length > 5 ? v.slice(0,5) + '-' + v.slice(5,10) : v;
+           ">
+    <div class="form-actions">
+        <button type="submit" class="btn btn-danger">Remove all second factors</button>
+    </div>
+</form>
+<p class="auth-footer-links">
+    <a href="{% url 'factor_remove' target_method target_id %}">← Back to confirming with another method</a><br>
+    <a href="{% url 'profile' %}">Cancel</a>
+</p>
+{% else %}
+<h1>Remove "{{ target_label|default:target_display_name }}"</h1>
+<p class="auth-hint">To remove this {{ target_display_name|lower }}, confirm with a different second factor first.</p>
+{% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
+
+<p class="in-page-tip">Confirming with: <strong>
+    <img src="{% factor_icon confirm_method %}" class="twofa-factor-icon" alt="">
+    {% factor_display_name confirm_method %}
+    {% if confirm_factor.label %}({{ confirm_factor.label }}){% endif %}
+</strong></p>
+
+{% with submit_label="Confirm removal" %}
+{% include challenge_template %}
+{% endwith %}
+
+{% if other_factors|length > 1 %}
+<div class="method-dropdown">
+    <button type="button" class="btn btn-secondary method-dropdown-toggle">Confirm with a different method instead</button>
+    <ul class="method-dropdown-menu">
+        {% for method_key, factor in other_factors %}
+        <li><a href="?cm={{ method_key }}&cid={{ factor.pk }}" class="method-dropdown-item">
+            <img src="{% factor_icon method_key %}" class="method-dropdown-icon" alt="">
+            <span>{% factor_display_name method_key %}{% if factor.label %} ({{ factor.label }}){% endif %}</span>
+        </a></li>
+        {% endfor %}
+    </ul>
+</div>
+{% include "feusers/partials/_method_dropdown_js.html" %}
+{% endif %}
+
+<p class="auth-footer-links">
+    <a href="{% url 'factor_remove' target_method target_id %}?recovery=1">Lost access to your other methods? Use a recovery code</a><br>
+    <a href="{% url 'profile' %}">← Cancel</a>
+</p>
+{% endif %}
+{% endblock %}

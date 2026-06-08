@@ -668,3 +668,32 @@ class BuddyQueryService:
             group=group,
             expires_at__gt=timezone.now(),
         )
+
+    @staticmethod
+    def pending_group_invites_outgoing(feuser):
+        from django.utils import timezone
+        return BuddyGroupInvite.objects.filter(
+            inviting_feuser=feuser,
+            expires_at__gt=timezone.now(),
+        ).select_related("group")
+
+    @staticmethod
+    def pending_expense_owner_confirmations(feuser, project=None):
+        """Expenses where `feuser` was designated as the upfront payer by
+        someone else and hasn't yet confirmed they actually paid ("Did you
+        pay for this?"). Excludes settlements (a separate confirmation flow)
+        and dummy-paid expenses (confirmed by the project admin instead).
+
+        `project=None` (the default) scopes to personal, non-project
+        expenses only, matching how direct-buddy-expenses.csv excludes
+        project expenses; pass a Project to scope to that project's
+        expenses instead (`project=None` filters `project__isnull=True`,
+        same as any other Django FK filter)."""
+        from budget.models import Expense
+        return Expense.objects.filter(
+            owning_feuser=feuser,
+            buddy_approved=False,
+            is_buddies_settlement=False,
+            is_dummy=False,
+            project=project,
+        )

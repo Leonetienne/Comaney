@@ -125,22 +125,32 @@ def _call_claude_impl(
     cache_write_tok = getattr(u, "cache_creation_input_tokens", 0)
     cache_read_tok  = getattr(u, "cache_read_input_tokens", 0)
 
-    cost = (
-        (input_tok       / 1_000_000) * _PRICE_INPUT +
-        (output_tok      / 1_000_000) * _PRICE_OUTPUT +
-        (cache_write_tok / 1_000_000) * _PRICE_CACHE_WRITE +
-        (cache_read_tok  / 1_000_000) * _PRICE_CACHE_READ
-    )
     usage = {
         "input_tokens":       input_tok,
         "output_tokens":      output_tok,
         "cache_write_tokens": cache_write_tok,
         "cache_read_tokens":  cache_read_tok,
         "total_tokens":       input_tok + output_tok + cache_write_tok + cache_read_tok,
-        "cost_usd":           round(cost, 6),
-        "cost_cents":         round(cost * 100, 1),
+        **_compute_usage_cost(input_tok, output_tok, cache_write_tok, cache_read_tok),
     }
     return raw, usage
+
+
+def _compute_usage_cost(input_tok: int, output_tok: int, cache_write_tok: int, cache_read_tok: int) -> dict:
+    """cost_usd/cost_cents for a Claude API call from its token usage.
+
+    cost_cents is kept at the same 4-decimal precision as
+    FeUser.ai_trial_budget_spent (a DecimalField(decimal_places=4)): rounding
+    to fewer decimals silently truncates cheap, cache-heavy requests to 0.0,
+    under-billing trial usage instead of just under-displaying it.
+    """
+    cost = (
+        (input_tok       / 1_000_000) * _PRICE_INPUT +
+        (output_tok      / 1_000_000) * _PRICE_OUTPUT +
+        (cache_write_tok / 1_000_000) * _PRICE_CACHE_WRITE +
+        (cache_read_tok  / 1_000_000) * _PRICE_CACHE_READ
+    )
+    return {"cost_usd": round(cost, 6), "cost_cents": round(cost * 100, 4)}
 
 
 def _default_agent_config(feuser) -> AgentConfig:

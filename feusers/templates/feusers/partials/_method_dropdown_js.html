@@ -1,0 +1,15 @@
+<script>
+// Wires up every .method-dropdown on the page: click the toggle to open/close,
+// click outside to close. Delegated listener so it works regardless of how
+// many dropdowns are on the page (login switcher, removal/recovery confirm).
+document.addEventListener('click', function(e) {
+    const toggle = e.target.closest('.method-dropdown-toggle');
+    if (toggle) {
+        toggle.closest('.method-dropdown').classList.toggle('method-dropdown--open');
+        return;
+    }
+    document.querySelectorAll('.method-dropdown--open').forEach(function(el) {
+        if (!el.contains(e.target)) el.classList.remove('method-dropdown--open');
+    });
+});
+</script>

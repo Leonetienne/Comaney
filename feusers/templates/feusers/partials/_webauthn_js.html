@@ -1,0 +1,65 @@
+<script>
+// Shared WebAuthn (FIDO2) browser-side helpers: base64url <-> ArrayBuffer
+// conversion between the server's JSON options and the navigator.credentials
+// API, which only speaks ArrayBuffers. Included by webauthn_setup.html and
+// twofa_challenge_webauthn.html so there is exactly one copy of this logic.
+function _b64urlToBuf(b64url) {
+    const pad = '='.repeat((4 - b64url.length % 4) % 4);
+    const b64 = (b64url + pad).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(b64);
+    const buf = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
+    return buf.buffer;
+}
+
+function _bufToB64url(buf) {
+    const bytes = new Uint8Array(buf);
+    let str = '';
+    for (let i = 0; i < bytes.byteLength; i++) str += String.fromCharCode(bytes[i]);
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function webauthnPrepareCreateOptions(options) {
+    options.challenge = _b64urlToBuf(options.challenge);
+    options.user.id = _b64urlToBuf(options.user.id);
+    if (options.excludeCredentials) {
+        options.excludeCredentials = options.excludeCredentials.map(
+            c => Object.assign({}, c, { id: _b64urlToBuf(c.id) })
+        );
+    }
+    return options;
+}
+
+function webauthnPrepareGetOptions(options) {
+    options.challenge = _b64urlToBuf(options.challenge);
+    if (options.allowCredentials) {
+        options.allowCredentials = options.allowCredentials.map(
+            c => Object.assign({}, c, { id: _b64urlToBuf(c.id) })
+        );
+    }
+    return options;
+}
+
+function webauthnCredentialToJSON(cred, isRegistration) {
+    const json = {
+        id: cred.id,
+        rawId: _bufToB64url(cred.rawId),
+        type: cred.type,
+        response: { clientDataJSON: _bufToB64url(cred.response.clientDataJSON) },
+    };
+    if (isRegistration) {
+        json.response.attestationObject = _bufToB64url(cred.response.attestationObject);
+        if (cred.response.getTransports) {
+            json.response.transports = cred.response.getTransports();
+        }
+    } else {
+        json.response.authenticatorData = _bufToB64url(cred.response.authenticatorData);
+        json.response.signature = _bufToB64url(cred.response.signature);
+        json.response.userHandle = cred.response.userHandle ? _bufToB64url(cred.response.userHandle) : null;
+    }
+    if (cred.authenticatorAttachment) {
+        json.authenticatorAttachment = cred.authenticatorAttachment;
+    }
+    return json;
+}
+</script>

@@ -92,7 +92,7 @@ window.BUDDY_EXPENSE_CONFIG = {
 
     {% if usage %}
     <div class="usage-pill">
-        <span class="cost">API cost: {{ usage.cost_cents }} ¢</span>
+        <span class="cost">API cost: {{ usage.cost_cents|floatformat:1 }} ¢</span>
     </div>
     {% endif %}
 

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Comaney – Remove second factor{% endblock %}
+{% block main_class %}page-narrow{% endblock %}
+
+{% block content %}
+<h1>Remove "{{ target_label|default:target_display_name }}"</h1>
+<p class="auth-hint">This is your only second-factor method. Removing it turns two-factor authentication off entirely for your account.</p>
+<form method="post" novalidate>
+    {% csrf_token %}
+    <div class="form-actions">
+        <button type="submit" class="btn btn-danger">Yes, remove and turn off 2FA</button>
+        <a href="{% url 'profile' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}

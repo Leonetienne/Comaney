@@ -108,6 +108,83 @@
   margin: 0 0 24px;
 }
 
+// A button that opens a small dropdown menu of alternatives (e.g. "Try a
+// different method" at 2FA login, "Confirm with a different method" on
+// removal/recovery-regen). Self-contained toggle JS lives alongside each
+// usage in partials/_method_dropdown_js.html.
+.method-dropdown {
+  position: relative;
+  display: inline-block;
+  margin: 16px 0;
+}
+
+.method-dropdown-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  &::after {
+    content: "";
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+    opacity: .6;
+  }
+}
+
+.method-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 240px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity .15s ease, transform .15s ease;
+
+  .method-dropdown--open & {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+}
+
+.method-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.9rem;
+
+  &:hover {
+    background: var(--bg-elevated);
+    text-decoration: none;
+  }
+}
+
+.method-dropdown-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  object-fit: contain;
+
+  @media (prefers-color-scheme: dark) {
+    filter: invert(1);
+  }
+}
+
 // ── Utility classes ──────────────────────────────────────────────────────────
 
 // Spacing

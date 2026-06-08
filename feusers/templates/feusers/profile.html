@@ -5,6 +5,7 @@
 
 {% block content %}
 {% load feuser_tags %}
+{% load second_factor_tags %}
 <div class="settings-wrap">
 
     <h1>Settings</h1>
@@ -220,7 +221,7 @@
     <div class="settings-card" id="section-2fa">
         <div class="settings-card-head">
             <h2 class="settings-card-title">Two-factor authentication</h2>
-            {% if current_feuser.totp_enabled %}
+            {% if second_factors %}
             <span class="settings-badge settings-badge--on">Enabled</span>
             {% else %}
             <span class="settings-badge settings-badge--off">Not enabled</span>
@@ -228,13 +229,46 @@
         </div>
         {% if current_feuser.is_demo %}
         <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
-        <button type="button" class="btn" disabled>Set up 2FA</button>
-        {% elif current_feuser.totp_enabled %}
-        <p class="in-page-tip">Your account is protected with an authenticator app.</p>
-        <a href="{% url 'totp_disable' %}" class="btn btn-danger btn-sm">Disable 2FA</a>
+        <button type="button" class="btn" disabled><img src="{% factor_icon 'totp' %}" class="btn-icon" alt="">Add authenticator app</button>
+        <button type="button" class="btn" disabled><img src="{% factor_icon 'webauthn' %}" class="btn-icon" alt="">Add security key</button>
         {% else %}
-        <p class="in-page-tip">Add an extra layer of security by requiring a one-time code from your authenticator app on each login.</p>
-        <a href="{% url 'totp_setup' %}" class="btn">Set up 2FA</a>
+        {% if second_factors %}
+        <ul class="twofa-factor-list">
+            {% for method_key, factor in second_factors %}
+            <li class="twofa-factor-row">
+                <div class="twofa-factor-info">
+                    <img src="{% factor_icon method_key %}" class="twofa-factor-icon" alt="{% factor_display_name method_key %}">
+                    <span class="twofa-factor-label">{{ factor.label|default:"Unnamed" }}</span>
+                    <span class="twofa-factor-method">{% factor_display_name method_key %}</span>
+                    {% if factor.is_primary %}<span class="settings-badge settings-badge--on">Primary</span>{% endif %}
+                    <span class="twofa-factor-date">Added {{ factor.created_at|date:"d.m.Y" }}</span>
+                </div>
+                <div class="twofa-factor-actions">
+                    {% if not factor.is_primary %}
+                    <form method="post" action="{% url 'factor_set_primary' method_key factor.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary btn-sm">Set as primary</button>
+                    </form>
+                    {% endif %}
+                    <a href="{% url 'factor_remove' method_key factor.pk %}" class="btn btn-danger btn-sm">Remove</a>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        <p class="in-page-tip"><a href="{% url 'recovery_regenerate' %}">Regenerate recovery code</a></p>
+        {% else %}
+        <p class="in-page-tip">Add an extra layer of security by requiring a second step on each login, from an authenticator app or a security key.</p>
+        {% endif %}
+        <div class="form-actions">
+            <a href="{% url 'totp_setup' %}" class="btn{% if second_factors %} btn-secondary{% endif %} btn-sm">
+                <img src="{% factor_icon 'totp' %}" class="btn-icon" alt="">Add authenticator app
+            </a>
+            {% if webauthn_available %}
+            <a href="{% url 'webauthn_setup' %}" class="btn{% if second_factors %} btn-secondary{% endif %} btn-sm">
+                <img src="{% factor_icon 'webauthn' %}" class="btn-icon" alt="">Add security key
+            </a>
+            {% endif %}
+        </div>
         {% endif %}
     </div>
 

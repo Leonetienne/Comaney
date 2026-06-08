@@ -121,6 +121,61 @@
   line-height: 1.6;
 }
 
+.twofa-factor-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.twofa-factor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.twofa-factor-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.twofa-factor-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  object-fit: contain;
+
+  @media (prefers-color-scheme: dark) {
+    filter: invert(1);
+  }
+}
+
+.twofa-factor-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.twofa-factor-method,
+.twofa-factor-date {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.twofa-factor-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  form { margin: 0; }
+}
+
 .success-msg {
   color: #155724;
   background: #d4edda;

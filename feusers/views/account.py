@@ -12,7 +12,9 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from ..forms import AISettingsForm, ChangeEmailForm, ChangePasswordForm, NotificationPreferencesForm, ProfileForm
+from ..second_factor_registry import get_all_factors, method_key_of
 from ..utils import _get_session_feuser
+from ..webauthn_helpers import rp_id_from_site_url
 
 
 def _sanitize_css(value: str) -> str:
@@ -203,6 +205,8 @@ def profile(request):
                 feuser.save(update_fields=["password", "last_mod"])
                 return redirect(f"{request.path}?success=password")
 
+    second_factors = [(method_key_of(f), f) for f in get_all_factors(feuser)]
+
     return render(request, "feusers/profile.html", {
         "active_nav": "profile",
         "profile_form": profile_form,
@@ -214,6 +218,8 @@ def profile(request):
         "email_error": email_error,
         "picture_error": picture_error,
         "backdrop_error": backdrop_error,
+        "second_factors": second_factors,
+        "webauthn_available": bool(rp_id_from_site_url(settings.SITE_URL)),
     })
 
 
@@ -223,8 +229,8 @@ def account_export(request):
         return redirect("login")
 
     from budget.models import Category, Dashboard, DashboardCard, Expense, ExpenseDataOverlay, ScheduledExpense, Tag
-    from buddies.models import CatalogPartnershipMembership, Project
-    from buddies.services import BuddyExportService, ProjectExportService
+    from buddies.models import BuddyOnboardingInvite, CatalogPartnershipInvite, CatalogPartnershipMembership, Project
+    from buddies.services import BuddyExportService, BuddyQueryService, ProjectExportService
     from comaney.csv_export import _csv_safe, write_model_csv
 
     buf = io.BytesIO()
@@ -235,7 +241,7 @@ def account_export(request):
         # ------------------------------------------------------------------
         _SKIP_FIELDS = {
             "password", "confirmation_token", "password_reset_token",
-            "password_reset_expires", "totp_secret", "totp_recovery_hash",
+            "password_reset_expires", "twofa_recovery_hash",
             "email_change_token",
         }
         _MASK_FIELDS = {"anthropic_api_key"}
@@ -380,6 +386,73 @@ def account_export(request):
             zf.writestr("catalog_partnership.csv", p.getvalue())
         except CatalogPartnershipMembership.DoesNotExist:
             pass
+
+        # ------------------------------------------------------------------
+        # pending_project_invites.csv — invites to join a project, sent by or
+        # addressed to feuser, that haven't expired yet. Covers invites to
+        # existing users (ProjectInvite) and to not-yet-registered email
+        # addresses (BuddyOnboardingInvite with group set).
+        # ------------------------------------------------------------------
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["direction", "invite_uid", "project_id", "project_name", "counterparty_email", "created_at", "expires_at"])
+        for inv in BuddyQueryService.pending_group_invites_outgoing(feuser):
+            w.writerow(["sent", inv.pk, inv.group_id, _csv_safe(inv.group.name), _csv_safe(inv.invitee_email), inv.created_at.isoformat(), inv.expires_at.isoformat()])
+        for inv in BuddyOnboardingInvite.objects.filter(inviting_feuser=feuser, group__isnull=False, expires_at__gt=timezone.now()).select_related("group"):
+            w.writerow(["sent", inv.pk, inv.group_id, _csv_safe(inv.group.name), _csv_safe(inv.invitee_email), inv.created_at.isoformat(), inv.expires_at.isoformat()])
+        for inv in BuddyQueryService.pending_group_invites_incoming(feuser):
+            w.writerow(["received", inv.pk, inv.group_id, _csv_safe(inv.group.name), _csv_safe(inv.inviting_feuser.email), inv.created_at.isoformat(), inv.expires_at.isoformat()])
+        zf.writestr("pending_project_invites.csv", p.getvalue())
+
+        # ------------------------------------------------------------------
+        # pending_buddy_invites.csv — direct-buddy invites, sent by or
+        # addressed to feuser, that haven't expired yet. Covers invites to
+        # existing users (BuddyInvite) and to not-yet-registered email
+        # addresses (BuddyOnboardingInvite with no group).
+        # ------------------------------------------------------------------
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["direction", "invite_uid", "counterparty_email", "created_at", "expires_at"])
+        for inv in BuddyQueryService.pending_invites_outgoing(feuser):
+            w.writerow(["sent", inv.pk, _csv_safe(inv.invitee_email), inv.created_at.isoformat(), inv.expires_at.isoformat()])
+        for inv in BuddyQueryService.pending_onboarding_invites_outgoing(feuser):
+            w.writerow(["sent", inv.pk, _csv_safe(inv.invitee_email), inv.created_at.isoformat(), inv.expires_at.isoformat()])
+        for inv in BuddyQueryService.pending_invites_incoming(feuser):
+            w.writerow(["received", inv.pk, _csv_safe(inv.inviter.email), inv.created_at.isoformat(), inv.expires_at.isoformat()])
+        zf.writestr("pending_buddy_invites.csv", p.getvalue())
+
+        # ------------------------------------------------------------------
+        # pending_partnership_invites.csv — catalog partnership invites, sent
+        # by or addressed to feuser, not yet accepted/declined.
+        # ------------------------------------------------------------------
+        _PARTNERSHIP_PENDING_STATUSES = [CatalogPartnershipInvite.STATUS_PENDING, CatalogPartnershipInvite.STATUS_IN_SETUP]
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["direction", "invite_uid", "counterparty_email", "status", "created_at"])
+        for inv in CatalogPartnershipInvite.objects.filter(inviter=feuser, status__in=_PARTNERSHIP_PENDING_STATUSES).select_related("inviter"):
+            w.writerow(["sent", inv.pk, _csv_safe(inv.invitee_email), inv.status, inv.created_at.isoformat()])
+        for inv in CatalogPartnershipInvite.objects.filter(invitee_email=feuser.email, status__in=_PARTNERSHIP_PENDING_STATUSES).select_related("inviter"):
+            w.writerow(["received", inv.pk, _csv_safe(inv.inviter.email), inv.status, inv.created_at.isoformat()])
+        zf.writestr("pending_partnership_invites.csv", p.getvalue())
+
+        # ------------------------------------------------------------------
+        # pending_expense_approvals.csv — personal (non-project) expenses
+        # where someone else designated feuser as the upfront payer and
+        # feuser hasn't yet confirmed they actually paid ("Did you pay for
+        # this?"). Settlements and dummy-paid expenses use separate
+        # confirmation flows and are excluded (see
+        # BuddyQueryService.pending_expense_owner_confirmations). Project
+        # expenses are excluded here too, like direct-buddy-expenses.csv:
+        # they are covered by the nested projects/<uid>/ export instead.
+        # ------------------------------------------------------------------
+        p = io.StringIO()
+        write_model_csv(
+            p,
+            BuddyQueryService.pending_expense_owner_confirmations(feuser).prefetch_related("tags"),
+            skip={"owning_feuser"},
+            extra=[_TAG_IDS],
+        )
+        zf.writestr("pending_expense_approvals.csv", p.getvalue())
 
         # ------------------------------------------------------------------
         # Feuser media files.

@@ -1,0 +1,43 @@
+import django.db.models.deletion
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('feusers', '0033_create_cache_table'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='TOTPFactor',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('label', models.CharField(blank=True, max_length=64)),
+                ('is_primary', models.BooleanField(default=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('secret', models.CharField(max_length=64)),
+                ('feuser', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='feusers.feuser')),
+            ],
+            options={
+                'ordering': ['created_at'],
+            },
+        ),
+        migrations.CreateModel(
+            name='WebAuthnFactor',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('label', models.CharField(blank=True, max_length=64)),
+                ('is_primary', models.BooleanField(default=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('credential_id', models.CharField(max_length=255, unique=True)),
+                ('public_key', models.TextField()),
+                ('sign_count', models.PositiveIntegerField(default=0)),
+                ('transports', models.CharField(blank=True, max_length=128)),
+                ('feuser', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='feusers.feuser')),
+            ],
+            options={
+                'ordering': ['created_at'],
+            },
+        ),
+    ]

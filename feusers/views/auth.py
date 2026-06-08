@@ -110,6 +110,11 @@ def register_success(request):
     return render(request, "feusers/register_success.html")
 
 
+def credits_page(request):
+    from ..credits import CREDITS
+    return render(request, "feusers/credits.html", {"credits": CREDITS})
+
+
 def contact(request):
     from django.http import Http404
     if not settings.ADMIN_NOTIFICATION_EMAIL or not settings.ENABLE_REGISTRATION or settings.DISABLE_EMAILING:
@@ -244,11 +249,11 @@ def login_view(request):
                 record_failure("login", ip)
                 record_failure("login-account", email)
                 error = "Invalid email or password."
-            elif user.totp_enabled:
+            elif user.has_2fa_enabled:
                 rl_clear("login", ip)
                 rl_clear("login-account", email)
-                request.session["totp_pending_id"] = user.pk
-                return redirect("totp_verify")
+                request.session["twofa_pending_id"] = user.pk
+                return redirect("twofa_verify")
             else:
                 rl_clear("login", ip)
                 rl_clear("login-account", email)

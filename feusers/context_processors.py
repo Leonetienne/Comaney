@@ -19,6 +19,8 @@ _HELP_PATH_MAP = [
     ("/buddies/",                    "/docs/user-manual/buddies/"),
     ("/notifications/",              "/docs/user-manual/notifications/"),
     ("/totp/",                       "/docs/user-manual/two-factor-auth/"),
+    ("/webauthn/",                   "/docs/user-manual/two-factor-auth/"),
+    ("/twofa/",                      "/docs/user-manual/two-factor-auth/"),
     ("/api-key/",                    "/docs/user-manual/api-access/"),
     ("/account/export/",             "/docs/user-manual/data-export/"),
     ("/profile/",                    "/docs/user-manual/account-settings/"),

@@ -1,0 +1,60 @@
+{% extends "auth_base.html" %}
+{% load second_factor_tags %}
+
+{% block title %}Comaney – Two-factor authentication{% endblock %}
+
+{% block auth_panel_title %}One last<br>step. <span class="auth-panel-accent">Almost there.</span>{% endblock %}
+{% block auth_panel_sub %}Confirm it's you to finish signing in.{% endblock %}
+{% block auth_panel_list %}
+<li>Authenticator app or security key</li>
+<li>Switch methods any time</li>
+<li>Or use a recovery code</li>
+{% endblock %}
+
+{% block auth_content %}
+{% if recovery_mode %}
+<h1>Recovery code</h1>
+<p class="auth-hint">Enter your recovery code to log in. This removes every second-factor method on your account.</p>
+{% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
+<form method="post" novalidate autocomplete="off">
+    {% csrf_token %}
+    <label for="id_recovery">Recovery code</label>
+    <input id="id_recovery" name="recovery" type="text" placeholder="XXXXX-XXXXX"
+           maxlength="11" autofocus autocomplete="off" class="input-mono"
+           oninput="
+             let v = this.value.toUpperCase().replace(/[^0-9A-F]/g,'');
+             this.value = v.length > 5 ? v.slice(0,5) + '-' + v.slice(5,10) : v;
+           ">
+    <div class="form-actions">
+        <button type="submit" class="btn btn-full">Use recovery code</button>
+    </div>
+</form>
+<p class="auth-footer-links">
+    <a href="{% url 'twofa_verify' %}">← Back</a><br>
+    Lost your recovery code too? <a href="{% url 'contact' %}">Shoot us a message</a> and we'll see what we can do!
+</p>
+{% else %}
+<h1>Two-factor authentication</h1>
+<p class="auth-hint">Confirm with your {{ active_display_name|lower }}{% if active_factor.label %} ({{ active_factor.label }}){% endif %}.</p>
+{% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
+
+{% include challenge_template %}
+
+{% if other_factors %}
+<div class="method-dropdown">
+    <button type="button" class="btn btn-secondary method-dropdown-toggle">Try a different method</button>
+    <ul class="method-dropdown-menu">
+        {% for method_key, factor in other_factors %}
+        <li><a href="{% url 'twofa_verify_switch' method_key factor.pk %}" class="method-dropdown-item">
+            <img src="{% factor_icon method_key %}" class="method-dropdown-icon" alt="">
+            <span>{% factor_display_name method_key %}{% if factor.label %} ({{ factor.label }}){% endif %}</span>
+        </a></li>
+        {% endfor %}
+    </ul>
+</div>
+{% include "feusers/partials/_method_dropdown_js.html" %}
+{% endif %}
+
+<p class="auth-footer-links"><a href="{% url 'twofa_verify_recovery' %}">Lost access? Use a recovery code</a></p>
+{% endif %}
+{% endblock %}
