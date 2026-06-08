@@ -13,6 +13,31 @@ import tempfile
 # Ensure tests/e2e/ is on sys.path regardless of where pytest is invoked from.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+
+def _load_dotenv():
+    """Load repo-root .env into the process environment, if present.
+
+    Host-side vars like AI_API_KEY_TESTS live only in .env; nothing else
+    sources it for a plain `pytest` invocation, so without this the test
+    suite silently runs as if those vars were never set. Real env vars
+    (CI, manual export) still win via setdefault.
+    """
+    env_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env"
+    )
+    if not os.path.isfile(env_path):
+        return
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_dotenv()
+
 import pytest
 import requests
 from selenium import webdriver
