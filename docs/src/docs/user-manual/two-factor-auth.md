@@ -2,10 +2,11 @@
 
 Two-factor authentication (2FA) adds an extra layer of security to your account. After you enter your password, Comaney asks you to confirm your identity a second way. Even if someone learns your password, they still cannot log in without that second step.
 
-Comaney supports two kinds of second step, and you can set up one or both:
+Comaney supports three kinds of second step, and you can set up any number of them:
 
 - **Authenticator app**: a 6-digit code from an app on your phone.
 - **Security key**: a physical key (such as a YubiKey), or your device's built-in fingerprint or face unlock (Touch ID, Windows Hello). This is also known as a FIDO2 or WebAuthn key.
+- **Email code**: a 6-digit code sent to your account's email address whenever you need it. This option only shows up if the Comaney instance you're using is set up to send email; if you don't see it, ask whoever runs your instance.
 
 You only need one method to protect your account. Adding a second one is useful as a backup in case you lose the first.
 
@@ -25,7 +26,7 @@ For a security key:
 ## Setting up an authenticator app
 
 1. Go to **Account Settings** and find the **Two-factor authentication** section.
-2. Click **Add authenticator app**.
+2. Click **Add new second factor**, then choose **Authenticator app** from the menu.
 3. Open your authenticator app and scan the QR code shown on the screen.
 4. Give it a name (for example "Phone" or "Google Authenticator") so you can tell it apart from any other authenticator app you add later.
 5. The app will immediately start showing a 6-digit code that changes every 30 seconds. Enter the current code to confirm that the setup worked.
@@ -34,9 +35,19 @@ For a security key:
 ## Setting up a security key
 
 1. Go to **Account Settings** and find the **Two-factor authentication** section.
-2. Click **Add security key**.
+2. Click **Add new second factor**, then choose **Security key** from the menu.
 3. Give the key a name (for example "Work YubiKey" or "MacBook Touch ID") so you can tell it apart later.
 4. Click **Register security key** and follow your browser's prompt to tap, insert, or scan your key.
+
+## Setting up an email code
+
+1. Go to **Account Settings** and find the **Two-factor authentication** section.
+2. Click **Add new second factor**, then choose **Email code** from the menu. (If you don't see this option, your Comaney instance isn't set up to send email.)
+3. Comaney immediately emails a 6-digit code to your account's address. Enter it to confirm that the setup worked.
+4. If the email doesn't arrive within a minute, click **Resend code**.
+5. Click **Activate**.
+
+You can only have one email code method on your account, since it always goes to the same address. There's no separate "name" step for it the way there is for authenticator apps and security keys.
 
 !!! warning "Save your recovery code"
     The first time you set up a second-factor method, Comaney shows you a **recovery code**. Copy it and store it somewhere safe (a password manager, or a printed note kept somewhere secure).
