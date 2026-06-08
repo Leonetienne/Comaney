@@ -42,6 +42,36 @@ _TAGS = [
 ]
 
 
+def _lock_recorded_on_submit(driver, btn_id, storage_key, timeout=5):
+    """Click #btn_id and confirm the base.html global submit guard disabled it.
+
+    Reads the state from inside the page via sessionStorage (survives any
+    subsequent navigation) instead of polling the WebElement afterwards,
+    since the app's Selenium click patch (conftest.py) defers the actual
+    click via setTimeout, making a straight post-click get_attribute() call
+    racy against both that deferral and, for fast actions, the navigation.
+    """
+    driver.execute_script(
+        "var storageKey = arguments[0], btnId = arguments[1];"
+        "sessionStorage.removeItem(storageKey);"
+        "document.addEventListener('submit', function(e) {"
+        "  var btn = document.getElementById(btnId);"
+        "  sessionStorage.setItem(storageKey, JSON.stringify("
+        "    !!btn && btn.disabled && btn.classList.contains('is-loading')));"
+        "});",
+        storage_key, btn_id,
+    )
+    driver.find_element(By.ID, btn_id).click()
+    deadline = time.time() + timeout
+    locked = None
+    while time.time() < deadline:
+        locked = driver.execute_script("return sessionStorage.getItem(arguments[0]);", storage_key)
+        if locked is not None:
+            break
+        time.sleep(0.2)
+    return locked == "true"
+
+
 def _trial_status(driver):
     driver.get(_url("/budget/ai/express-creation/"))
     time.sleep(1)
@@ -194,6 +224,16 @@ class TestExpressCreation:
             pytest.skip(reason)
         ctx["express_trial_ok"] = True
 
+    def test_parse_button_disables_on_click(self, driver, w, ctx):
+        if not ctx.get("express_trial_ok"):
+            pytest.skip("Trial not available")
+        driver.get(_url("/budget/ai/express-creation/"))
+        time.sleep(1)
+        ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
+        driver.execute_script("arguments[0].value = arguments[1];", ta, "Coffee 3€")
+        assert _lock_recorded_on_submit(driver, "parse-btn", "e2eParseBtnLocked"), \
+            "Parse button was not locked on submit"
+
     def test_express_tv_purchase(self, driver, w, ctx):
         if not ctx.get("express_trial_ok"):
             pytest.skip("Trial not available")
@@ -257,7 +297,11 @@ class TestExpressCreation:
         first_card = cards[0]
         title_area = first_card.find_element(By.CSS_SELECTOR, ".edit-title")
         driver.execute_script("arguments[0].value = 'XExpressTestEdited';", title_area)
-        driver.find_element(By.ID, "confirm-btn").click()
+        # The global double-submit guard (base.html) must disable the button
+        # and mark it loading before the save request completes, so a second
+        # click can't re-fire "Save selected" and create duplicates.
+        assert _lock_recorded_on_submit(driver, "confirm-btn", "e2eConfirmBtnLocked"), \
+            "Confirm button was not locked on submit"
         time.sleep(5)
         assert driver.find_elements(By.CSS_SELECTOR, ".success-banner"), "No success banner appeared"
         all_expenses = api_get("/api/v1/expenses/", ctx).json().get("expenses", [])

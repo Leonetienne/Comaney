@@ -10,7 +10,7 @@ from selenium.webdriver.support.ui import Select
 from helpers import (
     _url, fill, submit, server_today,
     session_cookies, api_get, api_post, api_delete,
-    setup_user, cleanup_user,
+    setup_user, cleanup_user, browser_login, SUBMIT_BTN,
 )
 
 
@@ -245,6 +245,52 @@ class TestDoubleSubmitGuard:
 
     Uses a plain requests.Session so the test is independent of browser login state.
     """
+
+    def test_create_button_disables_on_click(self, driver, w, ctx):
+        # Covers the global submit guard in templates/base.html: any form's
+        # submit button gets disabled and marked loading the moment a real
+        # (non-cancelled) submit fires, so a second click can't re-fire the
+        # same create action before the page navigates away.
+        #
+        # The local dev server responds too fast for a post-click Selenium
+        # round-trip to reliably observe the button before navigation, so
+        # record the state from inside the page via sessionStorage (which
+        # survives the navigation) instead of polling the element afterwards.
+        #
+        # Re-login explicitly: the shared session-scoped driver may currently
+        # be authenticated as a different (possibly already-deleted) user left
+        # over from another class's fixture (e.g. TestExpenseSorting.sctx).
+        # /login/ redirects an already-authenticated session straight through,
+        # so clear cookies first or the login form never renders.
+        driver.delete_all_cookies()
+        browser_login(driver, w, ctx["email"], ctx["password"])
+        today = server_today()
+        driver.get(_url("/budget/expenses/new/"))
+        fill(w, By.ID, "id_title", "E2E DoubleClickGuard")
+        fill(w, By.ID, "id_value", "1.23")
+        Select(driver.find_element(By.ID, "id_type")).select_by_value("expense")
+        driver.execute_script(
+            f"document.getElementById('id_date_due').value = '{today}';"
+            "document.getElementById('id_settled').checked = true;"
+            "sessionStorage.removeItem('e2eSubmitBtnLocked');"
+            # Registered after base.html's own submit listener, so this runs
+            # after the global guard has already disabled/marked the button.
+            "document.addEventListener('submit', function(e) {"
+            "  var btn = e.target.querySelector('button[type=submit]');"
+            "  sessionStorage.setItem('e2eSubmitBtnLocked', JSON.stringify("
+            "    !!btn && btn.disabled && btn.classList.contains('is-loading')));"
+            "});"
+        )
+        btn = driver.find_element(By.CSS_SELECTOR, SUBMIT_BTN)
+        btn.click()
+        time.sleep(2)
+        assert "/budget/expenses/" in driver.current_url
+        locked = driver.execute_script("return sessionStorage.getItem('e2eSubmitBtnLocked');")
+        assert locked == "true", f"Submit button was not locked on submit (recorded: {locked!r})"
+        resp = api_get("/api/v1/expenses/", ctx, params={"q": "E2E DoubleClickGuard"})
+        expenses = resp.json()["expenses"]
+        assert len(expenses) == 1, f"Expected exactly one expense, found {len(expenses)}"
+        api_delete(f"/api/v1/expenses/{expenses[0]['id']}/", ctx)
 
     def test_back_resubmit_creates_only_one_expense(self, ctx):
         import re as _re
