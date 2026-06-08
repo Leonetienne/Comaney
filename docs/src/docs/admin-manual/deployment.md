@@ -172,7 +172,7 @@ docker exec -it comaney-web-1 python manage.py set_user_password user@example.co
 
 ## Account recovery
 
-If a user forgets their password or loses access to their TOTP device, you can recover their account from the command line without any downtime.
+If a user forgets their password or loses access to every second-factor method (authenticator app, security keys), you can recover their account from the command line without any downtime.
 
 Reset a forgotten password:
 
@@ -180,7 +180,7 @@ Reset a forgotten password:
 docker exec -it comaney-web-1 python manage.py set_user_password user@example.com
 ```
 
-Remove a lost TOTP device so the user can log in with their password again:
+Remove every second-factor method so the user can log in with their password again:
 
 ```bash
 docker exec -it comaney-web-1 python manage.py remove_user_2fa user@example.com

@@ -12,7 +12,7 @@ Settings, root URL configuration, and middleware. Also contains a dynamic markdo
 
 Everything related to users and authentication. This app defines the `FeUser` model, which is Comaney's custom user type. It does **not** use `django.contrib.auth.User`.
 
-Responsibilities: registration, login, logout, email confirmation, password reset, TOTP two-factor auth, API key management, account settings, and account deletion.
+Responsibilities: registration, login, logout, email confirmation, password reset, multi-method two-factor auth (TOTP and FIDO2/WebAuthn security keys), API key management, account settings, and account deletion.
 
 Session authentication works by storing `feuser_id` in the Django session after a successful login. The `@feuser_required` decorator (in `budget/decorators.py`) checks this on each request and sets `request.feuser`.
 
@@ -74,7 +74,11 @@ SCSS and JS source files in `build/` are compiled to `static/dist/` by the build
 
 ## Authentication flows
 
-**Session auth (web UI):** On login, the server looks up the `FeUser` by email, verifies the submitted password with `check_password()`, and only then stores the user's database PK in the session as `feuser_id`. If TOTP is enabled, a `totp_pending_id` is stored instead and the user is redirected to a TOTP verification screen; the full session (`feuser_id`) is only established after the code is validated.
+**Session auth (web UI):** On login, the server looks up the `FeUser` by email, verifies the submitted password with `check_password()`, and only then stores the user's database PK in the session as `feuser_id`. If the account has any second factor (`FeUser.has_2fa_enabled`), a `twofa_pending_id` is stored instead and the user is redirected to `twofa_verify`; the full session (`feuser_id`) is only established after a factor is validated.
+
+**Second-factor architecture (`feusers/second_factor_registry.py`, `feusers/second_factor_service.py`):** TOTP and FIDO2/WebAuthn are both specializations of an abstract `SecondFactorAuth` model (`feusers/models/second_factor.py`); concrete subclasses are `TOTPFactor` and `WebAuthnFactor`. Each method registers itself once via `register_factor_type(FactorType(...))`, which records its model, display name, setup URL, and login-challenge template. `feusers/views/twofa.py` (login verification, method switching, removal, primary selection, recovery-code regeneration) and `feusers/views/account.py` (the profile list) drive entirely off this registry via `get_all_factors()`/`method_key_of()` and never branch on a method name directly, so adding a further method needs only a new model, a `register_factor_type()` call, a setup view, and one entry in `twofa.py`'s `_LOGIN_VERIFIERS` dispatch table.
+
+Exactly one factor (of any type) is `is_primary=True` per user at a time, enforced by `second_factor_service.set_primary()`. A single global `FeUser.twofa_recovery_hash` (not per-method) protects the whole account: it is generated once on a user's first-ever factor, and consuming it via `second_factor_service.consume_recovery_code()` deletes every factor of every method, since a user who needed the recovery code has just proven they can reach none of them.
 
 **Bearer token auth (REST API):** The `Authorization: Bearer <key>` header is read on every API request. The key is looked up against `FeUser.api_key` in the database.
 

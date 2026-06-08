@@ -1,48 +1,72 @@
 # Two-Factor Authentication
 
-Two-factor authentication (2FA) adds an extra layer of security to your account. After you enter your password, Comaney asks for a 6-digit code from an app on your phone. Even if someone learns your password, they still cannot log in without that code.
+Two-factor authentication (2FA) adds an extra layer of security to your account. After you enter your password, Comaney asks you to confirm your identity a second way. Even if someone learns your password, they still cannot log in without that second step.
+
+Comaney supports two kinds of second step, and you can set up one or both:
+
+- **Authenticator app**: a 6-digit code from an app on your phone.
+- **Security key**: a physical key (such as a YubiKey), or your device's built-in fingerprint or face unlock (Touch ID, Windows Hello). This is also known as a FIDO2 or WebAuthn key.
+
+You only need one method to protect your account. Adding a second one is useful as a backup in case you lose the first.
 
 ## What you need
 
-A free authenticator app on your smartphone. Popular options:
+For an authenticator app, a free app on your smartphone:
 
 - **Google Authenticator** (iPhone or Android)
 - **Authy** (iPhone, Android, or desktop)
 - Your password manager if it supports one-time codes (1Password, Bitwarden, and others do)
 
-Any of these will work.
+For a security key:
 
-## Setting up 2FA
+- A FIDO2/WebAuthn-compatible physical key, or
+- A device with a built-in authenticator, such as Touch ID or Windows Hello
+
+## Setting up an authenticator app
 
 1. Go to **Account Settings** and find the **Two-factor authentication** section.
-2. Click **Set up 2FA**.
+2. Click **Add authenticator app**.
 3. Open your authenticator app and scan the QR code shown on the screen.
-4. The app will immediately start showing a 6-digit code that changes every 30 seconds. Enter the current code to confirm that the setup worked.
-5. Click **Save**.
+4. Give it a name (for example "Phone" or "Google Authenticator") so you can tell it apart from any other authenticator app you add later.
+5. The app will immediately start showing a 6-digit code that changes every 30 seconds. Enter the current code to confirm that the setup worked.
+6. Click **Activate**.
+
+## Setting up a security key
+
+1. Go to **Account Settings** and find the **Two-factor authentication** section.
+2. Click **Add security key**.
+3. Give the key a name (for example "Work YubiKey" or "MacBook Touch ID") so you can tell it apart later.
+4. Click **Register security key** and follow your browser's prompt to tap, insert, or scan your key.
 
 !!! warning "Save your recovery code"
-    After setup, Comaney shows you a **recovery code**. Copy it and store it somewhere safe (a password manager, a printed note kept somewhere secure).
+    The first time you set up a second-factor method, Comaney shows you a **recovery code**. Copy it and store it somewhere safe (a password manager, or a printed note kept somewhere secure).
 
-    If you ever lose your phone or cannot access your authenticator app, the recovery code is the only way to get back into your account. It is shown only once.
+    If you ever lose access to every method you've set up, the recovery code is the only way to get back into your account. It is shown only once, and adding further methods later does not generate a new one.
+
+## Using more than one method
+
+You can set up an authenticator app and one or more security keys on the same account. Whichever one is marked **Primary** is what you're asked for first when you log in.
+
+When you add a second or later method, a checkbox lets you make it the new primary method. If you leave it unchecked, your existing primary method stays as it is. You can also change which method is primary at any time from **Account Settings**, using **Set as primary** next to any method in the list.
 
 ## Logging in with 2FA
 
-After you enter your email and password, a second screen asks for your 6-digit code. Open your authenticator app, find the Comaney entry, and type in the code shown.
+After you enter your email and password, a second screen asks you to confirm with your primary method: either a 6-digit code from your authenticator app, or a prompt to use your security key.
 
-The code changes every 30 seconds. If you enter a code and it is rejected, simply wait for the next one to appear and try again.
+If you have more than one method set up and the one shown isn't available to you right now, click **Try a different method** to pick another one.
 
-## If you lose your phone
+## If you lose access to all of your methods
 
-1. On the login screen, after entering your password, click **Use recovery code**.
+1. On the login screen, after entering your password, click **Lost access? Use a recovery code**.
 2. Enter the recovery code you saved during setup.
-3. You are logged in and 2FA is disabled on your account.
+3. You are logged in, and every second-factor method on your account is removed.
 
-After recovering access, set up 2FA again to get a fresh recovery code.
+Because using the recovery code removes all of your methods at once, only use it when you genuinely cannot reach any of them. After recovering access, set up 2FA again to get a fresh recovery code.
 
-## Turning off 2FA
+## Managing your methods
 
-1. Log in to your account (using your code if 2FA is currently active).
-2. Go to **Account Settings** and find the **Two-factor authentication** section.
-3. Click **Disable 2FA** and confirm.
+The **Two-factor authentication** section of **Account Settings** lists every method on your account, showing its name, when it was added, and whether it's the primary one. From there you can:
 
-2FA is removed immediately.
+- **Set as primary**: make a method the one you're asked for first at login.
+- **Remove**: delete a method. If you have another method, you'll be asked to confirm with it first. If it's your only method, removing it turns 2FA off entirely.
+- **Regenerate recovery code**: get a new recovery code if you've lost the old one, or simply want a fresh one. You'll need to confirm with one of your existing methods first, and your old recovery code stops working immediately.

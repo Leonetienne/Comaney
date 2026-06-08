@@ -54,13 +54,13 @@ Exits with an error if no account with that email exists.
 
 ### remove_user_2fa
 
-Disables two-factor authentication for a user. Use this when a user is locked out after losing their TOTP device and recovery code.
+Removes every second-factor method (authenticator app entries and security keys) for a user. Use this when a user is locked out after losing every method and their recovery code.
 
 ```
 python manage.py remove_user_2fa <email>
 ```
 
-Clears the TOTP secret, recovery hash, and enabled flag. The user can then log in with their password and re-enable 2FA from their profile. The command is idempotent: running it when 2FA is already off prints a notice and exits cleanly.
+Deletes all of the user's TOTP and security-key factors and clears the recovery code hash. The user can then log in with their password alone and set up 2FA again from their profile. The command is idempotent: running it when 2FA is already off prints a notice and exits cleanly.
 
 ```bash
 docker exec -it comaney-web-1 python manage.py remove_user_2fa alice@example.com

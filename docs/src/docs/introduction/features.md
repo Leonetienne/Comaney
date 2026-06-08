@@ -62,7 +62,7 @@ Choose what happens to unspent budget at the end of each month:
 
 ## Security
 
-**Two-factor authentication**: add a second login step using a free app on your phone (Google Authenticator, Authy, or any similar app). Even if someone learns your password, they cannot log in without the code from your phone.
+**Two-factor authentication**: add a second login step using a free app on your phone (Google Authenticator, Authy, or any similar app), a physical security key, or your device's fingerprint/face unlock. Even if someone learns your password, they cannot log in without that second step.
 
 ## Export and API access
 

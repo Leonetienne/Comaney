@@ -25,7 +25,7 @@ Comaney has no built-in admin UI for managing user accounts beyond the Django ad
 
 - View and edit user records.
 - Deactivate accounts (`is_active = False`).
-- Inspect or clear TOTP settings.
+- Inspect or clear a user's second-factor methods.
 
 ### Creating a user account
 
@@ -53,7 +53,7 @@ docker exec -it comaney-web-1 python manage.py set_user_password user@example.co
 
 ### Removing two-factor authentication
 
-If a user is locked out because they have lost their TOTP device and recovery code, you can disable 2FA for their account:
+If a user is locked out because they have lost every second-factor method (authenticator app, security keys) and their recovery code, you can remove 2FA from their account:
 
 ```bash
 docker exec -it comaney-web-1 python manage.py remove_user_2fa user@example.com

@@ -30,6 +30,7 @@ All runtime dependencies are in `requirements.txt`:
 | `anthropic` | AI express creation |
 | `Pillow` | Receipt image processing |
 | `pyotp` + `qrcode` | TOTP two-factor authentication |
+| `webauthn` | FIDO2/WebAuthn security key two-factor authentication |
 | `Markdown` | Dynamic public page rendering |
 
 ## Dev setup
