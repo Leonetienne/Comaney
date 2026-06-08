@@ -43,7 +43,7 @@ def express_creation(request):
     tags = list(Tag.objects.filter(owning_feuser=feuser).values("uid", "title"))
     context = {
         "active_nav":         "express_creation",
-        "description":        "",
+        "description":        request.GET.get("prefill", "") if request.method != "POST" else "",
         "preview_items":      None,
         "preview_json":       "",
         "usage":              None,

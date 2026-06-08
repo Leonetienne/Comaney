@@ -43,7 +43,15 @@
 </nav>
 
 {% if not project.archived %}
-<a href="{% url 'budget:expense_create' %}?project={{ project.uid }}&back={{ request.path|urlencode }}" class="fab-new-expense" title="New expense">+</a>
+<div class="fab-wrap">
+    <button type="button" class="fab-new-expense fab-toggle" title="New expense">+</button>
+    <div class="fab-menu">
+        <a href="{% url 'budget:expense_create' %}?project={{ project.uid }}&back={{ request.path|urlencode }}" class="fab-menu-item" title="Create manually">Manual</a>
+        {% if ai_smart_create_available %}
+        <a href="{% url 'budget:express_creation' %}?prefill={% filter urlencode %}Create all expenses for project '{{ project.name }}'{% endfilter %}" class="fab-menu-item" title="AI Express">AI</a>
+        {% endif %}
+    </div>
+</div>
 {% endif %}
 
 {% if request.GET.achim == "new" %}

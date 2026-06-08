@@ -29,7 +29,15 @@ window.EXPENSE_CONFIG = {
 <div class="page-header">
     <h1>Expenses</h1>
 </div>
-<a href="{% url 'budget:expense_create' %}" class="fab-new-expense" title="New expense">+</a>
+<div class="fab-wrap">
+    <button type="button" class="fab-new-expense fab-toggle" title="New expense">+</button>
+    <div class="fab-menu">
+        <a href="{% url 'budget:expense_create' %}" class="fab-menu-item" title="Create manually">Manual</a>
+        {% if ai_smart_create_available %}
+        <a href="{% url 'budget:express_creation' %}" class="fab-menu-item" title="AI Express">AI</a>
+        {% endif %}
+    </div>
+</div>
 {% for message in messages %}
 <div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
 {% endfor %}

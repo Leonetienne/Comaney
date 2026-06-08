@@ -1614,23 +1614,30 @@
 #buddy-group-select-row { margin-top: 0.5rem; }
 #buddy-payer-notice     { margin-top: 0.75rem; }
 
-// ── Project detail: floating action button ────────────────────────────────────
+// ── Project detail / expense list: floating action button ─────────────────────
 
-.fab-new-expense {
+.fab-wrap {
   position: fixed;
   bottom: 2rem;
   right: 2rem;
   z-index: 900;
+}
+
+.fab-new-expense {
+  position: relative;
   width: 3.5rem;
   height: 3.5rem;
+  border: none;
   border-radius: 50%;
   background: #c2478a;
   color: #fff;
+  font-family: inherit;
   font-size: 2rem;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
   text-decoration: none;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
   transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out, background 0.15s;
@@ -1641,6 +1648,92 @@
     text-decoration: none;
     transform: scale(1.1) rotate(90deg);
     box-shadow: 0 6px 22px rgba(0, 0, 0, 0.36);
+  }
+
+  .fab-wrap--open & {
+    transform: rotate(45deg);
+
+    &:hover { transform: rotate(45deg) scale(1.1); }
+  }
+}
+
+.fab-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  position: absolute;
+  // Flush against the FAB (no gap) with the visual spacing added as padding
+  // instead: a real gap here would be dead space belonging to neither
+  // element, breaking :hover continuity when the cursor moves from the FAB
+  // up into the menu (see .fab-wrap:hover below).
+  bottom: 100%;
+  padding-bottom: 0.9rem;
+  right: 0.05rem;
+}
+
+.fab-menu-item {
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.05;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(1.65rem) scale(0.4);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.16s ease, background 0.15s;
+
+  // The dark palette's surface tokens (--bg/--bg-surface/--bg-elevated) all
+  // sit within a few shades of near-black, so a FAB bubble floating over
+  // arbitrary page content barely stands out; lighten it explicitly here.
+  @media (prefers-color-scheme: dark) {
+    background: #5a5a5a;
+    border-color: #6b6b6b;
+  }
+
+  .fab-wrap--open & {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+  }
+
+  // Slide out in a little cascade: the bubble closest to the FAB leads.
+  .fab-wrap--open &:nth-child(2) { transition-delay: 0.05s; }
+
+  // Desktop only: hovering the FAB reveals the bubbles without a click.
+  // Gated to (hover: hover) so touch taps -- which can leave :hover "stuck"
+  // active -- don't trigger this; touch keeps using the click toggle only.
+  @media (hover: hover) and (pointer: fine) {
+    .fab-wrap:hover & {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+
+    .fab-wrap:hover &:nth-child(2) { transition-delay: 0.05s; }
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--text) 10%, var(--bg-elevated));
+    color: var(--text);
+    text-decoration: none;
+    // Reachable only once opacity/pointer-events above have already made the
+    // bubble interactive, so this never fires on a hidden bubble.
+    transform: translateY(0) scale(1.1);
+
+    @media (prefers-color-scheme: dark) {
+      background: #6c6c6c;
+    }
   }
 }
 
