@@ -606,6 +606,51 @@ class TestProjectRejectedStateBypassesLock:
             "State must have changed to approved (1) after approve from rejected state on project expense"
 
 
+class TestConsentButtonsUseAjaxNoReload:
+    """Clicking approve/reject updates the button in place via AJAX, without a full page reload."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Uma", last_name="Payer")
+        b = setup_user(None, None, first_name="Vic", last_name="AjaxClicker")
+        _create_buddy_link(a["email"], b["email"])
+        b_pk = int(_get_pk(b["email"]))
+        exp_pk = int(_create_personal_expense_with_buddy(
+            owner_email=a["email"], participant_pk=b_pk,
+            title="Ajax Click Expense", value="40.00",
+        ))
+        yield {"a": a, "b": b, "exp_pk": exp_pk}
+        cleanup_user(a["email"])
+        cleanup_user(b["email"])
+
+    def test_click_approve_updates_button_without_reload(self, driver, w, ctx):
+        _login_as(driver, ctx["b"])
+        driver.get(_url("/buddies/summary/"))
+        time.sleep(1)
+        driver.execute_script("window.__noReloadMarker = true;")
+        btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
+        btn.click()
+        time.sleep(1)
+        assert driver.execute_script("return window.__noReloadMarker === true;"), \
+            "Page must not have done a full reload/navigation after clicking approve"
+        approved_btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
+        assert "btn-consent--approved" in approved_btn.get_attribute("class")
+        assert _get_approval_state(ctx["exp_pk"], ctx["b"]["email"]) == "1"
+
+    def test_click_reject_updates_button_without_reload(self, driver, w, ctx):
+        driver.execute_script("window.__noReloadMarker = true;")
+        btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="reject"]')
+        btn.click()
+        time.sleep(1)
+        assert driver.execute_script("return window.__noReloadMarker === true;"), \
+            "Page must not have done a full reload/navigation after clicking reject"
+        approve_btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
+        reject_btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="reject"]')
+        assert "btn-consent--approved" not in approve_btn.get_attribute("class")
+        assert "btn-consent--rejected" in reject_btn.get_attribute("class")
+        assert _get_approval_state(ctx["exp_pk"], ctx["b"]["email"]) == "2"
+
+
 class TestConsentStillUnlockedWithin24h:
     """Within the 24-hour window changes are still allowed."""
 
