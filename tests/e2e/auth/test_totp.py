@@ -29,9 +29,10 @@ class TestTotp:
             fill(w, By.ID, "id_label", label)
         fill(w, By.ID, "id_code", pyotp.TOTP(ctx["totp_secret"]).now())
         submit(w)
+        # No dedicated "added" screen: setup redirects straight to the
+        # profile page, which flashes the one-time recovery code itself.
         recovery_el = w.until(EC.presence_of_element_located((By.ID, "recovery-code")))
         ctx["recovery_code"] = recovery_el.text.strip()
-        click(w, By.CSS_SELECTOR, "a.btn")
 
     def _login_with_totp(self, driver, w, ctx):
         """Log out, then log back in with a TOTP code."""
@@ -108,7 +109,8 @@ class TestTotp:
         second_secret = secret_el.text.strip()
         fill(w, By.ID, "id_code", pyotp.TOTP(second_secret).now())
         submit(w)
-        wait_text(driver, w, "Authenticator app added")
+        wait_url(w, "/profile/")
+        wait_text(driver, w, "Second factor added.")
         assert "id=\"recovery-code\"" not in driver.page_source
 
     def test_custom_labels_distinguish_multiple_totp_factors(self, driver, w, ctx):
@@ -122,8 +124,7 @@ class TestTotp:
         fill(w, By.ID, "id_label", "key_deskdrawer")
         fill(w, By.ID, "id_code", pyotp.TOTP(third_secret).now())
         submit(w)
-        wait_text(driver, w, "Authenticator app added")
-        click(w, By.CSS_SELECTOR, "a.btn")
+        wait_url(w, "/profile/")
 
         driver.get(_url("/profile/"))
         wait_text(driver, w, "key_deskdrawer")

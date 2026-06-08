@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.virtual_authenticator import Protocol, Transport, VirtualAuthenticatorOptions
 from selenium.webdriver.support import expected_conditions as EC
 
-from helpers import _url, fill, click, submit, wait_text, setup_user, cleanup_user
+from helpers import _url, fill, click, submit, wait_url, wait_text, setup_user, cleanup_user
 
 
 def _add_virtual_authenticator(driver):
@@ -55,7 +55,6 @@ class TestFactorRenameAndTest:
         fill(w, By.ID, "id_code", pyotp.TOTP(ctx["totp_secret"]).now())
         submit(w)
         w.until(EC.presence_of_element_located((By.ID, "recovery-code")))
-        click(w, By.CSS_SELECTOR, "a.btn")
 
     def test_rename_totp_factor_in_place(self, driver, w, ctx):
         driver.get(_url("/profile/"))
@@ -89,8 +88,7 @@ class TestFactorRenameAndTest:
         driver.get(_url("/webauthn/setup/"))
         fill(w, By.ID, "id_label", "YubiKey A")
         click(w, By.ID, "webauthn-register-btn")
-        wait_text(driver, w, "Security key added")
-        click(w, By.CSS_SELECTOR, "a.btn")
+        wait_url(w, "/profile/")
 
     def _webauthn_row(self, driver):
         rows = driver.find_elements(By.CSS_SELECTOR, ".twofa-factor-row")

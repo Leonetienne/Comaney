@@ -35,14 +35,15 @@ class TestWebAuthn:
         driver.get(_url("/webauthn/setup/"))
         fill(w, By.ID, "id_label", label)
         click(w, By.ID, "webauthn-register-btn")
-        wait_text(driver, w, "Security key added")
+        # No dedicated "added" screen: setup redirects straight to the
+        # profile page, which flashes the one-time recovery code itself.
+        wait_url(w, "/profile/")
 
     def test_setup_security_key(self, driver, w, ctx):
         self._register_key(driver, w)
         recovery_el = w.until(EC.presence_of_element_located((By.ID, "recovery-code")))
         ctx["recovery_code"] = recovery_el.text.strip()
         assert len(ctx["recovery_code"]) > 5
-        click(w, By.CSS_SELECTOR, "a.btn")
 
     def test_profile_shows_security_key_as_primary(self, driver, w, ctx):
         driver.get(_url("/profile/"))

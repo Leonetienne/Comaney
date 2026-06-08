@@ -36,16 +36,14 @@ class TestMultiFactor:
         submit(w)
         recovery_el = w.until(EC.presence_of_element_located((By.ID, "recovery-code")))
         ctx["recovery_code"] = recovery_el.text.strip()
-        click(w, By.CSS_SELECTOR, "a.btn")
 
     def test_adding_webauthn_without_checkbox_keeps_totp_primary(self, driver, w, ctx):
         driver.get(_url("/webauthn/setup/"))
         fill(w, By.ID, "id_label", "Backup Key")
         # Leave "use as primary" unchecked.
         click(w, By.ID, "webauthn-register-btn")
-        wait_text(driver, w, "Security key added")
+        wait_url(w, "/profile/")
         assert "id=\"recovery-code\"" not in driver.page_source
-        click(w, By.CSS_SELECTOR, "a.btn")
 
         driver.get(_url("/profile/"))
         wait_text(driver, w, "Backup Key")
