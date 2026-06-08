@@ -18,28 +18,28 @@
   white-space: nowrap;
   transition: background .15s, opacity .15s;
 
-  &:hover { background: #d4569b; opacity: 1; }
+  &:not(:disabled):not([disabled]):hover { background: #d4569b; opacity: 1; }
 
   &-sm { padding: 4px 12px; font-size: 0.85rem; }
 
   &-danger {
     background: #c00;
     color: #fff;
-    &:hover { background: #a00; opacity: 1; }
+    &:not(:disabled):not([disabled]):hover { background: #a00; opacity: 1; }
   }
 
   &-secondary {
     background: var(--bg-input);
     color: var(--text);
     border-color: var(--input-border);
-    &:hover { background: var(--bg-elevated); opacity: 1; }
+    &:not(:disabled):not([disabled]):hover { background: var(--bg-elevated); opacity: 1; }
   }
 
   &-success {
     background: var(--success);
     color: #fff;
     border-color: transparent;
-    &:hover { opacity: 0.88; }
+    &:not(:disabled):not([disabled]):hover { opacity: 0.88; }
   }
 
   &-xs {

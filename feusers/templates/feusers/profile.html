@@ -240,14 +240,15 @@
                     <img src="{% factor_icon method_key %}" class="twofa-factor-icon" alt="{% factor_display_name method_key %}">
                     <span class="twofa-factor-label">{{ factor.label|default:"Unnamed" }}</span>
                     <span class="twofa-factor-method">{% factor_display_name method_key %}</span>
-                    {% if factor.is_primary %}<span class="settings-badge settings-badge--on">Primary</span>{% endif %}
                     <span class="twofa-factor-date">Added {{ factor.created_at|date:"d.m.Y" }}</span>
                 </div>
                 <div class="twofa-factor-actions">
-                    {% if not factor.is_primary %}
+                    {% if factor.is_primary %}
+                    <button type="button" class="btn btn-success btn-sm twofa-primary-btn" disabled>Is primary</button>
+                    {% else %}
                     <form method="post" action="{% url 'factor_set_primary' method_key factor.pk %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-secondary btn-sm">Set as primary</button>
+                        <button type="submit" class="btn btn-secondary btn-sm twofa-primary-btn">Set as primary</button>
                     </form>
                     {% endif %}
                     <a href="{% url 'factor_remove' method_key factor.pk %}" class="btn btn-danger btn-sm">Remove</a>

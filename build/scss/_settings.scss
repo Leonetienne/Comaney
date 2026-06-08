@@ -176,6 +176,13 @@
   form { margin: 0; }
 }
 
+// Fixed width so the button doesn't shift the row layout when its label
+// switches between "Set as primary" and "Is primary".
+.twofa-primary-btn {
+  width: 120px;
+  text-align: center;
+}
+
 .success-msg {
   color: #155724;
   background: #d4edda;
