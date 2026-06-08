@@ -170,8 +170,8 @@ def form_login(session: requests.Session, email: str, password: str,
     """Submit the HTML login form via a requests session (CSRF-aware).
 
     Returns the POST response. For a non-2FA user a successful login redirects
-    to the landing page; for a TOTP-enabled user it redirects to /totp/verify/
-    and the session then carries the `totp_pending_id`."""
+    to the landing page; for a 2FA-enabled user it redirects to /twofa/verify/
+    and the session then carries the `twofa_pending_id`."""
     token = csrf_token(session, "/login/")
     return session.post(
         _url("/login/"),

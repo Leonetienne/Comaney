@@ -7,6 +7,13 @@ Project data export (ZIP):
 - expenses.csv lists the project's entire expense history (all-time)
 - participation_matrix.csv has one row per expense, with each participant's
   share in percent (payer's implicit share included)
+- approval_matrix.csv / approval_matrix_timestamps.csv: per-participant
+  approval state (neutral/approved/rejected) and when it was last set, for
+  non-settlement expenses only (settlements use a different confirmation
+  flow); the payer never gets a column, only participants do
+- pending_payer_confirmations.csv: expenses in this project where the
+  exporting member was designated as the upfront payer by someone else and
+  hasn't yet confirmed they actually paid; never date-filtered
 - Any project member (not just the admin) can export
 - Non-members and unauthenticated requests are denied
 - Projects have no date-range picker, so expenses.csv/participation_matrix.csv
@@ -66,7 +73,11 @@ class TestProjectExport:
 
         with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
             names = zf.namelist()
-        for expected in ("meta.csv", "members.csv", "expenses.csv", "participation_matrix.csv"):
+        for expected in (
+            "meta.csv", "members.csv", "expenses.csv", "participation_matrix.csv",
+            "approval_matrix.csv", "approval_matrix_timestamps.csv",
+            "pending_payer_confirmations.csv",
+        ):
             assert expected in names, f"{expected} missing from project export ZIP"
 
     def test_meta_csv_has_settings(self, driver, w, ctx):
@@ -115,6 +126,59 @@ class TestProjectExport:
         row = dict(zip(cols, data_row.split(",")))
         assert row[ctx["b_id"]] == "25.000", "Participant share_percent missing/incorrect"
         assert row["self"] == "75.000", "Payer's implicit share missing/incorrect"
+
+    def test_approval_matrix_has_states(self, driver, w, ctx):
+        """approval_matrix.csv must show Bob's (still-neutral) approval state
+        for his participation, and no column for the payer (Eve), since only
+        participants have an approval state. approval_matrix_timestamps.csv
+        must have an empty cell for Bob (never approved/rejected yet)."""
+        resp = _get_export(driver, ctx["gid"])
+        with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+            state_csv = _read_csv(zf, "approval_matrix.csv")
+            ts_csv = _read_csv(zf, "approval_matrix_timestamps.csv")
+
+        state_lines = state_csv.splitlines()
+        state_header = state_lines[0]
+        assert ctx["b_id"] in state_header, "Participant id missing from approval matrix header"
+        assert "self" not in state_header, "Payer must not get a column in the approval matrix"
+
+        state_row = next(l for l in state_lines[1:] if l.startswith(f"{ctx['exp_id']},"))
+        cols = state_header.split(",")
+        assert dict(zip(cols, state_row.split(",")))[ctx["b_id"]] == "neutral", (
+            "Bob's approval state must default to neutral"
+        )
+
+        ts_lines = ts_csv.splitlines()
+        ts_row = next(l for l in ts_lines[1:] if l.startswith(f"{ctx['exp_id']},"))
+        assert dict(zip(ts_lines[0].split(","), ts_row.split(",")))[ctx["b_id"]] == "", (
+            "Bob's consent_set_at must be empty while still neutral"
+        )
+
+    def test_pending_payer_confirmation_in_export(self, driver, w, ctx):
+        """pending_payer_confirmations.csv must list a project expense where
+        the exporting admin (Eve) was designated as the upfront payer by
+        someone else and hasn't yet confirmed she paid."""
+        expense_pk = int(_shell(
+            f"from feusers.models import FeUser; "
+            f"from buddies.models import BuddySpending, Project; "
+            f"from budget.expense_factory import create_expense; "
+            f"payer = FeUser.objects.get(email='{ctx['a']['email']}'); "
+            f"other = FeUser.objects.get(email='{ctx['b']['email']}'); "
+            f"proj = Project.objects.get(pk={ctx['gid']}); "
+            f"exp = create_expense(title='PendingPayerConfirmProjectExpense', type='expense', "
+            f"  value='45.00', owning_feuser=payer, settled=True, buddy_approved=False, project=proj); "
+            f"BuddySpending.objects.create(expense=exp, participant_feuser=other, share_percent='50.000'); "
+            f"print(exp.pk)"
+        ))
+        try:
+            resp = _get_export(driver, ctx["gid"])
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                csv_text = _read_csv(zf, "pending_payer_confirmations.csv")
+            assert "PendingPayerConfirmProjectExpense" in csv_text, (
+                "Unconfirmed upfront-payer project expense missing from pending_payer_confirmations.csv"
+            )
+        finally:
+            _shell(f"from budget.models import Expense; Expense.objects.filter(pk={expense_pk}).delete()")
 
     def test_export_is_always_all_time(self, driver, w, ctx):
         """expenses.csv and participation_matrix.csv always cover the

@@ -13,9 +13,22 @@ Account data export (ZIP):
   covered by the nested projects/<uid>/ export). These three replace the
   old expense_participants.csv, real_user_buddies.csv, and
   offline_buddies.csv, which are no longer included (now redundant).
+- direct-buddy-expense-approval-matrix.csv / direct-buddy-expense-approval-timestamps.csv:
+  per-participant approval state (neutral/approved/rejected) and the
+  timestamp it was last set, one row per non-settlement direct-buddy expense
 - expense_overlays.csv: feuser's personal overlays on shared expenses
 - projects/<uid>/...: full export nested for every project the feuser
-  belongs to (see tests/e2e/projects/test_project_export.py)
+  belongs to, including approval_matrix.csv / approval_matrix_timestamps.csv
+  and pending_payer_confirmations.csv (see tests/e2e/projects/test_project_export.py)
+- pending_project_invites.csv / pending_buddy_invites.csv /
+  pending_partnership_invites.csv: unexpired invites sent by or addressed to
+  the feuser, tagged with a sent/received direction
+- pending_expense_approvals.csv: personal (non-project) expenses where
+  someone else designated the feuser as the upfront payer and the feuser
+  hasn't yet confirmed they actually paid ("Did you pay for this?"); excludes
+  settlements and dummy-paid expenses (separate confirmation flows) and
+  project expenses (covered by projects/<uid>/pending_payer_confirmations.csv
+  instead, like direct-buddy-expenses.csv excludes project expenses)
 """
 import io
 import subprocess
@@ -91,7 +104,13 @@ class TestDataExport:
             "direct-buddies.csv",
             "direct-buddy-expenses.csv",
             "direct-buddy-expense-participation.csv",
+            "direct-buddy-expense-approval-matrix.csv",
+            "direct-buddy-expense-approval-timestamps.csv",
             "expense_overlays.csv",
+            "pending_project_invites.csv",
+            "pending_buddy_invites.csv",
+            "pending_partnership_invites.csv",
+            "pending_expense_approvals.csv",
         ):
             assert expected in names, f"{expected} missing from export ZIP"
         for removed in (
@@ -350,6 +369,60 @@ class TestDataExport:
         finally:
             cleanup_user(owner_email)
 
+    def test_approval_matrix_in_buddies_export(self, driver, w, ctx):
+        """direct-buddy-expense-approval-matrix.csv must show ctx user's
+        (self) approval_state label for a non-settlement direct-buddy
+        expense they participate in; direct-buddy-expense-approval-timestamps.csv
+        must carry the matching consent_set_at."""
+        owner_email = "export_owner_approval_matrix@example.com"
+        run_cmd("create_user", owner_email, "-p", "testpass123", *ai_test_api_key_args())
+        try:
+            participant_pk = int(_get_pk(ctx["email"]))
+            _shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddyLink; "
+                f"a = FeUser.objects.get(email='{owner_email}'); "
+                f"b = FeUser.objects.get(pk={participant_pk}); "
+                f"lo, hi = sorted([a, b], key=lambda u: u.pk); "
+                f"BuddyLink.objects.get_or_create(user_a=lo, user_b=hi)"
+            )
+            expense_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddySpending; "
+                f"from budget.expense_factory import create_expense; "
+                f"from django.utils import timezone; "
+                f"owner = FeUser.objects.get(email='{owner_email}'); "
+                f"exp = create_expense(title='ApprovalMatrixBuddyExpense', type='expense', "
+                f"  value='40.00', owning_feuser=owner, settled=True); "
+                f"BuddySpending.objects.create(expense=exp, participant_feuser_id={participant_pk}, "
+                f"  share_percent='50.000', approval_state=BuddySpending.APPROVAL_APPROVED, consent_set_at=timezone.now()); "
+                f"print(exp.pk)"
+            ))
+            try:
+                time.sleep(1)
+                resp = _get_export(driver)
+                with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                    state_csv = _read_csv(zf, "direct-buddy-expense-approval-matrix.csv")
+                    ts_csv = _read_csv(zf, "direct-buddy-expense-approval-timestamps.csv")
+
+                state_lines = state_csv.splitlines()
+                state_header = state_lines[0]
+                assert "self" in state_header, "Participant (ctx) self id missing from approval matrix header"
+                state_row = next(l for l in state_lines[1:] if l.startswith(f"{expense_pk},"))
+                state_cols = state_header.split(",")
+                assert dict(zip(state_cols, state_row.split(",")))["self"] == "approved", (
+                    "Participant's approval_state label missing/incorrect"
+                )
+
+                ts_lines = ts_csv.splitlines()
+                ts_row = next(l for l in ts_lines[1:] if l.startswith(f"{expense_pk},"))
+                ts_value = dict(zip(ts_lines[0].split(","), ts_row.split(",")))["self"]
+                assert ts_value, "consent_set_at timestamp missing for an approved participant"
+            finally:
+                _shell(f"from budget.models import Expense; Expense.objects.filter(pk={expense_pk}).delete()")
+        finally:
+            cleanup_user(owner_email)
+
     def test_project_participation_excluded_from_buddies_export(self, driver, w, ctx):
         """A project expense where ctx user is a participant (paid by someone else)
         must NOT appear in direct-buddy-expenses.csv: it is already covered by the
@@ -601,7 +674,8 @@ class TestDataExport:
     def test_member_project_appears_nested_in_export(self, driver, w, ctx):
         """Every project the feuser belongs to (admin or not) must get its own
         full export nested under projects/<uid>/: meta.csv, members.csv,
-        expenses.csv, participation_matrix.csv."""
+        expenses.csv, participation_matrix.csv, approval_matrix.csv,
+        approval_matrix_timestamps.csv, pending_payer_confirmations.csv."""
         admin_email = "export_project_admin@example.com"
         run_cmd("create_user", admin_email, "-p", "testpass123", *ai_test_api_key_args())
         proj_pk = None
@@ -626,6 +700,9 @@ class TestDataExport:
                     f"projects/{proj_pk}/members.csv",
                     f"projects/{proj_pk}/expenses.csv",
                     f"projects/{proj_pk}/participation_matrix.csv",
+                    f"projects/{proj_pk}/approval_matrix.csv",
+                    f"projects/{proj_pk}/approval_matrix_timestamps.csv",
+                    f"projects/{proj_pk}/pending_payer_confirmations.csv",
                 ):
                     assert expected in names, f"{expected} missing from nested project export"
 
@@ -743,6 +820,288 @@ class TestDataExport:
             assert "ExportPersonalDummy" in csv_text, "Offline buddy name missing from direct-buddies.csv"
         finally:
             _shell(f"from buddies.models import DummyUser; DummyUser.objects.filter(pk={dummy_pk}).delete()")
+
+    def test_pending_project_invites_in_export(self, driver, w, ctx):
+        """pending_project_invites.csv must list invites the user sent to join
+        their own project, and invites addressed to them for someone else's
+        project, each tagged with the right direction."""
+        other_email = "export_project_invite_other@example.com"
+        run_cmd("create_user", other_email, "-p", "testpass123", *ai_test_api_key_args())
+        own_proj_pk = None
+        other_proj_pk = None
+        try:
+            own_proj_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import Project, ProjectMember, ProjectInvite; "
+                f"u = FeUser.objects.get(email='{ctx['email']}'); "
+                f"p = Project.objects.create(name='InviteSenderProject', admin_feuser=u); "
+                f"ProjectMember.objects.create(group=p, feuser=u); "
+                f"ProjectInvite.objects.create(group=p, inviting_feuser=u, invitee_email='invitee_target@example.com'); "
+                f"print(p.pk)"
+            ))
+            other_proj_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import Project, ProjectMember, ProjectInvite; "
+                f"admin = FeUser.objects.get(email='{other_email}'); "
+                f"p = Project.objects.create(name='InviteReceiverProject', admin_feuser=admin); "
+                f"ProjectMember.objects.create(group=p, feuser=admin); "
+                f"ProjectInvite.objects.create(group=p, inviting_feuser=admin, invitee_email='{ctx['email']}'); "
+                f"print(p.pk)"
+            ))
+
+            time.sleep(1)
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                csv_text = _read_csv(zf, "pending_project_invites.csv")
+
+            lines = csv_text.splitlines()
+            sent_row = next(l for l in lines if "invitee_target@example.com" in l)
+            assert sent_row.startswith("sent,"), "Sent project invite must be tagged direction=sent"
+            assert str(own_proj_pk) in sent_row, "Sent invite's project_id missing"
+
+            received_row = next(l for l in lines if l.startswith("received,") and other_email in l)
+            assert str(other_proj_pk) in received_row, "Received invite's project_id missing"
+        finally:
+            if own_proj_pk:
+                _shell(f"from buddies.models import Project; Project.objects.filter(pk={own_proj_pk}).delete()")
+            if other_proj_pk:
+                _shell(f"from buddies.models import Project; Project.objects.filter(pk={other_proj_pk}).delete()")
+            cleanup_user(other_email)
+
+    def test_pending_buddy_invites_in_export(self, driver, w, ctx):
+        """pending_buddy_invites.csv must list direct-buddy invites sent by
+        and addressed to the user, each tagged with the right direction."""
+        other_email = "export_buddy_invite_other@example.com"
+        run_cmd("create_user", other_email, "-p", "testpass123", *ai_test_api_key_args())
+        try:
+            _shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddyInvite; "
+                f"u = FeUser.objects.get(email='{ctx['email']}'); "
+                f"BuddyInvite.objects.create(inviter=u, invitee_email='buddy_invitee_target@example.com')"
+            )
+            _shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddyInvite; "
+                f"other = FeUser.objects.get(email='{other_email}'); "
+                f"BuddyInvite.objects.create(inviter=other, invitee_email='{ctx['email']}')"
+            )
+
+            time.sleep(1)
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                csv_text = _read_csv(zf, "pending_buddy_invites.csv")
+
+            lines = csv_text.splitlines()
+            sent_row = next(l for l in lines if "buddy_invitee_target@example.com" in l)
+            assert sent_row.startswith("sent,"), "Sent buddy invite must be tagged direction=sent"
+
+            assert any(l.startswith("received,") and other_email in l for l in lines), (
+                "Received buddy invite missing from export"
+            )
+        finally:
+            _shell(f"from buddies.models import BuddyInvite; BuddyInvite.objects.filter(invitee_email__in=['buddy_invitee_target@example.com', '{ctx['email']}']).delete()")
+            cleanup_user(other_email)
+
+    def test_pending_partnership_invites_in_export(self, driver, w, ctx):
+        """pending_partnership_invites.csv must list catalog partnership
+        invites sent by and addressed to the user, each tagged with the
+        right direction."""
+        other_email = "export_partnership_invite_other@example.com"
+        run_cmd("create_user", other_email, "-p", "testpass123", *ai_test_api_key_args())
+        try:
+            _shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import CatalogPartnership, CatalogPartnershipMembership, CatalogPartnershipInvite; "
+                f"u = FeUser.objects.get(email='{ctx['email']}'); "
+                f"partnership = CatalogPartnership.objects.create(); "
+                f"CatalogPartnershipMembership.objects.create(partnership=partnership, feuser=u, onboarding_complete=True); "
+                f"CatalogPartnershipInvite.objects.create(partnership=partnership, inviter=u, invitee_email='partner_invitee_target@example.com')"
+            )
+            _shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import CatalogPartnership, CatalogPartnershipMembership, CatalogPartnershipInvite; "
+                f"other = FeUser.objects.get(email='{other_email}'); "
+                f"partnership = CatalogPartnership.objects.create(); "
+                f"CatalogPartnershipMembership.objects.create(partnership=partnership, feuser=other, onboarding_complete=True); "
+                f"CatalogPartnershipInvite.objects.create(partnership=partnership, inviter=other, invitee_email='{ctx['email']}')"
+            )
+
+            time.sleep(1)
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                csv_text = _read_csv(zf, "pending_partnership_invites.csv")
+
+            lines = csv_text.splitlines()
+            sent_row = next(l for l in lines if "partner_invitee_target@example.com" in l)
+            assert sent_row.startswith("sent,"), "Sent partnership invite must be tagged direction=sent"
+
+            assert any(l.startswith("received,") and other_email in l for l in lines), (
+                "Received partnership invite missing from export"
+            )
+        finally:
+            _shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import CatalogPartnershipMembership; "
+                f"CatalogPartnershipMembership.objects.filter(feuser__email__in=['{ctx['email']}', '{other_email}']).delete()"
+            )
+            cleanup_user(other_email)
+
+    def test_pending_expense_approvals_in_export(self, driver, w, ctx):
+        """pending_expense_approvals.csv must list an expense where ctx user
+        was designated as the upfront payer by someone else and hasn't yet
+        confirmed ("Did you pay for this?"), and must exclude an
+        already-confirmed one."""
+        other_email = "export_pending_confirm_other@example.com"
+        run_cmd("create_user", other_email, "-p", "testpass123", *ai_test_api_key_args())
+        pending_expense_pk = None
+        confirmed_expense_pk = None
+        try:
+            ctx_pk = int(_get_pk(ctx["email"]))
+            other_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"print(FeUser.objects.get(email='{other_email}').pk)"
+            ))
+            _shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddyLink; "
+                f"a = FeUser.objects.get(pk={ctx_pk}); "
+                f"b = FeUser.objects.get(pk={other_pk}); "
+                f"lo, hi = sorted([a, b], key=lambda u: u.pk); "
+                f"BuddyLink.objects.get_or_create(user_a=lo, user_b=hi)"
+            )
+            pending_expense_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddySpending; "
+                f"from budget.expense_factory import create_expense; "
+                f"payer = FeUser.objects.get(pk={ctx_pk}); "
+                f"exp = create_expense(title='PendingPayerConfirmExpense', type='expense', "
+                f"  value='20.00', owning_feuser=payer, settled=True, buddy_approved=False); "
+                f"BuddySpending.objects.create(expense=exp, participant_feuser_id={other_pk}, share_percent='50.000'); "
+                f"print(exp.pk)"
+            ))
+            confirmed_expense_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddySpending; "
+                f"from budget.expense_factory import create_expense; "
+                f"payer = FeUser.objects.get(pk={ctx_pk}); "
+                f"exp = create_expense(title='AlreadyConfirmedExpense', type='expense', "
+                f"  value='10.00', owning_feuser=payer, settled=True, buddy_approved=True); "
+                f"BuddySpending.objects.create(expense=exp, participant_feuser_id={other_pk}, share_percent='50.000'); "
+                f"print(exp.pk)"
+            ))
+
+            time.sleep(1)
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                csv_text = _read_csv(zf, "pending_expense_approvals.csv")
+
+            assert "PendingPayerConfirmExpense" in csv_text, "Unconfirmed upfront-payer expense missing from export"
+            assert "AlreadyConfirmedExpense" not in csv_text, "Already-confirmed expense must not appear in export"
+        finally:
+            for pk in (pending_expense_pk, confirmed_expense_pk):
+                if pk:
+                    _shell(f"from budget.models import Expense; Expense.objects.filter(pk={pk}).delete()")
+            cleanup_user(other_email)
+
+    def test_pending_expense_approval_only_shown_to_payer(self, driver, w, ctx):
+        """If ctx user creates an expense designating someone else as the
+        upfront payer, the pending confirmation must appear only in that
+        other person's export, never in ctx user's own export."""
+        payer_email = "export_pending_confirm_payer@example.com"
+        run_cmd("create_user", payer_email, "-p", "testpass123", *ai_test_api_key_args())
+        expense_pk = None
+        try:
+            ctx_pk = int(_get_pk(ctx["email"]))
+            payer_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"print(FeUser.objects.get(email='{payer_email}').pk)"
+            ))
+            _shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddyLink; "
+                f"a = FeUser.objects.get(pk={ctx_pk}); "
+                f"b = FeUser.objects.get(pk={payer_pk}); "
+                f"lo, hi = sorted([a, b], key=lambda u: u.pk); "
+                f"BuddyLink.objects.get_or_create(user_a=lo, user_b=hi)"
+            )
+            expense_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddySpending; "
+                f"from budget.expense_factory import create_expense; "
+                f"payer = FeUser.objects.get(pk={payer_pk}); "
+                f"exp = create_expense(title='NotMyConfirmationExpense', type='expense', "
+                f"  value='15.00', owning_feuser=payer, settled=True, buddy_approved=False); "
+                f"BuddySpending.objects.create(expense=exp, participant_feuser_id={ctx_pk}, share_percent='50.000'); "
+                f"print(exp.pk)"
+            ))
+
+            time.sleep(1)
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                csv_text = _read_csv(zf, "pending_expense_approvals.csv")
+
+            assert "NotMyConfirmationExpense" not in csv_text, (
+                "An expense someone else must confirm as payer must not appear in ctx user's own export"
+            )
+        finally:
+            if expense_pk:
+                _shell(f"from budget.models import Expense; Expense.objects.filter(pk={expense_pk}).delete()")
+            cleanup_user(payer_email)
+
+    def test_project_pending_confirmation_only_in_nested_export(self, driver, w, ctx):
+        """A project expense where ctx user was designated upfront payer and
+        hasn't confirmed must appear in the nested
+        projects/<uid>/pending_payer_confirmations.csv, but NOT in the
+        root-level pending_expense_approvals.csv (that file is
+        personal/non-project only, like direct-buddy-expenses.csv)."""
+        admin_email = "export_pending_confirm_admin@example.com"
+        run_cmd("create_user", admin_email, "-p", "testpass123", *ai_test_api_key_args())
+        proj_pk = None
+        expense_pk = None
+        try:
+            ctx_pk = int(_get_pk(ctx["email"]))
+            proj_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import Project, ProjectMember; "
+                f"admin = FeUser.objects.get(email='{admin_email}'); "
+                f"member = FeUser.objects.get(pk={ctx_pk}); "
+                f"p = Project.objects.create(name='PendingConfirmProject', admin_feuser=admin); "
+                f"ProjectMember.objects.create(group=p, feuser=admin); "
+                f"ProjectMember.objects.create(group=p, feuser=member); "
+                f"print(p.pk)"
+            ))
+            expense_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddySpending, Project; "
+                f"from budget.expense_factory import create_expense; "
+                f"payer = FeUser.objects.get(pk={ctx_pk}); "
+                f"admin = FeUser.objects.get(email='{admin_email}'); "
+                f"proj = Project.objects.get(pk={proj_pk}); "
+                f"exp = create_expense(title='ProjectPendingConfirmExpense', type='expense', "
+                f"  value='30.00', owning_feuser=payer, settled=True, buddy_approved=False, project=proj); "
+                f"BuddySpending.objects.create(expense=exp, participant_feuser=admin, share_percent='50.000'); "
+                f"print(exp.pk)"
+            ))
+
+            time.sleep(1)
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                root_csv = _read_csv(zf, "pending_expense_approvals.csv")
+                nested_csv = _read_csv(zf, f"projects/{proj_pk}/pending_payer_confirmations.csv")
+
+            assert "ProjectPendingConfirmExpense" not in root_csv, (
+                "Project expense pending confirmation must not appear in the root personal-only file"
+            )
+            assert "ProjectPendingConfirmExpense" in nested_csv, (
+                "Project expense pending confirmation missing from the nested project export"
+            )
+        finally:
+            if expense_pk:
+                _shell(f"from budget.models import Expense; Expense.objects.filter(pk={expense_pk}).delete()")
+            if proj_pk:
+                _shell(f"from buddies.models import Project; Project.objects.filter(pk={proj_pk}).delete()")
+            cleanup_user(admin_email)
 
     def test_export_requires_authentication(self, driver, w, ctx):
         resp = requests.get(_url("/account/export/"), timeout=10, allow_redirects=False)

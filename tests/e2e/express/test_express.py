@@ -330,6 +330,37 @@ class TestExpressCreation:
         email = ctx["email"]
         TINY_LIMIT = 1  # cents
 
+        # setup_user() unconditionally applies AI_API_KEY_TESTS if the host
+        # env var is set (see ai_test_api_key_args() in helpers.py), giving
+        # ctx's user their own anthropic_api_key. _trial_state() treats any
+        # user with a personal key as is_trial=False and skips all budget
+        # tracking outright, so this test must clear it for its duration
+        # (like test_demo_user.py/test_management_commands.py already do by
+        # never assigning one) to actually exercise the trial-budget path,
+        # then restore it so later tests in this class keep billing on the
+        # dedicated test key rather than the shared trial key.
+        original_key = _shell(
+            f"from feusers.models import FeUser; "
+            f"u = FeUser.objects.get(email='{email}'); "
+            f"print(u.anthropic_api_key)"
+        )
+
+        def _clear_personal_key():
+            _shell(
+                f"from feusers.models import FeUser; "
+                f"u = FeUser.objects.get(email='{email}'); "
+                f"u.anthropic_api_key = ''; "
+                f"u.save(update_fields=['anthropic_api_key'])"
+            )
+
+        def _restore_personal_key():
+            _shell(
+                f"from feusers.models import FeUser; "
+                f"u = FeUser.objects.get(email='{email}'); "
+                f"u.anthropic_api_key = {original_key!r}; "
+                f"u.save(update_fields=['anthropic_api_key'])"
+            )
+
         def _set_special_limit(value):
             _shell(
                 f"from feusers.models import FeUser; "
@@ -349,6 +380,7 @@ class TestExpressCreation:
             )
 
         try:
+            _clear_personal_key()
             _set_special_limit(TINY_LIMIT)
             cards = _parse(driver, "Coffee 3€")
             assert cards, "First request should succeed"
@@ -366,6 +398,7 @@ class TestExpressCreation:
             assert driver.find_elements(By.CSS_SELECTOR, ".trial-blocked")
         finally:
             _clear_special_limit()
+            _restore_personal_key()
 
     def test_express_refusal_on_non_financial_input(self, driver, w, ctx):
         if not ctx.get("express_trial_ok"):

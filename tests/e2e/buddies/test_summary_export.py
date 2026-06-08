@@ -15,6 +15,9 @@ per-project export:
   participant's share in percent (payer's implicit share included); the
   exporting feuser's own column is "self" rather than "u-<their pk>", since
   they are never listed under that id in direct-buddies.csv
+- direct-buddy-expense-approval-matrix.csv / direct-buddy-expense-approval-timestamps.csv:
+  per-participant approval state (neutral/approved/rejected) and when it was
+  last set, for non-settlement expenses only; the payer never gets a column
 - Project expense participation is excluded (covered by the project export)
 - Respects an explicit date_from/date_to range; with no params given, defaults
   to the current financial month (NOT all-time -- only the account-wide
@@ -63,6 +66,8 @@ class TestBuddySummaryExport:
                 "direct-buddies.csv",
                 "direct-buddy-expenses.csv",
                 "direct-buddy-expense-participation.csv",
+                "direct-buddy-expense-approval-matrix.csv",
+                "direct-buddy-expense-approval-timestamps.csv",
             ):
                 assert expected in names, f"{expected} missing from buddy summary export ZIP"
         finally:
@@ -225,6 +230,53 @@ class TestBuddySummaryExport:
             row = dict(zip(cols, data_row.split(",")))
             assert row["self"] == "20.000", "Participant share_percent missing/incorrect"
             assert row[b_id] == "80.000", "Payer's implicit share missing/incorrect"
+        finally:
+            if expense_pk:
+                _shell(f"from budget.models import Expense; Expense.objects.filter(pk={expense_pk}).delete()")
+            cleanup_user(a["email"])
+            cleanup_user(b["email"])
+
+    def test_approval_matrix_in_export(self, driver, w):
+        """direct-buddy-expense-approval-matrix.csv must show the exporting
+        feuser's (self) approval state for a non-settlement expense they
+        participate in; direct-buddy-expense-approval-timestamps.csv must
+        carry the matching consent_set_at."""
+        a = setup_user(driver, w, first_name="ApprovalMatrix", last_name="Owner")
+        b = setup_user(None, None, first_name="ApprovalMatrix", last_name="Buddy")
+        _create_buddy_link(a["email"], b["email"])
+        a_pk = int(_get_pk(a["email"]))
+        expense_pk = None
+        try:
+            expense_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddySpending; "
+                f"from budget.expense_factory import create_expense; "
+                f"from django.utils import timezone; "
+                f"owner = FeUser.objects.get(email='{b['email']}'); "
+                f"exp = create_expense(title='ApprovalMatrixSummaryExpense', type='expense', "
+                f"  value='30.00', owning_feuser=owner, settled=True); "
+                f"BuddySpending.objects.create(expense=exp, participant_feuser_id={a_pk}, "
+                f"  share_percent='20.000', approval_state=BuddySpending.APPROVAL_REJECTED, consent_set_at=timezone.now()); "
+                f"print(exp.pk)"
+            ))
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                state_csv = _read_csv(zf, "direct-buddy-expense-approval-matrix.csv")
+                ts_csv = _read_csv(zf, "direct-buddy-expense-approval-timestamps.csv")
+
+            state_lines = state_csv.splitlines()
+            state_header = state_lines[0]
+            assert "self" in state_header, "Participant (exporting feuser) self id missing from approval matrix header"
+            state_row = next(l for l in state_lines[1:] if l.startswith(f"{expense_pk},"))
+            assert dict(zip(state_header.split(","), state_row.split(",")))["self"] == "rejected", (
+                "Participant's approval_state label missing/incorrect"
+            )
+
+            ts_lines = ts_csv.splitlines()
+            ts_row = next(l for l in ts_lines[1:] if l.startswith(f"{expense_pk},"))
+            assert dict(zip(ts_lines[0].split(","), ts_row.split(",")))["self"], (
+                "consent_set_at timestamp missing for a rejected participant"
+            )
         finally:
             if expense_pk:
                 _shell(f"from budget.models import Expense; Expense.objects.filter(pk={expense_pk}).delete()")

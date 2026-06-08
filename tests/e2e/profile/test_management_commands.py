@@ -3,7 +3,7 @@ Management command tests: create_user, set_user_password, remove_user_2fa, delet
 
 create_user creates a confirmed, active account.
 set_user_password updates the password for an existing account.
-remove_user_2fa clears TOTP fields so the user can log in with password only.
+remove_user_2fa clears every second factor so the user can log in with password only.
 delete_user permanently removes the account.
 Both create_user and set_user_password accept -p for non-interactive use and
 prompt via getpass otherwise. delete_user accepts --yes to skip confirmation.
