@@ -4,6 +4,9 @@ Account data export (ZIP):
 - Contains all expected CSV files
 - Expense and category data appears in the correct CSV
 - anthropic_api_key is masked (only last 4 chars visible)
+- second_factors.csv: registered 2FA methods (type, label, primary flag,
+  created_at) only - never the underlying secret/credential (TOTP secret,
+  WebAuthn public_key/credential_id, Email 2FA secret)
 - Unauthenticated request is redirected
 - direct-buddies.csv / direct-buddy-expenses.csv /
   direct-buddy-expense-participation.csv: the combined real-user + offline
@@ -96,6 +99,7 @@ class TestDataExport:
             names = zf.namelist()
         for expected in (
             "profile.csv",
+            "second_factors.csv",
             "categories.csv",
             "tags.csv",
             "expenses.csv",
@@ -168,6 +172,43 @@ class TestDataExport:
         fill(w, By.ID, "id_ai_custom_instructions", "")
         _submit_form(driver, "ai")
         time.sleep(2)
+
+    def test_second_factors_metadata_in_export_without_secrets(self, driver, w, ctx):
+        """GDPR access requests must see which 2FA methods exist (type, label,
+        primary flag, when added), but the export must never hand back a
+        live security credential: not the TOTP secret, not the Email 2FA
+        secret, not a WebAuthn public_key/credential_id. Those aren't
+        personal data the user needs returned - they're working
+        authentication bypasses if leaked."""
+        totp_secret = "JBSWY3DPEHPK3PXP"
+        email_secret = "KRSXG5CTMVRXEZLU"
+        _shell(
+            f"from feusers.models import FeUser, TOTPFactor, EmailFactor; "
+            f"u = FeUser.objects.get(email='{ctx['email']}'); "
+            f"TOTPFactor.objects.create(feuser=u, secret='{totp_secret}', is_primary=True, label='ExportTestAuthenticator'); "
+            f"EmailFactor.objects.create(feuser=u, secret='{email_secret}', label='ExportTestEmailCode')"
+        )
+        try:
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                second_factors_csv = _read_csv(zf, "second_factors.csv")
+                all_bytes = b"".join(zf.read(n) for n in zf.namelist())
+
+            assert "Authenticator App" in second_factors_csv
+            assert "ExportTestAuthenticator" in second_factors_csv
+            assert "Email Code" in second_factors_csv
+            assert "ExportTestEmailCode" in second_factors_csv
+            assert "True" in second_factors_csv  # is_primary for the TOTP factor
+
+            assert totp_secret.encode() not in all_bytes, "TOTP secret must never appear in the export"
+            assert email_secret.encode() not in all_bytes, "Email 2FA secret must never appear in the export"
+        finally:
+            _shell(
+                f"from feusers.models import FeUser, TOTPFactor, EmailFactor; "
+                f"u = FeUser.objects.get(email='{ctx['email']}'); "
+                f"TOTPFactor.objects.filter(feuser=u).delete(); "
+                f"EmailFactor.objects.filter(feuser=u).delete()"
+            )
 
     def test_category_appears_in_export(self, driver, w, ctx):
         r = api_post("/api/v1/categories/", ctx, json={"title": "ExportCat"})
