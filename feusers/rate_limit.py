@@ -11,6 +11,10 @@ Semantics are unchanged from the original in-memory version: at most
 Because the store is shared between processes we key on wall-clock time
 (``time.time()``) rather than ``time.monotonic()``, whose zero point differs
 per process.
+
+``window``/``max_attempts`` can be overridden per call for callers with
+different thresholds (e.g. email 2FA send throttling); omit them to get the
+original login/TOTP brute-force semantics.
 """
 import time
 
@@ -24,21 +28,21 @@ def _cache_key(kind: str, identifier: str) -> str:
     return f"rl:{kind}:{identifier}"
 
 
-def _recent(kind: str, identifier: str, now: float) -> list[float]:
+def _recent(kind: str, identifier: str, now: float, window: int) -> list[float]:
     """Timestamps for this key that fall inside the current window."""
     timestamps = cache.get(_cache_key(kind, identifier)) or []
-    return [t for t in timestamps if now - t < _WINDOW]
+    return [t for t in timestamps if now - t < window]
 
 
-def is_limited(kind: str, identifier: str) -> bool:
-    return len(_recent(kind, identifier, time.time())) >= _MAX_ATTEMPTS
+def is_limited(kind: str, identifier: str, *, window: int = _WINDOW, max_attempts: int = _MAX_ATTEMPTS) -> bool:
+    return len(_recent(kind, identifier, time.time(), window)) >= max_attempts
 
 
-def record_failure(kind: str, identifier: str) -> None:
+def record_failure(kind: str, identifier: str, *, window: int = _WINDOW) -> None:
     now = time.time()
-    recent = _recent(kind, identifier, now)
+    recent = _recent(kind, identifier, now, window)
     recent.append(now)
-    cache.set(_cache_key(kind, identifier), recent, timeout=_WINDOW)
+    cache.set(_cache_key(kind, identifier), recent, timeout=window)
 
 
 def clear(kind: str, identifier: str) -> None:

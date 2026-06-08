@@ -30,7 +30,7 @@ document.getElementById('recovery-copy').addEventListener('click', function() {
 {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
 
 <p class="in-page-tip">Confirming with: <strong>
-    <img src="{% factor_icon confirm_method %}" class="twofa-factor-icon" alt="">
+    <img src="{% factor_icon confirm_method %}" class="factor-icon-inline" alt="">
     {% factor_display_name confirm_method %}
     {% if confirm_factor.label %}({{ confirm_factor.label }}){% endif %}
 </strong></p>

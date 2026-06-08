@@ -12,7 +12,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from ..forms import AISettingsForm, ChangeEmailForm, ChangePasswordForm, NotificationPreferencesForm, ProfileForm
-from ..second_factor_registry import get_all_factors, method_key_of
+from ..second_factor_registry import factor_type_for, get_all_factors, method_key_of
 from ..utils import _get_session_feuser
 from ..webauthn_helpers import rp_id_from_site_url
 
@@ -206,6 +206,10 @@ def profile(request):
                 return redirect(f"{request.path}?success=password")
 
     second_factors = [(method_key_of(f), f) for f in get_all_factors(feuser)]
+    has_email_factor = any(key == "email" for key, _ in second_factors)
+    # Set once, by totp_setup/webauthn_setup/email_factor_setup, right before
+    # redirecting here; popped so a reload can never show it a second time.
+    flashed_recovery_code = request.session.pop("_flash_recovery_code", None)
 
     return render(request, "feusers/profile.html", {
         "active_nav": "profile",
@@ -219,7 +223,9 @@ def profile(request):
         "picture_error": picture_error,
         "backdrop_error": backdrop_error,
         "second_factors": second_factors,
+        "flashed_recovery_code": flashed_recovery_code,
         "webauthn_available": bool(rp_id_from_site_url(settings.SITE_URL)),
+        "has_email_factor": has_email_factor,
     })
 
 
@@ -258,6 +264,29 @@ def account_export(request):
                 value = value.isoformat()
             w.writerow([field.name, _csv_safe(value)])
         zf.writestr("profile.csv", p.getvalue())
+
+        # ------------------------------------------------------------------
+        # second_factors.csv — which 2FA methods are registered (type, label,
+        # primary flag, when added) and nothing else. Deliberately excludes
+        # every method-specific secret/credential (TOTP secret, WebAuthn
+        # public_key/credential_id, Email secret): those are live security
+        # credentials, not personal data the user needs handed back, and
+        # putting them in an export would hand out a working authentication
+        # bypass instead of satisfying a GDPR access request. Works for any
+        # registered factor type without branching on it, same as the rest
+        # of the second-factor system (see CLAUDE.md).
+        # ------------------------------------------------------------------
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["method", "label", "is_primary", "created_at"])
+        for factor in get_all_factors(feuser):
+            w.writerow([
+                factor_type_for(method_key_of(factor)).display_name,
+                _csv_safe(factor.label),
+                factor.is_primary,
+                factor.created_at.isoformat(),
+            ])
+        zf.writestr("second_factors.csv", p.getvalue())
 
         _TAG_IDS = ("tag_ids", lambda obj: ",".join(str(t.uid) for t in obj.tags.all()))
 

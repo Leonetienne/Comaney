@@ -111,3 +111,11 @@ main.page-centered { text-align: center; }
   }
 }
 
+// Stacks .auth-footer-links's <a> children as rows with a consistent gap
+// instead of separating them with <br> tags.
+.auth-footer-links--flex {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+

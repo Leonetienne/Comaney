@@ -10,6 +10,7 @@ import pyotp
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
+from ..email_factor_service import clear_login_send_throttle, verify_code as _verify_email_code
 from ..models import FeUser
 from ..rate_limit import clear as rl_clear, is_limited, record_failure
 from ..second_factor_registry import factor_type_for, get_all_factors, method_key_of, pick_primary_factor
@@ -31,9 +32,23 @@ def _verify_totp_login(request, factor) -> bool:
     return pyotp.TOTP(factor.secret).verify(code, valid_window=1)
 
 
+def _verify_email_login(request, factor) -> bool:
+    code = request.POST.get("code", "").strip()
+    if not _verify_email_code(factor.secret, code):
+        return False
+    # Reused for the real login challenge, factor_test, and
+    # factor_remove/recovery_regenerate's confirm step alike: entering the
+    # current code proves the account owner can read their inbox, so the
+    # login-purpose send throttle no longer needs to hold them back
+    # afterward (e.g. logging out and immediately signing back in).
+    clear_login_send_throttle(factor.feuser_id)
+    return True
+
+
 _LOGIN_VERIFIERS = {
     "totp": _verify_totp_login,
     "webauthn": verify_login_assertion,
+    "email": _verify_email_login,
 }
 
 
@@ -116,7 +131,7 @@ def twofa_verify(request):
                     request.session["feuser_id"] = user.pk
                     return redirect("landing_page")
                 record_failure("twofa", rl_key)
-                error = ("Invalid code: please try again." if active_key == "totp"
+                error = ("Invalid code: please try again." if active_key in ("totp", "email")
                           else "Verification failed. Please try again.")
 
     factors = get_all_factors(user)  # fresh snapshot for rendering the picker

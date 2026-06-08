@@ -1,0 +1,15 @@
+<form method="post" novalidate autocomplete="off">
+    {% csrf_token %}
+    <p class="auth-hint">We just emailed you a 6-digit code.</p>
+    <label for="id_code">Email code</label>
+    <input id="id_code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}"
+           maxlength="6" placeholder="000000" autofocus autocomplete="one-time-code">
+    {% if confirm_method %}
+    <input type="hidden" name="confirm_method" value="{{ confirm_method }}">
+    <input type="hidden" name="confirm_factor_id" value="{{ confirm_factor.pk }}">
+    {% endif %}
+    <div class="form-actions">
+        <button type="submit" class="btn btn-full">{{ submit_label|default:"Verify" }}</button>
+    </div>
+</form>
+{% include "feusers/partials/_email_send_js.html" %}

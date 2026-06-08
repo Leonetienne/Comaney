@@ -20,6 +20,7 @@ _HELP_PATH_MAP = [
     ("/notifications/",              "/docs/user-manual/notifications/"),
     ("/totp/",                       "/docs/user-manual/two-factor-auth/"),
     ("/webauthn/",                   "/docs/user-manual/two-factor-auth/"),
+    ("/email-2fa/",                  "/docs/user-manual/two-factor-auth/"),
     ("/twofa/",                      "/docs/user-manual/two-factor-auth/"),
     ("/api-key/",                    "/docs/user-manual/api-access/"),
     ("/account/export/",             "/docs/user-manual/data-export/"),
@@ -54,6 +55,7 @@ def current_feuser(request):
         ((feuser and feuser.anthropic_api_key) or trial_ok)
         and not (feuser and feuser.disable_ai_ui)
     )
+    ctx["email_2fa_available"] = not settings.DISABLE_EMAILING
     ctx["unread_notification_count"] = (
         Notification.objects.filter(owning_feuser=feuser, read=False).count()
         if feuser else 0

@@ -5,7 +5,7 @@ from django.shortcuts import redirect, render
 
 from ..models import TOTPFactor
 from ..second_factor_registry import get_all_factors
-from ..second_factor_service import generate_recovery_code, register_factor
+from ..second_factor_service import finish_setup, register_factor
 from ..utils import _get_session_feuser
 
 
@@ -45,11 +45,7 @@ def totp_setup(request):
             make_primary = request.POST.get("make_primary") == "1"
             first = register_factor(factor, make_primary=make_primary)
             del request.session["totp_setup_secret"]
-            recovery_code = generate_recovery_code(feuser) if first else None
-            return render(request, "feusers/totp_setup.html", {
-                "recovery_code": recovery_code,
-                "done": True,
-            })
+            return finish_setup(request, feuser, first)
         error = "Invalid code: please try again."
     else:
         secret = pyotp.random_base32()

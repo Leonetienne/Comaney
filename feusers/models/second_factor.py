@@ -30,6 +30,17 @@ class WebAuthnFactor(SecondFactorAuth):
     transports = models.CharField(max_length=128, blank=True)
 
 
+class EmailFactor(SecondFactorAuth):
+    """A TOTP secret whose code is delivered to the feuser's own email address
+    on request rather than generated locally by an authenticator app. See
+    feusers/email_factor_service.py for the longer interval this uses (a
+    plain 30s TOTP step would routinely expire before the email arrives) and
+    the send-code throttling. Capped at one per feuser in email_factor_setup:
+    unlike TOTP/WebAuthn, every instance would target the exact same address,
+    so a second one adds nothing."""
+    secret = models.CharField(max_length=64)
+
+
 register_factor_type(FactorType(
     key="totp",
     model=TOTPFactor,
@@ -46,4 +57,13 @@ register_factor_type(FactorType(
     setup_url_name="webauthn_setup",
     challenge_template="feusers/twofa_challenge_webauthn.html",
     icon="dist/images/icons/key.png",
+))
+
+register_factor_type(FactorType(
+    key="email",
+    model=EmailFactor,
+    display_name="Email Code",
+    setup_url_name="email_factor_setup",
+    challenge_template="feusers/twofa_challenge_email.html",
+    icon="dist/images/icons/mail.png",
 ))

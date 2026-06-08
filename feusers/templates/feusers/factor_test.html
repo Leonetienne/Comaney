@@ -4,7 +4,7 @@
 {% block main_class %}page-narrow{% endblock %}
 
 {% block content %}
-<h1><img src="{% factor_icon target_method %}" class="twofa-factor-icon" alt="">Test "{{ target_label|default:target_display_name }}"</h1>
+<h1><img src="{% factor_icon target_method %}" class="factor-icon-inline" style="margin-right:.25em;" alt="">Test "{{ target_label|default:target_display_name }}"</h1>
 <p class="auth-hint">Confirm with this {{ target_display_name|lower }} to see whether it's the one you're holding.</p>
 
 {% if result == True %}

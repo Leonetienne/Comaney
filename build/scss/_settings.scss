@@ -157,6 +157,20 @@
   }
 }
 
+// A factor-type icon used as a symbol inline in flowing text (e.g. the
+// "Test 'X'" heading, "Confirming with: <icon> Method" lines) rather than a
+// standalone list row: sized to the surrounding text and nudged onto the
+// baseline instead of the fixed 22px .twofa-factor-icon uses.
+.factor-icon-inline {
+  width: 1em;
+  height: 1em;
+  transform: translateY(2px);
+
+  @media (prefers-color-scheme: dark) {
+    filter: invert(1);
+  }
+}
+
 .twofa-factor-label {
   font-weight: 600;
   color: var(--text);

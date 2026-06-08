@@ -28,7 +28,7 @@ from comaney.json_utils import safe_json
 
 from ..models import WebAuthnFactor
 from ..second_factor_registry import get_all_factors
-from ..second_factor_service import generate_recovery_code, register_factor
+from ..second_factor_service import finish_setup, register_factor
 from ..utils import _get_session_feuser
 from ..webauthn_helpers import rp_id_from_site_url, sign_count_is_valid
 
@@ -107,11 +107,7 @@ def webauthn_setup(request):
                     transports=_transports_from(credential_json),
                 )
                 is_first = register_factor(factor, make_primary=make_primary)
-                recovery_code = generate_recovery_code(feuser) if is_first else None
-                return render(request, "feusers/webauthn_setup.html", {
-                    "done": True,
-                    "recovery_code": recovery_code,
-                })
+                return finish_setup(request, feuser, is_first)
 
     existing = [f for f in get_all_factors(feuser) if isinstance(f, WebAuthnFactor)]
     is_first_factor = not get_all_factors(feuser)

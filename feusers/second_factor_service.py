@@ -8,6 +8,8 @@ import hashlib
 import secrets
 
 from django.db import transaction
+from django.shortcuts import redirect
+from django.urls import reverse
 
 from .second_factor_registry import get_all_factors
 
@@ -41,6 +43,19 @@ def register_factor(factor, *, make_primary: bool) -> bool:
     if not is_first and make_primary:
         set_primary(factor.feuser, factor)
     return is_first
+
+
+def finish_setup(request, feuser, first: bool):
+    """Common conclusion for every factor-setup view (totp_setup,
+    webauthn_setup, email_factor_setup): flash a fresh recovery code for the
+    very first factor, then redirect to the 2FA section of the profile page.
+    There is no per-method "<method> added" confirmation screen - profile.html
+    renders the one-time flash itself, so a new method needs no template of
+    its own for this step.
+    """
+    if first:
+        request.session["_flash_recovery_code"] = generate_recovery_code(feuser)
+    return redirect(f"{reverse('profile')}?success=2fa#section-2fa")
 
 
 @transaction.atomic

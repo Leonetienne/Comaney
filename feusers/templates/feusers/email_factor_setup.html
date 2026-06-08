@@ -4,36 +4,25 @@
 
 {% block content %}
 <h1>Set up two-factor authentication</h1>
-<p>Scan the QR code below with your authenticator app (e.g. Google Authenticator, Authy, 1Password, Bitwarden), then enter the 6-digit code to confirm.</p>
-
-<div class="totp-qr-wrap">
-    <img src="data:image/png;base64,{{ qr_b64 }}" alt="TOTP QR code" class="totp-qr">
-</div>
-
-<details class="totp-secret-details">
-    <summary>Can't scan? Enter the key manually</summary>
-    <code class="totp-secret">{{ secret }}</code>
-</details>
+<p>We'll email a 6-digit code to <strong>{{ feuser_email }}</strong> each time you sign in. Enter the code below to confirm.</p>
 
 {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
 
 <form method="post" novalidate autocomplete="off">
     {% csrf_token %}
-    <label for="id_label">Name this authenticator</label>
-    <input id="id_label" name="label" type="text" maxlength="64" placeholder="e.g. Phone, Google Authenticator" autofocus>
     <label for="id_code">Confirmation code</label>
     <input id="id_code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}"
-           maxlength="6" placeholder="000000" autocomplete="one-time-code">
+           maxlength="6" placeholder="000000" autofocus autocomplete="one-time-code">
     {% if is_first_factor %}
     <label class="checkbox-inline">
         <input type="checkbox" name="make_primary" value="1" checked disabled>
-        Use Authenticator App as primary second factor
+        Use Email Code as primary second factor
     </label>
     <input type="hidden" name="make_primary" value="1">
     {% else %}
     <label class="checkbox-inline">
         <input type="checkbox" name="make_primary" value="1">
-        Use Authenticator App as primary second factor
+        Use Email Code as primary second factor
     </label>
     <p class="in-page-tip">Your current primary method stays in place unless you check this.</p>
     {% endif %}
@@ -42,4 +31,5 @@
         <a href="{% url 'profile' %}" class="btn btn-secondary">Cancel</a>
     </div>
 </form>
+{% include "feusers/partials/_email_send_js.html" %}
 {% endblock %}

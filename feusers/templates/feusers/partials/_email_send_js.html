@@ -1,0 +1,69 @@
+<div id="email2fa-csrf-holder" style="display:none;">{% csrf_token %}</div>
+<p class="error-msg" id="email2fa-send-error" style="display:none;"></p>
+<p class="in-page-tip">Didn't get it? <button type="button" class="link-button" id="email2fa-resend-btn" disabled>Resend code</button></p>
+<script>
+(function() {
+    const btn = document.getElementById('email2fa-resend-btn');
+    const errEl = document.getElementById('email2fa-send-error');
+    const csrfToken = document.querySelector('#email2fa-csrf-holder [name=csrfmiddlewaretoken]').value;
+    let timer = null;
+
+    function setLabel(seconds) {
+        btn.textContent = seconds > 0 ? 'Resend code (' + seconds + 's)' : 'Resend code';
+    }
+
+    function startCooldown(seconds) {
+        let remaining = seconds;
+        btn.disabled = true;
+        setLabel(remaining);
+        clearInterval(timer);
+        timer = setInterval(function() {
+            remaining -= 1;
+            setLabel(remaining);
+            if (remaining <= 0) {
+                clearInterval(timer);
+                btn.disabled = false;
+            }
+        }, 1000);
+    }
+
+    function sendCode() {
+        errEl.style.display = 'none';
+        btn.disabled = true;
+        fetch("{% url 'email_factor_send_code' %}", {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrfToken},
+        }).then(function(r) {
+            return r.json().then(function(data) { return {ok: r.ok, data: data}; });
+        }).then(function(res) {
+            if (res.ok) {
+                errEl.style.display = 'none';
+                startCooldown(60);
+            } else if (res.data.reason === 'cooldown') {
+                // Not a real failure: a code was already sent within the
+                // last minute (e.g. moments ago during setup) and is still
+                // valid for several more minutes.
+                errEl.className = 'in-page-tip';
+                errEl.textContent = 'A code was already sent a moment ago — check your inbox, or wait to request a new one.';
+                errEl.style.display = 'block';
+                startCooldown(60);
+            } else {
+                errEl.className = 'error-msg';
+                errEl.textContent = res.data.error || 'We could not send the code. Please try again.';
+                errEl.style.display = 'block';
+                btn.disabled = false;
+                setLabel(0);
+            }
+        }).catch(function() {
+            errEl.className = 'error-msg';
+            errEl.textContent = 'We could not send the code. Please check your connection and try again.';
+            errEl.style.display = 'block';
+            btn.disabled = false;
+            setLabel(0);
+        });
+    }
+
+    btn.addEventListener('click', sendCode);
+    sendCode();
+})();
+</script>

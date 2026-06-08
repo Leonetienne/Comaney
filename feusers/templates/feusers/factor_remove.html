@@ -22,8 +22,8 @@
         <button type="submit" class="btn btn-danger">Remove all second factors</button>
     </div>
 </form>
-<p class="auth-footer-links">
-    <a href="{% url 'factor_remove' target_method target_id %}">← Back to confirming with another method</a><br>
+<p class="auth-footer-links auth-footer-links--flex">
+    <a href="{% url 'factor_remove' target_method target_id %}">← Back to confirming with another method</a>
     <a href="{% url 'profile' %}">Cancel</a>
 </p>
 {% else %}
@@ -32,7 +32,7 @@
 {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
 
 <p class="in-page-tip">Confirming with: <strong>
-    <img src="{% factor_icon confirm_method %}" class="twofa-factor-icon" alt="">
+    <img src="{% factor_icon confirm_method %}" class="factor-icon-inline" alt="">
     {% factor_display_name confirm_method %}
     {% if confirm_factor.label %}({{ confirm_factor.label }}){% endif %}
 </strong></p>
@@ -56,8 +56,8 @@
 {% include "feusers/partials/_method_dropdown_js.html" %}
 {% endif %}
 
-<p class="auth-footer-links">
-    <a href="{% url 'factor_remove' target_method target_id %}?recovery=1">Lost access to your other methods? Use a recovery code</a><br>
+<p class="auth-footer-links auth-footer-links--flex">
+    <a href="{% url 'factor_remove' target_method target_id %}?recovery=1">Lost access to your other methods? Use a recovery code</a>
     <a href="{% url 'profile' %}">← Cancel</a>
 </p>
 {% endif %}

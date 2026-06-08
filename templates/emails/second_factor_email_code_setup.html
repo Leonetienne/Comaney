@@ -1,0 +1,23 @@
+{% extends "emails/base_email.html" %}
+{% block subject %}Confirm your email for two-factor authentication{% endblock %}
+
+{% block content %}
+  <h1 style="margin:0 0 8px;font-size:1.4rem;font-weight:700;color:#e0e0e0;">Confirm your email</h1>
+  <p style="margin:0 0 28px;font-size:0.95rem;color:#aaa;line-height:1.7;">
+    Enter this code to turn on email codes as a two-factor authentication method for your Comaney account. It expires in a few minutes.
+  </p>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+    <tr>
+      <td align="center">
+        <span style="display:inline-block;padding:16px 32px;background:#1c1c1c;border:1px solid #333;border-radius:8px;font-weight:700;font-size:1.8rem;letter-spacing:0.3em;color:#e0e0e0;">{{ code }}</span>
+      </td>
+    </tr>
+  </table>
+
+  <hr style="border:none;border-top:1px solid #2a2a2a;margin:28px 0;">
+
+  <p style="margin:0;font-size:0.82rem;color:#555;line-height:1.5;">
+    If you didn't request this, you can safely ignore this email.
+  </p>
+{% endblock %}

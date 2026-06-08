@@ -105,7 +105,7 @@
 .in-page-tip {
   font-size:0.9rem;
   color:var(--text-subtle);
-  margin: 0 0 24px;
+  margin: 0.5em 0 24px;
 }
 
 // A button that opens a small dropdown menu of alternatives (e.g. "Try a
@@ -182,6 +182,29 @@
 
   @media (prefers-color-scheme: dark) {
     filter: invert(1);
+  }
+}
+
+// A <button> that reads as a plain underlined link (e.g. "Resend code"):
+// keeps button semantics/keyboard behavior for a JS-only action that has no
+// real href, but drops all button chrome.
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--link);
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--text-subtle);
+  }
+
+  &:disabled {
+    color: var(--text-muted);
+    text-decoration: none;
+    cursor: default;
   }
 }
 
