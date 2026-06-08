@@ -67,6 +67,8 @@ Because using the recovery code removes all of your methods at once, only use it
 
 The **Two-factor authentication** section of **Account Settings** lists every method on your account, showing its name, when it was added, and whether it's the primary one. From there you can:
 
+- **Rename**: click a method's name to edit it in place, then press Enter (or click away) to save. This is handy if you own several security keys with the same name and want to tell them apart, for example by writing the ID printed on the key itself.
+- **Test**: opens a page where you can try that specific method on its own, without logging out. This lets you figure out which physical key or authenticator entry a method actually corresponds to before renaming it.
 - **Set as primary**: make a method the one you're asked for first at login.
 - **Remove**: delete a method. If you have another method, you'll be asked to confirm with it first. If it's your only method, removing it turns 2FA off entirely.
 - **Regenerate recovery code**: get a new recovery code if you've lost the old one, or simply want a fresh one. You'll need to confirm with one of your existing methods first, and your old recovery code stops working immediately.
