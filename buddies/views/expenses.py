@@ -276,7 +276,8 @@ def admin_reject_dummy_settlement(request, group_id, expense_id):
 
 def _participant_set_approval(request, expense_id, new_state):
     from django.utils import timezone
-    from django.http import HttpResponseForbidden
+    from django.http import HttpResponseForbidden, JsonResponse
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     feuser = request.feuser
     expense = get_object_or_404(
         Expense,
@@ -286,9 +287,16 @@ def _participant_set_approval(request, expense_id, new_state):
     )
     bs = expense.buddy_spendings.filter(participant_feuser=feuser).first()
     if not bs:
+        if is_ajax:
+            return JsonResponse({"error": "not_participant"}, status=404)
         return redirect("buddies:buddy_summary")
 
     if not bs.can_change_consent:
+        if is_ajax:
+            return JsonResponse(
+                {"error": "locked", "approval_state": bs.approval_state, "can_change_consent": False},
+                status=403,
+            )
         return HttpResponseForbidden("Decision is locked after 24 hours.")
 
     if bs.approval_state != new_state:
@@ -301,6 +309,9 @@ def _participant_set_approval(request, expense_id, new_state):
         update_fields.append("last_mod")
         bs.save(update_fields=update_fields)
         BuddyEmailService.send_participant_approval_notification(expense, feuser, new_state)
+
+    if is_ajax:
+        return JsonResponse({"approval_state": bs.approval_state, "can_change_consent": bs.can_change_consent})
 
     back = request.POST.get("back") or request.GET.get("back")
     if back:

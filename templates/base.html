@@ -75,8 +75,40 @@
             confirmDialog(confirmForm.dataset.confirm || 'Are you sure?', confirmForm.dataset.ok || 'OK')
                 .then(function() { confirmForm.submit(); })
                 .catch(function() {});
+            return;
+        }
+        const consentForm = e.target.closest('.consent-form');
+        if (consentForm) {
+            e.preventDefault();
+            const group = consentForm.closest('.consent-btns');
+            const clickedBtn = consentForm.querySelector('button[data-consent]');
+            const optimisticState = clickedBtn.dataset.consent === 'approve' ? 1 : 2;
+            setConsentGroupState(group, optimisticState, true);
+            fetch(consentForm.action, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                body: new FormData(consentForm),
+            }).then(function(r) {
+                return r.json();
+            }).then(function(data) {
+                setConsentGroupState(group, data.approval_state, data.can_change_consent);
+            }).catch(function() {
+                window.location.reload();
+            });
         }
     });
+
+    function setConsentGroupState(group, approvalState, canChangeConsent) {
+        const approveBtn = group.querySelector('[data-consent="approve"]');
+        const rejectBtn = group.querySelector('[data-consent="reject"]');
+        [approveBtn, rejectBtn].forEach(function(btn) {
+            btn.classList.remove('btn-consent--approved', 'btn-consent--rejected');
+            btn.disabled = !canChangeConsent;
+        });
+        if (approvalState === 1) approveBtn.classList.add('btn-consent--approved');
+        if (approvalState === 2) rejectBtn.classList.add('btn-consent--rejected');
+    }
 
     window.confirmDialog = function(message, okLabel) {
         return new Promise(function(resolve, reject) {

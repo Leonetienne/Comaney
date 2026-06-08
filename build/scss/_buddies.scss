@@ -1280,6 +1280,11 @@
     background: color-mix(in srgb, #cf222e 15%, var(--bg-surface));
     color: #cf222e;
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 .pill--success {
