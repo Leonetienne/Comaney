@@ -47,7 +47,7 @@ class TestWebAuthn:
     def test_profile_shows_security_key_as_primary(self, driver, w, ctx):
         driver.get(_url("/profile/"))
         wait_text(driver, w, "Security Key")
-        assert "Primary" in driver.page_source
+        assert "Is primary" in driver.page_source
 
     def test_login_with_security_key(self, driver, w, ctx):
         click(w, By.CSS_SELECTOR, "button[type=submit]#logout-button")

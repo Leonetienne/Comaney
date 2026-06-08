@@ -55,7 +55,7 @@ class TestTotp:
         # very first factor's checkbox state fresh.
         driver.get(_url("/profile/"))
         wait_text(driver, w, "Two-factor authentication")
-        assert "Primary" in driver.page_source
+        assert "Is primary" in driver.page_source
 
     def test_login_with_totp(self, driver, w, ctx):
         self._login_with_totp(driver, w, ctx)

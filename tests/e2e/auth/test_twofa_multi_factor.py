@@ -51,7 +51,7 @@ class TestMultiFactor:
         wait_text(driver, w, "Backup Key")
         rows = driver.find_elements(By.CSS_SELECTOR, ".twofa-factor-row")
         assert len(rows) == 2
-        primary_rows = [r for r in rows if "Primary" in r.text]
+        primary_rows = [r for r in rows if "Is primary" in r.text]
         assert len(primary_rows) == 1
         assert "Authenticator App" in primary_rows[0].text
 
@@ -82,7 +82,7 @@ class TestMultiFactor:
         wait_url(w, "/profile/")
         wait_text(driver, w, "Backup Key")
         rows = driver.find_elements(By.CSS_SELECTOR, ".twofa-factor-row")
-        primary_rows = [r for r in rows if "Primary" in r.text]
+        primary_rows = [r for r in rows if "Is primary" in r.text]
         assert len(primary_rows) == 1
         assert "Security Key" in primary_rows[0].text
 
@@ -98,4 +98,4 @@ class TestMultiFactor:
         rows = driver.find_elements(By.CSS_SELECTOR, ".twofa-factor-row")
         assert len(rows) == 1
         assert "Security Key" in rows[0].text
-        assert "Primary" in rows[0].text
+        assert "Is primary" in rows[0].text
