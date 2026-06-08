@@ -4,7 +4,10 @@ code, and factor management (remove / set primary / regenerate recovery).
 Verification for a given method is dispatched through _LOGIN_VERIFIERS
 rather than branching on the method name inline, so a future method only
 needs one extra dict entry here plus its own setup view."""
+import json
+
 import pyotp
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
 from ..models import FeUser
@@ -271,6 +274,62 @@ def factor_set_primary(request, method_key, factor_id):
     if target is not None:
         _set_primary(feuser, target)
     return redirect("profile")
+
+
+def factor_rename(request, method_key, factor_id):
+    feuser = _get_session_feuser(request)
+    if not feuser:
+        return JsonResponse({"error": "Not authenticated."}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed."}, status=405)
+    target = _find(get_all_factors(feuser), method_key, factor_id)
+    if target is None:
+        return JsonResponse({"error": "Not found."}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except (ValueError, TypeError):
+        data = {}
+    label = data.get("label", "").strip()
+    if not label:
+        return JsonResponse({"error": "Name required."}, status=400)
+    if len(label) > 64:
+        return JsonResponse({"error": "Name must be 64 characters or fewer."}, status=400)
+
+    target.label = label
+    target.save(update_fields=["label"])
+    return JsonResponse({"label": target.label})
+
+
+def factor_test(request, method_key, factor_id):
+    """Lets a user try a specific factor in isolation (e.g. tap one of
+    several same-named security keys) without touching login/session state.
+    Verification is dispatched through the same _LOGIN_VERIFIERS table and
+    the registry's challenge_template as the real login challenge, so a
+    future method needs no extra code here."""
+    feuser = _get_session_feuser(request)
+    if not feuser:
+        return redirect("login")
+    target = _find(get_all_factors(feuser), method_key, factor_id)
+    if target is None:
+        return redirect("profile")
+
+    result = None
+    if request.method == "POST":
+        result = _LOGIN_VERIFIERS[method_key](request, target)
+
+    factor_type = factor_type_for(method_key)
+    context = {
+        "target_method": method_key,
+        "target_id": target.pk,
+        "target_display_name": factor_type.display_name,
+        "target_label": target.label,
+        "challenge_template": factor_type.challenge_template,
+        "result": result,
+    }
+    if method_key == "webauthn":
+        context["webauthn_options_json"] = build_login_options(request, target)
+    return render(request, "feusers/factor_test.html", context)
 
 
 def recovery_regenerate(request):

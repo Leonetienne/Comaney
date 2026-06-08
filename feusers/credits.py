@@ -5,4 +5,5 @@ footer. Add an entry here whenever a new non-original asset is added."""
 CREDITS = [
     {"asset": "Security key icon", "author": "sonnycandra"},
     {"asset": "QR code icon", "author": "freepic"},
+    {"asset": "YubiKey icon", "author": "icons8"},
 ]

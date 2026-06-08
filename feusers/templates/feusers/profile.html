@@ -236,11 +236,12 @@
         <ul class="twofa-factor-list">
             {% for method_key, factor in second_factors %}
             <li class="twofa-factor-row">
-                <div class="twofa-factor-info">
+                <div class="twofa-factor-meta">
                     <img src="{% factor_icon method_key %}" class="twofa-factor-icon" alt="{% factor_display_name method_key %}">
-                    <span class="twofa-factor-label">{{ factor.label|default:"Unnamed" }}</span>
                     <span class="twofa-factor-method">{% factor_display_name method_key %}</span>
-                    <span class="twofa-factor-date">Added {{ factor.created_at|date:"d.m.Y" }}</span>
+                </div>
+                <div class="twofa-factor-info">
+                    <span class="twofa-factor-label ct-name" data-method="{{ method_key }}" data-uid="{{ factor.pk }}" title="Click to rename">{{ factor.label|default:"Unnamed" }}</span>
                 </div>
                 <div class="twofa-factor-actions">
                     {% if factor.is_primary %}
@@ -251,6 +252,7 @@
                         <button type="submit" class="btn btn-secondary btn-sm twofa-primary-btn">Set as primary</button>
                     </form>
                     {% endif %}
+                    <a href="{% url 'factor_test' method_key factor.pk %}" class="btn btn-secondary btn-sm">Test</a>
                     <a href="{% url 'factor_remove' method_key factor.pk %}" class="btn btn-danger btn-sm">Remove</a>
                 </div>
             </li>
@@ -600,6 +602,58 @@ if (copyBtn) {
     dayInput.addEventListener('input', update);
     prevCheck.addEventListener('change', update);
     update();
+})();
+</script>
+<script>
+(function () {
+    // Inline rename of a 2FA factor's name, same click-to-edit pattern as
+    // the Categories & Tags page (.ct-name/.ct-name-input).
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+    function renameUrl(method, uid) {
+        return "{% url 'factor_rename' 'M' 0 %}".replace('/M/', `/${method}/`).replace('/0/', `/${uid}/`);
+    }
+
+    function startEdit(span) {
+        if (span.querySelector('input')) return;
+        const method = span.dataset.method;
+        const uid = span.dataset.uid;
+        const original = span.textContent.trim();
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'ct-name-input';
+        input.value = original;
+        span.textContent = '';
+        span.appendChild(input);
+        input.focus();
+        input.select();
+
+        let committed = false;
+
+        async function commit() {
+            if (committed) return;
+            committed = true;
+            const newLabel = input.value.trim();
+            if (!newLabel || newLabel === original) { span.textContent = original; return; }
+            const res = await fetch(renameUrl(method, uid), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body: JSON.stringify({ label: newLabel }),
+            });
+            span.textContent = res.ok ? (await res.json()).label : original;
+        }
+
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') { committed = true; span.textContent = original; }
+        });
+        input.addEventListener('blur', commit);
+    }
+
+    document.querySelectorAll('.twofa-factor-label.ct-name').forEach(span => {
+        span.addEventListener('click', () => startEdit(span));
+    });
 })();
 </script>
 {% endblock %}

@@ -128,22 +128,22 @@
 }
 
 .twofa-factor-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   padding: 12px 14px;
   background: var(--bg-elevated);
   border-radius: 8px;
   margin-bottom: 8px;
-  flex-wrap: wrap;
+}
+
+.twofa-factor-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .twofa-factor-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  margin-bottom: 8px;
 }
 
 .twofa-factor-icon {

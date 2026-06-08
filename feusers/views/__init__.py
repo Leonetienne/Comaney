@@ -8,7 +8,7 @@ from .totp import totp_setup
 from .webauthn import webauthn_setup
 from .twofa import (
     twofa_verify, twofa_verify_switch, twofa_verify_recovery,
-    factor_remove, factor_set_primary, recovery_regenerate,
+    factor_remove, factor_set_primary, factor_rename, factor_test, recovery_regenerate,
 )
 from .demo_banner import demo_banner_view
 from .notifications import notifications_list, notifications_mark_read, notifications_delete_read
@@ -21,7 +21,7 @@ __all__ = [
     "profile", "account_export", "account_delete", "api_key_generate", "api_key_revoke",
     "totp_setup", "webauthn_setup",
     "twofa_verify", "twofa_verify_switch", "twofa_verify_recovery",
-    "factor_remove", "factor_set_primary", "recovery_regenerate",
+    "factor_remove", "factor_set_primary", "factor_rename", "factor_test", "recovery_regenerate",
     "demo_banner_view",
     "notifications_list", "notifications_mark_read", "notifications_delete_read",
     "intro_seen", "upgrade_intro_seen",
