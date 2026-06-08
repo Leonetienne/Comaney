@@ -86,7 +86,6 @@ window.BUDDY_EXPENSE_CONFIG = {
 
         <div class="parse-actions">
             <button type="submit" class="btn" id="parse-btn">✦ Analyse with AI</button>
-            <div class="spinner" id="spinner"></div>
         </div>
     </form>
     </div>
@@ -355,12 +354,6 @@ const SESSION_KEY = 'express_creation_img';
     });
     removeBtn.addEventListener('click', clearImage);
 })();
-
-// ── Spinner ─────────────────────────────────────────────────────────────────
-document.getElementById('parse-form').addEventListener('submit', function () {
-    document.getElementById('parse-btn').disabled = true;
-    document.getElementById('spinner').style.display = 'inline-block';
-});
 
 {% if created_count is not None %}
 try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}

@@ -52,4 +52,39 @@
     text-align: center;
     display: block;
   }
+
+  &:disabled, &[disabled] {
+    cursor: not-allowed;
+    opacity: .7;
+  }
+
+  // Applied by the global submit guard in base.html while a form is in
+  // flight, so a second click can't re-fire the action before the page
+  // navigates away.
+  &.is-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 16px;
+      height: 16px;
+      margin: -8px 0 0 -8px;
+      border: 2px solid rgba(255, 255, 255, .5);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: btn-spin .7s linear infinite;
+    }
+
+    &.btn-secondary::after {
+      border-color: var(--input-border);
+      border-top-color: var(--text-subtle);
+    }
+  }
 }
+
+@keyframes btn-spin { to { transform: rotate(360deg); } }

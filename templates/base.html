@@ -60,6 +60,17 @@
         overlay.addEventListener('click', toggle);
     })();
 
+    document.addEventListener('click', function(e) {
+        const toggleBtn = e.target.closest('.fab-toggle');
+        if (toggleBtn) {
+            toggleBtn.closest('.fab-wrap').classList.toggle('fab-wrap--open');
+            return;
+        }
+        document.querySelectorAll('.fab-wrap--open').forEach(function(wrap) {
+            if (!wrap.contains(e.target)) wrap.classList.remove('fab-wrap--open');
+        });
+    });
+
     document.addEventListener('submit', function(e) {
         const deleteForm = e.target.closest('.delete-form');
         if (deleteForm) {
@@ -96,8 +107,24 @@
             }).catch(function() {
                 window.location.reload();
             });
+            return;
         }
+
+        // Guard every other form against double-submission: once a submit event
+        // actually goes through (i.e. no page-specific handler above cancelled
+        // it), lock its submit button(s) so a second click can't re-fire the
+        // action (e.g. creating the same expense twice) before the page navigates.
+        if (e.defaultPrevented) return;
+        lockSubmitButtons(e.target);
     });
+
+    function lockSubmitButtons(form) {
+        form.querySelectorAll('button[type=submit], button:not([type]), input[type=submit]').forEach(function(btn) {
+            if (btn.disabled) return;
+            btn.disabled = true;
+            btn.classList.add('is-loading');
+        });
+    }
 
     function setConsentGroupState(group, approvalState, canChangeConsent) {
         const approveBtn = group.querySelector('[data-consent="approve"]');

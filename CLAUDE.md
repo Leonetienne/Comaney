@@ -61,6 +61,8 @@ comaney/       Settings, root urls, middleware
 
 **Notification classes** (ordered): `"" < soon < tomorrow < today < late < settled`; each sent at most once per expense.
 
+**Double-submit guard** (`templates/base.html`): a global `document` `submit` listener disables every submit button in a form (`.is-loading` class, styled in `_buttons.scss`) the moment a submit event isn't cancelled, so a stray second click can't re-fire the same create/save action before the page navigates away. Applies automatically to any plain form; pages that intercept `submit` themselves (buddy consent AJAX, the date-range-warning confirm dialogs in `expense_form.html`/`express_creation.html`) call `e.preventDefault()` first, which the guard checks (`e.defaultPrevented`) and skips, leaving those flows to lock the button on their own eventual real submit. No per-page wiring needed for new create/save buttons.
+
 ## Tests
 - Always run tests with `-v` and pipe through `tee logfile.log`
 - Only ever pass `-v`. NEVER use `-x`: it stops at the first failure, which hides

@@ -85,18 +85,6 @@
   margin-top: 14px;
 }
 
-.spinner {
-  display: none;
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--border);
-  border-top-color: var(--text-subtle);
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
 .usage-pill {
   display: inline-flex;
   align-items: center;
