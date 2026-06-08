@@ -4,6 +4,27 @@ table {
   margin-top: 20px;
 }
 
+// A plain, quiet table: no header background, no hover highlight, smaller
+// text. For things like the credits page rather than a data grid.
+.credits-table {
+  max-width: 480px;
+  margin-top: 16px;
+  font-size: 0.88rem;
+
+  th {
+    background: none;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  td { color: var(--text-subtle); }
+
+  tr:hover td { background: none; }
+
+  tr:last-child td { border-bottom: none; }
+}
+
 th, td {
   text-align: left;
   padding: 10px 12px;

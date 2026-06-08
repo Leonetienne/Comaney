@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Comaney – Credits{% endblock %}
+
+{% block content %}
+<h1>Credits</h1>
+<p class="in-page-tip">Comaney uses a handful of third-party icons and images. Thank you to their creators.</p>
+
+<table class="credits-table">
+    <thead>
+        <tr>
+            <th>Asset</th>
+            <th>Author</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in credits %}
+        <tr>
+            <td>{{ entry.asset }}</td>
+            <td>{{ entry.author }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
