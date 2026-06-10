@@ -1,6 +1,6 @@
 """
 Spending over time (line chart) and tag distribution (bar chart) on the
-project detail page. Both charts use Chart.js via project_charts.js and
+project's Insights tab. Both charts use Chart.js via project_charts.js and
 are visible regardless of whether the project is solo or multi-member.
 """
 import time
@@ -96,7 +96,7 @@ class TestSpendingOverTimeChart:
 
     def test_spending_over_time_section_visible(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
         time.sleep(1)
         assert "Spending over time" in driver.page_source, \
             "Spending over time section must appear when project has approved non-settlement expenses"
@@ -166,7 +166,7 @@ class TestSpendingOverTimeOldProject:
         # Charts cover the project's entire history regardless of the
         # date-range picker (which only affects the expense list/export),
         # so these ~400-day-old expenses must still show up on the chart.
-        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
         time.sleep(1)
         labels = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.spendingOverTime; "
@@ -290,7 +290,7 @@ class TestTagDistributionChart:
 
     def test_tag_chart_section_visible(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
         time.sleep(1)
         assert "Project spending by tag" in driver.page_source, \
             "Project spending by tag section must appear when feuser has tags on their expenses"
@@ -333,7 +333,7 @@ class TestTagDistributionChart:
         # full expense amount, since the bar chart must never attribute another
         # feuser's spending to the viewing feuser.
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
         time.sleep(1)
         labels = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
@@ -353,7 +353,7 @@ class TestTagDistributionChart:
         # string that, applied via the project's ?q= deep link, isolates the
         # expenses behind that bar in the expense list below.
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
         time.sleep(1)
         labels = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
@@ -369,7 +369,7 @@ class TestTagDistributionChart:
 
     def test_tag_dist_queries_for_untagged(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
         time.sleep(1)
         queries = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
@@ -407,20 +407,25 @@ class TestSoloProjectSpendingChart:
 
     def test_solo_spending_over_time_visible(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
         time.sleep(1)
         assert "Spending over time" in driver.page_source, \
             "Solo project must show Spending over time chart when it has expenses"
 
     def test_solo_total_spending_label_visible(self, driver, w, ctx):
+        # "Total:" comes from the expense breakdown card, on the Expense list tab.
+        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        time.sleep(1)
         assert "Total:" in driver.page_source, \
-            "Solo project must show the total spending amount in the Spending over time section"
+            "Solo project must show the total spending amount on its expense card"
 
     def test_solo_total_spending_value(self, driver, w, ctx):
         assert "75.00" in driver.page_source, \
             "Solo project must display the total spending value (75.00)"
 
     def test_solo_pie_chart_absent(self, driver, w, ctx):
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
+        time.sleep(1)
         assert "Spending breakdown" not in driver.page_source, \
             "Solo project must never show the multi-member pie chart"
 

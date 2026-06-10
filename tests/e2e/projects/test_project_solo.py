@@ -26,12 +26,15 @@ class TestSoloProjectDetailPage:
         time.sleep(1)
         assert "Solo Project" in driver.page_source
 
-    def test_debt_graph_not_visible(self, driver, w, ctx):
-        assert "Expense flows" not in driver.page_source
-        assert "Quickest way to settle" not in driver.page_source
-
     def test_pay_someone_back_not_visible(self, driver, w, ctx):
         assert "Pay someone back" not in driver.page_source
+
+    def test_debt_graph_not_visible(self, driver, w, ctx):
+        # Debt graph lives on the Insights tab.
+        driver.get(_url(f"/projects/{ctx['gid']}/insights/"))
+        time.sleep(1)
+        assert "Expense flows" not in driver.page_source
+        assert "Quickest way to settle" not in driver.page_source
 
     def test_pie_chart_not_visible(self, driver, w, ctx):
         assert "Spending breakdown" not in driver.page_source

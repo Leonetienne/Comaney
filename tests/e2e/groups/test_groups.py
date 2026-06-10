@@ -501,15 +501,18 @@ class TestGroupBreakdown:
             "Group expense must appear in the Expense Breakdown section"
 
     def test_settlement_row_visible(self, driver, w, ctx):
+        # "Your balances" (the "owes" wording) lives on the Insights tab.
+        driver.get(_url(f"/projects/{ctx['group_id']}/insights/"))
+        time.sleep(1)
         assert "owes" in driver.page_source, \
             "A settlement 'owes' row must be shown"
 
     def test_settlement_amount_correct(self, driver, w, ctx):
         assert "50.00" in driver.page_source, \
-            "Settlement amount (50.00) must appear on the group detail page"
+            "Settlement amount (50.00) must appear on the project's Insights tab"
 
     def test_d3_graph_rendered(self, driver, w, ctx):
-        # The group page renders two D3 graphs: raw expense flows and simplified.
+        # The Insights tab renders two D3 graphs: raw expense flows and simplified.
         svg_elements = driver.find_elements(By.CSS_SELECTOR, "#raw-debt-graph svg, #simplified-debt-graph svg")
         assert len(svg_elements) >= 1, "D3 graph SVG must be rendered when debts exist"
 

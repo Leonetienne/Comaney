@@ -22,7 +22,7 @@ def _get_group_uid(group_id: int) -> str:
 
 
 class TestGroupSpendingChart:
-    """Spending breakdown section and pie chart render on the group detail page."""
+    """Spending breakdown section and pie chart render on the project's Insights tab."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -55,7 +55,7 @@ class TestGroupSpendingChart:
 
     def test_spending_section_visible(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
         time.sleep(1)
         assert "Spending breakdown" in driver.page_source, \
             "Spending breakdown section must appear when group has approved non-settlement expenses"
@@ -120,7 +120,7 @@ class TestGroupSpendingChartHidden:
 
     def test_spending_section_absent(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
         time.sleep(2)  # Wait for AJAX charts to load
         is_hidden = driver.execute_script(
             "var s = document.getElementById('section-spending-breakdown');"

@@ -451,9 +451,9 @@ class TestGroupSettlement:
 
     def test_admin_sees_no_debt_in_balances(self, driver, w, ctx):
         # "Pay someone back" is always rendered; what matters is that the admin
-        # who is owed money has no "You owe" row in "Your balances".
+        # who is owed money has no "You owe" row in "Your balances" (Insights tab).
         _login_as(driver, ctx["admin"])
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/insights/"))
         time.sleep(1)
         assert "You owe" not in driver.page_source, \
             "Admin who is owed money must not see a 'You owe' balance row"
