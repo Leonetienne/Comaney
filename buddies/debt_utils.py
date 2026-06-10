@@ -31,3 +31,36 @@ def simplify_balances(balances: dict) -> list:
         bal[ck] -= amount
         bal[dk] += amount
     return transactions
+
+
+def compute_net_member_spending(expenses: list) -> dict:
+    """
+    Net per-member spending for the project spending-breakdown pie chart.
+
+    Regular expenses contribute their upfront payment to the payer. A
+    settlement moves its amount from the creditor's total to the debtor's
+    (settling a debt from debtor A to creditor B adds the amount to A's net
+    and subtracts it from B's), instead of being ignored, so the pie reflects
+    who has effectively borne the cost after settlements even out.
+
+    expenses: list of dicts, each with:
+      is_settlement: bool
+      payer_key: str -- the payer (debtor, for a settlement)
+      total: Decimal-compatible
+      participant_shares: list of {"key": str, "amount": Decimal-compatible}
+        (only used for settlements, which have a single 100%-share creditor)
+
+    Returns {member_key: Decimal net}.
+    """
+    spending: dict = {}
+    for exp in expenses:
+        if exp["is_settlement"]:
+            debtor_key = exp["payer_key"]
+            spending[debtor_key] = spending.get(debtor_key, Decimal("0")) + exp["total"]
+            for share in exp["participant_shares"]:
+                creditor_key = share["key"]
+                spending[creditor_key] = spending.get(creditor_key, Decimal("0")) - share["amount"]
+        else:
+            pk = exp["payer_key"]
+            spending[pk] = spending.get(pk, Decimal("0")) + exp["total"]
+    return spending

@@ -19,6 +19,7 @@ from budget.decorators import feuser_required
 from budget.models import Expense
 from budget.query_parser import apply_query, has_date_filter
 from feusers.models import FeUser
+from ..debt_utils import compute_net_member_spending
 from ..models import Project, ProjectInvite, ProjectMember, BuddySpending, DummyUser
 from ..models import PERMISSION_LAXITY_CHOICES
 from ..services import BuddyArchiveService, ProjectService, ProjectExportService, BuddyQueryService, _display_name
@@ -430,12 +431,15 @@ def _compute_project_charts(feuser, project):
             "initials": obj.initials if obj else "?",
         })
 
-    member_spending: dict = {}
-    for ed in approved_expenses:
-        if ed["expense"].is_buddies_settlement:
-            continue
-        pk = ed["payer_key"]
-        member_spending[pk] = member_spending.get(pk, Decimal("0")) + ed["total"]
+    member_spending = compute_net_member_spending([
+        {
+            "is_settlement": ed["expense"].is_buddies_settlement,
+            "payer_key": ed["payer_key"],
+            "total": ed["total"],
+            "participant_shares": ed["participant_shares"],
+        }
+        for ed in approved_expenses
+    ])
 
     project_total = Decimal("0")
     for ed in approved_expenses:
