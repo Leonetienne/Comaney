@@ -17,7 +17,7 @@ from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
 from budget.models import Expense
-from budget.query_parser import apply_query, has_date_filter
+from budget.query_parser import apply_query, has_date_filter, visible_tag_titles
 from feusers.models import FeUser
 from ..debt_utils import compute_net_member_spending
 from ..models import Project, ProjectInvite, ProjectMember, BuddySpending, DummyUser
@@ -564,14 +564,13 @@ def _compute_project_charts(feuser, project):
             exp = ed["expense"]
             is_owner = not exp.is_dummy and exp.owning_feuser_id == feuser.pk
             if is_owner:
-                tags = expense_tag_map.get(exp.pk, [])
                 amount = float(ed["total"])
             else:
                 my_share = next((s["amount"] for s in ed["participant_shares"] if s["is_me"]), None)
                 if my_share is None:
                     continue
-                tags = overlay_tags.get(exp.pk, [])
                 amount = float(my_share)
+            tags = visible_tag_titles(exp, feuser, expense_tag_map, overlay_tags)
             if tags:
                 for title in tags:
                     tag_amounts[title] = tag_amounts.get(title, 0.0) + amount

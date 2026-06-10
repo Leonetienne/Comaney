@@ -511,6 +511,11 @@ def _compute_chart(config: dict, period_qs, value_field: str = 'value', feuser=N
         agg_field = value_field
 
     if group == 'tags':
+        # Same own-tags-if-owner-else-overlay-tags rule as
+        # `query_parser.visible_tag_titles`/`_tag_q`, expressed as a bulk ORM
+        # GROUP BY instead of a per-expense Python check (this runs over
+        # every expense in the period, so it stays in SQL for performance).
+        # Keep this in sync with those if the rule ever changes.
         totals: dict[str, Decimal] = {}
         # Own expenses: tags on the expense belong to feuser
         for row in (qs.filter(owning_feuser=feuser, tags__isnull=False)
@@ -531,6 +536,8 @@ def _compute_chart(config: dict, period_qs, value_field: str = 'value', feuser=N
         values = [float(p[1]) for p in pairs]
 
     elif group == 'categories':
+        # Same own-if-owner-else-overlay rule as the tags branch above and
+        # `query_parser._cat_q`; see that comment for why this stays in SQL.
         totals_cat: dict[str | None, Decimal] = {}
         # Own expenses: category on the expense belongs to feuser
         for row in (qs.filter(owning_feuser=feuser)

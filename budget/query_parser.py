@@ -220,10 +220,25 @@ def _payee_q(val: str) -> Q:
     return Q(payee__icontains=val)
 
 
+def visible_tag_titles(expense, feuser, own_tag_map: dict, overlay_tag_map: dict) -> list:
+    """Canonical per-expense tag-visibility rule: the expense's own tags when
+    feuser owns it, otherwise feuser's personal `ExpenseDataOverlay` tags;
+    never the foreign owner's own tags. Same rule as `_tag_q` below (a Q
+    filter for a single known tag value) and `budget/dashboard_cards.py`'s
+    `_compute_chart` (a bulk ORM GROUP BY over many expenses); this variant
+    is for callers that iterate expenses in Python and already have
+    per-expense tag maps keyed by expense pk (own_tag_map/overlay_tag_map),
+    e.g. `buddies/views/projects.py`'s project tag bar chart.
+    """
+    is_owner = not expense.is_dummy and expense.owning_feuser_id == feuser.pk
+    return own_tag_map.get(expense.pk, []) if is_owner else overlay_tag_map.get(expense.pk, [])
+
+
 def _tag_q(val: str, model=None, feuser=None) -> Q:
     """tag=<none|substring> — matches only tags visible to feuser: the
     expense's own tags when feuser owns it, otherwise feuser's overlay tags
-    (never the owner's tags on a foreign expense)."""
+    (never the owner's tags on a foreign expense). See `visible_tag_titles`
+    above for the same rule in a per-expense-iteration shape."""
     if val == 'none':
         # Own expenses: no direct tags. Foreign expenses: no overlay tags for feuser.
         q = Q(owning_feuser=feuser, tags__isnull=True)

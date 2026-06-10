@@ -43,14 +43,28 @@ class TestExpensesFabSubmenu:
         assert not any(i.is_displayed() for i in items)
 
     def test_click_toggles_menu_open(self, driver, w, ctx):
-        self._open(driver, w)
-        driver.find_element(By.CSS_SELECTOR, ".fab-toggle").click()
-        # The 3rd bubble's open transition (transform 0.22s) starts after a
-        # 0.1s cascade delay, so it isn't fully settled until ~0.32s -- too
-        # close to a 0.3s wait under any system load. Give it real headroom.
-        time.sleep(0.6)
-        items = self._menu_items(driver)
-        assert items and all(i.is_displayed() for i in items)
+        # This harness's clicks are JS-dispatched (conftest.py's WebElement.click
+        # patch, needed to dodge macOS background-window focus drops), so they
+        # never move a real mouse pointer or engage CSS `:hover`. The app only
+        # wires the click handler to toggle `.fab-wrap--open` for non-hover-
+        # capable (touch) pointers -- hover-capable ones already reveal the menu
+        # via `:hover` instead, see templates/base.html -- so without emulating
+        # a touch pointer here, this click would be a no-op on this browser.
+        # Emulation.setEmulatedMedia doesn't move the hover/pointer media
+        # features in Chrome; touch emulation is what actually flips them.
+        driver.execute_cdp_cmd("Emulation.setTouchEmulationEnabled", {"enabled": True, "maxTouchPoints": 1})
+        driver.execute_cdp_cmd("Emulation.setEmitTouchEventsForMouse", {"enabled": True})
+        try:
+            self._open(driver, w)
+            driver.find_element(By.CSS_SELECTOR, ".fab-toggle").click()
+            # The 3rd bubble's open transition (transform 0.22s) starts after a
+            # 0.1s cascade delay, so it isn't fully settled until ~0.32s -- too
+            # close to a 0.3s wait under any system load. Give it real headroom.
+            time.sleep(0.6)
+            items = self._menu_items(driver)
+            assert items and all(i.is_displayed() for i in items)
+        finally:
+            driver.execute_cdp_cmd("Emulation.setTouchEmulationEnabled", {"enabled": False})
 
     def test_outside_click_closes_menu(self, driver, w, ctx):
         self._open(driver, w)
