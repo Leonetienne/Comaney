@@ -248,6 +248,13 @@
 
         var tooltip = document.getElementById('group-pie-tooltip');
 
+        function goToPayerExpenses(query) {
+            if (!query) return;
+            var cfg = window.PROJECT_CHARTS;
+            var base = (cfg && cfg.expenseListUrl) || window.location.pathname;
+            window.location.href = base + '?q=' + encodeURIComponent(query) + '#section-expenses';
+        }
+
         arcs.forEach(function(d, i) {
             var member = d.data;
             var pct = totalSpent > 0 ? (member.spent / totalSpent * 100).toFixed(1) : '0.0';
@@ -312,6 +319,9 @@
                         cps.transition().duration(dur).attr('d', arc(hitD));
                         hitPath.attr('d', arc(hitD));
                         tooltip.style.display = 'none';
+                    })
+                    .on('click', function() {
+                        goToPayerExpenses(hitMember.query);
                     });
             })(member, d, pct, fillPath, borderPath, clipPathShape);
         });
@@ -320,6 +330,10 @@
             var pct = totalSpent > 0 ? (member.spent / totalSpent * 100).toFixed(1) : '0.0';
             var row = document.createElement('div');
             row.className = 'pie-legend-row' + (member.is_me ? ' pie-legend-row--me' : '');
+            if (member.query) {
+                row.style.cursor = 'pointer';
+                row.addEventListener('click', function() { goToPayerExpenses(member.query); });
+            }
 
             var dot = document.createElement('span');
             dot.className = 'pie-legend-dot';
@@ -393,6 +407,7 @@
 
         window.PROJECT_CHARTS = {
             currency: CURRENCY,
+            spendingPie: data.spending_pie || null,
             spendingOverTime: data.spending_over_time || null,
             tagDist: data.tag_dist || null,
             expenseListUrl: "{{ project_url|escapejs }}",

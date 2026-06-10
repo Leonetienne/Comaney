@@ -34,6 +34,13 @@ def _tag_filter_query(tag_title: str) -> str:
     return 'tag="{}"'.format(tag_title.replace('"', ""))
 
 
+def _payer_filter_query(payer_name: str) -> str:
+    """Build a `q` search-filter string (see budget/query_parser.py) that
+    filters the project's expense list down to expenses paid by a single
+    person, for the spending breakdown pie chart's click-through link."""
+    return 'payer="{}"'.format(payer_name.replace('"', ""))
+
+
 def _fetch_overlay_notes(feuser, breakdown):
     """Fetch ExpenseDataOverlay notes for all expenses in breakdown. Returns {expense_pk: note}."""
     from budget.models import ExpenseDataOverlay
@@ -457,6 +464,10 @@ def _compute_project_charts(feuser, project):
     for k, v in breakdown["member_map"].items():
         obj = v.get("user_obj")
         has_pic = bool(obj and obj.profile_picture)
+        # member_map's "name" appends " (offline member)" for dummies (see
+        # get_group_full_breakdown); the payer= filter must match the dummy's
+        # raw display_name, not that display-only suffix.
+        payer_name = obj.display_name if k.startswith("d") else v["name"]
         graph_nodes.append({
             "key": k,
             "name": v["name"],
@@ -464,6 +475,7 @@ def _compute_project_charts(feuser, project):
             "has_pic": has_pic,
             "avatar_url": obj.ppic_url if has_pic else None,
             "initials": obj.initials if obj else "?",
+            "query": _payer_filter_query(payer_name),
         })
 
     member_spending = compute_net_member_spending([
@@ -491,6 +503,7 @@ def _compute_project_charts(feuser, project):
             "has_pic": node["has_pic"],
             "avatar_url": node["avatar_url"],
             "initials": node["initials"],
+            "query": node["query"],
         }
         for node in graph_nodes
     ]

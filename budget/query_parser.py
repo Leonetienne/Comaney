@@ -34,7 +34,8 @@ Filters:
 import re
 from datetime import date as _date, timedelta as _timedelta
 from decimal import Decimal, InvalidOperation
-from django.db.models import Q
+from django.db.models import Q, Value
+from django.db.models.functions import Concat
 
 
 # Map the lowercased display names (as used in the UI) to internal DB values.
@@ -187,15 +188,21 @@ def _participant_q(val: str, model=None, feuser=None) -> Q:
 
 
 def _payer_q(val: str, model=None, feuser=None) -> Q:
-    """payer=<me|substring>: matches owning_feuser or dummy upfront payer (not participants)."""
+    """payer=<me|substring>: matches owning_feuser (by first name, last name, full
+    "first last" name, or email) or dummy upfront payer (not participants)."""
     if val == 'me' and feuser is not None:
         return Q(owning_feuser=feuser)
-    return (
+    q = (
         Q(owning_feuser__first_name__icontains=val)
         | Q(owning_feuser__last_name__icontains=val)
         | Q(owning_feuser__email__icontains=val)
         | Q(upfront_payee_dummy__display_name__icontains=val)
     )
+    if model is not None:
+        q |= Q(pk__in=model.objects.annotate(
+            _owner_full_name=Concat('owning_feuser__first_name', Value(' '), 'owning_feuser__last_name'),
+        ).filter(_owner_full_name__icontains=val).values('pk'))
+    return q
 
 
 def _project_q(val: str) -> Q:
