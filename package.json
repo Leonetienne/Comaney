@@ -8,7 +8,9 @@
     "build:buddy_expense": "esbuild build/js/buddy_expense.js --bundle --minify --target=es2020 --outfile=static/dist/buddy_expense.js",
     "build:project_charts": "esbuild build/js/project_charts.js --bundle --minify --target=es2020 --outfile=static/dist/project_charts.js",
     "build:project_detail": "esbuild build/js/project_detail.js --bundle --minify --target=es2020 --outfile=static/dist/project_detail.js",
-    "build": "npm run build:css && npm run build:js && npm run build:dashboard && npm run build:buddy_expense && npm run build:project_charts && npm run build:project_detail",
+    "build:d3": "esbuild build/js/d3-vendor.js --bundle --minify --target=es2020 --outfile=static/dist/d3.js",
+    "build:images": "mkdir -p static/dist/images && cp -r build/images/. static/dist/images/",
+    "build": "npm run build:css && npm run build:js && npm run build:dashboard && npm run build:buddy_expense && npm run build:project_charts && npm run build:project_detail && npm run build:d3 && npm run build:images",
     "watch:css": "sass --watch build/scss/main.scss:static/dist/main.css"
   },
   "dependencies": {
@@ -16,7 +18,8 @@
     "chart.js": "^4.4.0",
     "codemirror": "^6.0.1",
     "@codemirror/lang-yaml": "^6.1.2",
-    "@codemirror/theme-one-dark": "^6.1.2"
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "d3": "^7.9.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.4",
