@@ -68,6 +68,40 @@ def notify_admin_invalid_trial_key() -> None:
         log.exception("Could not send invalid trial key notification to %s", email)
 
 
+def notify_admin_json_repair_fallback(feature: str, resolved: bool) -> None:
+    """
+    A JSON-repair fallback (see budget.express_service.call_ai_for_json) had
+    to kick in: an AI feature's response didn't parse as JSON at all (usually
+    excessive markdown/code-fencing or stray text around it), so a second AI
+    call was made to try to recover it. Purely an operational signal for the
+    admin -- never includes any user data or response content, just which
+    feature hit this and whether the retry fixed it.
+    """
+    if getattr(settings, "DISABLE_EMAILING", False):
+        return
+    email = getattr(settings, "ADMIN_NOTIFICATION_EMAIL", "")
+    if not email:
+        return
+    from django.core.mail import send_mail
+
+    outcome = (
+        "The repair attempt fixed it and the request completed normally."
+        if resolved else
+        "The repair attempt also failed; the request was shown as failed to the user."
+    )
+    subject = f"[Comaney] AI JSON extraction needed a repair fallback ({feature})"
+    body = (
+        f'The AI feature "{feature}" returned a response that could not be parsed as JSON, '
+        f"likely due to excessive markdown/code-fencing or stray text around the JSON.\n\n"
+        f"A second AI call was made to repair the response. {outcome}\n\n"
+        "This is an operational notice only; no user or response data is included.\n"
+    )
+    try:
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [email])
+    except (SMTPException, OSError):
+        log.exception("Could not send JSON-repair-fallback notification to %s", email)
+
+
 def notify_admin_billing(reason: str) -> None:
     if getattr(settings, "DISABLE_EMAILING", False):
         return

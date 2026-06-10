@@ -2,15 +2,31 @@
 AI-powered express expense creation: agent abstraction, image handling,
 item validation, and trial-key management.
 
-The view layer lives in budget/views/express.py and imports from here.
+The view layer lives in budget/views/express.py and imports from here. This
+module is also the shared home for the AI plumbing used by every other AI
+feature in the app (budget.dashboard_card_ai, buddies.services.partnership_ai):
+provider dispatch, JSON-response recovery, and trial-budget billing all live
+here so a new AI feature never has to reimplement them.
 
 AI call hierarchy:
-  _call_agent(AgentConfig, system_prompt, messages) -> (raw_text, usage)
-    └── _call_claude_impl  (provider="claude")
-        └── future providers via AgentConfig.provider
+  call_ai_for_json(AgentConfig, system_prompt, messages, feature=...)
+    -> (parsed_json_value, usage, raw_text)
+      This is the entry point new AI code should use. It:
+        1. _call_agent(config, system_prompt, messages) -> (raw_text, usage)
+             └── _call_claude_impl  (provider="claude")
+                 └── future providers via AgentConfig.provider
+        2. extract_json_object(raw_text) -- recovers a JSON value even
+           through a stray code fence, leading prose, or trailing sign-off.
+        3. If that still fails to parse: one repair AI call (also via
+           _call_agent) asking a fresh session to fix the formatting, then
+           extract_json_object() again. usage from both calls is merged
+           (merge_usage) into a single combined usage dict either way.
+  record_ai_usage(feuser, is_trial, usage) -> bills a usage dict (from either
+      of the above) against the feuser's trial budget; a no-op off-trial.
 
-Express-creation callers use the legacy _call_claude() wrapper which builds
-the content array and parses the smart-create JSON format on top of _call_agent.
+Express-creation calls the legacy _call_claude() wrapper, which builds the
+image+text content array and interprets the smart-create JSON envelope on
+top of call_ai_for_json().
 """
 import json
 import logging
@@ -36,10 +52,15 @@ class AIRefusalError(Exception):
 
 class AIInvalidResponseError(Exception):
     """AI returned unparseable or structurally unexpected output."""
-    def __init__(self, raw: str, cause: Exception | None = None):
+    def __init__(self, raw: str = "", cause: Exception | None = None, usage: dict | None = None):
         super().__init__("Invalid response")
         self.raw = raw
         self.cause = cause
+        # Set only when raised by call_ai_for_json after a JSON-repair fallback
+        # was attempted -- the combined cost of the primary + repair calls, so
+        # the caller can still bill it even though the request ultimately
+        # failed. None for every other raise site (nothing extra was spent).
+        self.usage = usage
 
 
 class AIBudgetExceededError(Exception):
@@ -159,6 +180,36 @@ def _default_agent_config(feuser) -> AgentConfig:
     return AgentConfig(provider="claude", api_key=api_key)
 
 
+def merge_usage(*usages: dict) -> dict:
+    """
+    Combine usage dicts from multiple _call_agent calls made for one logical
+    request (e.g. a primary call plus a JSON-repair retry, see
+    call_ai_for_json) into a single usage dict of the same shape, so the
+    combined cost can be shown/billed exactly like a single call's usage.
+    """
+    keys = ("input_tokens", "output_tokens", "cache_write_tokens", "cache_read_tokens", "total_tokens")
+    merged = {k: sum(u.get(k, 0) for u in usages) for k in keys}
+    merged["cost_usd"] = round(sum(u.get("cost_usd", 0) for u in usages), 6)
+    merged["cost_cents"] = round(sum(u.get("cost_cents", 0) for u in usages), 4)
+    return merged
+
+
+def record_ai_usage(feuser, is_trial: bool, usage: dict | None) -> None:
+    """
+    Bill a completed AI call's cost against the feuser's trial budget, if
+    they're on the shared trial key (a feuser with their own Anthropic key
+    pays Anthropic directly, so there's nothing to record). A no-op when
+    usage is falsy, so callers can pass an exception's optional .usage
+    straight through without an extra guard. Shared by every AI feature
+    (express creation, dashboard card AI, partnership tag/category mapping)
+    so this billing logic only lives in one place.
+    """
+    if not (is_trial and usage):
+        return
+    feuser.ai_trial_budget_spent = (feuser.ai_trial_budget_spent or Decimal(0)) + Decimal(str(usage["cost_cents"]))
+    feuser.save(update_fields=["ai_trial_budget_spent"])
+
+
 # ---------------------------------------------------------------------------
 # Express-creation constants and helpers
 # ---------------------------------------------------------------------------
@@ -194,8 +245,11 @@ If an image is provided:
 - The payee is the store or vendor name from the receipt header.
 - Use the user's text (if any) as additional context or filtering instructions.
 
-Response format — your entire response must be one of these two JSON objects, no prose, no markdown, no code fences, never produce any output that's not json! Never produce a leading text or summary!:
-Only produce one of the following two json formats as your ENTIRE message:
+Response format — your ENTIRE reply, from the very first character to the very last, must be exactly one of the two JSON objects below and nothing else:
+- The first character of your reply MUST be "{" and the last character MUST be "}".
+- No prose, no markdown, no code fences (no ``` anywhere), no leading text, no trailing note or summary after the closing brace.
+- Do not use markdown formatting (backticks, asterisks, etc.) inside any field value either — plain text only.
+- Inside every string value, escape special characters properly per JSON rules (e.g. use \\n for a line break) — never place a raw, unescaped line break inside a string.
 
 Success:
 {"result": "good", "items": [ ... ]}
@@ -356,6 +410,130 @@ def _build_catalog(feuser, projects_data: list, single_buddies: list) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Shared raw-response parsing (express creation, dashboard card AI, partnership AI)
+# ---------------------------------------------------------------------------
+
+def extract_json_object(raw: str):
+    """
+    Best-effort recovery of a single JSON value from a raw AI text response.
+
+    Every AI feature's system prompt asks for a reply that is nothing but a
+    JSON object, but models sometimes still wrap it in a ``` code fence,
+    prefix it with a line of prose, or tack on a trailing sign-off sentence
+    despite being told not to. This tolerates all three by locating the first
+    "{" and parsing only the JSON value that starts there (via
+    json.JSONDecoder.raw_decode), rather than requiring -- like json.loads --
+    that the entire remaining string be valid JSON; anything trailing the
+    parsed value (a closing fence, a stray comment) is simply ignored instead
+    of causing an "Extra data" failure. strict=False additionally tolerates a
+    raw, unescaped line break inside a string value instead of raising.
+
+    Raises json.JSONDecodeError if no valid JSON value can be found at all.
+    """
+    cleaned = raw
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[-1]
+        cleaned = cleaned.rsplit("```", 1)[0].strip()
+
+    idx = cleaned.find("{")
+    if idx != -1:
+        cleaned = cleaned[idx:]
+
+    parsed, _end = json.JSONDecoder(strict=False).raw_decode(cleaned)
+    return parsed
+
+
+_JSON_REPAIR_SYSTEM = """You are a strict JSON repair tool.
+You will be given a piece of text that was supposed to be a single JSON object but failed to parse as one -- for example because it was wrapped in a markdown code fence, had a leading or trailing sentence around it, or contained a stray unescaped character.
+Your ONLY job is to recover the JSON object that was intended and output it, unchanged in meaning, and nothing else. Do not change, add, remove, or "improve" any keys or values -- only fix formatting/syntax so the result is valid JSON.
+Your entire reply must be exactly the corrected JSON object: no prose, no markdown, no code fences, no leading or trailing text of any kind. The first character of your reply MUST be "{" and the last character MUST be "}".
+If you cannot find a coherent JSON object to recover at all, reply with exactly: {"result": "fail", "msg": "could not recover"}"""
+
+
+def _attempt_json_repair(config: AgentConfig, broken_raw: str) -> tuple[str, dict]:
+    """
+    Last-resort fallback for call_ai_for_json: forwards a raw AI response
+    that failed to parse as JSON to a second, small AI call whose only job is
+    to recover the intended JSON. Returns (repaired_raw_text, usage) -- the
+    caller still has to run extract_json_object() on the result, since the
+    repair call itself is not guaranteed to produce valid JSON either.
+    """
+    repair_config = AgentConfig(
+        provider=config.provider, api_key=config.api_key,
+        model=config.model, max_tokens=config.max_tokens,
+    )
+    messages = [{"role": "user", "content": broken_raw}]
+    return _call_agent(repair_config, _JSON_REPAIR_SYSTEM, messages)
+
+
+def _notify_json_repair_admin(feature: str, resolved: bool) -> None:
+    from .ai_trial import notify_admin_json_repair_fallback
+    notify_admin_json_repair_fallback(feature, resolved)
+
+
+def call_ai_for_json(
+    config: AgentConfig,
+    system_prompt: str | list[dict],
+    messages: list[dict],
+    *,
+    feature: str,
+) -> tuple[object, dict, str]:
+    """
+    Single entry point for "call the AI, expect a JSON value back" -- the
+    shape every current AI feature (express creation, dashboard card AI,
+    partnership tag/category mapping) needs, and the one any new AI feature
+    should reach for instead of hand-rolling _call_agent + parsing again.
+
+    Handles the one retry every one of them wants: if the model's raw
+    response doesn't parse as JSON at all (see extract_json_object) -- most
+    often because it wrapped the JSON in extra code-fencing or prose despite
+    being told not to -- the raw text is forwarded to one small repair AI
+    call before giving up. The instance admin is emailed about it (feature
+    name and outcome only, never the response content -- see
+    budget.ai_trial.notify_admin_json_repair_fallback) so repeated fencing
+    problems on a given feature's prompt get noticed.
+
+    Returns (parsed_json_value, usage, raw_text): usage is already the
+    combined cost of every AI call made for this one logical request (the
+    primary call, plus the repair call if one was needed) -- pass it
+    straight to record_ai_usage(). raw_text is the exact response text that
+    was actually parsed into parsed_json_value (the primary response, or the
+    repaired one if a repair was needed), for callers that want to show/log
+    "what the AI actually said" (e.g. AIRefusalError's .raw).
+
+    Raises AIInvalidResponseError (with .usage set to the combined cost spent
+    so far) if the response still can't be parsed after the repair attempt.
+    """
+    raw, usage = _call_agent(config, system_prompt, messages)
+    _log.debug("%s raw response: %r", feature, raw)
+
+    try:
+        return extract_json_object(raw), usage, raw
+    except json.JSONDecodeError as exc:
+        _log.warning(
+            "%s JSON parse failure, attempting AI repair. raw=%r exc=%s",
+            feature, raw, exc,
+        )
+
+    repair_raw, repair_usage = _attempt_json_repair(config, raw)
+    combined_usage = merge_usage(usage, repair_usage)
+
+    try:
+        parsed = extract_json_object(repair_raw)
+    except json.JSONDecodeError as repair_exc:
+        _log.error(
+            "%s JSON repair also failed. raw=%r repair_raw=%r exc=%s",
+            feature, raw, repair_raw, repair_exc,
+        )
+        _notify_json_repair_admin(feature, resolved=False)
+        raise AIInvalidResponseError(raw, repair_exc, usage=combined_usage) from repair_exc
+
+    _log.info("%s JSON repair succeeded after primary parse failure.", feature)
+    _notify_json_repair_admin(feature, resolved=True)
+    return parsed, combined_usage, repair_raw
+
+
+# ---------------------------------------------------------------------------
 # Legacy express-creation wrapper (keeps express.py unchanged)
 # ---------------------------------------------------------------------------
 
@@ -368,8 +546,8 @@ def _call_claude(
 ) -> tuple[list[dict], dict]:
     """
     Express-creation specific AI call.
-    Builds the content array, calls _call_agent, parses the smart-create JSON format.
-    Returns (parsed_items, usage_dict).
+    Builds the content array, calls call_ai_for_json, interprets the
+    smart-create JSON envelope. Returns (parsed_items, usage_dict).
     """
     content: list[dict] = []
     if image_b64:
@@ -387,29 +565,9 @@ def _call_claude(
     })
 
     config = AgentConfig(provider="claude", api_key=api_key, max_tokens=8192)
-    raw, usage = _call_agent(config, system_prompt, [{"role": "user", "content": content}])
-
-    _log.debug("smart_create raw response: %r", raw)
-
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[-1]
-        raw = raw.rsplit("```", 1)[0].strip()
-
-    if not raw.startswith('{"result":'):
-        idx = raw.find('{"result":')
-        if idx == -1:
-            idx = raw.find('{ "result":')
-        if idx != -1:
-            raw = raw[idx:]
-
-    if not raw:
-        raise ValueError("Claude returned only a code fence with no content inside.")
-
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        _log.error("smart_create JSON parse failure. raw=%r exc=%s", raw, exc)
-        raise AIInvalidResponseError(raw, exc) from exc
+    parsed, usage, raw = call_ai_for_json(
+        config, system_prompt, [{"role": "user", "content": content}], feature="express_creation",
+    )
 
     if isinstance(parsed, dict):
         if parsed.get("result") == "fail":

@@ -1,11 +1,8 @@
 """
 AI-assisted tag and category mapping for partnership onboarding.
-Uses the same _call_agent abstraction as express creation.
+Uses the same call_ai_for_json abstraction as express creation and dashboard card AI.
 """
 import json
-import logging
-
-_log = logging.getLogger(__name__)
 
 _TAG_MAPPING_SYSTEM = """You are a tag migration assistant for a personal finance app.
 The user is joining a Catalog Partnership and needs to map their existing tags to their partner's tags.
@@ -17,7 +14,7 @@ Rules:
 - Prefer exact or near-exact matches first, then semantic equivalents.
 - The tags may be in any language; treat them semantically.
 
-Respond with ONLY a JSON object, no prose, no markdown:
+Your ENTIRE reply, from the very first character to the very last, must be exactly this JSON object and nothing else: no prose, no markdown, no code fences, no leading text, no trailing note or summary after the closing brace. The first character of your reply MUST be "{" and the last character MUST be "}".
 {"mappings": [{"source": "...", "target": "..." | null}, ...]}
 """
 
@@ -31,7 +28,7 @@ Rules:
 - Prefer exact or near-exact matches, then semantic equivalents.
 - Categories may be in any language; treat them semantically.
 
-Respond with ONLY a JSON object, no prose, no markdown:
+Your ENTIRE reply, from the very first character to the very last, must be exactly this JSON object and nothing else: no prose, no markdown, no code fences, no leading text, no trailing note or summary after the closing brace. The first character of your reply MUST be "{" and the last character MUST be "}".
 {"mappings": [{"source": "...", "target": "..." | null}, ...]}
 """
 
@@ -40,7 +37,7 @@ def suggest_tag_mappings(feuser, master_feuser, source_tags: list[str], target_t
     """
     Return [{source: str, target: str|None}, ...] for unmatched source tags.
     Raises budget.express_service.AIBudgetExceededError if budget is exceeded.
-    Raises ValueError on unexpected AI response.
+    Raises budget.express_service.AIInvalidResponseError on unexpected AI response.
     """
     return _suggest_mappings(feuser, master_feuser, source_tags, target_tags, _TAG_MAPPING_SYSTEM)
 
@@ -82,7 +79,8 @@ def _build_context_block(feuser, master_feuser) -> str:
 
 def _suggest_mappings(feuser, master_feuser, sources: list[str], targets: list[str], system_prompt: str) -> list[dict]:
     from budget.express_service import (
-        _call_agent, _default_agent_config, _trial_state, AIBudgetExceededError
+        AIBudgetExceededError, AIInvalidResponseError, _default_agent_config,
+        _trial_state, call_ai_for_json, record_ai_usage,
     )
 
     _, is_trial, trial_limit, trial_spent, trial_blocked = _trial_state(feuser)
@@ -103,21 +101,17 @@ def _suggest_mappings(feuser, master_feuser, sources: list[str], targets: list[s
     )
     messages = [{"role": "user", "content": user_message}]
 
-    raw, usage = _call_agent(config, system_prompt, messages)
-    _log.debug("partnership_ai raw response: %r", raw)
-
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-
     try:
-        parsed = json.loads(raw)
+        parsed, usage, raw = call_ai_for_json(config, system_prompt, messages, feature="partnership_ai")
         mappings = parsed["mappings"]
-    except (json.JSONDecodeError, KeyError, TypeError) as exc:
-        raise ValueError(f"Unexpected AI response: {raw!r}") from exc
+    except AIInvalidResponseError as exc:
+        # A repair fallback may have been attempted (see call_ai_for_json) and
+        # still ultimately failed -- bill whatever it cost before propagating
+        # (a no-op when .usage is unset, i.e. every other raise site here).
+        record_ai_usage(feuser, is_trial, exc.usage)
+        raise
+    except (KeyError, TypeError) as exc:
+        raise AIInvalidResponseError(raw) from exc
 
-    if is_trial and usage:
-        from decimal import Decimal
-        feuser.ai_trial_budget_spent = (feuser.ai_trial_budget_spent or Decimal(0)) + Decimal(str(usage["cost_cents"]))
-        feuser.save(update_fields=["ai_trial_budget_spent"])
-
+    record_ai_usage(feuser, is_trial, usage)
     return mappings

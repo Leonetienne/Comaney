@@ -18,6 +18,7 @@ from ..express_service import (
     _select_smart_create_blocks,
     _trial_state,
     _validate_items,
+    record_ai_usage,
 )
 from ..expense_factory import create_expense
 from ..models import Category, Tag, TransactionType
@@ -91,6 +92,15 @@ def express_creation(request):
                 system_prompt = _build_smart_create_system(catalog, blocks) + extra
                 today_str = timezone.localdate().isoformat()
                 description_with_date = f"[Today's date: {today_str}]\n\n{description}" if description else f"[Today's date: {today_str}]"
+
+                def _apply_usage(u):
+                    context["usage"] = u
+                    record_ai_usage(feuser, is_trial, u)
+                    if is_trial and u:
+                        context["trial_spent"] = round(float(feuser.ai_trial_budget_spent), 1)
+                        if float(feuser.ai_trial_budget_spent) >= trial_limit:
+                            context["trial_just_exhausted"] = True
+
                 try:
                     raw_items, usage = _call_claude(
                         api_key, system_prompt, description_with_date,
@@ -104,14 +114,7 @@ def express_creation(request):
                     if items:
                         context["preview_items"] = items
                         context["preview_json"] = json.dumps(items)
-                    context["usage"] = usage
-                    if is_trial and usage:
-                        from decimal import Decimal as _Dec
-                        feuser.ai_trial_budget_spent = (feuser.ai_trial_budget_spent or _Dec(0)) + _Dec(str(usage["cost_cents"]))
-                        feuser.save(update_fields=["ai_trial_budget_spent"])
-                        context["trial_spent"] = round(float(feuser.ai_trial_budget_spent), 1)
-                        if float(feuser.ai_trial_budget_spent) >= trial_limit:
-                            context["trial_just_exhausted"] = True
+                    _apply_usage(usage)
                 except AIRefusalError as exc:
                     context["ai_error"] = str(exc)
                     context["ai_raw_output"] = exc.raw
@@ -119,6 +122,12 @@ def express_creation(request):
                     _log.error("smart_create invalid response: cause=%s raw=%r", exc.cause, exc.raw)
                     context["ai_error"] = ""
                     context["ai_raw_output"] = exc.raw
+                    if exc.usage:
+                        # A JSON-repair fallback (see express_service.call_ai_for_json)
+                        # was attempted and still ultimately failed -- real tokens were
+                        # spent on both calls, so bill and surface the combined cost
+                        # even though the request itself failed.
+                        _apply_usage(exc.usage)
                 except Exception as exc:
                     import anthropic as _anthropic
 

@@ -11,11 +11,8 @@ The system prompt is split into two cached blocks:
      repeated generate clicks in the same session are cheap too.
 """
 import json
-import logging
 from functools import lru_cache
 from pathlib import Path
-
-_log = logging.getLogger(__name__)
 
 _DOCS_ROOT = Path(__file__).resolve().parent.parent / "docs" / "src" / "docs" / "user-manual" / "dashboard"
 _DOCS_BASE_URL = "https://comaney.app/docs/user-manual/dashboard"
@@ -52,7 +49,7 @@ The full user-facing documentation for that schema (https://comaney.app/docs/use
 
 Your job is to write ONE card's YAML configuration based on the user's request.
 
-Response format -- your entire response must be one of these two JSON objects, no prose, no markdown, no code fences, never produce any output that's not json!:
+Response format -- your ENTIRE reply, from the very first character to the very last, must be exactly one of these two JSON objects and nothing else. The first character of your reply MUST be "{" and the last character MUST be "}": no prose, no markdown, no code fences (no ``` anywhere), no leading text, no trailing note or summary after the closing brace.
 
 Success:
 {"result": "good", "yaml": "type: cell\\ntitle: ...\\n..."}
@@ -110,23 +107,10 @@ def _build_other_cards_block(feuser, dashboard, exclude_card_id=None) -> str:
 
 def _parse_response(raw: str):
     """Parse the {"result": "good"/"fail", ...} envelope. Returns the yaml string on success."""
-    from .express_service import AIInvalidResponseError, AIRefusalError
-
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-
-    if not raw.startswith('{"result":'):
-        idx = raw.find('{"result":')
-        if idx == -1:
-            idx = raw.find('{ "result":')
-        if idx != -1:
-            raw = raw[idx:]
-
-    if not raw:
-        raise AIInvalidResponseError(raw)
+    from .express_service import AIInvalidResponseError, AIRefusalError, extract_json_object
 
     try:
-        parsed = json.loads(raw)
+        parsed = extract_json_object(raw)
     except json.JSONDecodeError as exc:
         raise AIInvalidResponseError(raw, exc) from exc
 
@@ -160,7 +144,10 @@ def generate_card_yaml(
     or budget.dashboard_cards.CardConfigError if the AI's output doesn't pass validation.
     """
     from .dashboard_cards import parse_card_config
-    from .express_service import AIBudgetExceededError, _call_agent, _default_agent_config, _trial_state
+    from .express_service import (
+        AIBudgetExceededError, AIInvalidResponseError, _default_agent_config,
+        _trial_state, call_ai_for_json, record_ai_usage,
+    )
 
     api_key, is_trial, trial_limit, trial_spent, trial_blocked = _trial_state(feuser)
     if trial_blocked:
@@ -194,16 +181,16 @@ def generate_card_yaml(
     ]
     messages = [{"role": "user", "content": description}]
 
-    raw, usage = _call_agent(config, system_blocks, messages)
-    _log.debug("dashboard_card_ai raw response: %r", raw)
+    try:
+        _parsed, usage, raw = call_ai_for_json(config, system_blocks, messages, feature="dashboard_card_ai")
+        yaml_str = _parse_response(raw)
+        parse_card_config(yaml_str)  # raises CardConfigError if invalid; propagated to the caller
+    except AIInvalidResponseError as exc:
+        # A repair fallback may have been attempted (see call_ai_for_json) and
+        # still ultimately failed -- bill whatever it cost before propagating
+        # (a no-op when .usage is unset, i.e. every other raise site here).
+        record_ai_usage(feuser, is_trial, exc.usage)
+        raise
 
-    yaml_str = _parse_response(raw)
-    parse_card_config(yaml_str)  # raises CardConfigError if invalid; propagated to the caller
-
-    if is_trial and usage:
-        from decimal import Decimal
-
-        feuser.ai_trial_budget_spent = (feuser.ai_trial_budget_spent or Decimal(0)) + Decimal(str(usage["cost_cents"]))
-        feuser.save(update_fields=["ai_trial_budget_spent"])
-
+    record_ai_usage(feuser, is_trial, usage)
     return yaml_str
