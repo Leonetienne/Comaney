@@ -38,7 +38,7 @@ If you already share a project with someone, you can invite them as a direct bud
 
 **To do this:**
 
-1. Go to the project's **Manage** tab.
+1. Go to the project's **Settings** tab.
 2. Find their name in the member list and click **···**.
 3. Choose **Invite as direct buddy**.
 
@@ -70,4 +70,4 @@ Sometimes you realize the expenses you tracked under an offline buddy were actua
 2. Pick **Yourself** from the list and click **Merge**.
 3. Confirm. This happens right away, with no approval needed. The offline buddy disappears, and any expenses you had split with them become fully yours - they stop being shared at all.
 
-**For an offline project member** (admin only): the same **Merge into...** option appears on the project's **Manage** page, listing the project's other offline members and its real members. If you choose a real member, the pending request shows up for them on that same project page, not on My Buddies.
+**For an offline project member** (admin only): the same **Merge into...** option appears on the project's **Settings** tab, listing the project's other offline members and its real members. If you choose a real member, the pending request shows up for them on that same project page, not on My Buddies.

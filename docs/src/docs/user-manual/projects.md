@@ -20,13 +20,20 @@ You land on the new project page and become its admin.
 
 ## The project page
 
-The project page shows everything related to that project:
+Every project has three tabs:
 
-- The **member list** with user.
-- The **expense list**: all expenses linked to this project, with each person's share, covering the project's entire history. Use the search bar and sort controls above the expense list to search or sort it.
-- **Who owes who**: two diagrams showing raw debts and a simplified minimum-payment view. Hidden for solo projects (see below).
+- **Expense list** (the default tab): all expenses linked to this project, with each person's share, covering the project's entire history. Use the search bar and sort controls above the expense list to search or sort it. This tab also shows the project's total spending, pending items (expenses waiting for approval and settlements waiting for confirmation), and the settle-up tools ("Pay someone back" and "Clear everything at once").
+- **Insights**: charts and diagrams about the project's spending and balances - see below.
+- **Settings** (admin-only actions, plus the member list): see the sections further down this page.
+
+## Insights
+
+The Insights tab shows:
+
 - **Your balance**: a plain summary of who you owe and how much.
-- **Pending items**: expenses waiting for approval, and settlements waiting for confirmation.
+- **Who owes who**: two diagrams showing raw debts and a simplified minimum-payment view. Hidden for solo projects (see below).
+- **Spending breakdown**: a pie chart of how much each person has spent. Hidden for solo projects.
+- **Spending over time** and **spending by tag**: charts covering the project's entire history.
 
 ## Solo projects
 
@@ -56,9 +63,9 @@ The admin label appears next to your name on the project page.
 
 ## Who can edit cosmetics
 
-By default, only the admin can change the project's name, description, and picture. If you would like everyone in the project to be able to update these, the admin can loosen this on the **Manage** page.
+By default, only the admin can change the project's name, description, and picture. If you would like everyone in the project to be able to update these, the admin can loosen this on the **Settings** tab.
 
-1. On the project's **Manage** page, find **Who can edit cosmetics**.
+1. On the project's **Settings** tab, find **Who can edit cosmetics**.
 2. Choose from the dropdown:
    - **Admin only** (the default): only the admin can edit the name, description, and picture.
    - **Any member**: every member can edit the name, description, and picture.
@@ -66,7 +73,7 @@ By default, only the admin can change the project's name, description, and pictu
 
 This setting is purely cosmetic: it only covers the name, description, and picture. Everything that actually manages the project — inviting or removing members, transferring admin rights, archiving, and deleting — always stays admin only.
 
-When you choose **Any member**, other members see a **Cosmetics** area on their Manage page where they can make these changes.
+When you choose **Any member**, other members see a **Cosmetics** area on their Settings tab where they can make these changes.
 
 ## Inviting members
 
@@ -97,19 +104,19 @@ You can log expenses on their behalf and settle their share yourself. You can al
 
 Admin only. You can combine an offline member's history with another entry in the project, either because two entries turn out to be the same person, or because that person now has a real Comaney account and is already a member.
 
-1. On the project's **Manage** page, click **···** next to the offline member and choose **Merge into...**.
+1. On the project's **Settings** tab, click **···** next to the offline member and choose **Merge into...**.
 2. Pick a target from the list: another offline member, or a real member who has already joined the project.
 3. Click **Merge** and confirm.
 
 If you picked another offline member, the merge happens right away and cannot be undone: the shared expense history of both entries is combined, and the one you started from disappears.
 
-If you picked a real member, they get an email and a notification asking them to approve it. The request shows up for them on this same Manage page. Once they accept, the offline member's expense history moves to their account and the offline entry disappears.
+If you picked a real member, they get an email and a notification asking them to approve it. The request shows up for them on this same Settings tab. Once they accept, the offline member's expense history moves to their account and the offline entry disappears.
 
 If you pick **Yourself**, the merge also happens right away, with no approval needed - useful when an offline member turns out to have been you all along. The offline entry disappears and its expense history becomes attributed to you directly.
 
 ## Connecting with a fellow member
 
-Any member, not just the admin, can click the **···** menu next to another real member's name on the Manage tab to:
+Any member, not just the admin, can click the **···** menu next to another real member's name on the Settings tab to:
 
 - **Invite as direct buddy** - connects you one-on-one outside the project, so you can also share personal expenses together.
 - **Invite as partner** - sets up a Catalog Partnership so your tags and categories stay in sync. See [Catalog Partnerships](catalog-partnerships.md).
@@ -169,11 +176,11 @@ On the project page, find the **Delete project** section. Type the project name 
 
 ## Settling debts in a project
 
-Use the **Pay someone back** form on the project page to record a payment to another member. See [Settling Up](buddies/settling-up.md) for the full guide, including how the project admin can settle all debts at once.
+Use the **Pay someone back** form on the Expense list tab to record a payment to another member. See [Settling Up](buddies/settling-up.md) for the full guide, including how the project admin can settle all debts at once.
 
 ## The debt diagrams
 
-The project page shows two debt diagrams based on all approved shared expenses:
+The Insights tab shows two debt diagrams based on all approved shared expenses:
 
 **Raw debts** — an arrow from each person who owes money to the person they owe it to, with the amount. If two people owe each other, the smaller amount is subtracted and only the net direction shown.
 

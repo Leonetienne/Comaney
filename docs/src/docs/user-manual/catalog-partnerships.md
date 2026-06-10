@@ -16,7 +16,7 @@ A Catalog Partnership links your tags and categories with one or more other Coma
 You can send a partnership invite from two places:
 
 - **My Buddies**: find the person in your buddy list, click the **···** menu next to their name, and choose **Invite as partner**.
-- **Project manage page**: go to the Manage tab of a project, find a member, click **···**, and choose **Invite as partner**.
+- **Project settings page**: go to the Settings tab of a project, find a member, click **···**, and choose **Invite as partner**.
 
 The option only appears if the person is a real Comaney user (not an offline buddy), is not already your partner, and is not in another partnership.
 
