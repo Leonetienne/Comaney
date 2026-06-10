@@ -225,6 +225,7 @@ def profile(request):
         "second_factors": second_factors,
         "flashed_recovery_code": flashed_recovery_code,
         "webauthn_available": bool(rp_id_from_site_url(settings.SITE_URL)),
+        "yubikey_available": bool(settings.YUBICO_CLIENT_ID and settings.YUBICO_SECRET_KEY),
         "has_email_factor": has_email_factor,
     })
 

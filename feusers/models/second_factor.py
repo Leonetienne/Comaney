@@ -41,6 +41,15 @@ class EmailFactor(SecondFactorAuth):
     secret = models.CharField(max_length=64)
 
 
+class YubikeyFactor(SecondFactorAuth):
+    """One physical YubiKey OTP device, see feusers/yubico_otp_service.py.
+    `public_id` is the first 12 characters of every OTP that key generates
+    and uniquely identifies it - unique=True the same way WebAuthnFactor's
+    credential_id does, since one physical key can only meaningfully be
+    registered once across the whole instance."""
+    public_id = models.CharField(max_length=12, unique=True)
+
+
 register_factor_type(FactorType(
     key="totp",
     model=TOTPFactor,
@@ -66,4 +75,13 @@ register_factor_type(FactorType(
     setup_url_name="email_factor_setup",
     challenge_template="feusers/twofa_challenge_email.html",
     icon="dist/images/icons/mail.png",
+))
+
+register_factor_type(FactorType(
+    key="yubikey",
+    model=YubikeyFactor,
+    display_name="YubiKey OTP",
+    setup_url_name="yubikey_setup",
+    challenge_template="feusers/twofa_challenge_yubikey.html",
+    icon="dist/images/icons/yubikey.png",
 ))

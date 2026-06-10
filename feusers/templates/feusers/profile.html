@@ -295,6 +295,12 @@
                     <span>Security key</span>
                 </a></li>
                 {% endif %}
+                {% if yubikey_available %}
+                <li><a href="{% url 'yubikey_setup' %}" class="method-dropdown-item">
+                    <img src="{% factor_icon 'yubikey' %}" class="method-dropdown-icon" alt="">
+                    <span>YubiKey OTP</span>
+                </a></li>
+                {% endif %}
                 {% if email_2fa_available and not has_email_factor %}
                 <li><a href="{% url 'email_factor_setup' %}" class="method-dropdown-item">
                     <img src="{% factor_icon 'email' %}" class="method-dropdown-icon" alt="">

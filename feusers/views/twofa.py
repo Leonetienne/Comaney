@@ -20,6 +20,7 @@ from ..second_factor_service import (
 )
 from ..utils import _get_session_feuser, _record_login
 from .webauthn import build_login_options, verify_login_assertion
+from .yubikey import verify_yubikey_login
 
 _SESSION_KEYS = (
     "twofa_pending_id", "twofa_active_method", "twofa_active_factor_id",
@@ -49,6 +50,7 @@ _LOGIN_VERIFIERS = {
     "totp": _verify_totp_login,
     "webauthn": verify_login_assertion,
     "email": _verify_email_login,
+    "yubikey": verify_yubikey_login,
 }
 
 

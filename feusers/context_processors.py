@@ -21,6 +21,7 @@ _HELP_PATH_MAP = [
     ("/totp/",                       "/docs/user-manual/two-factor-auth/"),
     ("/webauthn/",                   "/docs/user-manual/two-factor-auth/"),
     ("/email-2fa/",                  "/docs/user-manual/two-factor-auth/"),
+    ("/yubikey/",                    "/docs/user-manual/two-factor-auth/"),
     ("/twofa/",                      "/docs/user-manual/two-factor-auth/"),
     ("/api-key/",                    "/docs/user-manual/api-access/"),
     ("/account/export/",             "/docs/user-manual/data-export/"),

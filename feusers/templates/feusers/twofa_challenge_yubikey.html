@@ -1,0 +1,13 @@
+<form method="post" novalidate autocomplete="off">
+    {% csrf_token %}
+    <p class="auth-hint">Click into the field below, then insert your YubiKey and touch it.</p>
+    <label for="id_otp">YubiKey OTP</label>
+    <input id="id_otp" name="otp" type="text" autocomplete="off" autofocus placeholder="Touch your YubiKey here">
+    {% if confirm_method %}
+    <input type="hidden" name="confirm_method" value="{{ confirm_method }}">
+    <input type="hidden" name="confirm_factor_id" value="{{ confirm_factor.pk }}">
+    {% endif %}
+    <div class="form-actions">
+        <button type="submit" class="btn btn-full">{{ submit_label|default:"Verify" }}</button>
+    </div>
+</form>

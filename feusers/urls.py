@@ -21,6 +21,7 @@ urlpatterns = [
     path("webauthn/setup/",        views.webauthn_setup,        name="webauthn_setup"),
     path("email-2fa/setup/",       views.email_factor_setup,    name="email_factor_setup"),
     path("email-2fa/send-code/",   views.email_factor_send_code, name="email_factor_send_code"),
+    path("yubikey/setup/",         views.yubikey_setup,         name="yubikey_setup"),
     path("twofa/verify/",                                  views.twofa_verify,         name="twofa_verify"),
     path("twofa/verify/switch/<str:method_key>/<int:factor_id>/", views.twofa_verify_switch, name="twofa_verify_switch"),
     path("twofa/verify/recovery/",                         views.twofa_verify_recovery, name="twofa_verify_recovery"),

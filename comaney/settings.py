@@ -169,6 +169,10 @@ AI_TRIAL_USAGE_LIMIT  = float(os.environ.get("AI_TRIAL_USAGE_LIMIT", "0"))  # ce
 AI_TRIAL_DISABLED_FLAG = os.environ.get("AI_TRIAL_DISABLED_FLAG", str(BASE_DIR / "ai_trial_disabled.flag"))
 ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "")
 
+YUBICO_CLIENT_ID  = os.environ.get("YUBICO_CLIENT_ID", "")
+YUBICO_SECRET_KEY = os.environ.get("YUBICO_SECRET_KEY", "")
+YUBICO_SERVER     = os.environ.get("YUBICO_SERVER", "https://api.yubico.com")
+
 APP_VERSION = os.environ.get("APP_VERSION", "dev")
 
 # Public static pages rendered from Markdown files.
