@@ -312,8 +312,8 @@ class TestTagDistributionChart:
         )
         assert "Camping" in labels, "tagDist labels must include the 'Camping' tag"
 
-    def test_tag_value_is_full_expense_amount(self, driver, w, ctx):
-        # The expense is 90.00 total; tag value must be the full project spend, not feuser's share
+    def test_tag_value_is_full_expense_amount_for_owner(self, driver, w, ctx):
+        # Admin owns the expense: their own tag counts the full expense amount (90.00)
         labels = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
             "return d ? d.labels : [];"
@@ -325,10 +325,13 @@ class TestTagDistributionChart:
         idx = labels.index("Camping") if "Camping" in labels else -1
         assert idx >= 0, "Camping tag must be present"
         assert abs(values[idx] - 90.0) < 0.01, \
-            f"Camping tag value must equal the full expense amount 90.00, got {values[idx]}"
+            f"Camping tag value must equal the full expense amount 90.00 for the owner, got {values[idx]}"
 
-    def test_member_view_sees_only_untagged(self, driver, w, ctx):
-        # Member has no overlay tags: expense falls into (untagged) at full expense value
+    def test_member_view_sees_only_untagged_at_own_share(self, driver, w, ctx):
+        # Member doesn't own the expense and has no overlay tags: it falls into
+        # (untagged), but only at the member's own 50% share (45.00), not the
+        # full expense amount, since the bar chart must never attribute another
+        # feuser's spending to the viewing feuser.
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['uid']}/"))
         time.sleep(1)
@@ -342,8 +345,51 @@ class TestTagDistributionChart:
         )
         assert labels == ["(untagged)"], \
             "Member with no overlay tags must see only (untagged) in tagDist"
-        assert abs(values[0] - 90.0) < 0.01, \
-            f"(untagged) value must equal the full expense amount 90.00, got {values[0]}"
+        assert abs(values[0] - 45.0) < 0.01, \
+            f"(untagged) value must equal the member's own share (45.00), not the full expense amount, got {values[0]}"
+
+    def test_tag_dist_queries_for_owner(self, driver, w, ctx):
+        # Each tagDist bar carries a `queries` entry: a query-language filter
+        # string that, applied via the project's ?q= deep link, isolates the
+        # expenses behind that bar in the expense list below.
+        _login_as(driver, ctx["admin"])
+        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        time.sleep(1)
+        labels = driver.execute_script(
+            "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
+            "return d ? d.labels : [];"
+        )
+        queries = driver.execute_script(
+            "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
+            "return d ? d.queries : [];"
+        )
+        idx = labels.index("Camping")
+        assert queries[idx] == 'tag="Camping"', \
+            f"Camping bar's query must filter by tag=\"Camping\", got {queries[idx]}"
+
+    def test_tag_dist_queries_for_untagged(self, driver, w, ctx):
+        _login_as(driver, ctx["member"])
+        driver.get(_url(f"/projects/{ctx['uid']}/"))
+        time.sleep(1)
+        queries = driver.execute_script(
+            "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
+            "return d ? d.queries : [];"
+        )
+        assert queries == ["tag=none"], \
+            f"(untagged) bar's query must be 'tag=none', got {queries}"
+
+    def test_q_param_prefills_and_filters_expense_list(self, driver, w, ctx):
+        # This is the link target a tag bar's onClick navigates to: clicking
+        # a bar sends the browser to ?q=<query>#section-expenses, which must
+        # pre-fill the search box and apply the filter on load.
+        _login_as(driver, ctx["admin"])
+        driver.get(_url(f"/projects/{ctx['uid']}/?q=" + 'tag%3D%22Camping%22'))
+        time.sleep(1)
+        search_value = driver.find_element(By.ID, "proj-exp-search").get_attribute("value")
+        assert search_value == 'tag="Camping"', \
+            f"?q= must pre-fill the expense search box, got '{search_value}'"
+        assert "Tagged Expense" in driver.page_source, \
+            "Expense list must show the matching expense once the tag filter from the URL is applied"
 
 
 class TestSoloProjectSpendingChart:
