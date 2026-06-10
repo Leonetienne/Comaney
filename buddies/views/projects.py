@@ -25,6 +25,15 @@ from ..models import PERMISSION_LAXITY_CHOICES
 from ..services import BuddyArchiveService, ProjectService, ProjectExportService, BuddyQueryService, _display_name
 
 
+def _tag_filter_query(tag_title: str) -> str:
+    """Build a `q` search-filter string (see budget/query_parser.py) that
+    filters the project's expense list down to a single tag bucket, for the
+    tag bar chart's click-through link."""
+    if tag_title == "(untagged)":
+        return "tag=none"
+    return 'tag="{}"'.format(tag_title.replace('"', ""))
+
+
 def _fetch_overlay_notes(feuser, breakdown):
     """Fetch ExpenseDataOverlay notes for all expenses in breakdown. Returns {expense_pk: note}."""
     from budget.models import ExpenseDataOverlay
@@ -515,14 +524,15 @@ def _compute_project_charts(feuser, project):
         for ed in non_settlement:
             exp = ed["expense"]
             is_owner = not exp.is_dummy and exp.owning_feuser_id == feuser.pk
-            is_participant = any(s["is_me"] for s in ed["participant_shares"])
-            if not is_owner and not is_participant:
-                continue
             if is_owner:
                 tags = expense_tag_map.get(exp.pk, [])
+                amount = float(ed["total"])
             else:
+                my_share = next((s["amount"] for s in ed["participant_shares"] if s["is_me"]), None)
+                if my_share is None:
+                    continue
                 tags = overlay_tags.get(exp.pk, [])
-            amount = float(ed["total"])
+                amount = float(my_share)
             if tags:
                 for title in tags:
                     tag_amounts[title] = tag_amounts.get(title, 0.0) + amount
@@ -539,6 +549,7 @@ def _compute_project_charts(feuser, project):
             tag_dist = {
                 "labels": [t[0] for t in sorted_tags],
                 "values": [round(t[1], 2) for t in sorted_tags],
+                "queries": [_tag_filter_query(t[0]) for t in sorted_tags],
             }
 
     return {

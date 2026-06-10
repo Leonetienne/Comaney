@@ -412,7 +412,7 @@
 <section class="buddies-section" id="section-tag-dist" style="display:none">
     <h2>Project spending by tag</h2>
     <div class="buddies-section--surface">
-    <p class="font-sm text-muted" style="margin:0 0 1rem;">Project expenses grouped by your tags. For expenses added by others, this uses your personal tag notes.</p>
+    <p class="font-sm text-muted" style="margin:0 0 1rem;">Project expenses grouped by your tags. For expenses added by others, this uses your personal tag notes and only counts your own share of the expense.</p>
     <div class="proj-chart-wrap">
         <canvas id="proj-tag-bar"></canvas>
     </div>
@@ -634,7 +634,7 @@
 
 
 {# ── Expense List (filters + list are one visual section) ────────────────── #}
-<section class="buddies-section">
+<section class="buddies-section" id="section-expenses">
     <h2>Expense Breakdown</h2>
     <div class="exp-filter-panel" style="margin-bottom:1.25rem;">
         <div class="exp-controls">
@@ -734,7 +734,13 @@
     sortByEl.addEventListener('change', fetchList);
     sortDirEl.addEventListener('change', fetchList);
 
-    document.addEventListener('DOMContentLoaded', fetchList);
+    document.addEventListener('DOMContentLoaded', function () {
+        // Deep-link support: ?q=<filter> (e.g. from clicking a tag bar chart
+        // bar) pre-fills the search box so the linked filter is applied.
+        var urlQ = new URLSearchParams(window.location.search).get('q');
+        if (urlQ) searchEl.value = urlQ;
+        fetchList();
+    });
 })();
 </script>
 

@@ -126,6 +126,16 @@ function _renderBar(data, currency) {
             scales: {
                 y: { grid: { display: false }, ticks: { font: { size: 11 }, autoSkip: false } },
             },
+            onHover: (evt, elements) => {
+                evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+            },
+            onClick: (_evt, elements) => {
+                if (!elements.length || !data.queries) return;
+                const q = data.queries[elements[0].index];
+                if (!q) return;
+                window.location.href =
+                    window.location.pathname + '?q=' + encodeURIComponent(q) + '#section-expenses';
+            },
         },
     });
 }
