@@ -1678,11 +1678,14 @@
 .fab-menu-item {
   width: 3.4rem;
   height: 3.4rem;
+  padding: 0;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
+  font-family: inherit;
+  cursor: pointer;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   color: var(--text);
@@ -1712,6 +1715,7 @@
 
   // Slide out in a little cascade: the bubble closest to the FAB leads.
   .fab-wrap--open &:nth-child(2) { transition-delay: 0.05s; }
+  .fab-wrap--open &:nth-child(3) { transition-delay: 0.1s; }
 
   // Desktop only: hovering the FAB reveals the bubbles without a click.
   // Gated to (hover: hover) so touch taps -- which can leave :hover "stuck"
@@ -1724,6 +1728,7 @@
     }
 
     .fab-wrap:hover &:nth-child(2) { transition-delay: 0.05s; }
+    .fab-wrap:hover &:nth-child(3) { transition-delay: 0.1s; }
   }
 
   &:hover {
@@ -1737,6 +1742,19 @@
     @media (prefers-color-scheme: dark) {
       background: #6c6c6c;
     }
+  }
+}
+
+.fab-menu-item-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  pointer-events: none;
+
+  // Icon art is drawn in black; invert it to stay legible against the
+  // lightened dark-mode bubble background above.
+  @media (prefers-color-scheme: dark) {
+    filter: invert(1);
   }
 }
 

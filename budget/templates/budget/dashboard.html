@@ -34,6 +34,19 @@ window.DASHBOARD_CONFIG = {
 {# ── Dashboard board (Alpine.js) ─────────────────────────────────────────── #}
 <div x-data="dashboardBoard" x-init="init()">
 
+    <div class="fab-wrap">
+        <button type="button" class="fab-new-expense fab-toggle" title="New expense">+</button>
+        <div class="fab-menu">
+            <a href="{% url 'budget:expense_create' %}" class="fab-menu-item" title="Create manually">Manual</a>
+            {% if ai_smart_create_available %}
+            <a href="{% url 'budget:express_creation' %}" class="fab-menu-item" title="AI Express">AI</a>
+            {% endif %}
+            <button type="button" class="fab-menu-item" title="New dashboard card" @click="openAdd()">
+                <img src="{% static 'dist/images/icons/pie-chart.png' %}" class="fab-menu-item-icon" alt="">
+            </button>
+        </div>
+    </div>
+
     {# ── Tab bar ────────────────────────────────────────────────────────────── #}
     <div class="dash-tabbar-wrap" x-show="!loading || dashboards.length > 0">
         <div class="dash-tabbar-scroll" x-ref="tabbarScroll">

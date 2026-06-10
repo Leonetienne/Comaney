@@ -60,10 +60,17 @@
         overlay.addEventListener('click', toggle);
     })();
 
+    const fabHoverCapable = window.matchMedia('(hover: hover) and (pointer: fine)');
+
     document.addEventListener('click', function(e) {
         const toggleBtn = e.target.closest('.fab-toggle');
         if (toggleBtn) {
-            toggleBtn.closest('.fab-wrap').classList.toggle('fab-wrap--open');
+            // Desktop already reveals the menu on hover (see _buddies.scss);
+            // the click toggle is only for touch devices, where a stray click
+            // would otherwise re-toggle the class the CSS hover already set.
+            if (!fabHoverCapable.matches) {
+                toggleBtn.closest('.fab-wrap').classList.toggle('fab-wrap--open');
+            }
             return;
         }
         document.querySelectorAll('.fab-wrap--open').forEach(function(wrap) {
