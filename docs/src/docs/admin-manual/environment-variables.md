@@ -229,6 +229,34 @@ When disabled, the registration page returns a 403 and no new accounts can be cr
 
 ---
 
+## Two-factor authentication
+
+### `YUBICO_CLIENT_ID`
+
+**Default:** *(empty; YubiKey OTP second factor hidden)*
+
+Client ID for the Yubico OTP validation API. Together with `YUBICO_SECRET_KEY`, this enables the YubiKey OTP second-factor method: users can register a physical YubiKey and use it to sign in. When either `YUBICO_CLIENT_ID` or `YUBICO_SECRET_KEY` is unset, this method is hidden everywhere in the app (setup, login, profile).
+
+Get a client ID and secret key by requesting one from Yubico (or your own self-hosted validation server, see `YUBICO_SERVER`).
+
+---
+
+### `YUBICO_SECRET_KEY`
+
+**Default:** *(empty; YubiKey OTP second factor hidden)*
+
+Secret key paired with `YUBICO_CLIENT_ID`, used to sign and verify requests to the Yubico OTP validation server. Keep this value secret.
+
+---
+
+### `YUBICO_SERVER`
+
+**Default:** `https://api.yubico.com`
+
+Base URL of the Yubico OTP validation server. Only needs to be changed if you run your own self-hosted validation server instead of Yubico's public one.
+
+---
+
 ## Demo user
 
 These variables enable a public demo account that visitors can use without signing up. When enabled, a landing page advert is shown and the account is reset automatically by `run_cron` once it has been inactive for at least one week.
