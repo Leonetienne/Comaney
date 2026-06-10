@@ -180,3 +180,84 @@ class TestBgsCardTotalSpending:
                 pass
         assert any("80.00" in v for v in total_values), \
             "The bgs-card must display the group total spending (80.00) in the Total spending stat"
+
+
+class TestPieChartClickThrough:
+    """Each pie slice/legend row carries a payer= filter query and is
+    clickable, sending the browser to the project's expense list filtered
+    to that person's expenses."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        admin = setup_user(driver, w, first_name="Piechart", last_name="Payer")
+        member = setup_user(None, None, first_name="Piechart", last_name="Member")
+        _create_buddy_link(admin["email"], member["email"])
+        gid = int(_create_group(admin["email"], "Pie Click Group"))
+        _add_group_member(gid, member["email"])
+        _create_group_expense(
+            admin_email=admin["email"],
+            participant_email=member["email"],
+            group_id=gid,
+            title="Pie Click Expense",
+            value="70.00",
+            share="50.0",
+        )
+        uid = _get_group_uid(gid)
+        yield {"admin": admin, "member": member, "gid": gid, "uid": uid}
+        cleanup_user(admin["email"])
+        cleanup_user(member["email"])
+
+    def test_spending_pie_data_injected(self, driver, w, ctx):
+        _login_as(driver, ctx["admin"])
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
+        time.sleep(2)
+        has_data = driver.execute_script(
+            "return !!(window.PROJECT_CHARTS && window.PROJECT_CHARTS.spendingPie)"
+        )
+        assert has_data, "window.PROJECT_CHARTS.spendingPie must be set"
+
+    def test_pie_member_query_is_full_name_payer_filter(self, driver, w, ctx):
+        queries = driver.execute_script(
+            "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.spendingPie; "
+            "return d ? d.map(function(m){return m.query;}) : [];"
+        )
+        assert 'payer="Piechart Payer"' in queries, \
+            f"Pie data must carry a payer= filter query for the admin's full name, got {queries}"
+
+    def test_click_pie_slice_navigates_to_expense_list(self, driver, w, ctx):
+        hit_paths = driver.find_elements(By.CSS_SELECTOR, "#group-spending-pie svg path[fill='transparent']")
+        assert hit_paths, "Pie chart must render at least one clickable slice"
+        driver.execute_script(
+            "arguments[0].dispatchEvent(new MouseEvent('click', {bubbles: true}));", hit_paths[0]
+        )
+        time.sleep(1)
+        assert "/insights/" not in driver.current_url, \
+            "Clicking a pie slice must navigate away from the Insights tab to the expense list"
+        assert "q=" in driver.current_url, \
+            "Clicking a pie slice must navigate with a q= filter query param"
+
+    def test_click_legend_row_navigates_to_expense_list(self, driver, w, ctx):
+        _login_as(driver, ctx["admin"])
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
+        time.sleep(2)
+        rows = driver.find_elements(By.CLASS_NAME, "pie-legend-row")
+        assert rows, "Legend must render at least one row"
+        driver.execute_script("arguments[0].click();", rows[0])
+        time.sleep(1)
+        assert "q=" in driver.current_url, \
+            "Clicking a legend row must navigate with a q= filter query param"
+
+    def test_payer_filter_matches_only_that_payer(self, driver, w, ctx):
+        driver.get(_url(f"/projects/{ctx['uid']}/?q=" + 'payer%3D%22Piechart%20Payer%22'))
+        time.sleep(1)
+        search_value = driver.find_element(By.ID, "proj-exp-search").get_attribute("value")
+        assert search_value == 'payer="Piechart Payer"', \
+            f"?q= must pre-fill the expense search box, got '{search_value}'"
+        assert "Pie Click Expense" in driver.page_source, \
+            "Expense list must show the admin's expense once the payer= filter from the URL is applied"
+
+    def test_payer_filter_excludes_other_payer(self, driver, w, ctx):
+        driver.get(_url(f"/projects/{ctx['uid']}/?q=" + 'payer%3D%22Piechart%20Member%22'))
+        time.sleep(1)
+        assert "Pie Click Expense" not in driver.page_source, \
+            "payer= filter for the member must not show the expense paid by the admin"

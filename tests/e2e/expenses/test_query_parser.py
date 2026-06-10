@@ -608,3 +608,40 @@ class TestBuddyFilter:
                 f"Project.objects.filter(pk={ctx.pop('qp_buddy_group_pk')}).delete()"
             )
         ctx.pop("qp_buddy_year", None)
+
+
+class TestPayerFilter:
+    """payer=<substring> must match the owning feuser's full "first last" name
+    (not just first name or last name in isolation), plus their email."""
+
+    @pytest.fixture(scope="class")
+    def payer_ctx(self, driver, w):
+        c = setup_user(driver, w, first_name="Payer", last_name="Fullname")
+        exp = api_post("/api/v1/expenses/", c, json={
+            "title": "QP PayerFull", "type": "expense", "value": "12.00",
+            "date_due": MID_ISO, "settled": False,
+        })
+        assert exp.status_code == 201
+        c["qp_payer_exp"] = exp.json()["id"]
+        yield c
+        api_delete(f"/api/v1/expenses/{c.pop('qp_payer_exp')}/", c)
+        cleanup_user(c["email"])
+
+    def _titles(self, ctx, q):
+        resp = api_get("/api/v1/expenses/", ctx, params={"q": q, "view": "year", "year": YEAR})
+        return [e["title"] for e in resp.json()["expenses"]]
+
+    def test_payer_matches_full_name(self, driver, w, payer_ctx):
+        assert "QP PayerFull" in self._titles(payer_ctx, 'payer="Payer Fullname"')
+
+    def test_payer_matches_first_name_only(self, driver, w, payer_ctx):
+        assert "QP PayerFull" in self._titles(payer_ctx, "payer=Payer")
+
+    def test_payer_matches_last_name_only(self, driver, w, payer_ctx):
+        assert "QP PayerFull" in self._titles(payer_ctx, "payer=Fullname")
+
+    def test_payer_matches_email(self, driver, w, payer_ctx):
+        assert "QP PayerFull" in self._titles(payer_ctx, f'payer="{payer_ctx["email"]}"')
+
+    def test_payer_no_match_for_unrelated_name(self, driver, w, payer_ctx):
+        assert "QP PayerFull" not in self._titles(payer_ctx, 'payer="Nomatch Person"')
