@@ -202,6 +202,24 @@ class TestTouchDragReorder:
         )
         assert not_shown, "contextmenu was not prevented on a draggable card"
 
+    def test_cards_allow_native_scroll_outside_a_drag(self, driver, w, ctx):
+        """Regression test: an earlier version of the long-press-drag fix set
+        touch-action: none statically on every card, which blocks the browser's
+        native swipe-to-scroll for any touch starting on a card, not just an
+        active drag. Scrolling must stay native (touch-action: auto) except
+        for the window the touchmove handler explicitly preventDefault()s,
+        i.e. while a long-press drag is actually in progress."""
+        driver.get(_url("/projects/"))
+        time.sleep(1)
+        card = driver.find_element(By.CSS_SELECTOR, ".bgs-card:not(.bgs-card--archived)")
+        touch_action = driver.execute_script(
+            "return getComputedStyle(arguments[0]).touchAction;", card
+        )
+        assert touch_action != "none", (
+            "project card has touch-action: none outside of an active drag, "
+            "which disables native swipe-scrolling on the project list"
+        )
+
 
 class TestUpdateLastmod:
     """Project.update_lastmod() sets last_mod to now and persists it."""
