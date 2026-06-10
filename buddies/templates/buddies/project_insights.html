@@ -3,7 +3,8 @@
 {% block title %}Comaney - {{ project.name }} - Insights{% endblock %}
 
 {% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+{% load static %}
+<script src="{% static 'dist/d3.js' %}"></script>
 <style>
   main.app-main { max-width: 1200px; }
 </style>

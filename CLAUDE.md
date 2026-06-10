@@ -8,6 +8,8 @@
 - New functional features or fixes: must add tests
 - Always code in a way a human can maintain it!
 - Use best practices, Don't repeat yourself (DRY), clear architecture
+- Never load anything from the internet after deployment, except AI interaction with Anthropic and YubiKey OTP validation server calls
+- All assets (fonts, images, scripts, libraries, etc.) must be served locally: either a plain JS file under `build/js/`/`static/` or a package installed with yarn (preferred) and bundled via esbuild; never a `<script src="https://...">`/CDN reference
 
 ## Stack
 - Python 3.12, Django, Gunicorn, WhiteNoise, mysqlclient, MariaDB

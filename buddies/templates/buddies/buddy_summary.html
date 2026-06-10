@@ -3,7 +3,8 @@
 {% block title %}Comaney - Buddy Expenses{% endblock %}
 
 {% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+{% load static %}
+<script src="{% static 'dist/d3.js' %}"></script>
 {% endblock %}
 
 {% block content %}
