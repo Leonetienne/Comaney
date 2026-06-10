@@ -591,7 +591,7 @@ function initCardBuddy(cardEl) {
             var sel = partEl.querySelector('.buddy-participant-select');
             if (!show && sel) { sel.value = ''; var aw=partEl.querySelector('.buddy-single-avatar-wrap'); if(aw){aw.innerHTML='';aw.style.display='none';} }
         } else {
-            if (partRow) partRow.style.display = '';
+            if (partRow) partRow.style.display = isSolo ? 'none' : '';
             partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
                 var hide = lbl.dataset.type === pt && lbl.dataset.id === pid;
                 lbl.style.display = hide ? 'none' : ''; if (hide) lbl.querySelector('input').checked = false;
