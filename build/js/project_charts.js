@@ -133,8 +133,9 @@ function _renderBar(data, currency) {
                 if (!elements.length || !data.queries) return;
                 const q = data.queries[elements[0].index];
                 if (!q) return;
-                window.location.href =
-                    window.location.pathname + '?q=' + encodeURIComponent(q) + '#section-expenses';
+                const cfg = window.PROJECT_CHARTS;
+                const base = (cfg && cfg.expenseListUrl) || window.location.pathname;
+                window.location.href = base + '?q=' + encodeURIComponent(q) + '#section-expenses';
             },
         },
     });

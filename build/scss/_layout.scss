@@ -98,6 +98,10 @@ body.has-backdrop .sidebar {
 .app-content {
   max-width: 1400px;
 
+  &--wide {
+    max-width: 1800px;
+  }
+
   > h1 {
     font-size: 1.85rem;
     font-weight: 800;

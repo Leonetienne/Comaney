@@ -55,7 +55,7 @@
     </nav>{% endif %}
     <main class="app-main">
         {% if current_feuser %}{% partnership_stoerer current_feuser %}{% endif %}
-        <div class="app-content">
+        <div class="app-content{% block content_class %}{% endblock %}">
             {% block content %}{% endblock %}
         </div>
     </main>

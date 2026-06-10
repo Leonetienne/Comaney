@@ -32,7 +32,7 @@ from .partnership import (
 )
 # Project views (new namespace)
 from .projects import (
-    projects_list, create_project, project_detail, project_charts_data, project_expense_list_partial, project_settings,
+    projects_list, create_project, project_detail, project_insights, project_charts_data, project_expense_list_partial, project_settings,
     project_export,
     project_rename, project_picture, project_set_permission_laxity,
     project_invite_member, project_revoke_invite, project_remove_member,

@@ -1214,6 +1214,40 @@
   canvas { display: block; }
 }
 
+// ── Project detail: Insights tab grid ────────────────────────────────────────
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+  align-items: stretch;
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.insights-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  min-width: 0;
+
+  &--wide {
+    grid-column: 1 / -1;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
 // ── Group detail: individual settle form ─────────────────────────────────────
 
 .settle-form-row {

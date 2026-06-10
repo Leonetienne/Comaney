@@ -259,16 +259,20 @@ def projects_list(request):
 create_project = projects_list
 
 
-@feuser_required
-def project_detail(request, project_id):
-    feuser = request.feuser
-    project = get_object_or_404(
+def _get_project_for_member(feuser, project_id):
+    return get_object_or_404(
         Project.objects.prefetch_related(
             "members__feuser", "members__dummy"
         ),
         uid=project_id,
         members__feuser=feuser,
     )
+
+
+def _project_common_context(feuser, project, active_tab):
+    """Shared context for the project's three tabs (Expense list / Insights /
+    Settings): identity, membership, and the full expense breakdown. Each tab
+    view adds only the data it needs on top of this."""
     is_admin = project.admin_feuser_id == feuser.pk
     pending_invites = BuddyQueryService.pending_group_invites_for_group(project) if is_admin else []
 
@@ -284,6 +288,80 @@ def project_detail(request, project_id):
     feuser_key = f"f{feuser.pk}"
     overlay_notes, overlay_tags = _fetch_overlay_notes(feuser, breakdown)
     _annotate_expense_permissions(feuser, project, breakdown, is_admin, overlay_notes)
+
+    return {
+        "active_nav": "projects",
+        "active_tab": active_tab,
+        "project": project,
+        "group": project,
+        "is_admin": is_admin,
+        "is_solo": solo,
+        "feuser_key": feuser_key,
+        "feuser_members": feuser_members,
+        "dummy_members": dummy_members,
+        "pending_invites": pending_invites,
+        "breakdown": breakdown,
+        "member_count": len(breakdown["member_map"]),
+        "has_multiple_members": len(breakdown["member_map"]) > 1,
+        "currency": feuser.currency,
+    }
+
+
+@feuser_required
+def project_detail(request, project_id):
+    feuser = request.feuser
+    project = _get_project_for_member(feuser, project_id)
+    ctx = _project_common_context(feuser, project, active_tab="expenses")
+    breakdown = ctx["breakdown"]
+    feuser_key = ctx["feuser_key"]
+    feuser_members = ctx["feuser_members"]
+    dummy_members = ctx["dummy_members"]
+
+    all_members_json = safe_json([
+        {"key": feuser_key, "name": "You", "is_me": True},
+        *[
+            {
+                "key": f"f{m.feuser.pk}",
+                "name": f"{m.feuser.first_name} {m.feuser.last_name}".strip() or m.feuser.email,
+                "is_me": False,
+            }
+            for m in feuser_members
+        ],
+        *[
+            {"key": f"d{m.dummy.pk}", "name": m.dummy.display_name + " (offline member)", "is_me": False, "is_dummy": True}
+            for m in dummy_members
+        ],
+    ])
+
+    settle_all_pairs_json = safe_json([
+        {
+            "from": t["from_name"],
+            "to": t["to_name"],
+            "amount": float(t["amount"]),
+        }
+        for t in breakdown["simplified"]
+    ])
+
+    pending_expenses = [e for e in breakdown["expenses"] if not e["expense"].buddy_approved]
+    approved_expenses = [e for e in breakdown["expenses"] if e["expense"].buddy_approved]
+
+    project_url = reverse("projects:project_detail", args=[project.uid])
+    ctx.update({
+        "pending_expenses": pending_expenses,
+        "approved_expenses": approved_expenses,
+        "all_members_json": all_members_json,
+        "settle_all_pairs_json": settle_all_pairs_json,
+        "project_url": project_url,
+    })
+    return render(request, "buddies/project_detail.html", ctx)
+
+
+@feuser_required
+def project_insights(request, project_id):
+    feuser = request.feuser
+    project = _get_project_for_member(feuser, project_id)
+    ctx = _project_common_context(feuser, project, active_tab="insights")
+    breakdown = ctx["breakdown"]
 
     raw_flows: dict = {}
     for exp_data in breakdown["expenses"]:
@@ -345,12 +423,6 @@ def project_detail(request, project_id):
         ],
     })
 
-    raw_debts_json = safe_json([
-        {"from": frm, "to": to, "amount": float(amount)}
-        for (frm, to), amount in raw_flows.items()
-        if amount > Decimal("0.005") and frm != to
-    ])
-
     my_balances = []
     for t in breakdown["simplified"]:
         if t["from_is_me"]:
@@ -359,60 +431,14 @@ def project_detail(request, project_id):
             my_balances.append({"name": t["from_name"], "you_owe": False, "amount": t["amount"]})
     my_balances.sort(key=lambda x: -x["amount"])
 
-    all_members_json = safe_json([
-        {"key": feuser_key, "name": "You", "is_me": True},
-        *[
-            {
-                "key": f"f{m.feuser.pk}",
-                "name": f"{m.feuser.first_name} {m.feuser.last_name}".strip() or m.feuser.email,
-                "is_me": False,
-            }
-            for m in feuser_members
-        ],
-        *[
-            {"key": f"d{m.dummy.pk}", "name": m.dummy.display_name + " (offline member)", "is_me": False, "is_dummy": True}
-            for m in dummy_members
-        ],
-    ])
-
-    settle_all_pairs_json = safe_json([
-        {
-            "from": t["from_name"],
-            "to": t["to_name"],
-            "amount": float(t["amount"]),
-        }
-        for t in breakdown["simplified"]
-    ])
-
-    pending_expenses = [e for e in breakdown["expenses"] if not e["expense"].buddy_approved]
-    approved_expenses = [e for e in breakdown["expenses"] if e["expense"].buddy_approved]
-
     project_url = reverse("projects:project_detail", args=[project.uid])
-    ctx = {
-        "active_nav": "projects",
-        "project": project,
-        "group": project,
-        "is_admin": is_admin,
-        "is_solo": solo,
-        "feuser_key": feuser_key,
-        "feuser_members": feuser_members,
-        "dummy_members": dummy_members,
-        "pending_invites": pending_invites,
-        "breakdown": breakdown,
-        "pending_expenses": pending_expenses,
-        "approved_expenses": approved_expenses,
+    ctx.update({
         "my_balances": my_balances,
         "raw_graph_json": raw_graph_json,
         "simplified_graph_json": simplified_graph_json,
-        "raw_debts_json": raw_debts_json,
-        "all_members_json": all_members_json,
-        "settle_all_pairs_json": settle_all_pairs_json,
-        "member_count": len(breakdown["member_map"]),
-        "has_multiple_members": len(breakdown["member_map"]) > 1,
-        "currency": feuser.currency,
         "project_url": project_url,
-    }
-    return render(request, "buddies/project_detail.html", ctx)
+    })
+    return render(request, "buddies/project_insights.html", ctx)
 
 def _compute_project_charts(feuser, project):
     """
@@ -667,6 +693,7 @@ def project_settings(request, project_id):
     merge_invites_out_project = BuddyQueryService.pending_merge_invites_outgoing_for_project(feuser, project) if is_admin else []
     return render(request, "buddies/project_settings.html", {
         "active_nav": "projects",
+        "active_tab": "settings",
         "project": project,
         "group": project,
         "is_admin": is_admin,
