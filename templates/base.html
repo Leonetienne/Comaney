@@ -142,6 +142,25 @@
         });
         if (approvalState === 1) approveBtn.classList.add('btn-consent--approved');
         if (approvalState === 2) rejectBtn.classList.add('btn-consent--rejected');
+
+        const card = group.closest('.bexp-breakdown-card');
+        const badge = card && card.querySelector('.avatar-wrap[data-self-avatar] .approval-badge');
+        if (badge) {
+            badge.classList.remove('approval-badge--approved', 'approval-badge--rejected', 'approval-badge--neutral');
+            if (approvalState === 1) {
+                badge.classList.add('approval-badge--approved');
+                badge.textContent = '✓';
+                badge.title = 'Approved';
+            } else if (approvalState === 2) {
+                badge.classList.add('approval-badge--rejected');
+                badge.textContent = '✗';
+                badge.title = 'Rejected';
+            } else {
+                badge.classList.add('approval-badge--neutral');
+                badge.textContent = '?';
+                badge.title = 'No decision yet';
+            }
+        }
     }
 
     window.confirmDialog = function(message, okLabel) {

@@ -636,6 +636,9 @@ class TestConsentButtonsUseAjaxNoReload:
         approved_btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
         assert "btn-consent--approved" in approved_btn.get_attribute("class")
         assert _get_approval_state(ctx["exp_pk"], ctx["b"]["email"]) == "1"
+        self_badge = driver.find_element(By.CSS_SELECTOR, '.avatar-wrap[data-self-avatar] .approval-badge')
+        assert "approval-badge--approved" in self_badge.get_attribute("class"), \
+            "Avatar stack badge must update to approved in place, without a page reload"
 
     def test_click_reject_updates_button_without_reload(self, driver, w, ctx):
         driver.execute_script("window.__noReloadMarker = true;")
@@ -649,6 +652,63 @@ class TestConsentButtonsUseAjaxNoReload:
         assert "btn-consent--approved" not in approve_btn.get_attribute("class")
         assert "btn-consent--rejected" in reject_btn.get_attribute("class")
         assert _get_approval_state(ctx["exp_pk"], ctx["b"]["email"]) == "2"
+        self_badge = driver.find_element(By.CSS_SELECTOR, '.avatar-wrap[data-self-avatar] .approval-badge')
+        assert "approval-badge--rejected" in self_badge.get_attribute("class"), \
+            "Avatar stack badge must update to rejected in place, without a page reload"
+
+
+class TestProjectConsentButtonsUseAjaxNoReload:
+    """Same in-place AJAX update behavior (button + avatar badge) on a project expense page."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Zack", last_name="Admin")
+        b = setup_user(None, None, first_name="Amy", last_name="AjaxMember")
+        _create_buddy_link(a["email"], b["email"])
+        b_pk = int(_get_pk(b["email"]))
+        group_pk = int(_create_group(a["email"], "Ajax Click Project"))
+        _add_group_member(group_pk, b["email"])
+        exp_pk = int(_create_group_expense(
+            admin_email=a["email"], participant_email=b["email"],
+            group_id=group_pk, title="Project Ajax Click Expense",
+            value="90.00", share="50.0",
+        ))
+        yield {"a": a, "b": b, "exp_pk": exp_pk, "group_pk": group_pk}
+        cleanup_user(a["email"])
+        cleanup_user(b["email"])
+
+    def test_click_approve_updates_button_and_avatar_badge_without_reload(self, driver, w, ctx):
+        _login_as(driver, ctx["b"])
+        driver.get(_url(f"/projects/{ctx['group_pk']}/"))
+        time.sleep(1)
+        driver.execute_script("window.__noReloadMarker = true;")
+        btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
+        btn.click()
+        time.sleep(1)
+        assert driver.execute_script("return window.__noReloadMarker === true;"), \
+            "Page must not have done a full reload/navigation after clicking approve"
+        approved_btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
+        assert "btn-consent--approved" in approved_btn.get_attribute("class")
+        assert _get_approval_state(ctx["exp_pk"], ctx["b"]["email"]) == "1"
+        self_badge = driver.find_element(By.CSS_SELECTOR, '.avatar-wrap[data-self-avatar] .approval-badge')
+        assert "approval-badge--approved" in self_badge.get_attribute("class"), \
+            "Avatar stack badge must update to approved in place on the project page, without a page reload"
+
+    def test_click_reject_updates_button_and_avatar_badge_without_reload(self, driver, w, ctx):
+        driver.execute_script("window.__noReloadMarker = true;")
+        btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="reject"]')
+        btn.click()
+        time.sleep(1)
+        assert driver.execute_script("return window.__noReloadMarker === true;"), \
+            "Page must not have done a full reload/navigation after clicking reject"
+        approve_btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
+        reject_btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="reject"]')
+        assert "btn-consent--approved" not in approve_btn.get_attribute("class")
+        assert "btn-consent--rejected" in reject_btn.get_attribute("class")
+        assert _get_approval_state(ctx["exp_pk"], ctx["b"]["email"]) == "2"
+        self_badge = driver.find_element(By.CSS_SELECTOR, '.avatar-wrap[data-self-avatar] .approval-badge')
+        assert "approval-badge--rejected" in self_badge.get_attribute("class"), \
+            "Avatar stack badge must update to rejected in place on the project page, without a page reload"
 
 
 class TestConsentStillUnlockedWithin24h:

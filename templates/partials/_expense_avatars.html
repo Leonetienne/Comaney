@@ -24,7 +24,7 @@
         {# Participant avatars with approval badges #}
         {% for bs in exp.buddy_spendings.all %}
             {% if bs.participant_feuser %}
-            <span class="avatar-wrap">
+            <span class="avatar-wrap"{% if bs.participant_feuser == request.feuser %} data-self-avatar{% endif %}>
                 {% include 'partials/_avatar.html' with user_obj=bs.participant_feuser avatar_title=bs.participant_feuser.first_name|add:" "|add:bs.participant_feuser.last_name %}
                 {% if not exp.is_buddies_settlement %}
                 {% if bs.approval_state == 1 %}
