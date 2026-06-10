@@ -71,6 +71,11 @@ class TestDemoBlocked:
         wait_text(driver, w, "Two-factor authentication")
         assert "/email-2fa/setup/" not in driver.current_url
 
+    def test_yubikey_setup_view_redirects_away(self, driver, w, demo_ctx):
+        driver.get(_url("/yubikey/setup/"))
+        wait_text(driver, w, "Two-factor authentication")
+        assert "/yubikey/setup/" not in driver.current_url
+
     def test_email_send_code_endpoint_has_nothing_to_send_for_demo(self, driver, w, demo_ctx):
         # Demo users can never reach a state with a persisted or mid-setup
         # EmailFactor (setup itself is blocked above), so the shared
