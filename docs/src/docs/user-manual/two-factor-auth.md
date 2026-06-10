@@ -2,11 +2,12 @@
 
 Two-factor authentication (2FA) adds an extra layer of security to your account. After you enter your password, Comaney asks you to confirm your identity a second way. Even if someone learns your password, they still cannot log in without that second step.
 
-Comaney supports three kinds of second step, and you can set up any number of them:
+Comaney supports four kinds of second step, and you can set up any number of them:
 
 - **Authenticator app**: a 6-digit code from an app on your phone.
 - **Security key**: a physical key (such as a YubiKey), or your device's built-in fingerprint or face unlock (Touch ID, Windows Hello). This is also known as a FIDO2 or WebAuthn key.
 - **Email code**: a 6-digit code sent to your account's email address whenever you need it. This option only shows up if the Comaney instance you're using is set up to send email; if you don't see it, ask whoever runs your instance.
+- **YubiKey OTP**: a YubiKey used in its "touch to type a one-time code" mode, rather than as a security key. This option only shows up if whoever runs your Comaney instance has set it up to work with YubiKeys; if you don't see it, ask them.
 
 You only need one method to protect your account. Adding a second one is useful as a backup in case you lose the first.
 
@@ -22,6 +23,8 @@ For a security key:
 
 - A FIDO2/WebAuthn-compatible physical key, or
 - A device with a built-in authenticator, such as Touch ID or Windows Hello
+
+For YubiKey OTP, a physical YubiKey that supports it (most current models do). No app is needed: the key types the code for you.
 
 ## Setting up an authenticator app
 
@@ -49,6 +52,16 @@ For a security key:
 
 You can only have one email code method on your account, since it always goes to the same address. There's no separate "name" step for it the way there is for authenticator apps and security keys.
 
+## Setting up a YubiKey OTP
+
+1. Go to **Account Settings** and find the **Two-factor authentication** section.
+2. Click **Add new second factor**, then choose **YubiKey OTP** from the menu. (If you don't see this option, your Comaney instance isn't set up for it.)
+3. Give the key a name (for example "Work YubiKey") so you can tell it apart from any other keys you add later.
+4. Click into the code field, then insert your YubiKey and touch it. It types a one-time code by itself.
+5. Click **Activate**.
+
+Each physical YubiKey can only be registered once, on one account. If you try to add a key that's already registered (to you or to someone else), Comaney will tell you.
+
 !!! warning "Save your recovery code"
     The first time you set up a second-factor method, Comaney shows you a **recovery code**. Copy it and store it somewhere safe (a password manager, or a printed note kept somewhere secure).
 
@@ -56,13 +69,13 @@ You can only have one email code method on your account, since it always goes to
 
 ## Using more than one method
 
-You can set up an authenticator app and one or more security keys on the same account. Whichever one is marked **Primary** is what you're asked for first when you log in.
+You can mix and match: an authenticator app, one or more security keys, an email code, and one or more YubiKey OTP keys can all be set up on the same account at once. Whichever one is marked **Primary** is what you're asked for first when you log in.
 
 When you add a second or later method, a checkbox lets you make it the new primary method. If you leave it unchecked, your existing primary method stays as it is. You can also change which method is primary at any time from **Account Settings**, using **Set as primary** next to any method in the list.
 
 ## Logging in with 2FA
 
-After you enter your email and password, a second screen asks you to confirm with your primary method: either a 6-digit code from your authenticator app, or a prompt to use your security key.
+After you enter your email and password, a second screen asks you to confirm with your primary method: a 6-digit code from your authenticator app or email, a prompt to use your security key, or a field to touch your YubiKey into.
 
 If you have more than one method set up and the one shown isn't available to you right now, click **Try a different method** to pick another one.
 
