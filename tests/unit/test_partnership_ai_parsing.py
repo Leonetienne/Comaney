@@ -12,10 +12,18 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
 def _parse_mappings(raw: str) -> list[dict]:
-    """Mirror the parsing logic from partnership_ai._suggest_mappings."""
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-    parsed = json.loads(raw)
+    """Mirror the parsing logic from partnership_ai._suggest_mappings, which
+    now delegates JSON recovery to express_service.extract_json_object via
+    call_ai_for_json (see test_express_json_extraction.py for that helper's
+    own tests)."""
+    cleaned = raw
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[-1]
+        cleaned = cleaned.rsplit("```", 1)[0].strip()
+    idx = cleaned.find("{")
+    if idx != -1:
+        cleaned = cleaned[idx:]
+    parsed, _end = json.JSONDecoder(strict=False).raw_decode(cleaned)
     return parsed["mappings"]
 
 
@@ -36,6 +44,11 @@ class TestAIMappingParsing:
 
     def test_code_fence_stripped(self):
         raw = '```json\n{"mappings": [{"source": "food", "target": "groceries"}]}\n```'
+        result = _parse_mappings(raw)
+        assert result[0]["source"] == "food"
+
+    def test_trailing_sign_off_ignored(self):
+        raw = '{"mappings": [{"source": "food", "target": "groceries"}]}\nHope that helps!'
         result = _parse_mappings(raw)
         assert result[0]["source"] == "food"
 
