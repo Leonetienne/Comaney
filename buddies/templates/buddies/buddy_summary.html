@@ -8,6 +8,16 @@
 {% endblock %}
 
 {% block content %}
+<div class="fab-wrap">
+    <button type="button" class="fab-new-expense fab-toggle" title="New expense">+</button>
+    <div class="fab-menu">
+        <a href="{% url 'budget:expense_create' %}?back={{ request.path|urlencode }}" class="fab-menu-item" title="Create manually">Manual</a>
+        {% if ai_smart_create_available %}
+        <a href="{% url 'budget:express_creation' %}" class="fab-menu-item" title="AI Express">AI</a>
+        {% endif %}
+    </div>
+</div>
+
 <div class="page-header">
     <h1>Buddy Expenses</h1>
 </div>
