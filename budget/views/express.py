@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import date
 from decimal import Decimal
 
@@ -6,34 +7,37 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from ..decorators import feuser_required
-from ..express_service import (
+from ..ai_service import (
+    AIAuthenticationError,
+    AIBillingError,
+    AIBudgetExceededError,
     AIInvalidResponseError,
     AIRefusalError,
+    AIService,
+    AITransientError,
+)
+from ..decorators import feuser_required
+from ..express_service import (
     _build_catalog,
-    _build_smart_create_system,
-    _call_claude,
     _parse_buddy_item,
     _prepare_image,
     _select_smart_create_blocks,
-    _trial_state,
     _validate_items,
-    record_ai_usage,
+    build_express_system_prompt,
 )
 from ..expense_factory import create_expense
 from ..models import Category, Tag, TransactionType
 from .expenses import _buddy_context
 
-import logging
 _log = logging.getLogger(__name__)
 
 
 @feuser_required
 def express_creation(request):
-    from ..ai_trial import disable_trial, notify_admin_billing, notify_admin_invalid_trial_key, trial_is_disabled
+    from ..ai_trial import trial_is_disabled
 
     feuser = request.feuser
-    api_key, is_trial, trial_limit, trial_spent, trial_blocked = _trial_state(feuser)
+    api_key, is_trial, trial_limit, trial_spent, trial_blocked = AIService.trial_state_for(feuser)
 
     if not api_key:
         return redirect("profile")
@@ -87,23 +91,15 @@ def express_creation(request):
                 # line up with the widget's own member/buddy arrays -- see _build_catalog.
                 catalog = _build_catalog(feuser, context["projects_data"], context["single_buddies_data"])
                 blocks = _select_smart_create_blocks(context["projects_data"], context["single_buddies_data"])
-                custom = feuser.ai_custom_instructions.strip()
-                extra = f"\n\nUser's custom instructions (follow these when assigning categories/tags):\n{custom}" if custom else ""
-                system_prompt = _build_smart_create_system(catalog, blocks) + extra
+                system_prompt = build_express_system_prompt(catalog, blocks, feuser.ai_custom_instructions)
                 today_str = timezone.localdate().isoformat()
                 description_with_date = f"[Today's date: {today_str}]\n\n{description}" if description else f"[Today's date: {today_str}]"
 
-                def _apply_usage(u):
-                    context["usage"] = u
-                    record_ai_usage(feuser, is_trial, u)
-                    if is_trial and u:
-                        context["trial_spent"] = round(float(feuser.ai_trial_budget_spent), 1)
-                        if float(feuser.ai_trial_budget_spent) >= trial_limit:
-                            context["trial_just_exhausted"] = True
-
+                service = None
                 try:
-                    raw_items, usage = _call_claude(
-                        api_key, system_prompt, description_with_date,
+                    service = AIService(feuser)
+                    raw_items = service.prompt_express_expense_gen(
+                        system_prompt, description_with_date,
                         image_b64=image_b64, image_type=image_type,
                     )
                     items, errors = _validate_items(
@@ -114,58 +110,41 @@ def express_creation(request):
                     if items:
                         context["preview_items"] = items
                         context["preview_json"] = json.dumps(items)
-                    _apply_usage(usage)
                 except AIRefusalError as exc:
                     context["ai_error"] = str(exc)
                     context["ai_raw_output"] = exc.raw
                 except AIInvalidResponseError as exc:
+                    # A JSON-repair fallback may have been attempted (see
+                    # AIService._call_and_repair) and still ultimately failed --
+                    # real tokens may have been spent on both calls; AIService
+                    # already billed that combined cost before raising.
                     _log.error("smart_create invalid response: cause=%s raw=%r", exc.cause, exc.raw)
-                    context["ai_error"] = ""
                     context["ai_raw_output"] = exc.raw
-                    if exc.usage:
-                        # A JSON-repair fallback (see express_service.call_ai_for_json)
-                        # was attempted and still ultimately failed -- real tokens were
-                        # spent on both calls, so bill and surface the combined cost
-                        # even though the request itself failed.
-                        _apply_usage(exc.usage)
-                except Exception as exc:
-                    import anthropic as _anthropic
-
-                    def _handle_billing():
-                        if is_trial:
-                            disable_trial(str(exc))
-                            notify_admin_billing(str(exc))
-                            context["trial_disabled"] = True
-                        else:
-                            context["ai_error"] = "Insufficient Anthropic credits. Please top up your account at console.anthropic.com."
-
-                    if isinstance(exc, _anthropic.AuthenticationError):
-                        if is_trial:
-                            notify_admin_invalid_trial_key()
-                            context["ai_error"] = "The server is misconfigured: the trial API key is invalid. Please contact the server administrator."
-                        else:
-                            context["ai_error"] = "Invalid API key. Please update it in your profile."
-                    elif isinstance(exc, _anthropic.PermissionDeniedError):
-                        context["ai_error"] = "API key does not have permission to use this model. Please check your Anthropic account."
-                    elif isinstance(exc, _anthropic.RateLimitError):
-                        msg = str(exc).lower()
-                        if "credit" in msg or "billing" in msg or "balance" in msg:
-                            _handle_billing()
-                        else:
-                            context["ai_error"] = "Anthropic rate limit reached. Please wait a moment and try again."
-                    elif isinstance(exc, _anthropic.InternalServerError):
-                        context["ai_error_overloaded"] = True
-                        context["ai_error_detail"] = str(exc)
-                    elif isinstance(exc, _anthropic.APIConnectionError):
-                        context["ai_error"] = "Could not reach the Anthropic API. Please check your internet connection."
-                    elif isinstance(exc, _anthropic.APIStatusError):
-                        msg = str(exc).lower()
-                        if "credit" in msg or "billing" in msg or "balance" in msg:
-                            _handle_billing()
-                        else:
-                            context["ai_error"] = f"Anthropic API error {exc.status_code}: {exc.message}"
+                except AIBillingError as exc:
+                    if is_trial:
+                        context["trial_disabled"] = True
                     else:
-                        context["ai_error"] = f"Unexpected error: {exc}"
+                        context["ai_error"] = str(exc)
+                except AIAuthenticationError as exc:
+                    context["ai_error"] = str(exc)
+                except AITransientError as exc:
+                    if exc.overloaded:
+                        context["ai_error_overloaded"] = True
+                        context["ai_error_detail"] = exc.detail
+                    else:
+                        context["ai_error"] = str(exc)
+                except AIBudgetExceededError as exc:
+                    context["ai_error"] = str(exc) or "AI budget exceeded."
+                except Exception as exc:
+                    context["ai_error"] = f"Unexpected error: {exc}"
+
+                if service is not None:
+                    if service.last_usage:
+                        context["usage"] = service.last_usage
+                    if service.is_trial:
+                        context["trial_spent"] = round(service.trial_spent, 1)
+                        if service.trial_spent >= trial_limit:
+                            context["trial_just_exhausted"] = True
 
         elif action == "confirm":
             preview_json = request.POST.get("preview_json", "")

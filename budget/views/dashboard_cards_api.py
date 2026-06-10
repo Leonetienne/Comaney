@@ -368,9 +368,12 @@ def card_ai_api(request):
     except (TypeError, ValueError):
         exclude_id = None
 
+    from ..ai_service import (
+        AIAuthenticationError, AIBillingError, AIBudgetExceededError,
+        AIInvalidResponseError, AIRefusalError, AITransientError,
+    )
     from ..dashboard_card_ai import generate_card_yaml
     from ..dashboard_cards import CardConfigError
-    from ..express_service import AIBudgetExceededError, AIInvalidResponseError, AIRefusalError
 
     try:
         yaml_str = generate_card_yaml(
@@ -386,6 +389,12 @@ def card_ai_api(request):
         return _err(f'The AI produced an invalid card: {exc}', 400)
     except AIInvalidResponseError:
         return _err('The AI returned something unexpected. Please try rephrasing.', 400)
+    except AIBillingError as exc:
+        return _err(str(exc) or 'AI is temporarily unavailable (out of credits).', 402)
+    except AIAuthenticationError as exc:
+        return _err(str(exc) or 'AI is misconfigured. Please contact the administrator.', 500)
+    except AITransientError as exc:
+        return _err(str(exc) or 'AI is temporarily unavailable. Please try again.', 503)
     except Exception:
         _log.exception('card_ai_api: AI call failed')
         return _err('AI suggestion failed. Please try again or write the YAML directly.', 500)

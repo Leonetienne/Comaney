@@ -70,12 +70,12 @@ def notify_admin_invalid_trial_key() -> None:
 
 def notify_admin_json_repair_fallback(feature: str, resolved: bool) -> None:
     """
-    A JSON-repair fallback (see budget.express_service.call_ai_for_json) had
-    to kick in: an AI feature's response didn't parse as JSON at all (usually
-    excessive markdown/code-fencing or stray text around it), so a second AI
-    call was made to try to recover it. Purely an operational signal for the
-    admin -- never includes any user data or response content, just which
-    feature hit this and whether the retry fixed it.
+    A JSON-repair fallback (see budget.ai_service.AIService._call_and_repair)
+    had to kick in: an AI feature's response didn't parse as JSON at all
+    (usually excessive markdown/code-fencing or stray text around it), so a
+    second AI call was made to try to recover it. Purely an operational
+    signal for the admin -- never includes any user data or response
+    content, just which feature hit this and whether the retry fixed it.
     """
     if getattr(settings, "DISABLE_EMAILING", False):
         return

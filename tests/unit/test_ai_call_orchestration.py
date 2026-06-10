@@ -1,12 +1,15 @@
 """
-Unit tests for the shared AI-call orchestration in budget/express_service.py:
-merge_usage, record_ai_usage, and the retry/repair/notify control flow of
-call_ai_for_json.
+Unit tests for the shared AI-call orchestration in budget/ai_service.py:
+_merge_usage, _record_ai_usage (real imports -- see their docstring), and a
+mirror of AIService._call_and_repair's retry/merge/notify control flow.
 
-Django is not importable in the local venv without settings configured (as
-with test_express_smart_create_blocks.py), so this mirrors the pure algorithms
--- the retry control flow is mirrored with the two AI calls and the admin
-notifier injected as fakes, so it can be exercised without Django or network.
+budget.ai_service has no module-level Django/DB imports, so _merge_usage and
+_record_ai_usage are imported and exercised directly. AIService._call_and_repair
+itself calls AIService._call, which does `import anthropic` and touches
+django.conf.settings (via AIService.__init__/trial_state_for) -- neither
+anthropic nor a configured settings module is available in this local venv,
+so that one retry/merge/notify control flow is still mirrored here with the
+two AI calls and the admin notifier injected as fakes.
 Run with: venv/bin/pytest tests/unit/test_ai_call_orchestration.py -v
 """
 import json
@@ -18,29 +21,9 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-
-# ── Mirror of extract_json_object (see test_express_json_extraction.py) ────
-
-def extract_json_object(raw: str):
-    cleaned = raw
-    if cleaned.startswith("```"):
-        cleaned = cleaned.split("\n", 1)[-1]
-        cleaned = cleaned.rsplit("```", 1)[0].strip()
-    idx = cleaned.find("{")
-    if idx != -1:
-        cleaned = cleaned[idx:]
-    parsed, _end = json.JSONDecoder(strict=False).raw_decode(cleaned)
-    return parsed
-
-
-# ── Mirror of merge_usage / record_ai_usage ─────────────────────────────────
-
-def merge_usage(*usages: dict) -> dict:
-    keys = ("input_tokens", "output_tokens", "cache_write_tokens", "cache_read_tokens", "total_tokens")
-    merged = {k: sum(u.get(k, 0) for u in usages) for k in keys}
-    merged["cost_usd"] = round(sum(u.get("cost_usd", 0) for u in usages), 6)
-    merged["cost_cents"] = round(sum(u.get("cost_cents", 0) for u in usages), 4)
-    return merged
+from budget.ai_service import _extract_json_object as extract_json_object
+from budget.ai_service import _merge_usage as merge_usage
+from budget.ai_service import _record_ai_usage as record_ai_usage
 
 
 class FakeFeuser:
@@ -52,27 +35,20 @@ class FakeFeuser:
         self.save_calls += 1
 
 
-def record_ai_usage(feuser, is_trial: bool, usage: dict | None) -> None:
-    if not (is_trial and usage):
-        return
-    feuser.ai_trial_budget_spent = (feuser.ai_trial_budget_spent or Decimal(0)) + Decimal(str(usage["cost_cents"]))
-    feuser.save(update_fields=["ai_trial_budget_spent"])
-
-
-# ── Mirror of call_ai_for_json's retry/merge/notify control flow ───────────
+# ── Mirror of AIService._call_and_repair's retry/merge/notify control flow ─
 
 class RepairExhaustedError(Exception):
     def __init__(self, usage):
         self.usage = usage
 
 
-def call_ai_for_json_sim(primary_call, repair_call, notify, feature="test_feature"):
+def call_and_repair_sim(primary_call, repair_call, notify, feature="test_feature"):
     """
-    Mirror of express_service.call_ai_for_json: the two AI calls and the
+    Mirror of AIService._call_and_repair: the two AI calls and the
     admin-notify hook are injected as fakes (primary_call/repair_call each
-    return (raw_text, usage) like _call_agent does) so the retry decision,
-    usage merging, and notification behavior can be verified without Django
-    or a real Anthropic call.
+    return (raw_text, usage) like AIService._call does) so the retry decision,
+    usage merging, and notification behavior can be verified without Django,
+    anthropic, or a real Anthropic call.
     """
     raw, usage = primary_call()
     try:
@@ -140,7 +116,7 @@ class TestRecordAiUsage:
         assert feuser.ai_trial_budget_spent == Decimal("0.75")
 
 
-class TestCallAiForJsonRepairFallback:
+class TestCallAndRepairFallback:
 
     def test_repair_skipped_when_primary_parses(self):
         def primary():
@@ -150,7 +126,7 @@ class TestCallAiForJsonRepairFallback:
             raise AssertionError("repair should not be called when primary parses fine")
 
         notified = []
-        parsed, usage, raw = call_ai_for_json_sim(
+        parsed, usage, raw = call_and_repair_sim(
             primary, repair_should_not_run, lambda f, r: notified.append((f, r)),
         )
         assert parsed == {"result": "good", "items": []}
@@ -165,7 +141,7 @@ class TestCallAiForJsonRepairFallback:
             return '{"result": "good", "items": [{"title": "Fixed"}]}', _usage(0.5)
 
         notified = []
-        parsed, usage, raw = call_ai_for_json_sim(
+        parsed, usage, raw = call_and_repair_sim(
             primary, repair, lambda f, r: notified.append((f, r)),
         )
         assert parsed["items"][0]["title"] == "Fixed"
@@ -182,6 +158,6 @@ class TestCallAiForJsonRepairFallback:
 
         notified = []
         with pytest.raises(RepairExhaustedError) as exc_info:
-            call_ai_for_json_sim(primary, repair, lambda f, r: notified.append((f, r)))
+            call_and_repair_sim(primary, repair, lambda f, r: notified.append((f, r)))
         assert exc_info.value.usage["cost_cents"] == 1.5
         assert notified == [("test_feature", False)]

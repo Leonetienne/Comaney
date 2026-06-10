@@ -1,10 +1,11 @@
 """
-Unit tests for budget/express_service.py::extract_json_object -- the shared
+Unit tests for budget/ai_service.py::_extract_json_object -- the shared
 raw-AI-response JSON recovery used by express creation, dashboard card AI,
-and partnership AI.
+and partnership AI (via AIService._call_and_repair).
 
-Django is not importable in the local venv without settings configured (as
-with test_express_smart_create_blocks.py), so this mirrors the pure algorithm.
+budget.ai_service has no module-level Django/DB imports, so unlike most
+files under budget/ it imports cleanly without a configured Django settings
+module -- this exercises the real function directly rather than a mirror.
 Run with: venv/bin/pytest tests/unit/test_express_json_extraction.py -v
 """
 import json
@@ -15,21 +16,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-
-# ── Mirror of extract_json_object (no Django needed) ───────────────────────
-
-def extract_json_object(raw: str):
-    cleaned = raw
-    if cleaned.startswith("```"):
-        cleaned = cleaned.split("\n", 1)[-1]
-        cleaned = cleaned.rsplit("```", 1)[0].strip()
-
-    idx = cleaned.find("{")
-    if idx != -1:
-        cleaned = cleaned[idx:]
-
-    parsed, _end = json.JSONDecoder(strict=False).raw_decode(cleaned)
-    return parsed
+from budget.ai_service import _extract_json_object as extract_json_object
 
 
 class TestExtractJsonObject:

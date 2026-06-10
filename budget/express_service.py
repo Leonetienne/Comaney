@@ -1,36 +1,17 @@
 """
-AI-powered express expense creation: agent abstraction, image handling,
-item validation, and trial-key management.
+AI express expense creation: system-prompt assembly, image handling, and
+item validation.
 
-The view layer lives in budget/views/express.py and imports from here. This
-module is also the shared home for the AI plumbing used by every other AI
-feature in the app (budget.dashboard_card_ai, buddies.services.partnership_ai):
-provider dispatch, JSON-response recovery, and trial-budget billing all live
-here so a new AI feature never has to reimplement them.
-
-AI call hierarchy:
-  call_ai_for_json(AgentConfig, system_prompt, messages, feature=...)
-    -> (parsed_json_value, usage, raw_text)
-      This is the entry point new AI code should use. It:
-        1. _call_agent(config, system_prompt, messages) -> (raw_text, usage)
-             └── _call_claude_impl  (provider="claude")
-                 └── future providers via AgentConfig.provider
-        2. extract_json_object(raw_text) -- recovers a JSON value even
-           through a stray code fence, leading prose, or trailing sign-off.
-        3. If that still fails to parse: one repair AI call (also via
-           _call_agent) asking a fresh session to fix the formatting, then
-           extract_json_object() again. usage from both calls is merged
-           (merge_usage) into a single combined usage dict either way.
-  record_ai_usage(feuser, is_trial, usage) -> bills a usage dict (from either
-      of the above) against the feuser's trial budget; a no-op off-trial.
-
-Express-creation calls the legacy _call_claude() wrapper, which builds the
-image+text content array and interprets the smart-create JSON envelope on
-top of call_ai_for_json().
+The view layer lives in budget/views/express.py. The actual AI round trip
+(talking to Claude, JSON-response recovery, trial-budget billing, error
+classification) is not here -- it's budget.ai_service.AIService, the single
+shared entry point used by every AI feature in the app. This module only
+owns what's specific to express creation: building the system prompt text,
+preparing an uploaded receipt image, and sanitising the items the AI hands
+back before they're shown to the user.
 """
 import json
 import logging
-from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
@@ -40,185 +21,10 @@ _log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Errors
-# ---------------------------------------------------------------------------
-
-class AIRefusalError(Exception):
-    """AI returned {"result": "fail", "msg": "..."}"""
-    def __init__(self, msg: str, raw: str = ""):
-        super().__init__(msg)
-        self.raw = raw
-
-
-class AIInvalidResponseError(Exception):
-    """AI returned unparseable or structurally unexpected output."""
-    def __init__(self, raw: str = "", cause: Exception | None = None, usage: dict | None = None):
-        super().__init__("Invalid response")
-        self.raw = raw
-        self.cause = cause
-        # Set only when raised by call_ai_for_json after a JSON-repair fallback
-        # was attempted -- the combined cost of the primary + repair calls, so
-        # the caller can still bill it even though the request ultimately
-        # failed. None for every other raise site (nothing extra was spent).
-        self.usage = usage
-
-
-class AIBudgetExceededError(Exception):
-    """Trial or user budget is exhausted."""
-
-
-# ---------------------------------------------------------------------------
-# Agent abstraction
-# ---------------------------------------------------------------------------
-
-@dataclass
-class AgentConfig:
-    provider: str = "claude"
-    api_key: str = ""
-    model: str = "claude-sonnet-4-6"
-    max_tokens: int = 8192
-    extra: dict = field(default_factory=dict)
-
-
-def _call_agent(
-    config: AgentConfig,
-    system_prompt: str | list[dict],
-    messages: list[dict],
-) -> tuple[str, dict]:
-    """
-    Dispatch to the configured AI provider.
-    system_prompt may be a plain string (wrapped in a single cached block) or
-    a pre-built list of Anthropic system content blocks -- the latter lets a
-    caller split a large static portion (its own cache_control breakpoint,
-    shareable across requests/users) from a smaller per-request dynamic tail.
-    Returns (raw_text_response, usage_dict).
-    usage_dict keys: input_tokens, output_tokens, cache_write_tokens,
-                     cache_read_tokens, total_tokens, cost_usd, cost_cents.
-    """
-    if config.provider == "claude":
-        return _call_claude_impl(config, system_prompt, messages)
-    raise ValueError(f"Unsupported AI provider: {config.provider!r}")
-
-
-def _call_claude_impl(
-    config: AgentConfig,
-    system_prompt: str | list[dict],
-    messages: list[dict],
-) -> tuple[str, dict]:
-    """Raw Anthropic API call. Returns (response_text, usage_dict)."""
-    import anthropic
-
-    if isinstance(system_prompt, str):
-        system = [
-            {
-                "type": "text",
-                "text": system_prompt,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ]
-    else:
-        system = system_prompt
-
-    client = anthropic.Anthropic(api_key=config.api_key)
-    response = client.messages.create(
-        model=config.model or "claude-sonnet-4-6",
-        max_tokens=config.max_tokens,
-        system=system,
-        messages=messages,
-    )
-
-    raw = ""
-    for block in response.content:
-        if getattr(block, "type", None) == "text":
-            raw = block.text.strip()
-            break
-
-    if not raw:
-        _log.error("_call_claude_impl: empty response. blocks: %r", response.content)
-        raise ValueError(
-            f"Claude returned an empty response. Content blocks: "
-            f"{[getattr(b, 'type', '?') for b in response.content]}"
-        )
-
-    u = response.usage
-    input_tok       = getattr(u, "input_tokens", 0)
-    output_tok      = getattr(u, "output_tokens", 0)
-    cache_write_tok = getattr(u, "cache_creation_input_tokens", 0)
-    cache_read_tok  = getattr(u, "cache_read_input_tokens", 0)
-
-    usage = {
-        "input_tokens":       input_tok,
-        "output_tokens":      output_tok,
-        "cache_write_tokens": cache_write_tok,
-        "cache_read_tokens":  cache_read_tok,
-        "total_tokens":       input_tok + output_tok + cache_write_tok + cache_read_tok,
-        **_compute_usage_cost(input_tok, output_tok, cache_write_tok, cache_read_tok),
-    }
-    return raw, usage
-
-
-def _compute_usage_cost(input_tok: int, output_tok: int, cache_write_tok: int, cache_read_tok: int) -> dict:
-    """cost_usd/cost_cents for a Claude API call from its token usage.
-
-    cost_cents is kept at the same 4-decimal precision as
-    FeUser.ai_trial_budget_spent (a DecimalField(decimal_places=4)): rounding
-    to fewer decimals silently truncates cheap, cache-heavy requests to 0.0,
-    under-billing trial usage instead of just under-displaying it.
-    """
-    cost = (
-        (input_tok       / 1_000_000) * _PRICE_INPUT +
-        (output_tok      / 1_000_000) * _PRICE_OUTPUT +
-        (cache_write_tok / 1_000_000) * _PRICE_CACHE_WRITE +
-        (cache_read_tok  / 1_000_000) * _PRICE_CACHE_READ
-    )
-    return {"cost_usd": round(cost, 6), "cost_cents": round(cost * 100, 4)}
-
-
-def _default_agent_config(feuser) -> AgentConfig:
-    """Resolve the right API key for a feuser (own key > trial key)."""
-    api_key, *_ = _trial_state(feuser)
-    return AgentConfig(provider="claude", api_key=api_key)
-
-
-def merge_usage(*usages: dict) -> dict:
-    """
-    Combine usage dicts from multiple _call_agent calls made for one logical
-    request (e.g. a primary call plus a JSON-repair retry, see
-    call_ai_for_json) into a single usage dict of the same shape, so the
-    combined cost can be shown/billed exactly like a single call's usage.
-    """
-    keys = ("input_tokens", "output_tokens", "cache_write_tokens", "cache_read_tokens", "total_tokens")
-    merged = {k: sum(u.get(k, 0) for u in usages) for k in keys}
-    merged["cost_usd"] = round(sum(u.get("cost_usd", 0) for u in usages), 6)
-    merged["cost_cents"] = round(sum(u.get("cost_cents", 0) for u in usages), 4)
-    return merged
-
-
-def record_ai_usage(feuser, is_trial: bool, usage: dict | None) -> None:
-    """
-    Bill a completed AI call's cost against the feuser's trial budget, if
-    they're on the shared trial key (a feuser with their own Anthropic key
-    pays Anthropic directly, so there's nothing to record). A no-op when
-    usage is falsy, so callers can pass an exception's optional .usage
-    straight through without an extra guard. Shared by every AI feature
-    (express creation, dashboard card AI, partnership tag/category mapping)
-    so this billing logic only lives in one place.
-    """
-    if not (is_trial and usage):
-        return
-    feuser.ai_trial_budget_spent = (feuser.ai_trial_budget_spent or Decimal(0)) + Decimal(str(usage["cost_cents"]))
-    feuser.save(update_fields=["ai_trial_budget_spent"])
-
-
-# ---------------------------------------------------------------------------
-# Express-creation constants and helpers
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
 # System prompt, assembled from independent feature blocks.
 #
 # Each block is self-contained and describes exactly one capability plus the
-# item keys it introduces. _build_smart_create_system() joins the enabled
+# item keys it introduces. build_express_system_prompt() joins the enabled
 # blocks and appends the catalog. Keeping features in separate blocks (rather
 # than one monolithic string) lets us later switch individual capabilities off
 # without disturbing the rest: drop a block and the AI stops emitting its keys.
@@ -289,7 +95,7 @@ _SMART_CREATE_DIRECT_BUDDY = """Sharing an expense one-on-one with a direct budd
 If buddy_idx is set, the item's type MUST be "expense". Only use an idx that appears in the Direct buddies list below; never invent one."""
 
 # Ordered feature blocks. The base is mandatory; the rest can be dropped later
-# to switch a capability off. _build_smart_create_system() joins them in order.
+# to switch a capability off. build_express_system_prompt() joins them in order.
 _SMART_CREATE_BLOCKS = [
     _SMART_CREATE_BASE,
     _SMART_CREATE_PROJECTS,
@@ -326,14 +132,23 @@ def _select_smart_create_blocks(projects_data: list, single_buddies: list) -> li
         blocks.append(_SMART_CREATE_DIRECT_BUDDY)
     return blocks
 
+
+def build_express_system_prompt(catalog: str, blocks: list[str], custom_instructions: str = "") -> str:
+    """Assemble the full express-creation system prompt: feature blocks +
+    catalog + the feuser's own custom instructions, if any."""
+    system_prompt = _build_smart_create_system(catalog, blocks)
+    custom_instructions = (custom_instructions or "").strip()
+    if custom_instructions:
+        system_prompt += (
+            "\n\nUser's custom instructions (follow these when assigning categories/tags):\n"
+            f"{custom_instructions}"
+        )
+    return system_prompt
+
+
 _ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 _IMAGE_MAX_PX = 1600
 _IMAGE_QUALITY = 82
-
-_PRICE_INPUT       = 3.00
-_PRICE_OUTPUT      = 15.00
-_PRICE_CACHE_WRITE = 3.75
-_PRICE_CACHE_READ  = 0.30
 
 
 def _prepare_image(image_file) -> tuple[str, str]:
@@ -407,181 +222,6 @@ def _build_catalog(feuser, projects_data: list, single_buddies: list) -> str:
             f"{json.dumps(direct_buddies, ensure_ascii=False)}"
         )
     return "\n\n".join(parts)
-
-
-# ---------------------------------------------------------------------------
-# Shared raw-response parsing (express creation, dashboard card AI, partnership AI)
-# ---------------------------------------------------------------------------
-
-def extract_json_object(raw: str):
-    """
-    Best-effort recovery of a single JSON value from a raw AI text response.
-
-    Every AI feature's system prompt asks for a reply that is nothing but a
-    JSON object, but models sometimes still wrap it in a ``` code fence,
-    prefix it with a line of prose, or tack on a trailing sign-off sentence
-    despite being told not to. This tolerates all three by locating the first
-    "{" and parsing only the JSON value that starts there (via
-    json.JSONDecoder.raw_decode), rather than requiring -- like json.loads --
-    that the entire remaining string be valid JSON; anything trailing the
-    parsed value (a closing fence, a stray comment) is simply ignored instead
-    of causing an "Extra data" failure. strict=False additionally tolerates a
-    raw, unescaped line break inside a string value instead of raising.
-
-    Raises json.JSONDecodeError if no valid JSON value can be found at all.
-    """
-    cleaned = raw
-    if cleaned.startswith("```"):
-        cleaned = cleaned.split("\n", 1)[-1]
-        cleaned = cleaned.rsplit("```", 1)[0].strip()
-
-    idx = cleaned.find("{")
-    if idx != -1:
-        cleaned = cleaned[idx:]
-
-    parsed, _end = json.JSONDecoder(strict=False).raw_decode(cleaned)
-    return parsed
-
-
-_JSON_REPAIR_SYSTEM = """You are a strict JSON repair tool.
-You will be given a piece of text that was supposed to be a single JSON object but failed to parse as one -- for example because it was wrapped in a markdown code fence, had a leading or trailing sentence around it, or contained a stray unescaped character.
-Your ONLY job is to recover the JSON object that was intended and output it, unchanged in meaning, and nothing else. Do not change, add, remove, or "improve" any keys or values -- only fix formatting/syntax so the result is valid JSON.
-Your entire reply must be exactly the corrected JSON object: no prose, no markdown, no code fences, no leading or trailing text of any kind. The first character of your reply MUST be "{" and the last character MUST be "}".
-If you cannot find a coherent JSON object to recover at all, reply with exactly: {"result": "fail", "msg": "could not recover"}"""
-
-
-def _attempt_json_repair(config: AgentConfig, broken_raw: str) -> tuple[str, dict]:
-    """
-    Last-resort fallback for call_ai_for_json: forwards a raw AI response
-    that failed to parse as JSON to a second, small AI call whose only job is
-    to recover the intended JSON. Returns (repaired_raw_text, usage) -- the
-    caller still has to run extract_json_object() on the result, since the
-    repair call itself is not guaranteed to produce valid JSON either.
-    """
-    repair_config = AgentConfig(
-        provider=config.provider, api_key=config.api_key,
-        model=config.model, max_tokens=config.max_tokens,
-    )
-    messages = [{"role": "user", "content": broken_raw}]
-    return _call_agent(repair_config, _JSON_REPAIR_SYSTEM, messages)
-
-
-def _notify_json_repair_admin(feature: str, resolved: bool) -> None:
-    from .ai_trial import notify_admin_json_repair_fallback
-    notify_admin_json_repair_fallback(feature, resolved)
-
-
-def call_ai_for_json(
-    config: AgentConfig,
-    system_prompt: str | list[dict],
-    messages: list[dict],
-    *,
-    feature: str,
-) -> tuple[object, dict, str]:
-    """
-    Single entry point for "call the AI, expect a JSON value back" -- the
-    shape every current AI feature (express creation, dashboard card AI,
-    partnership tag/category mapping) needs, and the one any new AI feature
-    should reach for instead of hand-rolling _call_agent + parsing again.
-
-    Handles the one retry every one of them wants: if the model's raw
-    response doesn't parse as JSON at all (see extract_json_object) -- most
-    often because it wrapped the JSON in extra code-fencing or prose despite
-    being told not to -- the raw text is forwarded to one small repair AI
-    call before giving up. The instance admin is emailed about it (feature
-    name and outcome only, never the response content -- see
-    budget.ai_trial.notify_admin_json_repair_fallback) so repeated fencing
-    problems on a given feature's prompt get noticed.
-
-    Returns (parsed_json_value, usage, raw_text): usage is already the
-    combined cost of every AI call made for this one logical request (the
-    primary call, plus the repair call if one was needed) -- pass it
-    straight to record_ai_usage(). raw_text is the exact response text that
-    was actually parsed into parsed_json_value (the primary response, or the
-    repaired one if a repair was needed), for callers that want to show/log
-    "what the AI actually said" (e.g. AIRefusalError's .raw).
-
-    Raises AIInvalidResponseError (with .usage set to the combined cost spent
-    so far) if the response still can't be parsed after the repair attempt.
-    """
-    raw, usage = _call_agent(config, system_prompt, messages)
-    _log.debug("%s raw response: %r", feature, raw)
-
-    try:
-        return extract_json_object(raw), usage, raw
-    except json.JSONDecodeError as exc:
-        _log.warning(
-            "%s JSON parse failure, attempting AI repair. raw=%r exc=%s",
-            feature, raw, exc,
-        )
-
-    repair_raw, repair_usage = _attempt_json_repair(config, raw)
-    combined_usage = merge_usage(usage, repair_usage)
-
-    try:
-        parsed = extract_json_object(repair_raw)
-    except json.JSONDecodeError as repair_exc:
-        _log.error(
-            "%s JSON repair also failed. raw=%r repair_raw=%r exc=%s",
-            feature, raw, repair_raw, repair_exc,
-        )
-        _notify_json_repair_admin(feature, resolved=False)
-        raise AIInvalidResponseError(raw, repair_exc, usage=combined_usage) from repair_exc
-
-    _log.info("%s JSON repair succeeded after primary parse failure.", feature)
-    _notify_json_repair_admin(feature, resolved=True)
-    return parsed, combined_usage, repair_raw
-
-
-# ---------------------------------------------------------------------------
-# Legacy express-creation wrapper (keeps express.py unchanged)
-# ---------------------------------------------------------------------------
-
-def _call_claude(
-    api_key: str,
-    system_prompt: str,
-    description: str,
-    image_b64: str = "",
-    image_type: str = "image/jpeg",
-) -> tuple[list[dict], dict]:
-    """
-    Express-creation specific AI call.
-    Builds the content array, calls call_ai_for_json, interprets the
-    smart-create JSON envelope. Returns (parsed_items, usage_dict).
-    """
-    content: list[dict] = []
-    if image_b64:
-        content.append({
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": image_type,
-                "data": image_b64,
-            },
-        })
-    content.append({
-        "type": "text",
-        "text": description or "Please analyse this image and extract all expense items.",
-    })
-
-    config = AgentConfig(provider="claude", api_key=api_key, max_tokens=8192)
-    parsed, usage, raw = call_ai_for_json(
-        config, system_prompt, [{"role": "user", "content": content}], feature="express_creation",
-    )
-
-    if isinstance(parsed, dict):
-        if parsed.get("result") == "fail":
-            raise AIRefusalError(parsed.get("msg", ""), raw)
-        if parsed.get("result") == "good":
-            items = parsed.get("items", [])
-        else:
-            raise AIInvalidResponseError(raw)
-    elif isinstance(parsed, list):
-        items = parsed
-    else:
-        raise AIInvalidResponseError(raw)
-
-    return items, usage
 
 
 # ---------------------------------------------------------------------------
@@ -888,20 +528,3 @@ def _parse_buddy_item(item: dict, feuser) -> dict | None:
         "group":          group,
         "spendings":      spendings,
     }
-
-
-def _trial_state(feuser):
-    """Return (api_key, is_trial, trial_limit, trial_spent, trial_blocked)."""
-    from django.conf import settings
-    if feuser.anthropic_api_key:
-        return feuser.anthropic_api_key, False, 0, 0, False
-    trial_key = settings.AI_TRIAL_API_KEY
-    if feuser.special_ai_trial_budget is not None:
-        trial_limit = float(feuser.special_ai_trial_budget)
-    else:
-        trial_limit = settings.AI_TRIAL_USAGE_LIMIT
-    if not trial_key or not trial_limit:
-        return "", False, 0, 0, False
-    spent   = float(feuser.ai_trial_budget_spent or 0)
-    blocked = spent >= trial_limit
-    return trial_key, True, trial_limit, spent, blocked

@@ -15,10 +15,14 @@ from budget.dashboard_card_ai import _DOC_FILES, _DOCS_BASE_URL, _build_docs_ref
 
 
 def _parse_envelope(raw: str) -> str:
-    """Mirror the parsing logic from dashboard_card_ai._parse_response.
-    Importing that function directly would pull in budget.express_service,
-    which needs Django configured -- so this unit test mirrors the algorithm
-    instead, same as test_partnership_ai_parsing.py does for partnership_ai.
+    """Mirror of AIService._call_for_json's {"result": "good"/"fail", ...}
+    envelope check combined with AIService.prompt_dashboard_card_yaml's own
+    "yaml" payload validation (see budget/ai_service.py) -- dashboard card AI
+    no longer has its own response-parsing function to import directly.
+    Mirrored the same way test_partnership_ai_parsing.py mirrors partnership
+    AI's payload parsing, since importing budget.ai_service.AIService itself
+    would require a configured Django settings module (its constructor reads
+    django.conf.settings).
     """
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()

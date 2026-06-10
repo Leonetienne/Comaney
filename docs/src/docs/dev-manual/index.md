@@ -27,7 +27,7 @@ All runtime dependencies are in `requirements.txt`:
 | `mysqlclient` | MariaDB driver |
 | `whitenoise` | Static file serving |
 | `PyYAML` | Dashboard card YAML parsing |
-| `anthropic` | AI express creation |
+| `anthropic` | AI features (express creation, dashboard card AI, partnership tag/category mapping) -- see [Architecture](architecture.md#ai-architecture) |
 | `Pillow` | Receipt image processing |
 | `pyotp` + `qrcode` | TOTP two-factor authentication |
 | `webauthn` | FIDO2/WebAuthn security key two-factor authentication |

@@ -53,8 +53,8 @@ def dashboard_detail(request, uid: int):
 
     dashboards_json = safe_json(_dashboard_list_json(feuser))
 
-    from ..express_service import _trial_state
-    _, _, _, _, ai_trial_blocked = _trial_state(feuser)
+    from ..ai_service import AIService
+    *_, ai_trial_blocked = AIService.trial_state_for(feuser)
 
     ctx = {
         'active_nav': 'dashboard',

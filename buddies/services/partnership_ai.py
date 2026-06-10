@@ -1,6 +1,9 @@
 """
 AI-assisted tag and category mapping for partnership onboarding.
-Uses the same call_ai_for_json abstraction as express creation and dashboard card AI.
+Talks to the AI exclusively through budget.ai_service.AIService, the single
+shared entry point used by every AI feature (express creation, dashboard
+card AI, partnership AI). This module only owns what's specific to this
+feature: the two mapping prompts and the source/target catalog context.
 """
 import json
 
@@ -36,8 +39,8 @@ Your ENTIRE reply, from the very first character to the very last, must be exact
 def suggest_tag_mappings(feuser, master_feuser, source_tags: list[str], target_tags: list[str]) -> list[dict]:
     """
     Return [{source: str, target: str|None}, ...] for unmatched source tags.
-    Raises budget.express_service.AIBudgetExceededError if budget is exceeded.
-    Raises budget.express_service.AIInvalidResponseError on unexpected AI response.
+    Raises budget.ai_service.AIBudgetExceededError if budget is exceeded.
+    Raises budget.ai_service.AIInvalidResponseError on unexpected AI response.
     """
     return _suggest_mappings(feuser, master_feuser, source_tags, target_tags, _TAG_MAPPING_SYSTEM)
 
@@ -78,20 +81,7 @@ def _build_context_block(feuser, master_feuser) -> str:
 
 
 def _suggest_mappings(feuser, master_feuser, sources: list[str], targets: list[str], system_prompt: str) -> list[dict]:
-    from budget.express_service import (
-        AIBudgetExceededError, AIInvalidResponseError, _default_agent_config,
-        _trial_state, call_ai_for_json, record_ai_usage,
-    )
-
-    _, is_trial, trial_limit, trial_spent, trial_blocked = _trial_state(feuser)
-    if trial_blocked:
-        raise AIBudgetExceededError("Trial budget exhausted.")
-
-    config = _default_agent_config(feuser)
-    if not config.api_key:
-        raise AIBudgetExceededError("No AI API key configured.")
-
-    config.max_tokens = 1024
+    from budget.ai_service import AIService
 
     context_block = _build_context_block(feuser, master_feuser)
     user_message = (
@@ -99,19 +89,6 @@ def _suggest_mappings(feuser, master_feuser, sources: list[str], targets: list[s
         f"Source tags: {json.dumps(sources, ensure_ascii=False)}\n"
         f"Target tags: {json.dumps(targets, ensure_ascii=False)}"
     )
-    messages = [{"role": "user", "content": user_message}]
 
-    try:
-        parsed, usage, raw = call_ai_for_json(config, system_prompt, messages, feature="partnership_ai")
-        mappings = parsed["mappings"]
-    except AIInvalidResponseError as exc:
-        # A repair fallback may have been attempted (see call_ai_for_json) and
-        # still ultimately failed -- bill whatever it cost before propagating
-        # (a no-op when .usage is unset, i.e. every other raise site here).
-        record_ai_usage(feuser, is_trial, exc.usage)
-        raise
-    except (KeyError, TypeError) as exc:
-        raise AIInvalidResponseError(raw) from exc
-
-    record_ai_usage(feuser, is_trial, usage)
-    return mappings
+    service = AIService(feuser)  # raises AIBudgetExceededError up front if blocked/no key
+    return service.prompt_partnership_mapping(system_prompt, user_message)

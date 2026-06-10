@@ -24,7 +24,7 @@ The core budgeting functionality. Contains all models (`Expense`, `ScheduledExpe
 - Scheduled expense template management and cron-driven generation
 - Category and tag management
 - The modular dashboard (YAML card parsing and data computation)
-- AI express creation
+- AI express creation, and the shared AI-calling infrastructure other apps' AI features build on (see [AI architecture](#ai-architecture) below)
 - Email notifications
 - End-of-month allowance handling logic
 - The query language parser (translates the search bar mini-language into Django Q objects)
@@ -67,6 +67,14 @@ The dashboard, expense list, and API all accept `?year=` and `?month=` parameter
 Cards are stored as `DashboardCard` model instances containing only a raw YAML string and a creation timestamp. All layout and configuration information lives inside the YAML.
 
 When the dashboard loads, the frontend fetches all cards via the session-authenticated card API. For each card, the server parses the YAML, applies the card's query filter against the current period, and computes either a scalar value (cell cards) or grouped chart data (bar/pie charts). The result is returned as JSON.
+
+## AI architecture
+
+Three features call the AI: express expense creation (`budget/express_service.py`, view in `budget/views/express.py`), dashboard card AI assist (`budget/dashboard_card_ai.py`), and Catalog Partnership tag/category mapping (`buddies/services/partnership_ai.py`).
+
+All three talk to the AI exclusively through `budget/ai_service.py`'s `AIService` class -- nowhere else in the codebase constructs an `anthropic.Anthropic` client, calls `.messages.create`, or hand-parses an AI JSON response. `AIService` owns *how* to talk to the AI safely: own-key/shared-trial-key resolution, the actual API call, JSON-response recovery (one repair retry if the model's reply doesn't parse), trial-budget billing, and classifying a failure into a typed exception (`AIAuthenticationError`, `AIBillingError`, `AITransientError`, `AIRefusalError`, `AIInvalidResponseError`, `AIBudgetExceededError`) -- including disabling the shared trial key and emailing the admin (see [AI Trial Key](../admin-manual/ai-trial-key.md)) on an authentication or billing failure, for any of the three features, not just express creation.
+
+`AIService` deliberately knows nothing about categories, tags, projects, or dashboard cards. Each feature module owns *what* to ask: assembling its own system prompt text and validating the payload it gets back before it's used. A new AI feature is one more `prompt_*` method on `AIService` plus a feature module that builds its prompt and calls it -- it never needs to reimplement JSON recovery, billing, or error handling.
 
 ## Static files
 

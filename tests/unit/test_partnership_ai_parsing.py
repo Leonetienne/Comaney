@@ -1,5 +1,6 @@
 """
-Unit tests for partnership AI response parsing.
+Unit tests for partnership AI response parsing (see
+budget/ai_service.py::AIService.prompt_partnership_mapping).
 No Django, no database.
 Run with: venv/bin/pytest tests/unit/test_partnership_ai_parsing.py -v
 """
@@ -11,11 +12,19 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
+class InvalidResponse(Exception):
+    """Stand-in for budget.ai_service.AIInvalidResponseError."""
+
+
 def _parse_mappings(raw: str) -> list[dict]:
-    """Mirror the parsing logic from partnership_ai._suggest_mappings, which
-    now delegates JSON recovery to express_service.extract_json_object via
-    call_ai_for_json (see test_express_json_extraction.py for that helper's
-    own tests)."""
+    """Mirror of AIService.prompt_partnership_mapping's payload extraction
+    (see budget/ai_service.py): JSON recovery delegates to
+    _extract_json_object (see test_express_json_extraction.py for that
+    helper's own tests, now imported for real there). Partnership mapping is
+    the one feature that doesn't use the {"result": "good"/"fail", ...}
+    envelope (there's no meaningful "fail" case -- an unmatched source just
+    maps to null), so a missing/malformed "mappings" key raises directly
+    rather than via a result-field check."""
     cleaned = raw
     if cleaned.startswith("```"):
         cleaned = cleaned.split("\n", 1)[-1]
@@ -24,7 +33,12 @@ def _parse_mappings(raw: str) -> list[dict]:
     if idx != -1:
         cleaned = cleaned[idx:]
     parsed, _end = json.JSONDecoder(strict=False).raw_decode(cleaned)
-    return parsed["mappings"]
+    if not isinstance(parsed, dict):
+        raise InvalidResponse(raw)
+    mappings = parsed.get("mappings")
+    if not isinstance(mappings, list):
+        raise InvalidResponse(raw)
+    return mappings
 
 
 class TestAIMappingParsing:
@@ -57,11 +71,11 @@ class TestAIMappingParsing:
         assert _parse_mappings(raw) == []
 
     def test_invalid_json_raises(self):
-        with pytest.raises((json.JSONDecodeError, KeyError)):
+        with pytest.raises((json.JSONDecodeError, InvalidResponse)):
             _parse_mappings("this is not json")
 
     def test_missing_mappings_key_raises(self):
-        with pytest.raises(KeyError):
+        with pytest.raises(InvalidResponse):
             _parse_mappings('{"result": "good"}')
 
     def test_n_to_1_multiple_sources_same_target(self):

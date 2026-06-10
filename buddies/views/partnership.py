@@ -185,7 +185,7 @@ def onboarding_ai_suggest_tags(request, token):
     )
     from budget.models import Tag
     from buddies.services.partnership_ai import suggest_tag_mappings
-    from budget.express_service import AIBudgetExceededError
+    from budget.ai_service import AIBudgetExceededError
 
     master_tags = list(Tag.objects.filter(owning_feuser=invite.inviter).values_list("title", flat=True))
     my_tags = list(Tag.objects.filter(owning_feuser=request.feuser).values_list("title", flat=True))
@@ -196,7 +196,7 @@ def onboarding_ai_suggest_tags(request, token):
         return JsonResponse({"mappings": []})
 
     try:
-        mappings = suggest_tag_mappings(request.feuser, unmatched, master_tags)
+        mappings = suggest_tag_mappings(request.feuser, invite.inviter, unmatched, master_tags)
         return JsonResponse({"mappings": mappings})
     except AIBudgetExceededError as exc:
         return JsonResponse({"error": str(exc) or "AI budget exceeded."}, status=402)
@@ -214,7 +214,7 @@ def onboarding_ai_suggest_cats(request, token):
     )
     from budget.models import Category
     from buddies.services.partnership_ai import suggest_category_mappings
-    from budget.express_service import AIBudgetExceededError
+    from budget.ai_service import AIBudgetExceededError
 
     master_cats = list(Category.objects.filter(owning_feuser=invite.inviter).values_list("title", flat=True))
     my_cats = list(Category.objects.filter(owning_feuser=request.feuser).values_list("title", flat=True))
@@ -225,7 +225,7 @@ def onboarding_ai_suggest_cats(request, token):
         return JsonResponse({"mappings": []})
 
     try:
-        mappings = suggest_category_mappings(request.feuser, unmatched, master_cats)
+        mappings = suggest_category_mappings(request.feuser, invite.inviter, unmatched, master_cats)
         return JsonResponse({"mappings": mappings})
     except AIBudgetExceededError as exc:
         return JsonResponse({"error": str(exc) or "AI budget exceeded."}, status=402)

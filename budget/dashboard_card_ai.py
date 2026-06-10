@@ -1,6 +1,10 @@
 """
 AI-assisted dashboard card creation and editing.
-Uses the same _call_agent abstraction as express creation and partnership AI.
+Talks to the AI exclusively through budget.ai_service.AIService, the single
+shared entry point used by every AI feature (express creation, dashboard
+card AI, partnership AI). This module only owns what's specific to this
+feature: the system prompt text, the docs/catalog/other-cards context it's
+built from, and validating the returned YAML against the card schema.
 
 The system prompt is split into two cached blocks:
   1. Static instructions + the full dashboard user-manual docs, identical for
@@ -105,30 +109,6 @@ def _build_other_cards_block(feuser, dashboard, exclude_card_id=None) -> str:
     return "Other cards already on this dashboard:\n" + "\n".join(blocks)
 
 
-def _parse_response(raw: str):
-    """Parse the {"result": "good"/"fail", ...} envelope. Returns the yaml string on success."""
-    from .express_service import AIInvalidResponseError, AIRefusalError, extract_json_object
-
-    try:
-        parsed = extract_json_object(raw)
-    except json.JSONDecodeError as exc:
-        raise AIInvalidResponseError(raw, exc) from exc
-
-    if not isinstance(parsed, dict):
-        raise AIInvalidResponseError(raw)
-
-    if parsed.get("result") == "fail":
-        raise AIRefusalError(parsed.get("msg", ""), raw)
-    if parsed.get("result") != "good":
-        raise AIInvalidResponseError(raw)
-
-    yaml_str = parsed.get("yaml")
-    if not isinstance(yaml_str, str) or not yaml_str.strip():
-        raise AIInvalidResponseError(raw)
-
-    return yaml_str
-
-
 def generate_card_yaml(
     feuser,
     dashboard,
@@ -140,22 +120,12 @@ def generate_card_yaml(
     Generate (or, if current_yaml is given, modify) a single dashboard card's YAML
     from a natural-language description. Returns a schema-validated YAML string.
 
-    Raises budget.express_service.AIBudgetExceededError/AIRefusalError/AIInvalidResponseError,
-    or budget.dashboard_cards.CardConfigError if the AI's output doesn't pass validation.
+    Raises budget.ai_service.AIBudgetExceededError/AIRefusalError/AIInvalidResponseError
+    /AIAuthenticationError/AIBillingError/AITransientError, or
+    budget.dashboard_cards.CardConfigError if the AI's output doesn't pass validation.
     """
+    from .ai_service import AIService
     from .dashboard_cards import parse_card_config
-    from .express_service import (
-        AIBudgetExceededError, AIInvalidResponseError, _default_agent_config,
-        _trial_state, call_ai_for_json, record_ai_usage,
-    )
-
-    api_key, is_trial, trial_limit, trial_spent, trial_blocked = _trial_state(feuser)
-    if trial_blocked:
-        raise AIBudgetExceededError("Trial budget exhausted.")
-
-    config = _default_agent_config(feuser)
-    if not config.api_key:
-        raise AIBudgetExceededError("No AI API key configured.")
 
     context_parts = [
         _build_catalog_block(feuser),
@@ -167,7 +137,7 @@ def generate_card_yaml(
     if custom:
         context_parts.append(f"User's custom instructions: {custom}")
 
-    system_blocks = [
+    system_prompt = [
         {
             "type": "text",
             "text": _SYSTEM_INSTRUCTIONS + "\n" + _build_docs_reference(),
@@ -179,18 +149,8 @@ def generate_card_yaml(
             "cache_control": {"type": "ephemeral"},
         },
     ]
-    messages = [{"role": "user", "content": description}]
 
-    try:
-        _parsed, usage, raw = call_ai_for_json(config, system_blocks, messages, feature="dashboard_card_ai")
-        yaml_str = _parse_response(raw)
-        parse_card_config(yaml_str)  # raises CardConfigError if invalid; propagated to the caller
-    except AIInvalidResponseError as exc:
-        # A repair fallback may have been attempted (see call_ai_for_json) and
-        # still ultimately failed -- bill whatever it cost before propagating
-        # (a no-op when .usage is unset, i.e. every other raise site here).
-        record_ai_usage(feuser, is_trial, exc.usage)
-        raise
-
-    record_ai_usage(feuser, is_trial, usage)
+    service = AIService(feuser)  # raises AIBudgetExceededError up front if blocked/no key
+    yaml_str = service.prompt_dashboard_card_yaml(system_prompt, description)
+    parse_card_config(yaml_str)  # raises CardConfigError if invalid; propagated to the caller
     return yaml_str

@@ -1,6 +1,6 @@
 # AI Trial Key
 
-The AI trial key is a shared Anthropic API key that allows users without their own Anthropic account to use the [AI Express Creation](../user-manual/ai-express-creation.md) feature.
+The AI trial key is a shared Anthropic API key that allows users without their own Anthropic account to use Comaney's AI features: [AI Express Creation](../user-manual/ai-express-creation.md), AI-assisted dashboard card creation, and AI tag/category mapping during Catalog Partnership onboarding. All three draw from the same shared key and the same per-user budget.
 
 ## Setup
 
@@ -17,9 +17,9 @@ Please note that the enforced limit is an approximation and no exact limit.
 ## How it works
 
 - Each user has a `ai_trial_budget_spent` counter on their account (reset to zero monthly by the `reset_trial_budgets` cron job).
-- Every Express Creation request records the API cost (in cents) against the user's counter.
-- When a user's counter reaches `AI_TRIAL_USAGE_LIMIT`, the Express Creation feature is disabled for that user until the next reset.
-- If the Anthropic API returns a billing error (account out of credit) or an authentication error (invalid key), the trial feature is **globally disabled** and a flag file is created. The feature stays disabled until an admin re-enables it.
+- Every AI request, from any of the three features above, records its API cost (in cents) against the user's counter.
+- When a user's counter reaches `AI_TRIAL_USAGE_LIMIT`, all three AI features are disabled for that user until the next reset.
+- If the Anthropic API returns a billing error (account out of credit) or an authentication error (invalid key), on any of the three features, the trial feature is **globally disabled** and a flag file is created. The feature stays disabled until an admin re-enables it.
 
 ## The trial flag file
 

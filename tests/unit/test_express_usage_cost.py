@@ -1,10 +1,10 @@
 """
 Unit tests for the AI usage-cost computation in
-budget/express_service.py::_compute_usage_cost.
+budget/ai_service.py::_compute_usage_cost.
 
-Django is not importable in the local venv (express_service.py pulls in
-budget.models at module level), so this mirrors the pure formula, same as
-test_express_smart_create_blocks.py.
+budget.ai_service has no module-level Django/DB imports, so unlike most
+files under budget/ it imports cleanly without a configured Django settings
+module -- this exercises the real function directly rather than a mirror.
 Run with: venv/bin/pytest tests/unit/test_express_usage_cost.py -v
 """
 import os
@@ -12,25 +12,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-# ── Mirror of _compute_usage_cost (no Django needed) ────────────────────────
+from budget.ai_service import _compute_usage_cost as compute_usage_cost
 
-_PRICE_INPUT       = 3.00
-_PRICE_OUTPUT      = 15.00
-_PRICE_CACHE_WRITE = 3.75
-_PRICE_CACHE_READ  = 0.30
-
-
-def compute_usage_cost(input_tok, output_tok, cache_write_tok, cache_read_tok) -> dict:
-    cost = (
-        (input_tok       / 1_000_000) * _PRICE_INPUT +
-        (output_tok      / 1_000_000) * _PRICE_OUTPUT +
-        (cache_write_tok / 1_000_000) * _PRICE_CACHE_WRITE +
-        (cache_read_tok  / 1_000_000) * _PRICE_CACHE_READ
-    )
-    return {"cost_usd": round(cost, 6), "cost_cents": round(cost * 100, 4)}
-
-
-# ── Tests ────────────────────────────────────────────────────────────────────
 
 def test_typical_request_cost():
     usage = compute_usage_cost(input_tok=4000, output_tok=300, cache_write_tok=0, cache_read_tok=0)
