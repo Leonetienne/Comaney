@@ -710,9 +710,12 @@
 }
 
 // Draggable non-archived cards
+// touch-action stays at its default (auto) here so a plain swipe still
+// scrolls the page; the touchmove handler in projects_list.html only
+// calls preventDefault() once a long-press has actually started a drag,
+// which is enough to stop the page scrolling during that gesture.
 #projects-sortable .bgs-card:not(.bgs-card--archived) {
   cursor: grab;
-  touch-action: none;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
