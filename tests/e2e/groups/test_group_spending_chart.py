@@ -225,6 +225,9 @@ class TestPieChartClickThrough:
             f"Pie data must carry a payer= filter query for the admin's full name, got {queries}"
 
     def test_click_pie_slice_navigates_to_expense_list(self, driver, w, ctx):
+        # The destination page strips ?q= from the URL right after reading it
+        # (see project_detail.html), so the proof of a successful click-through
+        # is the pre-filled search box, not a lingering q= in the URL.
         hit_paths = driver.find_elements(By.CSS_SELECTOR, "#group-spending-pie svg path[fill='transparent']")
         assert hit_paths, "Pie chart must render at least one clickable slice"
         driver.execute_script(
@@ -233,8 +236,22 @@ class TestPieChartClickThrough:
         time.sleep(1)
         assert "/insights/" not in driver.current_url, \
             "Clicking a pie slice must navigate away from the Insights tab to the expense list"
-        assert "q=" in driver.current_url, \
-            "Clicking a pie slice must navigate with a q= filter query param"
+        search_value = driver.find_element(By.ID, "proj-exp-search").get_attribute("value")
+        assert search_value.startswith('payer="'), \
+            f"Clicking a pie slice must pre-fill the expense search box with a payer= filter, got '{search_value}'"
+
+    def test_click_pie_slice_strips_q_param_from_url(self, driver, w, ctx):
+        _login_as(driver, ctx["admin"])
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
+        time.sleep(2)
+        hit_paths = driver.find_elements(By.CSS_SELECTOR, "#group-spending-pie svg path[fill='transparent']")
+        assert hit_paths, "Pie chart must render at least one clickable slice"
+        driver.execute_script(
+            "arguments[0].dispatchEvent(new MouseEvent('click', {bubbles: true}));", hit_paths[0]
+        )
+        time.sleep(1)
+        assert "q=" not in driver.current_url, \
+            f"?q= must be stripped from the URL right after page load, got '{driver.current_url}'"
 
     def test_click_legend_row_navigates_to_expense_list(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
@@ -244,8 +261,9 @@ class TestPieChartClickThrough:
         assert rows, "Legend must render at least one row"
         driver.execute_script("arguments[0].click();", rows[0])
         time.sleep(1)
-        assert "q=" in driver.current_url, \
-            "Clicking a legend row must navigate with a q= filter query param"
+        search_value = driver.find_element(By.ID, "proj-exp-search").get_attribute("value")
+        assert search_value.startswith('payer="'), \
+            f"Clicking a legend row must pre-fill the expense search box with a payer= filter, got '{search_value}'"
 
     def test_payer_filter_matches_only_that_payer(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['uid']}/?q=" + 'payer%3D%22Piechart%20Payer%22'))

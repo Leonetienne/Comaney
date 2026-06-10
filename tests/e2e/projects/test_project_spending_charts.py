@@ -391,6 +391,31 @@ class TestTagDistributionChart:
         assert "Tagged Expense" in driver.page_source, \
             "Expense list must show the matching expense once the tag filter from the URL is applied"
 
+    def test_q_param_stripped_from_url_after_load(self, driver, w, ctx):
+        # Once ?q= has pre-filled the search box, it must be removed from the
+        # URL right away so editing the search box afterward -- or simply
+        # reloading the page -- doesn't keep resetting the box back to the
+        # chart's original deep-linked query.
+        _login_as(driver, ctx["admin"])
+        driver.get(_url(f"/projects/{ctx['uid']}/?q=" + 'tag%3D%22Camping%22'))
+        time.sleep(1)
+        assert "q=" not in driver.current_url, \
+            f"?q= must be stripped from the URL right after page load, got '{driver.current_url}'"
+
+    def test_reload_after_q_param_does_not_restore_stale_query(self, driver, w, ctx):
+        # Regression: before ?q= was stripped from the URL, editing the search
+        # box (or just reloading the page) would keep snapping the box back
+        # to the tag chart's original deep-linked query, since the URL still
+        # carried it.
+        _login_as(driver, ctx["admin"])
+        driver.get(_url(f"/projects/{ctx['uid']}/?q=" + 'tag%3D%22Camping%22'))
+        time.sleep(1)
+        driver.get(driver.current_url)
+        time.sleep(1)
+        search_value = driver.find_element(By.ID, "proj-exp-search").get_attribute("value")
+        assert search_value == "", \
+            f"Reloading after the ?q= deep link must not restore the stale query, got '{search_value}'"
+
 
 class TestSoloProjectSpendingChart:
     """Solo project shows spending over time chart (but no pie chart)."""

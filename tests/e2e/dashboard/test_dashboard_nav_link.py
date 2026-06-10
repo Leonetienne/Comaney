@@ -6,6 +6,7 @@ import time
 
 import requests
 import pytest
+from selenium.webdriver.common.by import By
 
 from helpers import (
     _url, server_today, session_cookies, BASE_URL, setup_user, cleanup_user,
@@ -105,7 +106,12 @@ class TestNavLinkYearView:
         _delete_card(sess, csrf, card_id)
 
     def test_cell_link_existing_query_gets_ampersand_not_question_mark(self, driver, w, ctx, sess):
-        """Card link with existing ?search=... navigates to that URL preserving the query string."""
+        """Card link with existing ?search=... navigates there and the expense
+        list applies that filter. The page then strips ?search= from the URL
+        right after reading it (see expenses.js init()), so a reload or a
+        later edit to the search box doesn't keep resetting it back to the
+        card's query -- so the query string itself isn't asserted here, only
+        that it was correctly parsed and applied to the search box."""
         today = server_today()
         year = today[:4]
         csrf = _csrf(sess)
@@ -122,9 +128,35 @@ class TestNavLinkYearView:
         )
         time.sleep(2)
 
-        url = driver.current_url
-        assert "/budget/expenses/" in url
-        assert "search=" in url
+        assert "/budget/expenses/" in driver.current_url
+        search_value = driver.find_element(By.ID, "exp-search").get_attribute("value")
+        assert search_value == "type=expense", \
+            f"Search box must be pre-filled from the card's ?search= query, got '{search_value}'"
+
+        _delete_card(sess, csrf, card_id)
+
+    def test_cell_link_search_param_stripped_from_url(self, driver, w, ctx, sess):
+        """The ?search= deep-link param must be removed from the URL right
+        after page load so a reload doesn't keep re-applying the dashboard
+        card's query over whatever the user has since typed."""
+        today = server_today()
+        year = today[:4]
+        csrf = _csrf(sess)
+
+        r = _post_card(sess, csrf, _cell_yaml(link="/budget/expenses/?search=type%3Dexpense"))
+        assert r.status_code == 201
+        card_id = r.json()["card"]["id"]
+
+        driver.get(_url(f"/budget/?date_from={year}-01-01&date_to={year}-12-31"))
+        time.sleep(3)
+
+        driver.execute_script(
+            "document.querySelector('.dash-card-body--linked').click();"
+        )
+        time.sleep(2)
+
+        assert "search=" not in driver.current_url, \
+            f"?search= must be stripped from the URL right after page load, got '{driver.current_url}'"
 
         _delete_card(sess, csrf, card_id)
 

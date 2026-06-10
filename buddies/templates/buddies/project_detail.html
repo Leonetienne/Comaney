@@ -138,9 +138,20 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         // Deep-link support: ?q=<filter> (e.g. from clicking a tag bar chart
-        // bar) pre-fills the search box so the linked filter is applied.
-        var urlQ = new URLSearchParams(window.location.search).get('q');
-        if (urlQ) searchEl.value = urlQ;
+        // bar or a pie chart slice) pre-fills the search box so the linked
+        // filter is applied. The param is then stripped from the URL so a
+        // later edit to the search box (or a page reload) doesn't keep
+        // resetting it back to the deep-linked value.
+        var params = new URLSearchParams(window.location.search);
+        var urlQ = params.get('q');
+        if (urlQ) {
+            searchEl.value = urlQ;
+            params.delete('q');
+            var clean = window.location.pathname
+                + (params.toString() ? '?' + params.toString() : '')
+                + window.location.hash;
+            history.replaceState(null, '', clean);
+        }
         fetchList();
     });
 })();

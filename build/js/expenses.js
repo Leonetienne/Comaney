@@ -73,10 +73,20 @@ function expenseList() {
                 this.fetchExpenses();
             });
 
-            const urlSearch = new URLSearchParams(window.location.search).get('search');
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlSearch = urlParams.get('search');
             if (urlSearch !== null) {
                 sessionStorage.setItem('expSearch', urlSearch);
                 this.query = urlSearch;
+                // Deep-link support: ?search=<filter> (e.g. from a dashboard
+                // card click-through) pre-fills the search box. Strip it from
+                // the URL right away so editing the box (or reloading the
+                // page) doesn't keep resetting it back to this value.
+                urlParams.delete('search');
+                const clean = window.location.pathname
+                    + (urlParams.toString() ? '?' + urlParams.toString() : '')
+                    + window.location.hash;
+                history.replaceState(null, '', clean);
             } else {
                 let ref = '';
                 try { ref = document.referrer ? new URL(document.referrer).pathname : ''; } catch(e) {}
