@@ -45,7 +45,10 @@ class TestExpensesFabSubmenu:
     def test_click_toggles_menu_open(self, driver, w, ctx):
         self._open(driver, w)
         driver.find_element(By.CSS_SELECTOR, ".fab-toggle").click()
-        time.sleep(0.3)
+        # The 3rd bubble's open transition (transform 0.22s) starts after a
+        # 0.1s cascade delay, so it isn't fully settled until ~0.32s -- too
+        # close to a 0.3s wait under any system load. Give it real headroom.
+        time.sleep(0.6)
         items = self._menu_items(driver)
         assert items and all(i.is_displayed() for i in items)
 

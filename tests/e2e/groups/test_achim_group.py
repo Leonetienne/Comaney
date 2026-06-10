@@ -273,7 +273,8 @@ class TestAchimGroupSelfDebtCancels:
             f"DummyB must not appear in the member list, got: {member_names}"
 
     def test_no_simplified_links_in_page(self, driver, w, ctx):
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        # Debt graphs live on the Insights tab, not the default expense list.
+        driver.get(_url(f"/projects/{ctx['group_id']}/insights/"))
         time.sleep(1.5)
         src = driver.page_source
         assert '"links": []' in src or '"links":[]' in src, \

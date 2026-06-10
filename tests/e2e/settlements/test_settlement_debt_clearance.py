@@ -272,13 +272,18 @@ class TestGroupFullSettlementZeroBalance:
         assert "confirmed" in driver.page_source.lower()
 
     def test_member_sees_all_settled_up_on_group_page(self, driver, w, ctx):
+        # "You are all settled up." (personal balance) lives on the Insights tab.
         _login_as(driver, ctx["member"])
-        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        driver.get(_url(f"/projects/{ctx['group_id']}/insights/"))
         time.sleep(1)
         assert "You are all settled up." in driver.page_source, \
-            "Group page must show 'You are all settled up.' when member's balance = 0"
+            "Insights tab must show 'You are all settled up.' when member's balance = 0"
 
     def test_group_shows_no_transfers_needed(self, driver, w, ctx):
+        # "Everyone is settled up." (group-wide settle tools) lives on the
+        # default expense-list tab.
+        driver.get(_url(f"/projects/{ctx['group_id']}/"))
+        time.sleep(1)
         assert "Everyone is settled up. No transfers needed." in driver.page_source, \
             "Group page must show 'No transfers needed.' once all debts are cleared"
 

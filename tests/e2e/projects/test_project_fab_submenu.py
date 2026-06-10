@@ -37,6 +37,13 @@ class TestProjectFabSubmenu:
         els = driver.find_elements(By.CSS_SELECTOR, f'.fab-menu-item[title="{title}"]')
         return els[0] if els else None
 
+    @pytest.mark.parametrize("path", ["", "insights/", "settings/"])
+    def test_fab_present_on_every_project_tab(self, driver, w, ctx, path):
+        driver.get(_url(f"/projects/{ctx['group_id']}/{path}"))
+        time.sleep(1)
+        assert driver.find_elements(By.CSS_SELECTOR, ".fab-wrap .fab-toggle"), \
+            f"New expense FAB must be present on /projects/<id>/{path}"
+
     def test_create_manually_link_preserves_project_and_back(self, driver, w, ctx):
         self._open(driver, w, ctx)
         manual = self._item_by_title(driver, "Create manually")

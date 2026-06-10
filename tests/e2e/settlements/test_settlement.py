@@ -564,8 +564,14 @@ class TestGroupSettlementReviewFlow:
             "Waiting for approval section must disappear after creditor confirms"
 
     def test_settlement_moves_to_expense_breakdown(self, driver, w, ctx):
-        assert "Expense Breakdown" in driver.page_source, \
-            "Approved settlement must now appear in the Expense Breakdown"
+        # The approved-expenses section has no visible heading; the settlement
+        # card moving into #proj-approved-section is what "Expense Breakdown"
+        # refers to here.
+        src = driver.page_source
+        assert 'id="proj-approved-section"' in src, \
+            "Approved-expenses section must be present"
+        assert "Settlement" in src.split('id="proj-approved-section"')[-1], \
+            "Approved settlement must now appear in the approved-expenses section"
 
     def test_settlement_card_has_no_approval_badges(self, driver, w, ctx):
         # Settlements do not use per-participant approval, so the avatar stack of

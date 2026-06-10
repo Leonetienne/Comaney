@@ -61,9 +61,12 @@ class TestGroupSpendingChart:
             "Spending breakdown section must appear when group has approved non-settlement expenses"
 
     def test_group_total_displayed(self, driver, w, ctx):
-        # Total = 100 + 60 = 160
-        assert "160.00" in driver.page_source, \
-            "Group total spending (160.00) must be visible in the spending breakdown section"
+        # The pie legend shows each member's own upfront-paid amount, not a
+        # combined group total: admin paid 100.00 (Expense A), member paid
+        # 60.00 (Expense B).
+        legend = driver.find_element(By.ID, "group-spending-legend")
+        assert "100.00" in legend.text and "60.00" in legend.text, \
+            "Legend must show each member's individual spending amount"
 
     def test_pie_svg_rendered(self, driver, w, ctx):
         container = driver.find_element(By.ID, "group-spending-pie")
