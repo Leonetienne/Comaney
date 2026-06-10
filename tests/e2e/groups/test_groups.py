@@ -577,7 +577,7 @@ class TestGroupExpenseCreateUI:
         time.sleep(0.3)
         driver.find_element(By.ID, "buddy-equal-btn").click()
         time.sleep(0.3)
-        driver.find_element(By.XPATH, "//button[contains(text(), 'Create expense')]").click()
+        driver.find_element(By.XPATH, "//button[contains(text(), 'Finish')]").click()
         time.sleep(2)
         assert "/budget/expenses/" in driver.current_url, \
             "Group expense (I pay) must redirect to expense list"

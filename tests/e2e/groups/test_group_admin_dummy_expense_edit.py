@@ -109,7 +109,7 @@ class TestAdminCanEditDummyUpfrontExpense:
         )
         title_input = driver.find_element(By.CSS_SELECTOR, "input[name='title']")
         driver.execute_script("arguments[0].value = arguments[1];", title_input, "Dan Paid Camping Trip")
-        driver.find_element(By.XPATH, "//button[contains(text(), 'Save changes')]").click()
+        driver.find_element(By.XPATH, "//button[contains(text(), 'Finish')]").click()
         time.sleep(1)
         saved_title = _shell(
             f"from budget.models import Expense; "
