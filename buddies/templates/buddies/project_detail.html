@@ -21,17 +21,7 @@
 </div>
 {% endif %}
 
-{% if not project.archived %}
-<div class="fab-wrap">
-    <button type="button" class="fab-new-expense fab-toggle" title="New expense">+</button>
-    <div class="fab-menu">
-        <a href="{% url 'budget:expense_create' %}?project={{ project.uid }}&back={{ request.path|urlencode }}" class="fab-menu-item" title="Create manually">Manual</a>
-        {% if ai_smart_create_available %}
-        <a href="{% url 'budget:express_creation' %}?prefill={% filter urlencode %}Create all expenses for project '{{ project.name }}'{% endfilter %}" class="fab-menu-item" title="AI Express">AI</a>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
+{% include "buddies/_project_fab.html" %}
 
 {% if request.GET.achim == "new" %}
 <div id="achim-modal" class="cdialog-backdrop cdialog-visible">
