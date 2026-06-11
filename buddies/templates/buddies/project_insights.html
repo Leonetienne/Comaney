@@ -360,7 +360,7 @@
 </section>
 {% endif %}{# end not is_solo for spending breakdown pie #}
 
-<section class="insights-card" id="section-tag-dist" style="display:none">
+<section class="insights-card{% if is_solo %} insights-card--wide{% endif %}" id="section-tag-dist" style="display:none">
     <h2>Project spending by tag</h2>
     <p class="font-sm text-muted" style="margin:0 0 1rem;">Project expenses grouped by your tags. For expenses added by others, this uses your personal tag notes and only counts your own share of the expense.</p>
     <div class="proj-chart-wrap">
