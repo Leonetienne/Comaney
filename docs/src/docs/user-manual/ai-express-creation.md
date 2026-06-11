@@ -4,7 +4,7 @@ Express creation lets you log expenses by describing them in plain language or t
 
 ## How to use it
 
-1. Click **AI** in the navigation, then click **Express creation**. Or, from the **Expenses** page or a project page, click the **+** button and choose **AI Express**; from a project page this also pre-fills the description with a prompt to create all of that project's expenses, which you can edit before submitting.
+1. Click **Add Expense** in the navigation, then choose **Create with AI**. Or, from the **Expenses** page or a project page, click the **+** button and choose **AI Express**; from a project page this also pre-fills the description with a prompt to create all of that project's expenses, which you can edit before submitting.
 2. Either:
     - **Take a photo or upload an image** of a receipt, invoice, or any document with prices.
     - **Type a description** of what you bought. For example: "Bought groceries at REWE for 37.50 and a coffee for 4.20".
