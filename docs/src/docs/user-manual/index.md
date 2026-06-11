@@ -11,6 +11,7 @@ You do not need any technical knowledge to use Comaney. If you can fill in a for
 | Record a payment, expense, or income | [Expenses](expenses.md) |
 | Set up a recurring bill (rent, Netflix, etc.) | [Recurring Expenses](scheduled-expenses.md) |
 | Organise my expenses into groups | [Categories & Tags](categories-tags.md) |
+| Find and fix expenses missing a category or tags | [Unclassified Expenses](unclassified-expenses.md) |
 | See charts and totals on my home screen | [Dashboard](dashboard/index.md) |
 | Get email reminders before bills are due | [Notifications](notifications.md) |
 | Change my name, currency, or password | [Account & Settings](account-settings.md) |
