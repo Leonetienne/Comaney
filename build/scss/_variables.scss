@@ -23,11 +23,13 @@
   --unsaved-bg:     #cce5ff;
   --unsaved-fg:     #004085;
   // Same color as --unsaved-bg/--unsaved-fg, kept as its own pair since it
-  // means something unrelated here (the "AI: select tags" button's hover
-  // state, not an unsaved-value highlight) -- see CLAUDE.md's note on
+  // means something unrelated here (any .ai-btn's default highlighted look,
+  // not an unsaved-value highlight) -- see CLAUDE.md's note on
   // --sav-dep-bg/--sav-dep-fg vs --unsaved-bg/--unsaved-fg for the same reasoning.
-  --ai-btn-bg:      #cce5ff;
-  --ai-btn-fg:      #004085;
+  --ai-btn-bg:        #cce5ff;
+  --ai-btn-fg:        #004085;
+  --ai-btn-bg-hover:  #8ecbff;
+  --ai-btn-fg-hover:  #00305e;
   --sidebar-bg:          var(--sidebar-top);
   --sidebar-border:      rgba(0, 0, 0, .08);
   --sidebar-link:        rgba(0, 0, 0, .45);
@@ -69,8 +71,10 @@
     --sav-wit-fg:     #ffd966;
     --unsaved-bg:     #0d2a4a;
     --unsaved-fg:     #7ec8f7;
-    --ai-btn-bg:      #0d2a4a;
-    --ai-btn-fg:      #7ec8f7;
+    --ai-btn-bg:        #0d2a4a;
+    --ai-btn-fg:        #7ec8f7;
+    --ai-btn-bg-hover:  #1c4a7a;
+    --ai-btn-fg-hover:  #ade4ff;
     --sidebar-bg:          #0f0f1a;
     --sidebar-border:      rgba(255, 255, 255, .06);
     --sidebar-link:        rgba(255, 255, 255, .45);

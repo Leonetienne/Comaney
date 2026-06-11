@@ -86,7 +86,7 @@
         <div class="tag-cb-wrap">{{ form.tags }}</div>
         {% if ai_smart_create_available %}
         <span class="flex-row-center mt-sm">
-            <button type="button" id="tag-ai-btn" class="btn btn-sm btn-secondary ai-btn" data-url="{% url 'budget:expense_ai_suggest_tags' %}">
+            <button type="button" id="tag-ai-btn" class="btn btn-sm ai-btn" data-url="{% url 'budget:expense_ai_suggest_tags' %}">
                 {% include 'budget/partials/_ai_icon.html' %}<span class="ai-btn-label">Let AI select tags</span>
             </button>
             <span id="tag-ai-cost" class="text-muted font-sm" style="display:none;"></span>
