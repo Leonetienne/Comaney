@@ -272,6 +272,14 @@
   gap: 8px;
 }
 
+// Flex row with center alignment, contents pushed to opposite ends (e.g. a
+// field label with an action button beside it)
+.flex-row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 // Hint text on auth/info pages
 .auth-hint {
   font-size: 0.9rem;

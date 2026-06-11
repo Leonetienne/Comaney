@@ -21,7 +21,7 @@ from .categories_tags import (
 )
 from .express import express_creation
 from .unclassified import (
-    unclassified_ai_solve, unclassified_list, unclassified_save, unclassified_save_all,
+    expense_ai_suggest_tags, unclassified_ai_solve, unclassified_list, unclassified_save, unclassified_save_all,
 )
 
 __all__ = [
@@ -40,4 +40,5 @@ __all__ = [
     "tag_create", "tag_delete", "tag_rename",
     "express_creation",
     "unclassified_list", "unclassified_save", "unclassified_save_all", "unclassified_ai_solve",
+    "expense_ai_suggest_tags",
 ]

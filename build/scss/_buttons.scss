@@ -110,3 +110,22 @@
 }
 
 @keyframes btn-spin { to { transform: rotate(360deg); } }
+
+// "AI: select tags" button (expense/recurring-expense forms) and any future
+// AI-triggering button sharing its look: an inline sparkle icon that follows
+// the button text color via currentColor, and a hover state in the
+// dedicated --ai-btn-bg/--ai-btn-fg pair rather than .btn-secondary's own
+// hover (see _variables.scss for why it's a separate pair from --unsaved-*).
+.ai-btn {
+  &:not(:disabled):not([disabled]):hover {
+    background: var(--ai-btn-bg);
+    color: var(--ai-btn-fg);
+  }
+}
+
+.ai-btn-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  margin-right: 5px;
+}

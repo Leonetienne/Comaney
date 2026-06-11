@@ -141,6 +141,31 @@ def unclassified_save_all(request):
     return _ok({"rows": results})
 
 
+def _call_ai(fn, log_label: str):
+    """Run an AIService-backed callable, translating its typed exceptions
+    into a JsonResponse. Returns (result, None) on success or (None,
+    JsonResponse) on failure -- shared by unclassified_ai_solve and
+    expense_ai_suggest_tags so the two don't drift on error handling/status
+    codes for the same underlying AIService error types."""
+    try:
+        return fn(), None
+    except AIBudgetExceededError as exc:
+        return None, _err(str(exc) or "AI budget exceeded.", 402)
+    except AIRefusalError as exc:
+        return None, _err(str(exc) or "The AI could not classify this expense.", 400)
+    except AIInvalidResponseError:
+        return None, _err("The AI returned something unexpected. Please try again.", 400)
+    except AIBillingError as exc:
+        return None, _err(str(exc) or "AI is temporarily unavailable (out of credits).", 402)
+    except AIAuthenticationError as exc:
+        return None, _err(str(exc) or "AI is misconfigured. Please contact the administrator.", 500)
+    except AITransientError as exc:
+        return None, _err(str(exc) or "AI is temporarily unavailable. Please try again.", 503)
+    except Exception:
+        _log.exception("%s: AI call failed", log_label)
+        return None, _err("AI suggestion failed. Please try again.", 500)
+
+
 @feuser_required
 @require_http_methods(["POST"])
 def unclassified_ai_solve(request, uid: int):
@@ -153,23 +178,9 @@ def unclassified_ai_solve(request, uid: int):
     if row["problem"] is None:
         return _err("This expense is already fully classified.", 400)
 
-    try:
-        suggestion = solve_unclassified(feuser, row)
-    except AIBudgetExceededError as exc:
-        return _err(str(exc) or "AI budget exceeded.", 402)
-    except AIRefusalError as exc:
-        return _err(str(exc) or "The AI could not classify this expense.", 400)
-    except AIInvalidResponseError:
-        return _err("The AI returned something unexpected. Please try again.", 400)
-    except AIBillingError as exc:
-        return _err(str(exc) or "AI is temporarily unavailable (out of credits).", 402)
-    except AIAuthenticationError as exc:
-        return _err(str(exc) or "AI is misconfigured. Please contact the administrator.", 500)
-    except AITransientError as exc:
-        return _err(str(exc) or "AI is temporarily unavailable. Please try again.", 503)
-    except Exception:
-        _log.exception("unclassified_ai_solve: AI call failed")
-        return _err("AI suggestion failed. Please try again.", 500)
+    suggestion, error = _call_ai(lambda: solve_unclassified(feuser, row), "unclassified_ai_solve")
+    if error:
+        return error
 
     categories, tags = category_tag_catalog(feuser)
     category_map = {c["uid"]: c["title"] for c in categories}
@@ -185,3 +196,38 @@ def unclassified_ai_solve(request, uid: int):
         "tag_titles": [tag_map[u] for u in tag_uids if u in tag_map],
         "cost_cents": suggestion.get("cost_cents", 0),
     })
+
+
+@feuser_required
+@require_http_methods(["POST"])
+def expense_ai_suggest_tags(request):
+    """AI tag suggestion for the expense/recurring-expense create+edit forms'
+    "AI: select tags" button. Unlike unclassified_ai_solve this never looks
+    up a DB expense: the form (still being edited, possibly not yet created)
+    sends its current field values directly, and the response only ever
+    covers tags -- see budget.unclassified_ai.suggest_tags for why."""
+    from ..unclassified_ai import suggest_tags
+
+    feuser = request.feuser
+    body = _parse_body(request)
+
+    category_uid = body.get("category_uid")
+    try:
+        category_uid = int(category_uid) if category_uid not in (None, "") else None
+    except (TypeError, ValueError):
+        category_uid = None
+
+    result, error = _call_ai(lambda: suggest_tags(
+        feuser,
+        title=body.get("title") or "",
+        type_=body.get("type") or "",
+        value=body.get("value") or "",
+        payee=body.get("payee") or "",
+        date_due=body.get("date_due") or None,
+        note=body.get("note") or "",
+        category_uid=category_uid,
+    ), "expense_ai_suggest_tags")
+    if error:
+        return error
+
+    return _ok(result)

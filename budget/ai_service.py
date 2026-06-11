@@ -274,20 +274,25 @@ class AIService:
     def prompt_unclassified_solve(self, system_prompt: str) -> dict:
         """Unclassified Expenses: suggest a category and/or tags (whichever
         the caller's system prompt says is missing) for a single expense,
-        picking only from the feuser's own closed catalog. Like partnership
-        mapping, there's no meaningful "fail" case -- a field the AI can't
-        confidently match just comes back null -- so this skips the
+        picking only from the feuser's own closed catalog. The AI is shown
+        that catalog as 0-based "idx" positions, never real uids (same
+        reasoning as express creation's project/buddy idx -- see
+        budget/unclassified_ai.py), so budget.unclassified_ai.solve_unclassified
+        is the one that translates an idx back to a real uid, bounds-checked
+        against the exact catalog list the prompt was built from. Like
+        partnership mapping, there's no meaningful "fail" case -- a field the
+        AI can't confidently match just comes back null -- so this skips the
         {"result": "good"/"fail"} envelope too. Returns
-        {"category_uid": int|None, "tag_uids": list[int]}."""
+        {"category_idx": int|None, "tag_idxs": list[int]}."""
         config = AgentConfig(api_key=self.api_key, max_tokens=1024)
         messages = [{"role": "user", "content": "Suggest the missing classification for this expense."}]
         parsed, raw = self._call_for_json(
             config, system_prompt, messages, feature="unclassified_solve", envelope=False,
         )
-        tag_uids = parsed.get("tag_uids")
+        tag_idxs = parsed.get("tag_idxs")
         return {
-            "category_uid": parsed.get("category_uid"),
-            "tag_uids": tag_uids if isinstance(tag_uids, list) else [],
+            "category_idx": parsed.get("category_idx"),
+            "tag_idxs": tag_idxs if isinstance(tag_idxs, list) else [],
         }
 
     # -----------------------------------------------------------------

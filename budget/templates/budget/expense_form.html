@@ -1,4 +1,5 @@
 {% extends "budget_base.html" %}
+{% load static %}
 
 {% block title %}Comaney – {% if expense %}Edit expense{% else %}New expense{% endif %}{% endblock %}
 
@@ -50,8 +51,17 @@
             </div>
         </div>
 
-        <label>{{ form.tags.label }}</label>
+        <label class="mb-0">{{ form.tags.label }}</label>
         <div class="tag-cb-wrap">{{ form.tags }}</div>
+        {% if ai_smart_create_available %}
+        <span class="flex-row-center mt-sm">
+            <button type="button" id="tag-ai-btn" class="btn btn-sm btn-secondary ai-btn" data-url="{% url 'budget:expense_ai_suggest_tags' %}">
+                {% include 'budget/partials/_ai_icon.html' %}<span class="ai-btn-label">Let AI select tags</span>
+            </button>
+            <span id="tag-ai-cost" class="text-muted font-sm" style="display:none;"></span>
+        </span>
+        {% endif %}
+        <p id="tag-ai-error" class="error-msg" style="display:none;"></p>
         {% for e in form.tags.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
 
         <label for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
@@ -80,6 +90,7 @@
     </form>
 </div>
 </div>
+<script src="{% static 'dist/expense_tag_ai.js' %}" defer></script>
 {% include "partials/_date_range_warning_js.html" %}
 <script>
 (function () {

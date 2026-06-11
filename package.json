@@ -9,8 +9,10 @@
     "build:project_charts": "esbuild build/js/project_charts.js --bundle --minify --target=es2020 --outfile=static/dist/project_charts.js",
     "build:project_detail": "esbuild build/js/project_detail.js --bundle --minify --target=es2020 --outfile=static/dist/project_detail.js",
     "build:d3": "esbuild build/js/d3-vendor.js --bundle --minify --target=es2020 --outfile=static/dist/d3.js",
+    "build:unclassified": "esbuild build/js/unclassified.js --bundle --minify --target=es2020 --outfile=static/dist/unclassified.js",
+    "build:expense_tag_ai": "esbuild build/js/expense_tag_ai.js --bundle --minify --target=es2020 --outfile=static/dist/expense_tag_ai.js",
     "build:images": "mkdir -p static/dist/images && cp -r build/images/. static/dist/images/",
-    "build": "npm run build:css && npm run build:js && npm run build:dashboard && npm run build:buddy_expense && npm run build:project_charts && npm run build:project_detail && npm run build:d3 && npm run build:images",
+    "build": "npm run build:css && npm run build:js && npm run build:dashboard && npm run build:buddy_expense && npm run build:project_charts && npm run build:project_detail && npm run build:d3 && npm run build:unclassified && npm run build:expense_tag_ai && npm run build:images",
     "watch:css": "sass --watch build/scss/main.scss:static/dist/main.css"
   },
   "dependencies": {
