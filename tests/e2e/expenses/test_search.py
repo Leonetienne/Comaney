@@ -93,6 +93,10 @@ def setup_data(ctx, driver, w):
          "date_due": DATE_LATE,  "settled": True},
         {"title": "SrchTest Deact",   "type": "expense", "value": "50.00",
          "date_due": DATE_MID,   "settled": False, "deactivated": True},
+        {"title": "SrchTest OldRange",    "type": "expense", "value": "10.00",
+         "date_due": "2000-01-01", "settled": False},
+        {"title": "SrchTest FutureRange", "type": "expense", "value": "10.00",
+         "date_due": "2030-01-01", "settled": False},
     ]
     eids = []
     for body in expenses:
@@ -170,6 +174,20 @@ class TestDateComparisons:
         assert "SrchTest Beta" in titles
         assert "SrchTest Gamma" in titles
         assert "SrchTest Alpha" not in titles
+
+
+class TestDateQueryBoundedByRange:
+    """A `date` comparison in the search query must narrow the currently
+    selected date range, not replace it with all-time results."""
+
+    def test_date_lte_still_excludes_expense_outside_range(self, driver, w, ctx):
+        titles = _api_titles(ctx, "SrchTest date<=today")
+        assert "SrchTest Alpha" in titles
+        assert "SrchTest OldRange" not in titles
+
+    def test_date_gte_still_excludes_expense_outside_range(self, driver, w, ctx):
+        titles = _api_titles(ctx, "SrchTest date>=today")
+        assert "SrchTest FutureRange" not in titles
 
 
 class TestLogicalOperators:
