@@ -43,6 +43,10 @@ The new record appears in your expense list for the current period.
 !!! tip "Got a receipt? Let the AI handle it."
     Instead of typing everything manually, you can take a photo of a receipt and let Comaney extract the details for you. See [AI Express Creation](ai-express-creation.md).
 
+### Letting AI pick your tags
+
+Not sure which tags fit? Fill in the title, payee, value, and anything else you've got, then click **AI: select tags** next to the Tags field. Comaney's AI looks at what you've entered and checks off the tags it thinks fit best, choosing only from tags you already have. You can still add or remove tags yourself afterwards; nothing is saved until you click **Save**. Using this counts against your usual AI usage allowance, the same as everywhere else in Comaney.
+
 ## Settling an expense
 
 An unsettled expense means the money hasn't moved yet; it's something you owe or are expecting. Once the payment happens, mark it as settled.
