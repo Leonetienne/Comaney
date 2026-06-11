@@ -4,26 +4,26 @@
 {# To announce new features: update this file and bump CURRENT_UPGRADE_INTRO_VERSION          #}
 {# in feusers/intros.py. That is the only change needed to re-trigger the modal.              #}
 {#                                                                                             #}
-{# Current version: 1                                                                          #}
+{# Current version: 2                                                                          #}
 <div id="upgrade-intro-modal" class="cdialog-backdrop" aria-hidden="true">
     <div class="cdialog" role="dialog" aria-modal="true" aria-labelledby="upgrade-intro-title">
         <p class="cdialog-title" id="upgrade-intro-title">What's new in Comaney {{ APP_VERSION }}</p>
         <ul class="intro-feature-list">
             <li>
-                <strong>Partnership catalog</strong>
-                Link your account with users to automatically sync your categories and tags, so you're always working with the same vocabulary.
+                <strong>Reorganized project pages</strong>
+                Projects are now split into three tabs: Expenses, Insights, and Settings, so the debt graphs and charts have their own dedicated space.
             </li>
             <li>
-                <strong>Multiple dashboards</strong>
-                Create as many dashboards as you like, each with its own set of cards and layout. Switch between them from the dashboard header.
+                <strong>New sign-in options</strong>
+                Register a YubiKey, get codes by email, or use a security key (FIDO2) as a second factor, alongside the existing authenticator app support.
             </li>
             <li>
-                <strong>Custom time ranges</strong>
-                Filter your expenses by any date range you choose, not just the current month or year.
+                <strong>Smarter AI Express creation</strong>
+                The AI can now split a project expense among participants and pick who paid upfront, not just fill in the category and tags.
             </li>
             <li>
-                <strong>Notifications</strong>
-                Get in-app alerts for expense activity, settlements, and project events. Open the bell icon in the header to see your notifications.
+                <strong>New dashboard tools</strong>
+                Add a gauge card to track progress toward a limit, or describe the card you want in plain language and let AI build it for you.
             </li>
         </ul>
         <div class="cdialog-actions">
