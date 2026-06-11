@@ -53,11 +53,44 @@ def apply_overlay(overlay, expense):
     overlay.delete()
 
 
+def _same_catalog_partnership(a, b) -> bool:
+    """True if a and b are both members of the same onboarding-complete
+    CatalogPartnership -- the only case where their tag catalogs are actually
+    guaranteed to be in sync (buddies.services.partnership syncs tags/categories
+    between partners the moment onboarding completes)."""
+    from buddies.models import CatalogPartnershipMembership
+    try:
+        a_membership = a.catalog_membership
+    except CatalogPartnershipMembership.DoesNotExist:
+        return False
+    try:
+        b_membership = b.catalog_membership
+    except CatalogPartnershipMembership.DoesNotExist:
+        return False
+    return (
+        a_membership.onboarding_complete
+        and b_membership.onboarding_complete
+        and a_membership.partnership_id == b_membership.partnership_id
+    )
+
+
 def create_participant_overlays(expense):
     """
-    For each real-user participant of expense, auto-create an overlay if they
-    have any tags or a category whose title matches the expense's current
-    tags/category. Only creates when there is at least one match.
+    For each real-user participant of expense, auto-create an overlay if a
+    match is found:
+      - category: unconditionally, if the participant has their own category
+        with the same title as the expense's category. A wrong category
+        match is just wrong -- easy to notice and fix.
+      - tags: ONLY when the participant and the owner are in the same Catalog
+        Partnership (see _same_catalog_partnership), where their tag catalogs
+        are guaranteed to actually be the same set. Matching tags by title
+        for unrelated feusers is unsafe: a coincidental match ("Restaurant"
+        vs "Restaurante") assigns one plausible-looking tag while silently
+        dropping every other tag the expense should have gotten, and -- because
+        the overlay is no longer empty -- the expense stops showing up on the
+        Unclassified Expenses page (budget/unclassified.py) even though it's
+        still missing most of its real tags.
+    Only creates an overlay when there is at least one match.
     Skips participants who already have an overlay (preserves explicit overlays).
     """
     from .models import Category, Tag, ExpenseDataOverlay
@@ -83,11 +116,12 @@ def create_participant_overlays(expense):
                 pass
 
         matched_tags = []
-        for tag in expense_tags:
-            try:
-                matched_tags.append(Tag.objects.get(owning_feuser=p, title=tag.title))
-            except Tag.DoesNotExist:
-                pass
+        if expense_tags and _same_catalog_partnership(expense.owning_feuser, p):
+            for tag in expense_tags:
+                try:
+                    matched_tags.append(Tag.objects.get(owning_feuser=p, title=tag.title))
+                except Tag.DoesNotExist:
+                    pass
 
         if matched_category or matched_tags:
             upsert_overlay(expense, p, matched_category, matched_tags)

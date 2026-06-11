@@ -45,6 +45,18 @@ def _mk_category(email: str, title: str) -> int:
     ))
 
 
+def _create_catalog_partnership(email_a: str, email_b: str) -> None:
+    """Put both feusers in the same onboarding-complete CatalogPartnership."""
+    _shell(
+        f"from feusers.models import FeUser; "
+        f"from buddies.models import CatalogPartnership, CatalogPartnershipMembership; "
+        f"a = FeUser.objects.get(email='{email_a}'); b = FeUser.objects.get(email='{email_b}'); "
+        f"p = CatalogPartnership.objects.create(); "
+        f"CatalogPartnershipMembership.objects.create(partnership=p, feuser=a, onboarding_complete=True); "
+        f"CatalogPartnershipMembership.objects.create(partnership=p, feuser=b, onboarding_complete=True)"
+    )
+
+
 def _mk_tag(email: str, title: str) -> int:
     return int(_shell(
         f"from feusers.models import FeUser; from budget.models import Tag; "
@@ -246,34 +258,48 @@ class TestNoOverlayWhenCreatorHasNone:
 # ===========================================================================
 
 class TestAutoOverlayForParticipants:
-    """[C3] Participants with title-matching tags/category get auto-overlays on creation."""
+    """[C3] Participants get auto-overlays on creation from a title-matching
+    category unconditionally, but from a title-matching TAG only when they
+    and the owner are in the same Catalog Partnership (see
+    budget/services.py::_same_catalog_partnership) -- a bare title match on
+    tags between unrelated feusers is coincidence, not a real match, and
+    silently marking the overlay "classified enough" on that basis would hide
+    it from the Unclassified Expenses page while still missing its real tags."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         owner = setup_user(driver, w, first_name="AutoOv", last_name="Owner")
         p1    = setup_user(None, None, first_name="AutoOv", last_name="P1")
         p2    = setup_user(None, None, first_name="AutoOv", last_name="P2")
+        p3    = setup_user(None, None, first_name="AutoOv", last_name="P3")
+        p4    = setup_user(None, None, first_name="AutoOv", last_name="P4")
 
         # Owner has category + tag
-        _mk_category(owner["email"], "Travel")
+        owner_cat_pk = _mk_category(owner["email"], "Travel")
         owner_tag_pk = _mk_tag(owner["email"], "Trip")
 
-        # P1 has the same tag title -> should get overlay
+        # P1 has the same TAG title but is NOT a catalog partner of owner ->
+        # coincidental match, must NOT auto-overlay.
         _mk_tag(p1["email"], "Trip")
 
-        # P2 has no matching tags -> no overlay
+        # P2 has no matching tags or category at all -> no overlay.
         _mk_tag(p2["email"], "Unrelated")
+
+        # P3 has the same CATEGORY title -> category matching is unconditional.
+        _mk_category(p3["email"], "Travel")
+
+        # P4 has the same tag title AND is in the same Catalog Partnership as
+        # owner -> their catalogs are guaranteed in sync, so the tag match is
+        # trusted.
+        _mk_tag(p4["email"], "Trip")
+        _create_catalog_partnership(owner["email"], p4["email"])
 
         p1_pk = int(_get_pk(p1["email"]))
         p2_pk = int(_get_pk(p2["email"]))
+        p3_pk = int(_get_pk(p3["email"]))
+        p4_pk = int(_get_pk(p4["email"]))
 
-        owner_cat_pk = int(_shell(
-            f"from feusers.models import FeUser; from budget.models import Category; "
-            f"u = FeUser.objects.get(email='{owner['email']}'); "
-            f"print(Category.objects.get(owning_feuser=u, title='Travel').pk)"
-        ))
-
-        # Create expense owned by owner, with p1 and p2 as participants
+        # Create expense owned by owner, with p1..p4 as participants
         exp_pk = int(_shell(
             f"from feusers.models import FeUser; from budget.models import Expense; "
             f"from buddies.models import BuddySpending; from decimal import Decimal; "
@@ -282,30 +308,46 @@ class TestAutoOverlayForParticipants:
             f"e = Expense.objects.create(owning_feuser=o, title='C3 Exp', "
             f"  type='expense', value='90.00', settled=False, category_id={owner_cat_pk}); "
             f"e.tags.set([{owner_tag_pk}]); "
-            f"BuddySpending.objects.create(expense=e, participant_feuser_id={p1_pk}, share_percent=Decimal('33')); "
-            f"BuddySpending.objects.create(expense=e, participant_feuser_id={p2_pk}, share_percent=Decimal('33')); "
+            f"BuddySpending.objects.create(expense=e, participant_feuser_id={p1_pk}, share_percent=Decimal('25')); "
+            f"BuddySpending.objects.create(expense=e, participant_feuser_id={p2_pk}, share_percent=Decimal('25')); "
+            f"BuddySpending.objects.create(expense=e, participant_feuser_id={p3_pk}, share_percent=Decimal('25')); "
+            f"BuddySpending.objects.create(expense=e, participant_feuser_id={p4_pk}, share_percent=Decimal('25')); "
             f"create_participant_overlays(e); "
             f"print(e.pk)"
         ))
 
         yield {
-            "owner": owner, "p1": p1, "p2": p2, "exp_pk": exp_pk,
+            "owner": owner, "p1": p1, "p2": p2, "p3": p3, "p4": p4, "exp_pk": exp_pk,
         }
         cleanup_user(owner["email"])
         cleanup_user(p1["email"])
         cleanup_user(p2["email"])
+        cleanup_user(p3["email"])
+        cleanup_user(p4["email"])
 
-    def test_participant_with_matching_tag_gets_overlay(self, ctx):
-        assert _overlay_exists(ctx["exp_pk"], ctx["p1"]["email"]), \
-            "[C3] Participant with matching tag must get auto-overlay"
-
-    def test_auto_overlay_contains_matched_tag(self, ctx):
-        assert "Trip" in _overlay_tag_titles(ctx["exp_pk"], ctx["p1"]["email"]), \
-            "[C3] Auto-overlay must contain participant's matching tag"
+    def test_non_partner_with_matching_tag_only_gets_no_overlay(self, ctx):
+        assert not _overlay_exists(ctx["exp_pk"], ctx["p1"]["email"]), \
+            "[C3] A coincidental tag-title match must NOT auto-overlay without a Catalog Partnership"
 
     def test_participant_without_match_gets_no_overlay(self, ctx):
         assert not _overlay_exists(ctx["exp_pk"], ctx["p2"]["email"]), \
-            "[C3] Participant without matching tags must not get an overlay"
+            "[C3] Participant without matching tags or category must not get an overlay"
+
+    def test_participant_with_matching_category_gets_overlay(self, ctx):
+        assert _overlay_exists(ctx["exp_pk"], ctx["p3"]["email"]), \
+            "[C3] Category matching is unconditional and must still auto-overlay"
+
+    def test_auto_overlay_contains_matched_category(self, ctx):
+        assert _overlay_category_title(ctx["exp_pk"], ctx["p3"]["email"]) == "Travel", \
+            "[C3] Auto-overlay must contain participant's matching category"
+
+    def test_catalog_partner_with_matching_tag_gets_overlay(self, ctx):
+        assert _overlay_exists(ctx["exp_pk"], ctx["p4"]["email"]), \
+            "[C3] A tag-title match between Catalog Partners must auto-overlay"
+
+    def test_auto_overlay_contains_matched_tag_for_partner(self, ctx):
+        assert "Trip" in _overlay_tag_titles(ctx["exp_pk"], ctx["p4"]["email"]), \
+            "[C3] Auto-overlay must contain the matched tag for a Catalog Partner"
 
     def test_owner_has_no_overlay(self, ctx):
         assert not _overlay_exists(ctx["exp_pk"], ctx["owner"]["email"]), \
