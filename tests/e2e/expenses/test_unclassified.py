@@ -27,7 +27,7 @@ def _shell(code: str) -> str:
     return r.stdout.strip()
 
 
-def _create_expense(email, title, *, category=None, tag_titles=None, payee=""):
+def _create_expense(email, title, *, category=None, tag_titles=None, payee="", type="expense"):
     tag_titles = tag_titles or []
     code = (
         "from feusers.models import FeUser\n"
@@ -39,7 +39,7 @@ def _create_expense(email, title, *, category=None, tag_titles=None, payee=""):
         f"if {category!r}:\n"
         f"    cat, _ = Category.objects.get_or_create(owning_feuser=u, title={category!r})\n"
         f"tags = [Tag.objects.get_or_create(owning_feuser=u, title=t)[0] for t in {tag_titles!r}]\n"
-        f"e = create_expense(owning_feuser=u, title={title!r}, type='expense', "
+        f"e = create_expense(owning_feuser=u, title={title!r}, type={type!r}, "
         f"value=Decimal('9.99'), payee={payee!r}, category=cat, tags=tags)\n"
         "print(e.uid)\n"
     )
@@ -127,6 +127,16 @@ class TestUnclassifiedExpensesList:
         assert "Tags missing" in _row(driver, uid_tags).text
         assert "Category and Tags missing" in _row(driver, uid_both).text
         assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_full}")) == 0
+
+    def test_savings_deposit_and_withdrawal_never_shown(self, driver, w, ctx):
+        uid_dep = _create_expense(ctx["email"], "Savings deposit test", type="savings_dep")
+        uid_wit = _create_expense(ctx["email"], "Savings withdrawal test", type="savings_wit")
+
+        driver.get(_url("/budget/unclassified/"))
+        time.sleep(1.5)
+
+        assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_dep}")) == 0
+        assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_wit}")) == 0
 
     def test_inline_category_select_and_save_removes_row(self, driver, w, ctx):
         _ensure_category(ctx, "Beta Cat")

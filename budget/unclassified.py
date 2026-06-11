@@ -9,7 +9,10 @@ An expense is unclassified for a feuser when:
     the feuser's own ExpenseDataOverlay for it has no category and no tags
     (the owner's classification of that same expense is irrelevant to this
     check -- it's evaluated purely from the feuser's own overlay).
-Settlement expenses are never unclassified, regardless of state.
+Settlement expenses are never unclassified, regardless of state. Neither are
+savings deposits/withdrawals (TransactionType.SAVINGS_DEPOSIT/SAVINGS_WITHDRAWAL)
+-- moving money between your own accounts isn't the kind of spend a
+category/tag classifies meaningfully.
 
 This is a fourth place implementing the same "own vs overlay" visibility split
 as budget/query_parser.py's `_tag_q`/`_cat_q`/`visible_tag_titles` and
@@ -17,7 +20,12 @@ budget/dashboard_cards.py's `_compute_chart` (see CLAUDE.md).
 """
 from __future__ import annotations
 
-from .models import Category, Expense, ExpenseDataOverlay, Tag
+from .models import Category, Expense, ExpenseDataOverlay, Tag, TransactionType
+
+# Never surfaced as unclassified, regardless of category/tags state: a
+# settlement isn't a real spend, and a savings movement isn't the kind of
+# thing a category/tag meaningfully classifies.
+_EXCLUDED_TYPES = [TransactionType.SAVINGS_DEPOSIT, TransactionType.SAVINGS_WITHDRAWAL]
 
 
 def category_tag_catalog(feuser) -> tuple[list[dict], list[dict]]:
@@ -142,6 +150,7 @@ def get_unclassified_row(feuser, expense_uid) -> dict | None:
 def _own_rows(feuser) -> list[dict]:
     qs = (
         Expense.objects.filter(owning_feuser=feuser, is_buddies_settlement=False)
+        .exclude(type__in=_EXCLUDED_TYPES)
         .select_related("category", "project")
         .prefetch_related("tags")
         .order_by("-date_created")
@@ -163,6 +172,7 @@ def _foreign_rows(feuser) -> list[dict]:
     qs = (
         Expense.objects.filter(pk__in=expense_ids, is_buddies_settlement=False)
         .exclude(owning_feuser=feuser)
+        .exclude(type__in=_EXCLUDED_TYPES)
         .select_related("category", "owning_feuser", "project")
         .prefetch_related("tags")
         .order_by("-date_created")
@@ -196,6 +206,7 @@ def count_unclassified_expenses(feuser) -> int:
 
     own = (
         Expense.objects.filter(owning_feuser=feuser, is_buddies_settlement=False)
+        .exclude(type__in=_EXCLUDED_TYPES)
         .filter(Q(category__isnull=True) | Q(tags__isnull=True))
         .distinct()
         .count()
@@ -220,6 +231,7 @@ def count_unclassified_expenses(feuser) -> int:
         Expense.objects.filter(pk__in=expense_ids, is_buddies_settlement=False)
         .exclude(owning_feuser=feuser)
         .exclude(pk__in=classified_ids)
+        .exclude(type__in=_EXCLUDED_TYPES)
         .count()
     )
     return own + foreign
