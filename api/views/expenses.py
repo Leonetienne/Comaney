@@ -4,7 +4,7 @@ from django.http import JsonResponse
 
 from budget.date_utils import financial_month_range, financial_year_range
 from budget.models import Expense
-from budget.query_parser import apply_query, has_date_filter
+from budget.query_parser import apply_query
 from budget.notifications import send_settled_notification, set_initial_notification_class
 from budget.views._sharing import build_shared_qs
 from ..serializers import _expense_json, _apply_expense_fields, _set_tags
@@ -47,13 +47,9 @@ def expenses(request, feuser):
         if sort_dir == "desc":
             sort_field = "-" + sort_field
 
-        date_filtered_by_query = has_date_filter(q_str)
-        eff_start = None if date_filtered_by_query else start
-        eff_end   = None if date_filtered_by_query else end
-
         if shared_mode:
             qs = (
-                build_shared_qs(feuser, eff_start, eff_end)
+                build_shared_qs(feuser, start, end)
                 .select_related("category", "project", "owning_feuser", "upfront_payee_dummy")
                 .prefetch_related(
                     "tags",
@@ -63,10 +59,9 @@ def expenses(request, feuser):
                 .order_by(sort_field, "date_created")
             )
         else:
-            date_filter = {} if date_filtered_by_query else {"date_due__gte": start, "date_due__lte": end}
             qs = (
                 Expense.objects
-                .filter(owning_feuser=feuser, is_dummy=False, **date_filter)
+                .filter(owning_feuser=feuser, is_dummy=False, date_due__gte=start, date_due__lte=end)
                 .select_related("category", "project")
                 .prefetch_related(
                     "tags",
