@@ -309,6 +309,14 @@ def expenses_export(request):
 
 
 @feuser_required
+def add_expense(request):
+    from feusers.context_processors import current_feuser as build_feuser_context
+    if not build_feuser_context(request)["ai_smart_create_available"]:
+        return redirect("budget:expense_create")
+    return render(request, "budget/add_expense.html", {"active_nav": "add_expense"})
+
+
+@feuser_required
 def expense_create(request):
     feuser = request.feuser
     if request.method == "POST":

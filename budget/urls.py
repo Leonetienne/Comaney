@@ -33,6 +33,7 @@ urlpatterns = [
     path("expenses/", views.expenses_list, name="expenses_list"),
     path("expenses/bulk-action/", views.expense_bulk_action, name="expense_bulk_action"),
     path("expenses/export/", views.expenses_export, name="expenses_export"),
+    path("expenses/add/", views.add_expense, name="add_expense"),
     path("expenses/new/", views.expense_create, name="expense_create"),
     path("expenses/<int:uid>/edit/", views.expense_edit, name="expense_edit"),
     path("expenses/<int:uid>/edit-overlay/", views.expense_edit_overlay, name="expense_edit_overlay"),

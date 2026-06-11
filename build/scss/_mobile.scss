@@ -65,4 +65,48 @@
 
   .app-main { padding: 20px 16px; }
   main      { padding: 0 16px; margin: 24px auto; }
+
+  // No hover scale on mobile (see below), so the extra desktop breathing
+  // room in .add-expense-wrap's padding isn't needed here.
+  .add-expense-wrap { padding: 2.5rem 0 1rem; }
+
+  .add-expense-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .add-expense-tile {
+    min-height: 160px;
+    transition: none;
+
+    // No hover on touch: tiles stay grayscale/uncolored on mobile.
+    &::before { transition: none; }
+
+    &:hover, &:focus-visible {
+      transform: none;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, .08);
+
+      &::before {
+        opacity: 0;
+        filter: grayscale(1);
+        background-position: 0% 50%;
+      }
+
+      .add-expense-tile-icon, .add-expense-tile-label { color: var(--text); }
+      .add-expense-tile-icon {
+        transform: none;
+
+        img {
+          filter: none;
+          @media (prefers-color-scheme: dark) { filter: invert(1); }
+        }
+      }
+    }
+  }
+
+  .add-expense-tile--recurring {
+    grid-column: 1;
+    min-height: auto;
+    padding: 1.25rem 1.5rem;
+  }
 }

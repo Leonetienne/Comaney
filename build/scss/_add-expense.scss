@@ -1,0 +1,128 @@
+.add-expense-wrap {
+  // Extra horizontal padding (beyond .app-main's own) so the hover
+  // scale(1.1) + expanded box-shadow on the tiles has room to breathe
+  // without being clipped by .app-main's overflow-x: hidden.
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 4rem 3rem 2rem;
+  text-align: center;
+}
+
+.add-expense-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 3.5rem 0;
+}
+
+.add-expense-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 260px;
+  padding: 2rem 1.5rem;
+  border-radius: 28px;
+  color: var(--text);
+  text-decoration: none;
+  // The hover/focus-visible state below (scale + glow + color reveal) is
+  // already a strong visible indicator, so the browser's default outline
+  // would just be visual noise on top of it.
+  outline: none;
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, .08);
+  transition: transform .35s cubic-bezier(.22, 1, .36, 1), box-shadow .35s ease;
+
+  // Colorful gradient layer, hidden+desaturated until hover
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    background: var(--tile-grad);
+    background-size: 200% 200%;
+    background-position: 0% 50%;
+    opacity: 0;
+    filter: grayscale(1);
+    transition: opacity .4s ease, filter .4s ease, background-position .9s ease;
+  }
+
+  &:hover, &:focus-visible {
+    text-decoration: none;
+    transform: scale(1.1) translateY(-4px);
+    // border-color: transparent alone still leaves a faint antialiased
+    // seam at the rounded corners over the gradient; drop the border
+    // outright so the hover state reads clean.
+    border: none;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .22);
+
+    &::before {
+      opacity: 1;
+      filter: grayscale(0);
+      background-position: 100% 50%;
+    }
+
+    .add-expense-tile-icon, .add-expense-tile-label { color: #fff; }
+    .add-expense-tile-icon {
+      transform: scale(1.15) rotate(-18deg);
+      img { filter: brightness(0) invert(1); }
+    }
+  }
+}
+
+.add-expense-tile--manual     { --tile-grad: var(--tile-manual-grad); }
+.add-expense-tile--ai         { --tile-grad: var(--tile-ai-grad); }
+.add-expense-tile--recurring  { --tile-grad: var(--tile-recurring-grad); }
+
+.add-expense-tile-icon,
+.add-expense-tile-label {
+  position: relative;
+  z-index: 1;
+  color: var(--text);
+  transition: color .35s ease, transform .35s ease;
+}
+
+.add-expense-tile-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg { width: 100%; height: 100%; }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+
+    // PNG icon art is drawn black-on-transparent; invert for legibility on
+    // the dark-mode glass surface (matches .fab-menu-item-icon convention).
+    @media (prefers-color-scheme: dark) {
+      filter: invert(1);
+    }
+  }
+}
+
+.add-expense-tile-label {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+// The recurring-expense tile spans the full grid width, so its width always
+// equals the two square tiles combined -- same card design, laid out as a
+// slim horizontal row instead of a centered stack.
+.add-expense-tile--recurring {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: flex-start;
+  min-height: auto;
+  padding: 1.5rem 2rem;
+
+  .add-expense-tile-icon { width: 34px; height: 34px; }
+  .add-expense-tile-label { font-size: 1.05rem; }
+}

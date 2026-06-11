@@ -29,6 +29,11 @@
   --sidebar-label:       rgba(0, 0, 0, .3);
   --success:          #2da44e;
   --ai-refusal-color: #2db0ff;
+  --tile-manual-grad:    linear-gradient(135deg, #4b7bec, #6ec1ff);
+  --tile-ai-grad:        linear-gradient(135deg, #c2478a, #ff9a9e);
+  --tile-recurring-grad: linear-gradient(135deg, #0d9488, #5eead4);
+  --glass-surface:       rgba(239, 239, 239, .92);
+  --glass-border:        rgba(0, 0, 0, .08);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -63,5 +68,7 @@
     --sidebar-label:       rgba(255, 255, 255, .22);
     --success:          #2da44e;
     --ai-refusal-color: #2db0ff;
+    --glass-surface:    rgba(39, 39, 39, .9);
+    --glass-border:     rgba(255, 255, 255, .1);
   }
 }

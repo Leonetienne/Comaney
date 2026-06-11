@@ -1,0 +1,39 @@
+{% extends "budget_base.html" %}
+{% load static %}
+
+{% block title %}Comaney – Add Expense{% endblock %}
+
+{% block content %}
+<div class="add-expense-wrap">
+    <h1>Add Expense</h1>
+    <p class="page-tip">How would you like to add it?</p>
+
+    <div class="add-expense-grid">
+        <a href="{% url 'budget:expense_create' %}" class="add-expense-tile add-expense-tile--manual" id="add-expense-manual-tile">
+            <span class="add-expense-tile-icon">
+                <img src="{% static 'dist/images/icons/pencil.png' %}" alt="">
+            </span>
+            <span class="add-expense-tile-label">Enter Manually</span>
+        </a>
+        {% if ai_smart_create_available %}
+        <a href="{% url 'budget:express_creation' %}" class="add-expense-tile add-expense-tile--ai" id="add-expense-ai-tile">
+            <span class="add-expense-tile-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l1.8 7.2L21 11l-7.2 1.8L12 20l-1.8-7.2L3 11l7.2-1.8z"/>
+                    <circle cx="19" cy="5" r="1.4"/>
+                    <circle cx="5" cy="18" r="1"/>
+                </svg>
+            </span>
+            <span class="add-expense-tile-label">Create with AI</span>
+        </a>
+        {% endif %}
+
+        <a href="{% url 'budget:scheduled_create' %}" class="add-expense-tile add-expense-tile--recurring">
+            <span class="add-expense-tile-icon">
+                <img src="{% static 'dist/images/icons/refresh.png' %}" alt="">
+            </span>
+            <span class="add-expense-tile-label">Create new recurring expense</span>
+        </a>
+    </div>
+</div>
+{% endblock %}

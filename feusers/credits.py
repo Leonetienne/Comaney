@@ -7,5 +7,7 @@ CREDITS = [
     {"asset": "QR code icon", "author": "freepik"},
     {"asset": "Pie chart icon", "author": "freepik"},
     {"asset": "Security key icon", "author": "sonnycandra"},
-    {"asset": "YubiKey icon", "author": "icons8"}
+    {"asset": "YubiKey icon", "author": "icons8"},
+    {"asset": "Pencil icon", "author": "those icons"},
+    {"asset": "Refresh icon", "author": "meaicon"}
 ]

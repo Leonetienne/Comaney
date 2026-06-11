@@ -20,6 +20,9 @@
             <li class="{% if active_nav == 'categories_tags' %}active{% endif %}">
                 <a href="{% url 'budget:categories_tags' %}">Categories &amp; Tags {% action_badge current_feuser "partnership" %}</a>
             </li>
+            <li class="{% if active_nav == 'add_expense' %}active{% endif %}">
+                <a href="{% if ai_smart_create_available %}{% url 'budget:add_expense' %}{% else %}{% url 'budget:expense_create' %}{% endif %}">Add Expense</a>
+            </li>
             <li><span class="sidebar-section-label">Buddy</span></li>
             <li class="{% if active_nav == 'my_buddies' %}active{% endif %}">
                 <a href="{% url 'buddies:my_buddies' %}">Manage Buddies {% action_badge current_feuser "buddies" %}</a>
@@ -30,13 +33,6 @@
             <li class="{% if active_nav == 'projects' %}active{% endif %}">
                 <a href="{% url 'projects:projects_list' %}">Projects {% action_badge current_feuser "projects" %}</a>
             </li>
-
-            {% if ai_smart_create_available %}
-            <li><span class="sidebar-section-label">AI</span></li>
-            <li class="{% if active_nav == 'express_creation' %}active{% endif %}">
-                <a href="{% url 'budget:express_creation' %}">Express Creation</a>
-            </li>
-            {% endif %}
 
             <li><span class="sidebar-section-label">Account</span></li>
             <li class="{% if active_nav == 'profile' %}active{% endif %}">
