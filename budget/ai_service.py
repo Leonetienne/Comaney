@@ -6,9 +6,10 @@ outside this file constructs an anthropic.Anthropic client, calls
 one AIService instance:
 
     service = AIService(feuser)                     # raises AIBudgetExceededError up front if blocked/no key
-    items   = service.prompt_express_expense_gen(system_prompt, description, image_b64=..., image_type=...)
-    yaml    = service.prompt_dashboard_card_yaml(system_prompt, description)
-    mapping = service.prompt_partnership_mapping(system_prompt, user_message)
+    items    = service.prompt_express_expense_gen(system_prompt, description, image_b64=..., image_type=...)
+    yaml     = service.prompt_dashboard_card_yaml(system_prompt, description)
+    mapping  = service.prompt_partnership_mapping(system_prompt, user_message)
+    solution = service.prompt_unclassified_solve(system_prompt)
 
 AIService owns HOW to talk to the AI safely: provider dispatch, JSON-response
 recovery (one repair retry), envelope parsing, own-key/trial-key resolution,
@@ -17,11 +18,11 @@ exceptions here, plus the side effects of disabling the shared trial key and
 notifying the admin -- see budget.ai_trial). It deliberately knows nothing
 about categories, tags, projects, or dashboard cards: each feature module
 (budget.express_service, budget.dashboard_card_ai,
-buddies.services.partnership_ai) owns assembling its own system prompt text
-and interpreting the returned payload for saving. Mixing that business logic
-in here would just trade "AI plumbing scattered across files" for "three
-unrelated features' business rules crammed into one file" -- the same mess in
-a different shape.
+buddies.services.partnership_ai, budget.unclassified_ai) owns assembling its
+own system prompt text and interpreting the returned payload for saving.
+Mixing that business logic in here would just trade "AI plumbing scattered
+across files" for "four unrelated features' business rules crammed into one
+file" -- the same mess in a different shape.
 """
 from __future__ import annotations
 
@@ -269,6 +270,25 @@ class AIService:
         if not isinstance(mappings, list):
             raise AIInvalidResponseError(raw)
         return mappings
+
+    def prompt_unclassified_solve(self, system_prompt: str) -> dict:
+        """Unclassified Expenses: suggest a category and/or tags (whichever
+        the caller's system prompt says is missing) for a single expense,
+        picking only from the feuser's own closed catalog. Like partnership
+        mapping, there's no meaningful "fail" case -- a field the AI can't
+        confidently match just comes back null -- so this skips the
+        {"result": "good"/"fail"} envelope too. Returns
+        {"category_uid": int|None, "tag_uids": list[int]}."""
+        config = AgentConfig(api_key=self.api_key, max_tokens=1024)
+        messages = [{"role": "user", "content": "Suggest the missing classification for this expense."}]
+        parsed, raw = self._call_for_json(
+            config, system_prompt, messages, feature="unclassified_solve", envelope=False,
+        )
+        tag_uids = parsed.get("tag_uids")
+        return {
+            "category_uid": parsed.get("category_uid"),
+            "tag_uids": tag_uids if isinstance(tag_uids, list) else [],
+        }
 
     # -----------------------------------------------------------------
     # Shared core

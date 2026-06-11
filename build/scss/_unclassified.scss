@@ -1,0 +1,269 @@
+// ── Backdrop surface ─────────────────────────────────────────────────────
+// The table must not sit directly on the page background; give it the same
+// card surface treatment as .exp-card/.bexp-breakdown-card elsewhere in the app.
+.unclassified-surface {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.unclassified-table-scroll {
+  overflow-x: auto;
+}
+
+// Foreign-row provenance ("From <project>"/"From <owner>"): plain small
+// caption under the title, not a pill -- project names are often long
+// enough to wrap a pill onto its own line and break the row height.
+.unclassified-source-label {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+// table-layout: fixed + an explicit <colgroup> means column widths are set
+// ONLY by the <col> widths below, never by a cell's current content -- so
+// swapping a cell's plain-text view for a <select>/combobox on edit can
+// never shift the column width. Widths are only ever changed by dragging a
+// .col-resize-handle-full (build/js/unclassified.js::startColResize).
+.unclassified-table {
+  width: 100%;
+  min-width: 760px;
+  table-layout: fixed;
+  margin-top: 0;
+
+  th, td {
+    // Visible column separators, running the full height of the table (the
+    // table inherits border-collapse:collapse from the generic `table`
+    // rule, so each row's border segment lines up into one continuous line).
+    border-right: 1px solid var(--border);
+
+    &:last-child { border-right: none; }
+  }
+
+  td {
+    vertical-align: top;
+  }
+
+  .unclassified-cell {
+    overflow: visible;
+  }
+
+  .unclassified-cell-view {
+    // Fill the whole cell, not just the rendered text ("—" for an empty
+    // value is a single character -- without this, only that character is
+    // clickable in an otherwise wide, mostly-empty cell).
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    min-height: 1.6em;
+    border-radius: 4px;
+
+    &:hover { background: var(--bg-elevated); }
+  }
+}
+
+// A newly-suggested/edited value, highlighted inline -- never the whole cell,
+// so an unchanged old tag sitting next to a new one stays plain.
+.unclassified-highlight {
+  background: var(--unsaved-bg);
+  color: var(--unsaved-fg);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+// Wraps the table so the resize handles (positioned relative to this, not
+// to any single row) can span its full height.
+.unclassified-table-wrap {
+  position: relative;
+}
+
+// Injected once per column boundary by _setupColResize(); height/left are
+// set in JS from live measurements, so only the interaction/appearance is
+// styled here. Spans every row, not just the header -- draggable from
+// anywhere along the column border.
+.col-resize-handle-full {
+  position: absolute;
+  top: 0;
+  width: 9px;
+  margin-left: -4px;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 4;
+
+  &:hover, &:active {
+    background: color-mix(in srgb, var(--link) 20%, transparent);
+  }
+}
+
+.unclassified-category-select {
+  max-width: 100%;
+}
+
+// ── Tags combobox ────────────────────────────────────────────────────────
+.unclassified-tag-combobox {
+  position: relative;
+}
+
+.unclassified-tag-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--bg-input);
+}
+
+.unclassified-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.unclassified-tag-pill-remove {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.unclassified-tag-input {
+  flex: 1 1 80px;
+  min-width: 80px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  color: var(--text);
+}
+
+.unclassified-tag-suggestions {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 2px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.unclassified-tag-suggestion {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover { background: var(--bg-elevated); }
+}
+
+// ── Per-row action buttons: 3 columns on desktop, 1 column (with margin
+// between rows) on mobile, never a bare unspaced vertical stack. ─────────
+.unclassified-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .unclassified-actions-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+// ── Bulk actions ──────────────────────────────────────────────────────────
+.unclassified-bulk-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+// ── Full-view blocking overlay while waiting on AI ───────────────────────
+.unclassified-block-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .35);
+}
+
+.unclassified-block-box {
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 28px 36px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .25);
+  // Fixed footprint so swapping the spinner for the cost readout never
+  // reflows/shrinks the box.
+  width: 260px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.unclassified-spinner {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 14px;
+  border: 3px solid var(--border);
+  border-top-color: var(--link);
+  border-radius: 50%;
+  animation: unclassified-spin .8s linear infinite;
+}
+
+@keyframes unclassified-spin {
+  to { transform: rotate(360deg); }
+}
+
+// Cost readout shown briefly in place of the spinner once a single
+// "Let AI solve" call finishes, right before the overlay fades out.
+// aiProgress carries a literal "\n" between the "AI Cost:" label and the
+// amount (see aiSolveRow); pre-line renders that as an actual line break.
+.unclassified-cost-text {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: pre-line;
+}
+
+// ── "Let AI resolve all" progress: a small floating panel, NOT a full-page
+// overlay -- the table must stay visible so rows can be seen filling in
+// live, one at a time, as each result comes back. ─────────────────────────
+.unclassified-progress-panel {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .2);
+  font-size: 0.88rem;
+}
+
+.unclassified-progress-cost {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}

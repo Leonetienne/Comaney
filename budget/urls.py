@@ -49,4 +49,9 @@ urlpatterns = [
     path("scheduled/<int:uid>/delete/", views.scheduled_delete, name="scheduled_delete"),
     path("scheduled/<int:uid>/update-expenses/", views.scheduled_update_expenses_api, name="scheduled_update_expenses"),
     path("ai/express-creation/", views.express_creation, name="express_creation"),
+
+    path("unclassified/", views.unclassified_list, name="unclassified_list"),
+    path("unclassified/save-all/", views.unclassified_save_all, name="unclassified_save_all"),
+    path("unclassified/<int:uid>/save/", views.unclassified_save, name="unclassified_save"),
+    path("unclassified/<int:uid>/ai-solve/", views.unclassified_ai_solve, name="unclassified_ai_solve"),
 ]

@@ -1,0 +1,158 @@
+{% extends "budget_base.html" %}
+{% load static %}
+
+{% block title %}Comaney – Unclassified Expenses{% endblock %}
+
+{% block extra_head %}
+<style>
+  main.app-main { max-width: 1200px; }
+</style>
+<script>
+window.UNCLASSIFIED_CONFIG = {
+    rows:           {{ rows_json|safe }},
+    categories:     {{ categories_json|safe }},
+    tags:           {{ tags_json|safe }},
+    urlSave:        "{% url 'budget:unclassified_save' 0 %}",
+    urlAiSolve:     "{% url 'budget:unclassified_ai_solve' 0 %}",
+    urlSaveAll:     "{% url 'budget:unclassified_save_all' %}",
+    urlEditExpense: "{% url 'budget:expense_edit' 0 %}",
+    urlEditOverlay: "{% url 'budget:expense_edit_overlay' 0 %}",
+};
+</script>
+<script src="{% static 'dist/unclassified.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Unclassified Expenses</h1>
+</div>
+<div class="desc-surface"><p class="page-tip" style="margin:0;opacity:1;">Expenses missing a category or tags show up here. Fix them inline, or let AI suggest a classification.</p></div>
+
+<div x-data="unclassifiedPage" style="position:relative;">
+
+    <div x-show="aiBusy" x-transition.opacity.duration.400ms class="unclassified-block-overlay" @click="showAiCost && dismissCostPreview()">
+        <div class="unclassified-block-box">
+            <div class="unclassified-spinner" x-show="!showAiCost"></div>
+            <p x-text="aiProgress || 'Working…'" :class="{ 'unclassified-cost-text': showAiCost }"></p>
+        </div>
+    </div>
+
+    <div x-show="resolveAllRunning" class="unclassified-progress-panel">
+        <span x-text="resolveAllProgress"></span>
+        <span class="unclassified-progress-cost" x-text="'Total so far: ' + resolveAllTotalCost.toFixed(1) + ' ¢'"></span>
+        <button type="button" class="btn btn-sm btn-danger" :disabled="resolveAllStopRequested" @click="stopResolveAll()" x-text="resolveAllStopRequested ? 'Stopping…' : 'Stop'"></button>
+    </div>
+
+    <div x-show="error" class="buddy-flash buddy-flash-error" style="cursor:pointer;" @click="error=''" x-text="error"></div>
+
+    <template x-if="rows.length === 0">
+        <p class="page-tip">Nothing to classify — you're all caught up.</p>
+    </template>
+
+    <template x-if="rows.length > 0">
+    <div class="unclassified-surface">
+        <div class="unclassified-table-scroll">
+        <div class="unclassified-table-wrap" x-ref="tableWrap">
+        <table class="unclassified-table" x-ref="table">
+            <colgroup>
+                <col style="width: 24%">
+                <col style="width: 14%">
+                <col style="width: 16%">
+                <col style="width: 20%">
+                <col style="width: 26%">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Problem</th>
+                    <th>Category</th>
+                    <th>Tags</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="row in rows" :key="row.expense_uid">
+                <tr :id="'unclassified-row-' + row.expense_uid">
+                    <td data-label="Title">
+                        <div x-text="row.title"></div>
+                        <div x-show="row.kind === 'foreign'" class="unclassified-source-label" x-text="'From ' + (row.project_title || row.owner_name)"></div>
+                    </td>
+                    <td data-label="Problem"><span x-text="row.problem"></span></td>
+
+                    <td data-label="Category" class="unclassified-cell">
+                        <template x-if="!row.editingCategory">
+                            <span class="unclassified-cell-view" @click="openCategoryEditor(row)">
+                                <span :class="{ 'unclassified-highlight': categoryDirty(row) }" x-text="row.pendingCategoryTitle || '—'"></span>
+                            </span>
+                        </template>
+                        <template x-if="row.editingCategory">
+                            <select class="unclassified-category-select"
+                                    @change="onCategoryChange(row, $event.target.value)"
+                                    @blur="row.editingCategory = false"
+                                    @keydown.escape="row.editingCategory = false; $event.target.blur()">
+                                <option value="" :selected="row.pendingCategoryUid === null">—</option>
+                                <template x-for="cat in categories" :key="cat.uid">
+                                    <option :value="cat.uid" :selected="cat.uid === row.pendingCategoryUid" x-text="cat.title"></option>
+                                </template>
+                            </select>
+                        </template>
+                    </td>
+
+                    <td data-label="Tags" class="unclassified-cell">
+                        <template x-if="!row.editingTags">
+                            <span class="unclassified-cell-view" @click="openTagsEditor(row)">
+                                <template x-if="row.pendingTagUids.length === 0">
+                                    <span>—</span>
+                                </template>
+                                <template x-for="(uid, idx) in row.pendingTagUids" :key="uid">
+                                    <span>
+                                        <span :class="{ 'unclassified-highlight': !row.tag_uids.includes(uid) }" x-text="row.pendingTagTitles[idx]"></span><span x-show="idx < row.pendingTagUids.length - 1">, </span>
+                                    </span>
+                                </template>
+                            </span>
+                        </template>
+                        <template x-if="row.editingTags">
+                            <div class="unclassified-tag-combobox" @click.outside="closeTagsEditor(row)">
+                                <div class="unclassified-tag-pills">
+                                    <template x-for="uid in row.pendingTagUids" :key="uid">
+                                        <span class="pill unclassified-tag-pill" :class="{ 'unclassified-highlight': !row.tag_uids.includes(uid) }">
+                                            <span x-text="row.pendingTagTitles[row.pendingTagUids.indexOf(uid)]"></span>
+                                            <button type="button" class="unclassified-tag-pill-remove" @click="removeTag(row, uid)">×</button>
+                                        </span>
+                                    </template>
+                                    <input type="text" class="unclassified-tag-input" x-model="row.tagInput"
+                                           placeholder="Type to search…" x-init="$nextTick(() => $el.focus())"
+                                           @keydown.escape="closeTagsEditor(row); $event.target.blur()">
+                                </div>
+                                <div class="unclassified-tag-suggestions" x-show="tagSuggestions(row).length > 0">
+                                    <template x-for="tag in tagSuggestions(row)" :key="tag.uid">
+                                        <div class="unclassified-tag-suggestion" @click="addTag(row, tag)" x-text="tag.title"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </td>
+
+                    <td data-label="Actions">
+                        <div class="unclassified-actions-grid">
+                            <button type="button" class="btn btn-sm btn-secondary" x-show="!isDirty(row)" @click="editRow(row)">Edit</button>
+                            <button type="button" class="btn btn-sm btn-secondary" x-show="isDirty(row)" @click="revertRow(row)">Revert</button>
+                            <button type="button" class="btn btn-sm btn-success" x-show="isDirty(row)" :disabled="row.saving" @click="saveRow(row)">Save</button>
+                            <button type="button" class="btn btn-sm" x-show="!aiUnavailable" @click="aiSolveRow(row)" x-text="row.aiUsed ? 'Let AI retry' : 'Let AI solve'"></button>
+                        </div>
+                    </td>
+                </tr>
+                </template>
+            </tbody>
+        </table>
+        </div>
+        </div>
+    </div>
+    </template>
+
+    <div class="unclassified-bulk-actions">
+        <button type="button" class="btn btn-secondary" x-show="rows.length > 0 && !aiUnavailable" :disabled="resolveAllRunning" @click="aiResolveAll()">Let AI resolve all</button>
+        <button type="button" class="btn btn-success" x-show="anyDirty()" :disabled="resolveAllRunning" @click="saveAll()">Save all</button>
+    </div>
+</div>
+{% endblock %}

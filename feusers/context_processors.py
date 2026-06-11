@@ -11,6 +11,7 @@ from .models import FeUser, Notification
 _HELP_PATH_MAP = [
     ("/budget/ai/express-creation/", "/docs/user-manual/ai-express-creation/"),
     ("/budget/categories-tags/",     "/docs/user-manual/categories-tags/"),
+    ("/budget/unclassified/",        "/docs/user-manual/unclassified-expenses/"),
     ("/budget/scheduled/",           "/docs/user-manual/scheduled-expenses/"),
     ("/budget/expenses/",            "/docs/user-manual/expenses/"),
     ("/budget/dash/",                "/docs/user-manual/dashboard/"),

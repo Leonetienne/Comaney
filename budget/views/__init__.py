@@ -20,6 +20,9 @@ from .categories_tags import (
     tag_create, tag_delete, tag_rename,
 )
 from .express import express_creation
+from .unclassified import (
+    unclassified_ai_solve, unclassified_list, unclassified_save, unclassified_save_all,
+)
 
 __all__ = [
     "dashboard", "dashboard_detail",
@@ -36,4 +39,5 @@ __all__ = [
     "category_create", "category_delete", "category_rename",
     "tag_create", "tag_delete", "tag_rename",
     "express_creation",
+    "unclassified_list", "unclassified_save", "unclassified_save_all", "unclassified_ai_solve",
 ]

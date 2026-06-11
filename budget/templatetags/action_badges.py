@@ -185,6 +185,12 @@ def _count_buddy_expense_actions(feuser) -> int:
     return count
 
 
+@register_badge("unclassified_expenses")
+def _count_unclassified_actions(feuser) -> int:
+    from budget.unclassified import count_unclassified_expenses
+    return count_unclassified_expenses(feuser)
+
+
 @register_badge("projects")
 def _count_project_actions(feuser) -> int:
     from django.utils import timezone

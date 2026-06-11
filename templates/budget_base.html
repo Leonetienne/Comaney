@@ -20,6 +20,9 @@
             <li class="{% if active_nav == 'categories_tags' %}active{% endif %}">
                 <a href="{% url 'budget:categories_tags' %}">Categories &amp; Tags {% action_badge current_feuser "partnership" %}</a>
             </li>
+            <li class="{% if active_nav == 'unclassified' %}active{% endif %}">
+                <a href="{% url 'budget:unclassified_list' %}">Unclassified Expenses {% action_badge current_feuser "unclassified_expenses" %}</a>
+            </li>
             <li class="{% if active_nav == 'add_expense' %}active{% endif %}">
                 <a href="{% if ai_smart_create_available %}{% url 'budget:add_expense' %}{% else %}{% url 'budget:expense_create' %}{% endif %}">Add Expense</a>
             </li>
