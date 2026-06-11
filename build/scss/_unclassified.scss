@@ -267,3 +267,61 @@
   font-size: 0.82rem;
   white-space: nowrap;
 }
+
+// ── Mobile: fall back to the app's generic .resp-table "card" layout
+// (see build/scss/_tables.scss) -- the fixed-width, resizable-column table
+// is a desktop-only interaction; below 640px each row becomes its own
+// label/value card instead of forcing horizontal scrolling. ──────────────
+@media (max-width: 640px) {
+  // Let .resp-table's own card chrome (per-row background/border/radius)
+  // be the visible surface instead of nesting it inside another card.
+  .unclassified-surface {
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  .unclassified-table {
+    min-width: 0;
+
+    th, td {
+      border-right: none;
+    }
+  }
+
+  // table-layout:fixed no longer applies once .resp-table switches the
+  // table/rows to block/flex display, but the drag handles were positioned
+  // for the fixed-column layout and have nothing meaningful to resize once
+  // it's gone -- hide them rather than leave stray invisible hit-targets.
+  .col-resize-handle-full {
+    display: none;
+  }
+
+  // Inside .resp-table's flex `td`, let the cell view share the row with
+  // the data-label prefix instead of forcing its own 100% width.
+  .unclassified-cell-view {
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .unclassified-tag-combobox {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .unclassified-block-box {
+    width: auto;
+    max-width: calc(100vw - 48px);
+  }
+
+  .unclassified-progress-panel {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    transform: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
+}
