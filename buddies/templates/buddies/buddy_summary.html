@@ -27,13 +27,6 @@
 <script src="{% static 'dist/project_detail.js' %}" defer></script>
 {% include "partials/_date_range_nav.html" %}
 
-{% if messages %}
-{% for message in messages %}
-<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
-{% endfor %}
-{% endif %}
-
-
 {% if pending_approvals %}
 <section class="buddies-section" id="section-pending">
     <h2>Waiting for your approval</h2>

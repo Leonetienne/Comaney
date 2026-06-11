@@ -39,6 +39,7 @@
     {% endblock %}
     {% include "partials/_footer.html" %}
     {% if help_fab_url %}<a class="help-fab" href="{{ help_fab_url }}" target="_blank" rel="noopener" title="Open help">?</a>{% endif %}
+    {% include "partials/_toast_stack.html" %}
 
     <div class="cdialog-backdrop" id="cdialog-backdrop" aria-hidden="true">
         <div class="cdialog" role="dialog" aria-modal="true">
@@ -162,6 +163,42 @@
             }
         }
     }
+
+    // Global toast stack -- every django.contrib.messages flash (server-
+    // rendered above, on page load) and every JS-triggered one (an AJAX
+    // action that doesn't reload the page) render into the same
+    // #toast-stack, so they auto-dismiss and stack the same way everywhere.
+    const TOAST_LIFETIME_MS = 5000;
+    const toastStack = document.getElementById('toast-stack');
+
+    function initToast(toastEl) {
+        const timer = setTimeout(function() { toastEl.remove(); }, TOAST_LIFETIME_MS);
+        toastEl.querySelector('.toast-close').addEventListener('click', function() {
+            clearTimeout(timer);
+            toastEl.remove();
+        });
+    }
+    toastStack.querySelectorAll('.toast').forEach(initToast);
+
+    window.showToast = function(message, tag) {
+        const toastEl = document.createElement('div');
+        toastEl.className = 'toast toast-' + (tag || 'success');
+
+        const text = document.createElement('span');
+        text.className = 'toast-text';
+        text.textContent = message;
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'toast-close';
+        closeBtn.setAttribute('aria-label', 'Dismiss');
+        closeBtn.innerHTML = '&times;';
+
+        toastEl.appendChild(text);
+        toastEl.appendChild(closeBtn);
+        toastStack.appendChild(toastEl);
+        initToast(toastEl);
+    };
 
     window.confirmDialog = function(message, okLabel) {
         return new Promise(function(resolve, reject) {

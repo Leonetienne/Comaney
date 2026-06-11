@@ -6,6 +6,63 @@
   margin-bottom: 1rem;
 }
 
+// ── Global toast stack (templates/partials/_toast_stack.html) ──────────────
+// Fixed in the viewport's lower-right corner rather than sitting inline in
+// the document flow -- an inline flash toggling visible/hidden would shove
+// the rest of the page's content up and down every time one appears. Every
+// django.contrib.messages flash (server-rendered on page load) and every
+// JS-triggered one (window.showToast, for an AJAX action that doesn't
+// reload the page) render into the same stack.
+// column-reverse so a newly-appended toast slots in right above the corner
+// and pushes older ones up, instead of the stack growing away from it.
+.toast-stack {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+  max-width: 400px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-radius: 8px;
+  padding: 16px 22px;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .25);
+
+  // Same color-mix recipe as .buddy-flash's tag variants (_buddies.scss) --
+  // there's no dedicated --success-bg/--success-border pair like --error
+  // has, just the plain --success/--accent text colors, and warning has no
+  // CSS var at all (matches .buddy-flash-warning/.wizard-warning).
+  &.toast-info    { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border)); }
+  &.toast-success { color: var(--success); background: color-mix(in srgb, var(--success) 10%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--success) 40%, var(--border)); }
+  &.toast-warning { color: #e3a008; background: color-mix(in srgb, #e3a008 10%, var(--bg-surface)); border: 1px solid color-mix(in srgb, #e3a008 40%, var(--border)); }
+  &.toast-error   { color: var(--error); background: var(--error-bg); border: 1px solid var(--error-border); }
+}
+
+.toast-text {
+  flex: 1;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+
+  &:hover { opacity: 1; }
+}
+
 .custom-backdrop {
   position: fixed;
   inset: 0;

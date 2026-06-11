@@ -38,9 +38,6 @@ window.EXPENSE_CONFIG = {
         {% endif %}
     </div>
 </div>
-{% for message in messages %}
-<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
-{% endfor %}
 <div class="desc-surface"><p class="page-tip" style="margin:0;opacity:1;">Expenses are items that describe transactions. A transaction is you getting paid, receiving money, paying money, depositing savings or withdrawing from savings.</p></div>
 <div x-data="expenseList">
     <div class="add-buddy-panel" style="margin-bottom:1.25rem;">

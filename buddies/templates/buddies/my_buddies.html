@@ -9,12 +9,6 @@
 </div>
 <div class="desc-surface"><p class="page-subtitle" style="margin:0;">Track shared spending with friends. Whoever pays upfront logs the full expense; the others' shares are recorded automatically.</p></div>
 
-{% if messages %}
-{% for message in messages %}
-<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
-{% endfor %}
-{% endif %}
-
 {% if request.GET.achim == "new" %}
 <div id="achim-modal" class="cdialog-backdrop cdialog-visible">
     <div class="cdialog">

@@ -1,4 +1,4 @@
-{# Shared header for the three project tabs (hero, flash messages, tab nav); expects project, is_admin, active_tab #}
+{# Shared header for the three project tabs (hero, tab nav); expects project, is_admin, active_tab #}
 <div class="group-hero{% if project.group_picture %} group-hero--has-bg{% endif %}">
     <div class="group-hero-content">
         <div class="page-header">
@@ -16,12 +16,6 @@
     <div class="group-hero-image" id="group-hero-image" style="display:none;"></div>
     {% endif %}
 </div>
-
-{% if messages %}
-{% for message in messages %}
-<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
-{% endfor %}
-{% endif %}
 
 <nav class="project-tab-nav">
     <a href="{% url 'projects:project_detail' project_id=project.uid %}" class="project-tab{% if active_tab == 'expenses' %} project-tab--active{% endif %}">Expense list</a>

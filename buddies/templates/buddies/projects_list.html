@@ -9,12 +9,6 @@
 </div>
 <div class="desc-surface"><p class="page-subtitle" style="margin:0;">Track shared expenses across a group or solo. Invite others to join, or keep it personal.</p></div>
 
-{% if messages %}
-{% for message in messages %}
-<div class="buddy-flash buddy-flash-{{ message.tags }}">{{ message }}</div>
-{% endfor %}
-{% endif %}
-
 {% if incoming_project_invites %}
 <section class="buddies-section" id="section-invites">
     <h2>Group invitations</h2>

@@ -1,0 +1,8 @@
+<div class="toast-stack" id="toast-stack">
+{% for message in messages %}
+<div class="toast toast-{{ message.tags|default:"info" }}">
+    <span class="toast-text">{{ message }}</span>
+    <button type="button" class="toast-close" aria-label="Dismiss">&times;</button>
+</div>
+{% endfor %}
+</div>
