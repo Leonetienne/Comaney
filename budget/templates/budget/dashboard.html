@@ -383,7 +383,7 @@ window.DASHBOARD_CONFIG = {
                           placeholder="Modify this card to ..."></textarea>
                 <p class="dash-ai-error" x-show="editAiError" x-text="editAiError"></p>
                 <p class="dash-ai-note" x-show="editAiNote" x-text="editAiNote"></p>
-                <button class="btn btn-secondary"
+                <button class="btn ai-btn"
                         :disabled="editAiLoading || !editAiPrompt.trim()"
                         @click="generateCardAi('edit')">
                     <span x-text="editAiLoading ? 'Thinking…' : '✦ Generate with AI'"></span>
@@ -450,7 +450,7 @@ window.DASHBOARD_CONFIG = {
                           placeholder="The card should show how much I spent on amazon this month."></textarea>
                 <p class="dash-ai-error" x-show="addAiError" x-text="addAiError"></p>
                 <p class="dash-ai-note" x-show="addAiNote" x-text="addAiNote"></p>
-                <button class="btn btn-secondary"
+                <button class="btn ai-btn"
                         :disabled="addAiLoading || !addAiPrompt.trim()"
                         @click="generateCardAi('add')">
                     <span x-text="addAiLoading ? 'Thinking…' : '✦ Generate with AI'"></span>

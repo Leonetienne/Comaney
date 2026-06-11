@@ -139,7 +139,7 @@ window.UNCLASSIFIED_CONFIG = {
                             <button type="button" class="btn btn-sm btn-secondary" x-show="isDirty(row)" @click="revertRow(row)">Revert</button>
                             <button type="button" class="btn btn-sm btn-success" x-show="isDirty(row)" :disabled="row.saving" @click="saveRow(row)">Save</button>
                             {% if ai_smart_create_available %}
-                            <button type="button" class="btn btn-sm unclassified-ai-solve-btn" x-show="!aiUnavailable" @click="aiSolveRow(row)" x-text="row.aiUsed ? 'Let AI retry' : 'Let AI solve'"></button>
+                            <button type="button" class="btn btn-sm ai-btn unclassified-ai-solve-btn" x-show="!aiUnavailable" @click="aiSolveRow(row)" x-text="row.aiUsed ? 'Let AI retry' : 'Let AI solve'"></button>
                             {% endif %}
                         </div>
                     </td>
@@ -154,7 +154,7 @@ window.UNCLASSIFIED_CONFIG = {
 
     <div class="unclassified-bulk-actions">
         {% if ai_smart_create_available %}
-        <button type="button" class="btn btn-secondary" id="unclassified-resolve-all-btn" x-show="rows.length > 0 && !aiUnavailable" :disabled="resolveAllRunning" @click="aiResolveAll()">Let AI resolve all</button>
+        <button type="button" class="btn ai-btn" id="unclassified-resolve-all-btn" x-show="rows.length > 0 && !aiUnavailable" :disabled="resolveAllRunning" @click="aiResolveAll()">Let AI resolve all</button>
         {% endif %}
         <button type="button" class="btn btn-success" x-show="anyDirty()" :disabled="resolveAllRunning" @click="saveAll()">Save all</button>
     </div>
