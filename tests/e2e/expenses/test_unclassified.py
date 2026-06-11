@@ -27,6 +27,24 @@ def _shell(code: str) -> str:
     return r.stdout.strip()
 
 
+def _set_disable_ai_ui(email: str, value: bool) -> None:
+    _shell(
+        f"from feusers.models import FeUser\n"
+        f"u = FeUser.objects.get(email={email!r})\n"
+        f"u.disable_ai_ui = {value}\n"
+        f"u.save(update_fields=['disable_ai_ui'])"
+    )
+
+
+def _set_api_key(email: str, key: str) -> None:
+    _shell(
+        f"from feusers.models import FeUser\n"
+        f"u = FeUser.objects.get(email={email!r})\n"
+        f"u.anthropic_api_key = {key!r}\n"
+        f"u.save(update_fields=['anthropic_api_key'])"
+    )
+
+
 def _create_expense(email, title, *, category=None, tag_titles=None, payee="", type="expense"):
     tag_titles = tag_titles or []
     code = (
@@ -415,3 +433,44 @@ class TestUnclassifiedExpensesAI:
         assert float(spent_after) > float(spent_before), (
             f"ai_trial_budget_spent did not increase: before={spent_before} after={spent_after}"
         )
+
+
+class TestUnclassifiedAiButtonVisibility:
+    """The AI buttons on this page (per-row "Let AI solve"/"Let AI retry" and
+    the bottom "Let AI resolve all") must respect "Hide all AI features"
+    (FeUser.disable_ai_ui), same as every other AI entry point in the app --
+    see tests/e2e/expenses/test_expense_tag_ai_button_visibility.py for the
+    equivalent check on the expense form's AI tag button.
+
+    Forces a fake own API key for the duration so ai_smart_create_available
+    is deterministically true regardless of this environment's shared-trial
+    state (and regardless of earlier tests in this file clearing the ctx
+    user's own key, e.g. test_ai_solve_bills_trial_usage)."""
+
+    @pytest.fixture(autouse=True)
+    def _own_key(self, ctx):
+        _set_api_key(ctx["email"], "sk-test-fake-key")
+        yield
+        _set_api_key(ctx["email"], "")
+
+    def test_ai_buttons_hidden_when_disabled(self, driver, w, ctx):
+        _create_expense(ctx["email"], "AI gate hidden row")
+        _set_disable_ai_ui(ctx["email"], True)
+        try:
+            driver.get(_url("/budget/unclassified/"))
+            time.sleep(1.5)
+            assert not driver.find_elements(By.CLASS_NAME, "unclassified-ai-solve-btn"), \
+                "Per-row AI button must be gone when disable_ai_ui is set"
+            assert not driver.find_elements(By.ID, "unclassified-resolve-all-btn"), \
+                "'Let AI resolve all' must be gone when disable_ai_ui is set"
+        finally:
+            _set_disable_ai_ui(ctx["email"], False)
+
+    def test_ai_buttons_visible_when_enabled(self, driver, w, ctx):
+        _create_expense(ctx["email"], "AI gate visible row")
+        driver.get(_url("/budget/unclassified/"))
+        time.sleep(1.5)
+        assert driver.find_elements(By.CLASS_NAME, "unclassified-ai-solve-btn"), \
+            "Per-row AI button should be present when AI is available"
+        assert driver.find_elements(By.ID, "unclassified-resolve-all-btn"), \
+            "'Let AI resolve all' should be present when AI is available"
