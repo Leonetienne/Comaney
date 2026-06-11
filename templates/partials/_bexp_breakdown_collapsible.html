@@ -1,5 +1,8 @@
 <details class="bexp-collapsible">
     <summary class="bexp-collapsible-summary">Show more info...</summary>
+    {% if e.expense.payee %}
+    <p class="bexp-payee text-muted">Payee: {{ e.expense.payee }}</p>
+    {% endif %}
     {% if e.visible_note %}
     <p class="bexp-note text-muted" style="margin: 0.5rem 0.75rem 0.75rem;">{{ e.visible_note }}</p>
     {% endif %}
