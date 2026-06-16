@@ -87,6 +87,34 @@ class TestUpdateExpensesModal:
             api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
         api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
 
+    def test_modal_title_renders_hyphen_literally(self, driver, w, ctx):
+        """Scheduled titles containing a hyphen must not leak JS escape codes (e.g. \\u002D) into the modal."""
+        title = "UE Givvee-Karte Test"
+        sched_id = api_post("/api/v1/scheduled/", ctx, json={
+            "title": title,
+            "type": "expense",
+            "value": "10.00",
+            "repeat_every_factor": 1,
+            "repeat_every_unit": "months",
+            "repeat_base_date": server_today(),
+        }).json()["id"]
+        time.sleep(1)
+
+        generated = _expenses_by_title(ctx, title)
+        assert len(generated) >= 1, "Expected at least one generated expense"
+
+        _open_update_modal(driver, w, sched_id)
+
+        title_el = driver.find_element(By.ID, "update-exp-title")
+        assert title_el.text == f"Update expenses: {title}"
+        assert "\\u002D" not in title_el.text
+
+        driver.find_element(By.ID, "update-exp-cancel").click()
+        time.sleep(0.3)
+        for e in generated:
+            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
+
     def test_update_applies_changes_to_selected_expenses(self, driver, w, ctx):
         """After editing the scheduled expense, Update expenses syncs changes to generated ones."""
         old_title = "UE Before Update"
