@@ -33,7 +33,7 @@ The Insights tab shows:
 - **Your balance**: a plain summary of who you owe and how much.
 - **Who owes who**: two diagrams showing raw debts and a simplified minimum-payment view. Hidden for solo projects (see below).
 - **Spending breakdown**: a pie chart of how much each person has spent. Hidden for solo projects.
-- **Spending over time** and **spending by tag**: charts covering the project's entire history.
+- **Spending over time** and **spending by tag**: charts covering the project's entire history. The spending by tag chart shows your own tags (or your personal tag notes on expenses added by others); by default it shows the full value of every project expense, but a **Show only my share** switch limits it to just the portion of each expense that's yours.
 
 ## Solo projects
 
