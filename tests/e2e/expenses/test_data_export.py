@@ -32,6 +32,8 @@ Account data export (ZIP):
   settlements and dummy-paid expenses (separate confirmation flows) and
   project expenses (covered by projects/<uid>/pending_payer_confirmations.csv
   instead, like direct-buddy-expenses.csv excludes project expenses)
+- sankey_graph.json: the feuser's saved Sankey Studio node/edge layout
+  (config_json as persisted), only present once the feuser has saved one
 """
 import io
 import subprocess
@@ -1143,6 +1145,36 @@ class TestDataExport:
             if proj_pk:
                 _shell(f"from buddies.models import Project; Project.objects.filter(pk={proj_pk}).delete()")
             cleanup_user(admin_email)
+
+    def test_sankey_graph_absent_when_not_saved(self, driver, w, ctx):
+        """sankey_graph.json must be omitted entirely for a feuser who has
+        never saved a Sankey Studio graph."""
+        resp = _get_export(driver)
+        with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+            names = zf.namelist()
+        assert "sankey_graph.json" not in names, (
+            "sankey_graph.json must not appear in the export until a graph is saved"
+        )
+
+    def test_sankey_graph_in_export(self, driver, w, ctx):
+        """Once a feuser has saved a Sankey Studio graph, sankey_graph.json
+        must contain the exact persisted config_json."""
+        config = '{"nodes": {"tag:1": {"x": 10, "y": 20, "priority": 0, "disabled": false}}, "edges": []}'
+        _shell(
+            f"from feusers.models import FeUser; "
+            f"from budget.models import SankeyGraph; "
+            f"u = FeUser.objects.get(email='{ctx['email']}'); "
+            f"""SankeyGraph.objects.update_or_create(feuser=u, defaults={{'config_json': '{config}'}})"""
+        )
+        try:
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                names = zf.namelist()
+                assert "sankey_graph.json" in names, "sankey_graph.json missing from export after a graph was saved"
+                graph_json = zf.read("sankey_graph.json").decode()
+            assert graph_json == config, "sankey_graph.json must contain the exact persisted config_json"
+        finally:
+            _shell(f"from budget.models import SankeyGraph; SankeyGraph.objects.filter(feuser__email='{ctx['email']}').delete()")
 
     def test_export_requires_authentication(self, driver, w, ctx):
         resp = requests.get(_url("/account/export/"), timeout=10, allow_redirects=False)

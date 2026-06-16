@@ -246,7 +246,7 @@ def account_export(request):
     if not feuser:
         return redirect("login")
 
-    from budget.models import Category, Dashboard, DashboardCard, Expense, ExpenseDataOverlay, ScheduledExpense, Tag
+    from budget.models import Category, Dashboard, DashboardCard, Expense, ExpenseDataOverlay, SankeyGraph, ScheduledExpense, Tag
     from buddies.models import BuddyOnboardingInvite, CatalogPartnershipInvite, CatalogPartnershipMembership, Project
     from buddies.services import BuddyExportService, BuddyQueryService, ProjectExportService
     from comaney.csv_export import _csv_safe, write_model_csv
@@ -354,6 +354,16 @@ def account_export(request):
             skip={"owning_feuser"},
         )
         zf.writestr("dashboard_cards.csv", p.getvalue())
+
+        # ------------------------------------------------------------------
+        # sankey_graph.json — the feuser's Sankey Studio node/edge layout
+        # (config_json is already the exact persisted shape, see
+        # budget/models/sankey.py), included only if one has been saved.
+        # ------------------------------------------------------------------
+        try:
+            zf.writestr("sankey_graph.json", feuser.sankey_graph.config_json)
+        except SankeyGraph.DoesNotExist:
+            pass
 
         # ------------------------------------------------------------------
         # direct-buddies.csv, direct-buddy-expenses.csv, and
