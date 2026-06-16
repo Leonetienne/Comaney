@@ -68,7 +68,7 @@ class TestDisabledByDefault:
     def test_direct_hit_redirects_to_dashboard(self, driver, w, ctx):
         driver.get(SANKEY_URL)
         time.sleep(1)
-        assert driver.current_url.rstrip("/").endswith("/budget"), \
+        assert "/budget/dash/" in driver.current_url, \
             f"Expected redirect to the dashboard, got {driver.current_url}"
 
     def test_save_api_returns_404(self, ctx, sess):
@@ -128,7 +128,7 @@ class TestToggleViaProfileForm:
 
         driver.get(SANKEY_URL)
         time.sleep(1)
-        assert driver.current_url.rstrip("/").endswith("/budget")
+        assert "/budget/dash/" in driver.current_url
 
 
 # ---------------------------------------------------------------------------

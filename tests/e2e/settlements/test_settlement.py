@@ -510,9 +510,12 @@ class TestGroupSettlementReviewFlow:
             "Pending settlement must appear in the 'Waiting for approval' section"
         # The approved-expenses div must not contain the settlement.
         # (The "Waiting for approval" section is nested inside the "Expense Breakdown"
-        # section, so we check by the approved-section id rather than the h2 text.)
-        assert 'id="proj-approved-section"' not in src or \
-            "Settlement" not in src.split('id="proj-approved-section"')[-1], \
+        # section, so we check by the approved-section id rather than the h2 text.
+        # Bounded to the toast-stack marker: the flash message from the settle action
+        # ("Settlement record created...") legitimately contains "Settlement" and always
+        # renders after all page content, so it must be excluded from this check.)
+        approved_section = src.split('id="proj-approved-section"')[-1].split('id="toast-stack"')[0]
+        assert 'id="proj-approved-section"' not in src or "Settlement" not in approved_section, \
             "Settlement must not appear in the approved expense section"
 
     def test_no_review_button_for_debtor(self, driver, w, ctx):
