@@ -38,7 +38,7 @@
             </form>
             <button type="button" class="btn btn-sm btn-secondary"
                     data-update-expenses-url="{% url 'budget:scheduled_update_expenses' s.uid %}"
-                    data-scheduled-title="{{ s.title|escapejs }}"
+                    data-scheduled-title="{{ s.title }}"
                     title="Update existing expenses to reflect changes made to this recurring expense"
                     onclick="openUpdateExpensesModal(this)">Update expenses</button>
             <form method="post" action="{% url 'budget:scheduled_delete' s.uid %}" class="delete-form" data-title="{{ s.title }}">
