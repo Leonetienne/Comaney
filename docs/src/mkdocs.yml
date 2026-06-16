@@ -52,6 +52,7 @@ nav:
     - Recurring Expenses: user-manual/scheduled-expenses.md
     - Categories & Tags: user-manual/categories-tags.md
     - Unclassified Expenses: user-manual/unclassified-expenses.md
+    - Sankey Studio: user-manual/sankey-studio.md
     - Catalog Partnerships: user-manual/catalog-partnerships.md
     - Dashboard:
       - Overview: user-manual/dashboard/index.md
