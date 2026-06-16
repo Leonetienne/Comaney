@@ -3,38 +3,9 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
+from .help_fab import get_help_fab as _get_help_fab
 from .intros import CURRENT_UPGRADE_INTRO_VERSION
 from .models import FeUser, Notification
-
-# Ordered list of (path_prefix, doc_url, tooltip).
-# More specific prefixes must come before broader ones.
-_HELP_PATH_MAP = [
-    ("/budget/ai/express-creation/", "/docs/user-manual/ai-express-creation/"),
-    ("/budget/categories-tags/",     "/docs/user-manual/categories-tags/"),
-    ("/budget/unclassified/",        "/docs/user-manual/unclassified-expenses/"),
-    ("/budget/scheduled/",           "/docs/user-manual/scheduled-expenses/"),
-    ("/budget/expenses/",            "/docs/user-manual/expenses/"),
-    ("/budget/dash/",                "/docs/user-manual/dashboard/"),
-    ("/budget/",                     "/docs/user-manual/dashboard/"),
-    ("/projects/",                   "/docs/user-manual/projects/"),
-    ("/buddies/",                    "/docs/user-manual/buddies/"),
-    ("/notifications/",              "/docs/user-manual/notifications/"),
-    ("/totp/",                       "/docs/user-manual/two-factor-auth/"),
-    ("/webauthn/",                   "/docs/user-manual/two-factor-auth/"),
-    ("/email-2fa/",                  "/docs/user-manual/two-factor-auth/"),
-    ("/yubikey/",                    "/docs/user-manual/two-factor-auth/"),
-    ("/twofa/",                      "/docs/user-manual/two-factor-auth/"),
-    ("/api-key/",                    "/docs/user-manual/api-access/"),
-    ("/account/export/",             "/docs/user-manual/data-export/"),
-    ("/profile/",                    "/docs/user-manual/account-settings/"),
-]
-
-
-def _get_help_fab(path):
-    for prefix, url in _HELP_PATH_MAP:
-        if path.startswith(prefix):
-            return url
-    return None
 
 
 def current_feuser(request):
