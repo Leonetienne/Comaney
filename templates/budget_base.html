@@ -17,6 +17,9 @@
                 <a href="{% url 'budget:scheduled_list' %}">Recurring Expenses</a>
             </li>
             <li><span class="sidebar-section-label">Budget</span></li>
+            <li class="{% if active_nav == 'add_expense' %}active{% endif %}">
+                <a href="{% if ai_smart_create_available %}{% url 'budget:add_expense' %}{% else %}{% url 'budget:expense_create' %}{% endif %}">Add Expense</a>
+            </li>
             <li class="{% if active_nav == 'categories_tags' %}active{% endif %}">
                 <a href="{% url 'budget:categories_tags' %}">Categories &amp; Tags {% action_badge current_feuser "partnership" %}</a>
             </li>
@@ -28,9 +31,6 @@
                 <a href="{% url 'budget:sankey_studio' %}">Sankey Studio</a>
             </li>
             {% endif %}
-            <li class="{% if active_nav == 'add_expense' %}active{% endif %}">
-                <a href="{% if ai_smart_create_available %}{% url 'budget:add_expense' %}{% else %}{% url 'budget:expense_create' %}{% endif %}">Add Expense</a>
-            </li>
             <li><span class="sidebar-section-label">Buddy</span></li>
             <li class="{% if active_nav == 'my_buddies' %}active{% endif %}">
                 <a href="{% url 'buddies:my_buddies' %}">Manage Buddies {% action_badge current_feuser "buddies" %}</a>
