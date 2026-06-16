@@ -57,6 +57,7 @@ def current_feuser(request):
         ((feuser and feuser.anthropic_api_key) or trial_ok)
         and not (feuser and feuser.disable_ai_ui)
     )
+    ctx["sankey_studio_available"] = bool(feuser and feuser.enable_early_access)
     ctx["email_2fa_available"] = not settings.DISABLE_EMAILING
     ctx["unread_notification_count"] = (
         Notification.objects.filter(owning_feuser=feuser, read=False).count()

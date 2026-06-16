@@ -79,6 +79,15 @@ class AISettingsForm(forms.ModelForm):
         return value
 
 
+class EarlyAccessSettingsForm(forms.ModelForm):
+    class Meta:
+        model = FeUser
+        fields = ["enable_early_access"]
+        labels = {
+            "enable_early_access": "Enable early access features",
+        }
+
+
 class ChangeEmailForm(forms.Form):
     email = forms.EmailField(label="New email address")
     password = forms.CharField(label="Current password", widget=forms.PasswordInput)

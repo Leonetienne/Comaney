@@ -2,7 +2,7 @@ import json
 from datetime import date
 
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from ..decorators import feuser_required
@@ -19,6 +19,8 @@ from ._sharing import has_buddy_or_multiuser_project
 @feuser_required
 def sankey_studio(request):
     feuser = request.feuser
+    if not feuser.enable_early_access:
+        return redirect("budget:dashboard")
     state = load_editor_state(feuser)
     ctx = {
         "active_nav": "sankey_studio",
@@ -37,6 +39,8 @@ def sankey_studio(request):
 @require_POST
 def sankey_save_api(request):
     feuser = request.feuser
+    if not feuser.enable_early_access:
+        return JsonResponse({"error": "Not available"}, status=404)
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
@@ -52,6 +56,8 @@ def sankey_save_api(request):
 @require_POST
 def sankey_generate_api(request):
     feuser = request.feuser
+    if not feuser.enable_early_access:
+        return JsonResponse({"error": "Not available"}, status=404)
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
