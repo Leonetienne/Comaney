@@ -42,6 +42,33 @@
   font-weight: 600;
 }
 
+#upgrade-intro-modal .cdialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+
+#upgrade-intro-modal .cdialog-title,
+#upgrade-intro-modal .cdialog-actions {
+  flex: 0 0 auto;
+}
+
+#upgrade-intro-modal .intro-feature-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 0 1rem;
+  padding-left: 1.1rem;
+}
+
+#upgrade-intro-modal .intro-feature-list li {
+  margin-bottom: 0.75rem;
+}
+
+#upgrade-intro-modal .intro-feature-list li strong {
+  display: block;
+}
+
 .cdialog-body {
   margin: 0 0 0.75rem;
   font-size: 0.95rem;
