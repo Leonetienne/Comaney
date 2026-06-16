@@ -27,6 +27,24 @@ from helpers import _url, cleanup_user, run_cmd, setup_user
 SANKEY_URL = _url("/budget/sankey/")
 
 
+def _enable_early_access(email: str) -> None:
+    """Sankey Studio is gated behind FeUser.enable_early_access (default False,
+    see test_early_access_setting.py for the gating tests themselves) -- every
+    test in this file exercises Sankey Studio once it's already available."""
+    run_cmd(
+        "shell", "-c",
+        f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}'); "
+        f"u.enable_early_access = True; "
+        f"u.save(update_fields=['enable_early_access'])",
+    )
+
+
+def _setup_user(driver, w):
+    ctx = setup_user(driver, w)
+    _enable_early_access(ctx["email"])
+    return ctx
+
+
 def _create_expense(email: str, category: str, tag: str, value: int, date_due: str,
                      txn_type: str = "TransactionType.EXPENSE") -> None:
     run_cmd(
@@ -48,7 +66,7 @@ def _create_expense(email: str, category: str, tag: str, value: int, date_due: s
 
 class TestSankeyStudioNav:
     def test_nav_link_present_and_loads(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(_url("/budget/"))
             time.sleep(1)
@@ -63,7 +81,7 @@ class TestSankeyStudioNav:
 
 class TestSankeyStudioGenerate:
     def test_generate_succeeds_with_unplaced_catalog_items(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
 
@@ -78,7 +96,7 @@ class TestSankeyStudioGenerate:
             cleanup_user(ctx["email"])
 
     def test_unplaced_node_is_excluded_from_generated_chart(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
 
@@ -111,7 +129,7 @@ class TestSankeyStudioGenerate:
             cleanup_user(ctx["email"])
 
     def test_generate_computes_real_expense_value_through_the_edge(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
 
@@ -161,7 +179,7 @@ class TestSankeyStudioGenerate:
             cleanup_user(ctx["email"])
 
     def test_generate_excludes_non_expense_transaction_types(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
             _create_expense(ctx["email"], "Salary", "Food", 999, "2026-07-11",
@@ -202,7 +220,7 @@ class TestSankeyStudioGenerate:
             cleanup_user(ctx["email"])
 
     def test_save_persists_graph_across_reload(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -231,7 +249,7 @@ class TestSankeyStudioGenerate:
             cleanup_user(ctx["email"])
 
     def test_reset_clears_nodes_and_edges(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -267,7 +285,7 @@ class TestSankeyStudioGenerate:
             cleanup_user(ctx["email"])
 
     def test_connector_node_routes_real_values(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             _create_expense(ctx["email"], "Salary", "Food", 100, "2026-07-10")
             _create_expense(ctx["email"], "Sales", "Health", 50, "2026-07-11")
@@ -317,7 +335,7 @@ class TestSankeyStudioGenerate:
             cleanup_user(ctx["email"])
 
     def test_category_to_category_edge_is_rejected(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -344,7 +362,7 @@ class TestSankeyStudioGenerate:
 
 class TestSankeyStudioToolbar:
     def test_canvas_toolbar_holds_graph_actions_and_generate_moved_below(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -379,7 +397,7 @@ class TestSankeyStudioToolbar:
 
 class TestSankeyStudioColorOverride:
     def test_color_override_persists_through_generate(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
 
@@ -420,7 +438,7 @@ class TestSankeyStudioColorOverride:
             cleanup_user(ctx["email"])
 
     def test_color_picker_popover_applies_preset_and_hex(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -455,7 +473,7 @@ class TestSankeyStudioColorOverride:
             cleanup_user(ctx["email"])
 
     def test_color_popover_offers_32_unique_presets(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -482,7 +500,7 @@ class TestSankeyStudioColorOverride:
 
 class TestSankeyStudioSnapToGrid:
     def test_snap_checkbox_defaults_on_and_toggles_off(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -505,7 +523,7 @@ class TestSankeyStudioSnapToGrid:
             cleanup_user(ctx["email"])
 
     def test_snap_only_rounds_while_enabled_and_never_moves_existing_nodes(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -540,7 +558,7 @@ class TestSankeyStudioSnapToGrid:
 
 class TestSankeyStudioAnchors:
     def test_right_click_adds_anchor_left_click_removes_it(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -580,7 +598,7 @@ class TestSankeyStudioAnchors:
             cleanup_user(ctx["email"])
 
     def test_right_click_on_anchor_itself_does_nothing(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -610,7 +628,7 @@ class TestSankeyStudioAnchors:
             cleanup_user(ctx["email"])
 
     def test_deleting_edge_deletes_its_anchors_too(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -644,7 +662,7 @@ class TestSankeyStudioAnchors:
             cleanup_user(ctx["email"])
 
     def test_shaped_line_stays_smooth_through_anchors(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -677,7 +695,7 @@ class TestSankeyStudioAnchors:
 
 class TestSankeyStudioTooltip:
     def test_hovering_editor_edge_and_anchor_shows_instant_tooltip(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -725,7 +743,7 @@ class TestSankeyStudioTooltip:
             cleanup_user(ctx["email"])
 
     def test_generated_chart_uses_custom_tooltip_not_native_title(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
 
@@ -767,7 +785,7 @@ class TestSankeyStudioTooltip:
 
 class TestSankeyStudioChartHeight:
     def test_chart_height_scales_with_a_crowded_column(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -794,7 +812,7 @@ class TestSankeyStudioChartHeight:
             cleanup_user(ctx["email"])
 
     def test_chart_height_accounts_for_sinks_merged_by_justify_alignment(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -838,7 +856,7 @@ class TestSankeyStudioChartHeight:
 
 class TestSankeyStudioNodeSpawn:
     def test_new_node_spawns_inside_the_current_viewport_after_panning(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -868,7 +886,7 @@ class TestSankeyStudioNodeSpawn:
             cleanup_user(ctx["email"])
 
     def test_repeated_spawns_in_a_small_zoomed_in_viewport_dont_stack_exactly(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -896,7 +914,7 @@ class TestSankeyStudioNodeSpawn:
 
 class TestSankeyStudioConnectAutoPan:
     def test_cursor_near_edge_while_connecting_auto_pans_toward_it(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -956,7 +974,7 @@ class TestSankeyStudioConnectAutoPan:
             cleanup_user(ctx["email"])
 
     def test_cursor_away_from_edges_does_not_auto_pan(self, driver, w):
-        ctx = setup_user(driver, w)
+        ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
             time.sleep(1)
