@@ -133,6 +133,16 @@ Group individual grocery items into a single expense unless they belong to diffe
 
 ---
 
+## Early access
+
+Turn on **Enable early access features** to try out new features before they are fully finished. They may change or have rough edges. It is off by default.
+
+Features currently gated behind this setting:
+
+- [Sankey Studio](sankey-studio.md)
+
+---
+
 ## Two-factor authentication
 
 Your current status (on or off) is shown here, with a link to set it up or turn it off. See [Two-Factor Authentication](two-factor-auth.md) for the full guide.

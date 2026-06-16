@@ -1,5 +1,7 @@
 # Sankey Studio
 
+Sankey Studio is an early access feature. To see it in your sidebar, turn on **Enable early access features** in [Account & Settings](account-settings.md#early-access) first.
+
 Sankey Studio lets you build a flow diagram out of your own Categories, Tags, and Projects, then generate it from your real expenses to see how your money actually moves between them.
 
 ## What does it show?
