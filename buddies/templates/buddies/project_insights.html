@@ -362,7 +362,14 @@
 
 <section class="insights-card{% if is_solo %} insights-card--wide{% endif %}" id="section-tag-dist" style="display:none">
     <h2>Project spending by tag</h2>
-    <p class="font-sm text-muted" style="margin:0 0 1rem;">Project expenses grouped by your tags. For expenses added by others, this uses your personal tag notes and only counts your own share of the expense.</p>
+    <p class="font-sm text-muted" style="margin:0 0 0.5rem;">Project expenses grouped by your tags. For expenses added by others, this uses your personal tag notes.</p>
+    {% if not is_solo %}
+    <label class="toggle-switch" style="margin:0 0 1rem;">
+        <input type="checkbox" id="tag-dist-my-share-only">
+        <span class="toggle-switch-track"><span class="toggle-switch-thumb"></span></span>
+        Show only my share
+    </label>
+    {% endif %}
     <div class="proj-chart-wrap">
         <canvas id="proj-tag-bar"></canvas>
     </div>
@@ -374,10 +381,12 @@
 (function() {
     var CHARTS_URL = "{% url 'projects:project_charts_data' project_id=project.uid %}";
     var CURRENCY = "{{ currency|escapejs }}";
+    var myShareToggle = document.getElementById('tag-dist-my-share-only');
 
     function fetchCharts() {
+        var url = CHARTS_URL + (myShareToggle && myShareToggle.checked ? '?tag_dist_my_share_only=1' : '');
         var xhr = new XMLHttpRequest();
-        xhr.open('GET', CHARTS_URL, true);
+        xhr.open('GET', url, true);
         xhr.onload = function() {
             if (xhr.status === 200) {
                 try { renderCharts(JSON.parse(xhr.responseText)); } catch(e) {}
@@ -385,6 +394,8 @@
         };
         xhr.send();
     }
+
+    if (myShareToggle) myShareToggle.addEventListener('change', fetchCharts);
 
     function renderCharts(data) {
         var total = parseFloat(data.group_total_spending || '0');

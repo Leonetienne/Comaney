@@ -265,6 +265,72 @@
   }
 }
 
+// A single boolean on/off control styled as a pill-shaped switch (vs. a plain
+// checkbox), for settings like "Show only my share" where a flip reads more
+// clearly than a checked box.
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85rem;
+  color: var(--text);
+
+  // Sized and positioned to exactly overlay .toggle-switch-track (rather than
+  // the usual 0x0 visually-hidden-checkbox trick) so it stays a real,
+  // clickable hit target -- both for real users and for automated tests that
+  // target the input directly rather than clicking through the <label>.
+  // z-index puts it above the track, which paints later in DOM order and
+  // would otherwise silently swallow every click.
+  input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    width: 34px;
+    height: 20px;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+}
+
+.toggle-switch-track {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--border);
+  transition: background 0.15s ease;
+}
+
+.toggle-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg);
+  transition: transform 0.15s ease;
+}
+
+.toggle-switch input:checked + .toggle-switch-track {
+  background: var(--link);
+}
+
+.toggle-switch input:checked + .toggle-switch-track .toggle-switch-thumb {
+  transform: translateX(14px);
+}
+
+.toggle-switch input:focus-visible + .toggle-switch-track {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
 // ── Utility classes ──────────────────────────────────────────────────────────
 
 // Spacing

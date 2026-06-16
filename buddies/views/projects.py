@@ -447,12 +447,21 @@ def project_insights(request, project_id):
     })
     return render(request, "buddies/project_insights.html", ctx)
 
-def _compute_project_charts(feuser, project):
+def _compute_project_charts(feuser, project, tag_dist_my_share_only=False):
     """
     Compute spending pie, spending-over-time, and tag-dist for a project.
     All charts and totals cover the project's entire history (all-time);
     projects have no date-range picker. Returns a dict ready for JSON
     serialization.
+
+    `tag_dist_my_share_only` controls only the tag-dist (spending by tag)
+    chart: when True, a foreign expense contributes just feuser's own
+    BuddySpending share (expenses feuser doesn't participate in are
+    skipped entirely); when False (default), every project expense
+    contributes its full value regardless of participation. Either way,
+    tags/category come only from feuser's own classification (owner) or
+    their personal `ExpenseDataOverlay` (foreign) - never another
+    participant's.
     """
     breakdown = BuddyQueryService.get_group_full_breakdown(feuser, project)
     overlay_notes, overlay_tags = _fetch_overlay_notes(feuser, breakdown)
@@ -563,13 +572,13 @@ def _compute_project_charts(feuser, project):
         for ed in non_settlement:
             exp = ed["expense"]
             is_owner = not exp.is_dummy and exp.owning_feuser_id == feuser.pk
-            if is_owner:
-                amount = float(ed["total"])
-            else:
+            if tag_dist_my_share_only and not is_owner:
                 my_share = next((s["amount"] for s in ed["participant_shares"] if s["is_me"]), None)
                 if my_share is None:
                     continue
                 amount = float(my_share)
+            else:
+                amount = float(ed["total"])
             tags = visible_tag_titles(exp, feuser, expense_tag_map, overlay_tags)
             if tags:
                 for title in tags:
@@ -608,7 +617,8 @@ def project_charts_data(request, project_id):
         members__feuser=feuser,
     )
 
-    data = _compute_project_charts(feuser, project)
+    tag_dist_my_share_only = request.GET.get("tag_dist_my_share_only") == "1"
+    data = _compute_project_charts(feuser, project, tag_dist_my_share_only=tag_dist_my_share_only)
     return JsonResponse(data)
 
 
