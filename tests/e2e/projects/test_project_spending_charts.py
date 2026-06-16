@@ -327,11 +327,10 @@ class TestTagDistributionChart:
         assert abs(values[idx] - 90.0) < 0.01, \
             f"Camping tag value must equal the full expense amount 90.00 for the owner, got {values[idx]}"
 
-    def test_member_view_sees_only_untagged_at_own_share(self, driver, w, ctx):
+    def test_member_view_default_sees_untagged_at_full_expense_value(self, driver, w, ctx):
         # Member doesn't own the expense and has no overlay tags: it falls into
-        # (untagged), but only at the member's own 50% share (45.00), not the
-        # full expense amount, since the bar chart must never attribute another
-        # feuser's spending to the viewing feuser.
+        # (untagged). "Show only my share" defaults to off, so the bar counts
+        # the expense's full value (90.00), not just the member's own share.
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
         time.sleep(1)
@@ -345,8 +344,49 @@ class TestTagDistributionChart:
         )
         assert labels == ["(untagged)"], \
             "Member with no overlay tags must see only (untagged) in tagDist"
+        assert abs(values[0] - 90.0) < 0.01, \
+            f"(untagged) value must equal the full expense amount (90.00) by default, got {values[0]}"
+
+    def test_my_share_toggle_unchecked_by_default(self, driver, w, ctx):
+        checked = driver.find_element(By.ID, "tag-dist-my-share-only").is_selected()
+        assert not checked, "'Show only my share' switch must default to off"
+
+    def test_my_share_toggle_limits_to_own_share(self, driver, w, ctx):
+        # Turning the switch on restores the member's own 50% share (45.00)
+        # instead of the expense's full value.
+        driver.find_element(By.ID, "tag-dist-my-share-only").click()
+        time.sleep(1)
+        labels = driver.execute_script(
+            "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
+            "return d ? d.labels : [];"
+        )
+        values = driver.execute_script(
+            "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
+            "return d ? d.values : [];"
+        )
+        assert labels == ["(untagged)"], \
+            "Member with no overlay tags must still see only (untagged) with the switch on"
         assert abs(values[0] - 45.0) < 0.01, \
-            f"(untagged) value must equal the member's own share (45.00), not the full expense amount, got {values[0]}"
+            f"(untagged) value must equal the member's own share (45.00) with the switch on, got {values[0]}"
+
+    def test_owner_view_unaffected_by_my_share_toggle(self, driver, w, ctx):
+        # The owner's own tag always counts the full expense value, switch or not.
+        _login_as(driver, ctx["admin"])
+        driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
+        time.sleep(1)
+        driver.find_element(By.ID, "tag-dist-my-share-only").click()
+        time.sleep(1)
+        labels = driver.execute_script(
+            "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
+            "return d ? d.labels : [];"
+        )
+        values = driver.execute_script(
+            "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
+            "return d ? d.values : [];"
+        )
+        idx = labels.index("Camping")
+        assert abs(values[idx] - 90.0) < 0.01, \
+            f"Camping tag value must stay the full expense amount 90.00 for the owner with the switch on, got {values[idx]}"
 
     def test_tag_dist_queries_for_owner(self, driver, w, ctx):
         # Each tagDist bar carries a `queries` entry: a query-language filter
@@ -457,6 +497,14 @@ class TestSoloProjectSpendingChart:
     def test_solo_tag_chart_visible(self, driver, w, ctx):
         assert "Project spending by tag" in driver.page_source, \
             "Solo project must show tag distribution chart when expenses have tags"
+
+    def test_solo_my_share_toggle_hidden(self, driver, w, ctx):
+        # A solo project has exactly one participant, so "only my share" and
+        # "full value" are always identical -- the switch would be a no-op
+        # and must not be shown.
+        elems = driver.find_elements(By.ID, "tag-dist-my-share-only")
+        assert not elems, \
+            "'Show only my share' switch must not appear on a solo project"
 
     def test_solo_tag_dist_reflects_full_expense_amount(self, driver, w, ctx):
         # Tag value is the full expense amount (75.00), not a participation fraction
