@@ -134,6 +134,7 @@ def approve_settlement_as_creditor(request, expense_id):
             date_due=_date.today(),
             settled=True,
             notify=False,
+            is_buddies_settlement=True,
             buddy_approved=True,
         )
 

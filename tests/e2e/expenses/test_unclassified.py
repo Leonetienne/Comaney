@@ -156,6 +156,52 @@ class TestUnclassifiedExpensesList:
         assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_dep}")) == 0
         assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_wit}")) == 0
 
+    def test_settlement_receipt_income_never_shown(self, driver, w, ctx):
+        """Regression: confirming a direct settlement as creditor creates a
+        mirrored "Settlement received from X" income expense on the creditor's
+        own side (buddies/views/expenses.py::approve_settlement_as_creditor).
+        That record must carry is_buddies_settlement=True like every other
+        settlement expense, so it never surfaces here despite having no
+        category/tags of its own."""
+        from selenium.webdriver.common.by import By as _By
+        from bhelpers import _login_as, _confirm, _create_buddy_link, _get_pk, _create_personal_expense_with_buddy
+
+        debtor = setup_user(None, None)
+        try:
+            _create_buddy_link(debtor["email"], ctx["email"])
+            debtor_pk = int(_get_pk(debtor["email"]))
+            # ctx user paid 100; debtor owes 50% = 50.00
+            _create_personal_expense_with_buddy(
+                owner_email=ctx["email"],
+                participant_pk=debtor_pk,
+                title="Settlement Receipt Unclassified Source",
+                value="100.00",
+                share="50.0",
+                approved=True,
+            )
+
+            _login_as(driver, debtor)
+            driver.get(_url("/buddies/summary/"))
+            time.sleep(1)
+            driver.find_element(_By.ID, "btn-direct-settle").click()
+            _confirm(driver)
+            time.sleep(1)
+
+            _login_as(driver, ctx)
+            driver.get(_url("/buddies/summary/"))
+            time.sleep(1)
+            driver.find_element(_By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
+            time.sleep(1)
+            driver.find_element(_By.ID, "btn-approve-settlement").click()
+            time.sleep(1)
+
+            driver.get(_url("/budget/unclassified/"))
+            time.sleep(1.5)
+            assert "Settlement received from" not in driver.page_source, \
+                "The creditor's settlement-receipt income record must not appear as unclassified"
+        finally:
+            cleanup_user(debtor["email"])
+
     def test_inline_category_select_and_save_removes_row(self, driver, w, ctx):
         _ensure_category(ctx, "Beta Cat")
         uid = _create_expense(ctx["email"], "Select category test", tag_titles=["Beta"])
