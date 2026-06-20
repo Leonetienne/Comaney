@@ -1,0 +1,395 @@
+// Sankey Studio's node canvas takes its Blender-inspired *shape* (header
+// bar, connector row, in/out sockets) but not a fixed dark palette -- it
+// follows the site's own light/dark theme via CSS custom properties, same
+// as every other page. Only each node's header keeps a fixed, vivid accent
+// color per type (project/category/tag/connector), same idea as a dashboard
+// card's colored cell: readable white text on it regardless of site theme.
+
+.sankey-hint-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+// The in-canvas control panel: graph-editing actions (+Connector, Save,
+// Reset, Snap to grid, zoom) live overlaid inside the canvas viewport
+// itself (top-right), next to the thing they actually control, rather
+// than in a separate bar above it.
+.sankey-canvas-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.sankey-toolbar-btn {
+  white-space: nowrap;
+}
+
+.sankey-snap-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sankey-zoom-group {
+  display: flex;
+  gap: 4px;
+}
+
+.sankey-zoom-btn {
+  padding: 4px 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sankey-generate-btn {
+  margin: 14px 0;
+}
+
+.sankey-hint {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  flex-basis: 100%;
+
+  div {
+    margin-top: 2px;
+  }
+}
+
+.sankey-error {
+  color: var(--error);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.sankey-palette {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+
+  h4 {
+    margin: 0 0 8px;
+  }
+}
+
+.sankey-palette-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.sankey-palette-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.sankey-palette-group {
+  min-width: 160px;
+}
+
+.sankey-palette-group-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.sankey-palette-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sankey-palette-item {
+  background: var(--bg-input);
+  // <button> has no color rule of its own here (unlike .btn), so it falls
+  // back to the browser's default button text color -- dark, regardless of
+  // page theme. Against --bg-input's dark-mode value that's unreadable
+  // dark-on-dark; this makes it follow the theme like everything else.
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+
+  &:hover {
+    background: var(--bg-elevated);
+  }
+}
+
+.sankey-canvas-wrap {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+
+#sankey-canvas {
+  display: block;
+  cursor: grab;
+  background-color: var(--bg-surface);
+  background-image:
+    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px),
+    linear-gradient(var(--border-subtle) 1px, transparent 1px);
+  background-size: 24px 24px;
+  // Click-drag panning shouldn't highlight node/label text along the way --
+  // a mousedown+move gesture anywhere on the canvas is a pan, never a text
+  // selection.
+  user-select: none;
+  -webkit-user-select: none;
+
+  &.sankey-panning {
+    cursor: grabbing;
+  }
+}
+
+.sankey-node-header {
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 1;
+  cursor: move;
+}
+
+.sankey-node-body {
+  fill: var(--bg-elevated);
+  stroke: var(--border);
+  stroke-width: 1;
+  cursor: move;
+}
+
+.sankey-node-row {
+  fill: transparent;
+  pointer-events: none;
+}
+
+.sankey-node-row--alt {
+  fill: var(--bg-surface);
+}
+
+// The blank "connector row" every node has (unrelated to the "Connector"
+// node *type* below) -- the row the sockets sit on: no label, no input, and
+// a hairline border to set it apart from the labeled property rows below so
+// a wire never reads as if it targets a specific property's value.
+.sankey-node-row--connector {
+  fill: var(--bg-surface);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.sankey-node--disabled {
+  opacity: 0.4;
+}
+
+.sankey-node-label {
+  fill: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.sankey-node-proprow-label {
+  fill: var(--text-muted);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.sankey-node-remove {
+  fill: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.75;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+// The Connector node type (see budget/sankey_service.py's module docstring):
+// pure wiring with no meaning of its own, drawn as a small unlabeled diamond
+// instead of the usual property box -- no header, no title, no rows.
+.sankey-node-connector-diamond {
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 1;
+  cursor: move;
+}
+
+.sankey-node-connector-remove {
+  fill: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.6;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.sankey-node-connector-swatch {
+  stroke: var(--bg-surface);
+  stroke-width: 1;
+  cursor: pointer;
+}
+
+.sankey-priority-input {
+  width: 44px;
+  font-size: 11px;
+  border: 1px solid var(--input-border);
+  border-radius: 3px;
+  padding: 1px 4px;
+  background: var(--bg-input);
+  color: var(--text);
+}
+
+.sankey-color-swatch-btn {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+}
+
+// The floating preset/hex popover opened by a node's color swatch (see
+// _openColorPicker); anchored at the clicked swatch's screen position.
+.sankey-color-popover {
+  position: fixed;
+  z-index: 1000;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.sankey-color-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  // 8 swatches per row (one full hue family of 4, twice), so the 32-color
+  // grid reads as 8 hue columns x 4 tone rows.
+  max-width: 224px;
+}
+
+.sankey-color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.sankey-color-hex {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text);
+}
+
+.sankey-socket {
+  stroke: var(--bg-surface);
+  stroke-width: 1.5;
+  cursor: crosshair;
+}
+
+.sankey-socket--in {
+  fill: var(--text-muted);
+}
+
+.sankey-socket--out {
+  fill: #f2c744;
+}
+
+.sankey-edge {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  cursor: pointer;
+
+  &:hover {
+    stroke: var(--error);
+  }
+}
+
+.sankey-edge--dragging {
+  stroke: #f2c744;
+  stroke-dasharray: 5 4;
+  pointer-events: none;
+}
+
+// A line-shaping anchor: purely visual (see build/js/sankey_editor.js's
+// _drawAnchor), drawn on top of its edge so it -- not the edge underneath
+// -- captures the hover/click. Turns red on hover to signal that left
+// click there deletes just the anchor, not the whole connection (which
+// stays its normal color, since .sankey-edge's own :hover rule never
+// fires while the pointer is over this separate element).
+.sankey-anchor-diamond {
+  fill: var(--text-muted);
+  stroke: var(--bg-surface);
+  stroke-width: 1;
+  cursor: pointer;
+}
+
+.sankey-anchor:hover .sankey-anchor-diamond {
+  fill: var(--error);
+}
+
+// Custom tooltip replacing native SVG <title> elements, which only appear
+// after the browser's own hover delay -- too slow for a diagram meant to
+// be read quickly. Plain fixed-position, follows the cursor, shown/hidden
+// by build/js/sankey_editor.js's _showTooltip/_hideTooltip.
+.sankey-tooltip {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sankey-chart-wrap {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  padding: 12px;
+}
+
+.sankey-chart-label {
+  fill: var(--text);
+  font-size: 12px;
+}

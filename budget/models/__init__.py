@@ -5,3 +5,4 @@ from .expense import Expense  # noqa: F401
 from .scheduled_expense import ScheduledExpense  # noqa: F401
 from .expense_data_overlay import ExpenseDataOverlay  # noqa: F401
 from .dashboard import Dashboard, DashboardCard  # noqa: F401
+from .sankey import SankeyGraph  # noqa: F401

@@ -1,11 +1,11 @@
 """
 Single entry point for every AI feature in the app: express expense creation,
-dashboard card AI assist, and partnership tag/category mapping. Nothing
-outside this file constructs an anthropic.Anthropic client, calls
-.messages.create, or hand-parses an AI JSON response -- it all goes through
-one AIService instance:
+dashboard card AI assist, partnership tag/category mapping, and Unclassified
+Expenses AI-solve. Nothing outside this file constructs an
+anthropic.Anthropic client, calls .messages.create, or hand-parses an AI
+JSON response -- it all goes through one AIService instance:
 
-    service = AIService(feuser)                     # raises AIBudgetExceededError up front if blocked/no key
+    service  = AIService(feuser)                     # raises AIBudgetExceededError up front if blocked/no key
     items    = service.prompt_express_expense_gen(system_prompt, description, image_b64=..., image_type=...)
     yaml     = service.prompt_dashboard_card_yaml(system_prompt, description)
     mapping  = service.prompt_partnership_mapping(system_prompt, user_message)

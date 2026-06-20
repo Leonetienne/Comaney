@@ -55,4 +55,8 @@ urlpatterns = [
     path("unclassified/save-all/", views.unclassified_save_all, name="unclassified_save_all"),
     path("unclassified/<int:uid>/save/", views.unclassified_save, name="unclassified_save"),
     path("unclassified/<int:uid>/ai-solve/", views.unclassified_ai_solve, name="unclassified_ai_solve"),
+
+    path("sankey/", views.sankey_studio, name="sankey_studio"),
+    path("sankey/save/", views.sankey_save_api, name="sankey_save"),
+    path("sankey/generate/", views.sankey_generate_api, name="sankey_generate"),
 ]

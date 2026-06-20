@@ -1,0 +1,35 @@
+{% extends "budget_base.html" %}
+{% load static %}
+
+{% block title %}Comaney – Sankey Studio{% endblock %}
+
+{% block extra_head %}
+<style>
+  main.app-main { max-width: 1200px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-1">Sankey Studio</h1>
+<p>Arrange your Tags, Categories, and Projects into a flow diagram, then generate it against your real expenses.</p>
+{% include "partials/_date_range_nav.html" %}
+
+<script>
+window.SANKEY_CONFIG = {
+    csrf: document.querySelector('meta[name="csrf-token"]').content,
+    urls: {
+        save:     "{% url 'budget:sankey_save' %}",
+        generate: "{% url 'budget:sankey_generate' %}",
+    },
+    catalog: {{ catalog_json|safe }},
+    nodes:   {{ nodes_json|safe }},
+    edges:   {{ edges_json|safe }},
+};
+</script>
+
+<div id="sankey-root"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'dist/sankey_editor.js' %}"></script>
+{% endblock %}
