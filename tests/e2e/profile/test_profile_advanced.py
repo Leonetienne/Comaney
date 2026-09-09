@@ -7,15 +7,37 @@ Advanced profile features:
 import time
 
 import pytest
+import requests
 from selenium.webdriver.common.by import By
 
 from helpers import (
-    _url, fill, browser_login,
-    api_get, api_patch,
+    BASE_URL, _url, fill, browser_login,
+    api_get, api_patch, session_cookies,
     setup_user, cleanup_user, PASSWORD,
 )
 
 NEW_PASSWORD = "R41n3RWlnKl3R"
+
+LONG_4096 = "x" * 4096
+LONG_4097 = "x" * 4097
+
+
+def _session(driver):
+    s = requests.Session()
+    s.cookies.update(session_cookies(driver))
+    if not s.cookies.get("csrftoken"):
+        s.get(BASE_URL + "/profile/")
+    return s
+
+
+def _profile_form_post(s, data):
+    csrf = s.cookies.get("csrftoken", "")
+    return s.post(
+        BASE_URL + "/profile/",
+        data={"csrfmiddlewaretoken": csrf, "action": "ai", **data},
+        headers={"Referer": BASE_URL + "/profile/"},
+        allow_redirects=False,
+    )
 
 
 def _submit_form(driver, action_value):
@@ -72,6 +94,22 @@ class TestAISettings:
         _submit_form(driver, "ai")
         time.sleep(2)
         assert "Saved." in driver.page_source
+
+    def test_frontend_maxlength_matches_backend_limit(self, driver, w, ctx):
+        driver.get(_url("/profile/"))
+        time.sleep(1)
+        field = driver.find_element(By.ID, "id_ai_custom_instructions")
+        assert field.get_attribute("maxlength") == "4096"
+
+    def test_save_up_to_new_limit_succeeds(self, driver, w, ctx):
+        s = _session(driver)
+        resp = _profile_form_post(s, {"ai_custom_instructions": LONG_4096})
+        assert resp.status_code == 302
+
+    def test_save_beyond_new_limit_rejected(self, driver, w, ctx):
+        s = _session(driver)
+        resp = _profile_form_post(s, {"ai_custom_instructions": LONG_4097})
+        assert resp.status_code == 200
 
 
 class TestEmailNotificationsToggle:

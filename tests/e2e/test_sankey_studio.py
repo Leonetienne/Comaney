@@ -18,13 +18,20 @@ Run with (live stack required):
     pytest tests/e2e/test_sankey_studio.py -v | tee logfile.log
 """
 import time
+from datetime import date
 
 from selenium.webdriver.common.by import By
 
 from bhelpers import _confirm
-from helpers import _url, cleanup_user, run_cmd, setup_user
+from helpers import _url, cleanup_user, run_cmd, server_today, setup_user
 
 SANKEY_URL = _url("/budget/sankey/")
+
+# Sankey Studio defaults its date-range picker to the current financial
+# month (server-side date.today(), see budget/views/_period.py). Expense
+# dates used to seed the chart must land inside that window -- a fixed
+# calendar date would silently drift out of range as real time passes.
+TODAY = date.fromisoformat(server_today()).isoformat()
 
 
 def _enable_early_access(email: str) -> None:
@@ -83,7 +90,7 @@ class TestSankeyStudioGenerate:
     def test_generate_succeeds_with_unplaced_catalog_items(self, driver, w):
         ctx = _setup_user(driver, w)
         try:
-            _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
+            _create_expense(ctx["email"], "Salary", "Food", 250, TODAY)
 
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -98,7 +105,7 @@ class TestSankeyStudioGenerate:
     def test_unplaced_node_is_excluded_from_generated_chart(self, driver, w):
         ctx = _setup_user(driver, w)
         try:
-            _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
+            _create_expense(ctx["email"], "Salary", "Food", 250, TODAY)
 
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -131,7 +138,7 @@ class TestSankeyStudioGenerate:
     def test_generate_computes_real_expense_value_through_the_edge(self, driver, w):
         ctx = _setup_user(driver, w)
         try:
-            _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
+            _create_expense(ctx["email"], "Salary", "Food", 250, TODAY)
 
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -181,10 +188,10 @@ class TestSankeyStudioGenerate:
     def test_generate_excludes_non_expense_transaction_types(self, driver, w):
         ctx = _setup_user(driver, w)
         try:
-            _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
-            _create_expense(ctx["email"], "Salary", "Food", 999, "2026-07-11",
+            _create_expense(ctx["email"], "Salary", "Food", 250, TODAY)
+            _create_expense(ctx["email"], "Salary", "Food", 999, TODAY,
                              txn_type="TransactionType.INCOME")
-            _create_expense(ctx["email"], "Salary", "Food", 999, "2026-07-12",
+            _create_expense(ctx["email"], "Salary", "Food", 999, TODAY,
                              txn_type="TransactionType.SAVINGS_DEPOSIT")
 
             driver.get(SANKEY_URL)
@@ -287,8 +294,8 @@ class TestSankeyStudioGenerate:
     def test_connector_node_routes_real_values(self, driver, w):
         ctx = _setup_user(driver, w)
         try:
-            _create_expense(ctx["email"], "Salary", "Food", 100, "2026-07-10")
-            _create_expense(ctx["email"], "Sales", "Health", 50, "2026-07-11")
+            _create_expense(ctx["email"], "Salary", "Food", 100, TODAY)
+            _create_expense(ctx["email"], "Sales", "Health", 50, TODAY)
 
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -399,7 +406,7 @@ class TestSankeyStudioColorOverride:
     def test_color_override_persists_through_generate(self, driver, w):
         ctx = _setup_user(driver, w)
         try:
-            _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
+            _create_expense(ctx["email"], "Salary", "Food", 250, TODAY)
 
             driver.get(SANKEY_URL)
             time.sleep(1)
@@ -745,7 +752,7 @@ class TestSankeyStudioTooltip:
     def test_generated_chart_uses_custom_tooltip_not_native_title(self, driver, w):
         ctx = _setup_user(driver, w)
         try:
-            _create_expense(ctx["email"], "Salary", "Food", 250, "2026-07-10")
+            _create_expense(ctx["email"], "Salary", "Food", 250, TODAY)
 
             driver.get(SANKEY_URL)
             time.sleep(1)

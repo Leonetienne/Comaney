@@ -63,7 +63,16 @@ class AISettingsForm(forms.ModelForm):
         }
         widgets = {
             "anthropic_api_key": forms.PasswordInput(render_value=True, attrs={"autocomplete": "off"}),
-            "ai_custom_instructions": forms.Textarea(attrs={"rows": 5, "maxlength": 1024, "placeholder": "e.g. Always assign groceries to the 'Food' category and tag with 'Rewe' when the payee is Rewe."}),
+            "ai_custom_instructions": forms.Textarea(attrs={
+                "rows": 5,
+                "maxlength": 4096,
+                "placeholder": "e.g. Always assign groceries to the 'Food' category and tag with 'Rewe' when the payee is Rewe.",
+                "autocomplete": "off",
+                "data-lpignore": "true",
+                "data-1p-ignore": "true",
+                "data-bwignore": "true",
+                "data-form-type": "other",
+            }),
         }
 
     def __init__(self, *args, **kwargs):

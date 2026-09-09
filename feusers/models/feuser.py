@@ -23,7 +23,7 @@ class FeUser(models.Model):
     password_reset_expires = models.DateTimeField(null=True, blank=True)
     currency = models.CharField(max_length=10, blank=True, default="€")
     anthropic_api_key = models.CharField(max_length=255, blank=True)
-    ai_custom_instructions = models.TextField(blank=True, max_length=1024)
+    ai_custom_instructions = models.TextField(blank=True, max_length=4096)
     twofa_recovery_hash = models.CharField(max_length=128, blank=True)
     ai_trial_budget_spent = models.DecimalField(max_digits=8, decimal_places=4, default=0)
     ai_trial_budget_last_reset = models.DateTimeField(null=True, blank=True)
