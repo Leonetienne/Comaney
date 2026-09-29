@@ -4,42 +4,14 @@
 {# To announce new features: update this file and bump CURRENT_UPGRADE_INTRO_VERSION          #}
 {# in feusers/intros.py. That is the only change needed to re-trigger the modal.              #}
 {#                                                                                             #}
-{# Current version: 2                                                                          #}
+{# Current version: 3                                                                          #}
 <div id="upgrade-intro-modal" class="cdialog-backdrop" aria-hidden="true">
     <div class="cdialog" role="dialog" aria-modal="true" aria-labelledby="upgrade-intro-title">
         <p class="cdialog-title" id="upgrade-intro-title">What's new in Comaney {{ APP_VERSION }}</p>
         <ul class="intro-feature-list">
             <li>
-                <strong>Reorganized project pages</strong>
-                Projects are now split into three tabs: Expenses, Insights, and Settings, so the debt graphs and charts have their own dedicated space.
-            </li>
-            <li>
-                <strong>New sign-in options</strong>
-                Register a YubiKey, get codes by email, or use a security key (FIDO2) as a second factor, alongside the existing authenticator app support.
-            </li>
-            <li>
-                <strong>Smarter AI Express creation</strong>
-                The AI can now split a project expense among participants and pick who paid upfront, not just fill in the category and tags.
-            </li>
-            <li>
-                <strong>New dashboard tools</strong>
-                Add a gauge card to track progress toward a limit, or describe the card you want in plain language and let AI build it for you.
-            </li>
-            <li>
-                <strong>Tidied up new-expense pages in navigation</strong>
-                A new Add Expense page gathers the manual and AI entry points in one place, with a shortcut to set up a recurring expense right there too.
-            </li>
-           <li>
-                <strong>Auto-detect and resolve unclassified expenses</strong>
-                Got any expenses without category or tags? There now is a page just for assigning them values! Either manually or via ai!
-            </li>
-            <li>
-                <strong>New switch on the project tag chart</strong>
-                The "Project spending by tag" chart on a project's Insights tab now has a "Show only my share" switch, controlling whether each tag's total adds up everyone's spending or just your own share of it.
-            </li>
-            <li>
-                <strong>Try Sankey Studio (early access)</strong>
-                Turn on early access in your profile settings to design your own Sankey chart, mapping how your spending flows through your tags, categories, and projects.
+                <strong>Automatically accept entries from a buddy</strong>
+                Tired of confirming everything a buddy records for you? In My Buddies, turn on "Automatically accept expenses and settlements" for that buddy. Anything they log with you as the payer, and any settlement they record paying you back, is then accepted right away, in direct expenses and in every project. You still get an email about each one.
             </li>
         </ul>
         <div class="cdialog-actions">

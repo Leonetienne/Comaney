@@ -43,6 +43,9 @@ You will see it in the **"Did you pay for this?"** section on the **Buddy Expens
 !!! tip
     You will also receive an email notification when someone creates a shared expense on your behalf, so you do not have to remember to check.
 
+!!! tip
+    If you trust a buddy completely, you can let their entries be accepted for you automatically. See [Automatically accepting a buddy's entries](adding-buddies.md#automatically-accepting-a-buddys-entries).
+
 ## Editing a shared expense
 
 Open the expense from your expense list or from the **Buddy Expenses** page and click **Edit**.

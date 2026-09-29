@@ -44,6 +44,28 @@ If you already share a project with someone, you can invite them as a direct bud
 
 This works for any member, not just the project admin. The option only appears if you are not already buddies and you do not already have a pending invite to them. The same menu may also offer **Invite as partner** - see [Catalog Partnerships](../catalog-partnerships.md).
 
+## Automatically accepting a buddy's entries
+
+Normally, when a buddy records something for you, you have to confirm it: an expense where they marked you as the one who paid, or a settlement where they say they paid you back. If you trust a buddy to get it right, you can skip this step for them.
+
+**To turn it on:**
+
+1. Go to **My Buddies**.
+2. Next to the buddy, switch on **Automatically accept expenses and settlements recorded by ...**.
+3. A confirmation box appears. Click **Save**.
+
+From then on, everything this buddy records for you is accepted right away, both for one-on-one expenses and in every project you share with them. You still get an email about each one, so nothing happens without you knowing. The small check mark that shows you agree to your share of their expenses is also set for you.
+
+Anything this buddy recorded earlier that is still waiting for you is accepted too, the moment you save. This cannot be undone. Expenses in archived projects are never changed.
+
+**Good to know:**
+
+- This only works for direct buddies. If you only share a project with someone, you cannot turn it on for them.
+- It only goes one way. Your buddy still has to confirm what you record for them, unless they turn it on for you as well.
+- Your buddy sees an **Accepts your entries automatically** label next to your name, so they know you rely on them.
+- You can switch it off at any time. Entries that were already accepted stay accepted.
+- If you remove the buddy, the setting is removed as well.
+
 ## Merging an offline buddy into another connection
 
 You can combine an offline buddy's history with another entry, either because they turn out to be the same person as someone else, or because they now have a real Comaney account.

@@ -30,6 +30,7 @@ urlpatterns = [
 
     # Actual-buddy kick
     path("link/<int:link_id>/kick/", views.kick_actual, name="kick_actual"),
+    path("link/<int:link_id>/auto-accept/", views.set_auto_accept, name="set_auto_accept"),
 
     # Merge invitations (personal dummy)
     path("merge/<str:token>/", views.view_merge_invite, name="view_merge_invite"),

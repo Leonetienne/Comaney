@@ -483,6 +483,8 @@ class BuddyQueryService:
             'net': Decimal,
             'net_abs': Decimal,
             'link_uid': int | None,
+            'i_auto_accept': bool,     # feuser auto-accepts this buddy's entries
+            'they_auto_accept': bool,  # this buddy auto-accepts feuser's entries
           }, ...
         ] sorted by abs(net) descending.
         """
@@ -498,6 +500,8 @@ class BuddyQueryService:
                     "sources": [],
                     "net": Decimal("0"),
                     "link_uid": None,
+                    "i_auto_accept": False,
+                    "they_auto_accept": False,
                 }
             if source not in person_map[key]["sources"]:
                 person_map[key]["sources"].append(source)
@@ -509,6 +513,8 @@ class BuddyQueryService:
             buddy = link.other(feuser)
             net = BuddyQueryService.get_net_debt(feuser, buddy_feuser=buddy)
             _upsert(("feuser", buddy.pk), "feuser", buddy, "Direct", net, link_uid=link.uid)
+            person_map[("feuser", buddy.pk)]["i_auto_accept"] = link.auto_accepts(feuser)
+            person_map[("feuser", buddy.pk)]["they_auto_accept"] = link.auto_accepts(buddy)
 
         for dummy in DummyUser.objects.filter(owning_feuser=feuser):
             net = BuddyQueryService.get_net_debt(feuser, buddy_dummy=dummy)

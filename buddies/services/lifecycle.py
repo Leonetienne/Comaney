@@ -480,6 +480,45 @@ class BuddyLifecycleService:
 
     @staticmethod
     @transaction.atomic
+    def confirm_settlement(expense, creditor) -> bool:
+        """
+        Creditor-side confirmation of a pending settlement: books the matching
+        "Settlement received" income for the creditor and approves the
+        settlement. Shared by the manual confirm view and the auto-accept trust
+        (buddies/services/trust.py). Callers handle notifications.
+        """
+        if expense.buddy_approved or not expense.is_buddies_settlement:
+            return False
+        from datetime import date as _date
+        from budget.expense_factory import create_expense
+        from budget.models import TransactionType
+
+        bs_row = expense.buddy_spendings.filter(participant_feuser=creditor).first()
+        income_amount = expense.value * (bs_row.share_percent / 100) if bs_row else expense.value
+
+        if expense.is_dummy and expense.upfront_payee_dummy_id:
+            debtor_label = expense.upfront_payee_dummy.display_name + " (offline member)"
+        else:
+            debtor_label = _display_name(expense.owning_feuser)
+
+        create_expense(
+            owning_feuser=creditor,
+            title=f"Settlement received from {debtor_label}",
+            type=TransactionType.INCOME,
+            value=income_amount,
+            date_due=_date.today(),
+            settled=True,
+            notify=False,
+            is_buddies_settlement=True,
+            buddy_approved=True,
+        )
+        BuddyLifecycleService.approve_expense(expense)
+        if expense.project_id and expense.project:
+            expense.project.update_lastmod()
+        return True
+
+    @staticmethod
+    @transaction.atomic
     def reject_expense(expense, rejecting_feuser) -> bool:
         if expense.buddy_approved:
             return False

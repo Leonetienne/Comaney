@@ -13,6 +13,7 @@ from .group import BuddyGroupService, ProjectService
 from .lifecycle import BuddyLifecycleService
 from .query import BuddyQueryService
 from .settlement import BuddySettlementService
+from .trust import BuddyTrustService
 
 __all__ = [
     "BuddyArchiveService",
@@ -25,5 +26,6 @@ __all__ = [
     "BuddyLifecycleService",
     "BuddyQueryService",
     "BuddySettlementService",
+    "BuddyTrustService",
     "_display_name",
 ]

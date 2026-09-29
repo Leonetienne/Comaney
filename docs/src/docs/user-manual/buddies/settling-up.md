@@ -16,6 +16,7 @@ After you confirm:
 - A settlement expense is created in your regular expense list.
 - If the other person is a connected Comaney user, they see a **"Pending settlement receipts"** notice on the Buddy Expenses page. They must review and confirm.
 - If the other person is an offline buddy, the settlement is confirmed automatically.
+- If the other person has chosen to accept your entries automatically, the settlement is confirmed right away. See [Automatically accepting a buddy's entries](adding-buddies.md#automatically-accepting-a-buddys-entries).
 
 **The balance on My Buddies does not clear until the other person confirms receipt.**
 

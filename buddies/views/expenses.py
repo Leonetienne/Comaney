@@ -113,37 +113,11 @@ def approve_settlement_as_creditor(request, expense_id):
         buddy_spendings__participant_feuser=request.feuser,
     )
     if request.method == "POST":
-        from datetime import date as _date
-        from budget.expense_factory import create_expense as _create_expense
-        from budget.models import TransactionType
-
         creditor = request.feuser
-        bs_row = expense.buddy_spendings.filter(participant_feuser=creditor).first()
-        income_amount = expense.value * (bs_row.share_percent / 100) if bs_row else expense.value
-
-        if expense.is_dummy and expense.upfront_payee_dummy_id:
-            debtor_label = expense.upfront_payee_dummy.display_name + " (offline member)"
-        else:
-            debtor_label = f"{expense.owning_feuser.first_name} {expense.owning_feuser.last_name}".strip() or expense.owning_feuser.email
-
-        _create_expense(
-            owning_feuser=creditor,
-            title=f"Settlement received from {debtor_label}",
-            type=TransactionType.INCOME,
-            value=income_amount,
-            date_due=_date.today(),
-            settled=True,
-            notify=False,
-            is_buddies_settlement=True,
-            buddy_approved=True,
-        )
-
-        BuddyLifecycleService.approve_expense(expense)
+        BuddyLifecycleService.confirm_settlement(expense, creditor)
         BuddyEmailService.send_settlement_approved_notification(
             expense, creditor, expense.owning_feuser
         )
-        if expense.project_id and expense.project:
-            expense.project.update_lastmod()
         django_messages.success(request, "Settlement confirmed. Thank you!")
         if expense.project_id:
             return redirect("projects:project_detail", project_id=expense.project_id)

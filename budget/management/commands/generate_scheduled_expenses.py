@@ -237,7 +237,10 @@ class Command(BaseCommand):
 
                 from budget.notifications import set_initial_notification_class
                 from buddies.services.email import BuddyEmailService
+                from buddies.services.trust import BuddyTrustService
                 set_initial_notification_class(expense)
+                if scheduled.assign_buddy_mode:
+                    BuddyTrustService.record_action(expense, feuser)
                 if not expense.buddy_approved:
                     BuddyEmailService.send_expense_approval_request(expense, feuser)
                 BuddyEmailService.notify_expense_created(expense, feuser)

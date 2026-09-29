@@ -272,6 +272,37 @@ def kick_actual(request, link_id):
 
 @feuser_required
 @require_POST
+def set_auto_accept(request, link_id):
+    """
+    Toggle the current feuser's auto-accept of entries recorded by the buddy on
+    the other side of this link. Enabling also accepts that buddy's pending
+    entries retroactively (see BuddyTrustService.set_auto_accept).
+    """
+    from ..services import BuddyTrustService
+
+    link = get_object_or_404(BuddyLink, uid=link_id)
+    if request.feuser.pk not in (link.user_a_id, link.user_b_id):
+        raise Http404
+    enabled = request.POST.get("enabled") == "1"
+    other = link.other(request.feuser)
+    accepted = BuddyTrustService.set_auto_accept(request.feuser, other, enabled)
+
+    name = _display_name(other)
+    if enabled:
+        msg = f"You now automatically accept entries from {name}."
+        if accepted:
+            msg += f" {accepted} pending entr{'y' if accepted == 1 else 'ies'} accepted."
+    else:
+        msg = f"You no longer automatically accept entries from {name}."
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"enabled": enabled, "accepted": accepted, "message": msg})
+    django_messages.success(request, msg)
+    return redirect("buddies:my_buddies")
+
+
+@feuser_required
+@require_POST
 def merge_dummy(request, dummy_id):
     """Merge an offline buddy into another offline buddy (immediate) or
     request a merge into an already-linked direct buddy (needs their approval)."""

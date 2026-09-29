@@ -139,6 +139,48 @@ class BuddyEmailService:
         )
 
     @staticmethod
+    def send_expense_auto_accepted(expense, initiating_feuser):
+        """Info-only replacement for send_expense_approval_request when the owner
+        auto-accepts entries from initiating_feuser (buddies/services/trust.py)."""
+        initiating_name = _display_name(initiating_feuser)
+        _emit(
+            expense.owning_feuser,
+            type="expense_assignments",
+            subject=f"Shared expense accepted automatically: {expense.title}",
+            message=f"{initiating_name} logged \"{expense.title}\" with you as the payer; it was accepted automatically.",
+            template="emails/buddy_expense_auto_accepted.html",
+            ctx={
+                "expense": expense,
+                "initiating_name": initiating_name,
+                "buddies_url": f"{getattr(settings, 'SITE_URL', '')}/buddies/my-buddies/",
+            },
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
+            related_feuser=initiating_feuser,
+        )
+
+    @staticmethod
+    def send_settlement_auto_accepted(expense, initiating_feuser, creditor_feuser):
+        """Info-only replacement for send_settlement_confirmation_request when the
+        creditor auto-accepts entries from initiating_feuser."""
+        initiating_name = _display_name(initiating_feuser)
+        _emit(
+            creditor_feuser,
+            type="settlements",
+            subject=f"Settlement confirmed automatically: {expense.title}",
+            message=f"{initiating_name} recorded a settlement paid to you; it was confirmed automatically.",
+            template="emails/buddy_settlement_auto_accepted.html",
+            ctx={
+                "expense": expense,
+                "initiating_name": initiating_name,
+                "buddies_url": f"{getattr(settings, 'SITE_URL', '')}/buddies/my-buddies/",
+            },
+            related_expense=expense,
+            related_project=expense.project if expense.project_id else None,
+            related_feuser=initiating_feuser,
+        )
+
+    @staticmethod
     def send_rejection_notification(expense, rejecting_feuser, notifying_feuser, owner_rejected=False):
         rejecting_name = _display_name(rejecting_feuser)
         _emit(
@@ -309,6 +351,8 @@ class BuddyEmailService:
                 debtor_map[pk]["items"].append((s["creditor_name"], s["amount"]))
 
             if s["creditor_feuser"]:
+                if s.get("trust_accepted"):
+                    continue
                 pk = s["creditor_feuser"].pk
                 confirm_url = f"{site_url}/buddies/expense/{s['expense'].uid}/approve-settlement/"
                 if pk not in creditor_map:

@@ -1,0 +1,26 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">Settlement confirmed automatically</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ initiating_name }}</strong> recorded a settlement paid to you.
+    Because you automatically accept entries from {{ initiating_name }}, it was confirmed for you. There is nothing you need to do.
+</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Title</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.title }}</td>
+    </tr>
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Amount</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.owning_feuser.currency }}{{ expense.value }}</td>
+    </tr>
+    {% if expense.project %}
+    <tr>
+        <td style="color:#aaa;padding:6px 0;font-size:0.9rem;">Project</td>
+        <td style="color:#e0e0e0;padding:6px 0;font-size:0.9rem;text-align:right;">{{ expense.project.name }}</td>
+    </tr>
+    {% endif %}
+</table>
+{% include "emails/_auto_accept_footer.html" %}
+{% endblock %}

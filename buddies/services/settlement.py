@@ -8,6 +8,7 @@ from ..models import BuddyLink, DummyUser
 from ._helpers import _display_name
 from .email import BuddyEmailService
 from .query import BuddyQueryService
+from .trust import BuddyTrustService
 
 
 class BuddySettlementService:
@@ -115,9 +116,11 @@ class BuddySettlementService:
                 buddy_approved=False,
                 buddy_spendings=[{"type": "feuser", "id": buddy.pk, "share_percent": Decimal("100")}],
             )
-            BuddyEmailService.send_direct_settlement_confirmation_request(
-                expense, feuser, buddy
-            )
+            BuddyTrustService.record_action(expense, feuser)
+            if not expense.buddy_approved:
+                BuddyEmailService.send_direct_settlement_confirmation_request(
+                    expense, feuser, buddy
+                )
             return True
 
         elif buddy_key.startswith("d"):
@@ -268,9 +271,11 @@ class BuddySettlementService:
         )
 
         if not auto_approve and creditor_feuser:
-            BuddyEmailService.send_settlement_confirmation_request(
-                expense, acting_feuser, creditor_feuser, debtor_name
-            )
+            BuddyTrustService.record_action(expense, acting_feuser)
+            if not expense.buddy_approved:
+                BuddyEmailService.send_settlement_confirmation_request(
+                    expense, acting_feuser, creditor_feuser, debtor_name
+                )
 
         group.update_lastmod()
         return True
@@ -351,6 +356,8 @@ class BuddySettlementService:
                     is_dummy=is_dummy_exp,
                     upfront_payee_dummy=debtor_dummy if is_dummy_exp else None,
                 )
+                if not auto_approve:
+                    BuddyTrustService.record_action(expense, admin_feuser)
                 created_settlements.append({
                     "expense": expense,
                     "debtor_feuser": debtor_feuser,
@@ -360,6 +367,9 @@ class BuddySettlementService:
                     "creditor_dummy": creditor_dummy,
                     "creditor_name": creditor_name,
                     "auto_approve": auto_approve,
+                    # Creditor trusts the admin: already confirmed and emailed
+                    # by BuddyTrustService, so no "please confirm" summary.
+                    "trust_accepted": not auto_approve and expense.buddy_approved,
                     "amount": amount,
                 })
 

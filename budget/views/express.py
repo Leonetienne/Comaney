@@ -231,7 +231,7 @@ def express_creation(request):
                     )
 
                     if buddy and buddy["upfront_type"] == "feuser" and buddy["upfront_feuser"]:
-                        from buddies.services import BuddyEmailService
+                        from buddies.services import BuddyEmailService, BuddyTrustService
                         expense = create_expense(
                             owning_feuser=buddy["upfront_feuser"],
                             buddy_approved=False,
@@ -239,7 +239,9 @@ def express_creation(request):
                             buddy_spendings=buddy["spendings"],
                             **common_kwargs,
                         )
-                        BuddyEmailService.send_expense_approval_request(expense, feuser)
+                        BuddyTrustService.record_action(expense, feuser)
+                        if not expense.buddy_approved:
+                            BuddyEmailService.send_expense_approval_request(expense, feuser)
                         BuddyEmailService.notify_expense_created(expense, feuser)
                     elif buddy:
                         expense = create_expense(
@@ -250,7 +252,8 @@ def express_creation(request):
                             buddy_spendings=buddy["spendings"],
                             **common_kwargs,
                         )
-                        from buddies.services import BuddyEmailService
+                        from buddies.services import BuddyEmailService, BuddyTrustService
+                        BuddyTrustService.record_action(expense, feuser)
                         BuddyEmailService.notify_expense_created(expense, feuser)
                     else:
                         create_expense(owning_feuser=feuser, project=project, **common_kwargs)

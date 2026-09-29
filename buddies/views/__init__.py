@@ -7,6 +7,7 @@ from .buddies import (
     add_dummy, kick_dummy, rename_dummy, personal_archive_wipe,
     invite_actual, send_buddy_invite, view_invite, accept_invite, decline_invite, revoke_invite, revoke_onboarding_invite,
     kick_actual,
+    set_auto_accept,
     merge_dummy, view_merge_invite, accept_merge, decline_merge, revoke_merge_invite,
     dummy_picture,
 )

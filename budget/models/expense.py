@@ -43,6 +43,17 @@ class Expense(OwnedModel):
         on_delete=models.SET_NULL,
         related_name="expenses",
     )
+    # The feuser whose action last put this expense into a state that needs
+    # someone else's confirmation (creating it, changing its payer, recording
+    # a settlement, or an edit that resets participant approvals). Drives the
+    # buddy auto-accept trust (buddies/services/trust.py). Null for legacy rows
+    # and anything created before this field existed.
+    initiated_by_feuser = models.ForeignKey(
+        "feusers.FeUser",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="initiated_expenses",
+    )
 
     class Meta:
         ordering = ["-date_created"]

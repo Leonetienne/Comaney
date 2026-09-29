@@ -46,14 +46,25 @@
                 <span class="buddy-email">{{ info.feuser.email }}</span>
                 {% endif %}
                 {% if info.type == 'feuser' and info.feuser %}{% partnership_invite_state request.feuser info.feuser as p_state %}{% endif %}
-                {% if info.type == 'dummy' and info.dummy or info.sources or p_state == "partner" or p_state == "pending" %}
+                {% if info.type == 'dummy' and info.dummy or info.sources or p_state == "partner" or p_state == "pending" or info.they_auto_accept %}
                 <div class="bbl-tags">
                     {% if info.type == 'dummy' and info.dummy and not info.dummy.is_archive %}<span class="pill">Offline member</span>{% endif %}
                     {% if info.type == 'dummy' and info.dummy and info.dummy.is_archive %}<span class="pill pill--faded">Archive</span>{% endif %}
                     {% for src in info.sources %}<span class="pill">{{ src }}</span>{% endfor %}
                     {% if p_state == "partner" %}<span class="pill">Partner</span>{% endif %}
                     {% if p_state == "pending" %}<span class="pill">Invite pending</span>{% endif %}
+                    {% if info.they_auto_accept %}<span class="pill auto-accept-pill" title="{{ info.display_name }} does not need to confirm what you record for them">Accepts your entries automatically</span>{% endif %}
                 </div>
+                {% endif %}
+                {% if info.type == 'feuser' and info.link_uid %}
+                <label class="toggle-switch font-sm" style="margin-top:6px;">
+                    <input type="checkbox" class="auto-accept-toggle" id="auto-accept-{{ info.link_uid }}"
+                           data-url="{% url 'buddies:set_auto_accept' info.link_uid %}"
+                           data-name="{{ info.display_name }}"
+                           {% if info.i_auto_accept %}checked{% endif %}>
+                    <span class="toggle-switch-track"><span class="toggle-switch-thumb"></span></span>
+                    Automatically accept expenses and settlements recorded by {{ info.display_name }}
+                </label>
                 {% endif %}
                 </div>
             </div>
@@ -276,6 +287,45 @@
 <script>
 (function () {
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+    // Auto-accept trust toggle (buddies/services/trust.py). Enabling needs an
+    // explicit OK because it also accepts that buddy's pending entries for good.
+    document.querySelectorAll('.auto-accept-toggle').forEach(function (cb) {
+        cb.addEventListener('change', async function () {
+            const enabled = cb.checked;
+            const name = cb.dataset.name;
+            if (enabled) {
+                try {
+                    await window.confirmDialog(
+                        'Automatically accept every expense and settlement ' + name + ' records for you? ' +
+                        'This also accepts all of ' + name + '\'s entries that are still waiting for your confirmation ' +
+                        '(except in archived projects). Their approval history is changed permanently and cannot be undone.',
+                        'Save'
+                    );
+                } catch (_) {
+                    cb.checked = false;
+                    return;
+                }
+            }
+            cb.disabled = true;
+            try {
+                const body = new URLSearchParams({enabled: enabled ? '1' : '0'});
+                const resp = await fetch(cb.dataset.url, {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest'},
+                    body: body,
+                });
+                if (!resp.ok) throw new Error(resp.status);
+                const data = await resp.json();
+                window.showToast(data.message, 'success');
+            } catch (_) {
+                cb.checked = !enabled;
+                window.showToast('Could not save your setting. Please try again.', 'error');
+            } finally {
+                cb.disabled = false;
+            }
+        });
+    });
 
     function startRename(span) {
         if (span.querySelector('input')) return;

@@ -15,6 +15,11 @@ class BuddyLink(models.Model):
     user_b = models.ForeignKey(
         "feusers.FeUser", on_delete=models.CASCADE, related_name="buddy_links_b"
     )
+    # Per-direction auto-accept trust: when set, that side no longer needs to
+    # confirm expenses/settlements the other side records for them.
+    # See buddies/services/trust.py.
+    user_a_auto_accepts_from_b = models.BooleanField(default=False)
+    user_b_auto_accepts_from_a = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     last_mod = models.DateTimeField(default=timezone.now)
 
@@ -24,6 +29,19 @@ class BuddyLink(models.Model):
 
     def other(self, feuser):
         return self.user_b if self.user_a_id == feuser.pk else self.user_a
+
+    def _trust_field(self, truster) -> str:
+        return "user_a_auto_accepts_from_b" if self.user_a_id == truster.pk else "user_b_auto_accepts_from_a"
+
+    def auto_accepts(self, truster) -> bool:
+        """True when `truster` auto-accepts entries recorded by the other side."""
+        return getattr(self, self._trust_field(truster))
+
+    def set_auto_accepts(self, truster, enabled: bool):
+        field = self._trust_field(truster)
+        setattr(self, field, enabled)
+        self.last_mod = timezone.now()
+        self.save(update_fields=[field, "last_mod"])
 
     def __str__(self):
         return f"{self.user_a} <-> {self.user_b}"

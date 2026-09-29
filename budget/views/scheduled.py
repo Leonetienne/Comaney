@@ -287,7 +287,7 @@ def scheduled_update_expenses_api(request, uid):
         return JsonResponse({"expenses": data, "currency": feuser.currency})
 
     if request.method == "POST":
-        from buddies.services import BuddyEmailService, BuddyExpenseService
+        from buddies.services import BuddyEmailService, BuddyExpenseService, BuddyTrustService
 
         body = json.loads(request.body)
         expense_ids = body.get("expense_ids", [])
@@ -347,6 +347,7 @@ def scheduled_update_expenses_api(request, uid):
             expense.save()
             expense.tags.set(tags)
             BuddyExpenseService.set_buddy_spendings(expense, spendings)
+            BuddyTrustService.record_action(expense, feuser)
             if expense.project:
                 expense.project.update_lastmod()
 

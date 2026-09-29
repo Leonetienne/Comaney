@@ -343,7 +343,7 @@ def expense_create(request):
                 # Save an overlay for the creating feuser, then reconcile the expense
                 # to the owning feuser's matching tags/categories.
                 from budget.services import upsert_overlay, create_participant_overlays
-                from buddies.services import BuddyEmailService, BuddyExpenseService
+                from buddies.services import BuddyEmailService, BuddyExpenseService, BuddyTrustService
                 creating_category = expense.category
                 creating_tags = list(expense.tags.all())
                 upsert_overlay(expense, feuser, creating_category, creating_tags)
@@ -352,7 +352,9 @@ def expense_create(request):
                 _apply_solo_spendings(expense, buddy, feuser)
                 BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"], acting_feuser=feuser)
                 create_participant_overlays(expense)
-                BuddyEmailService.send_expense_approval_request(expense, feuser)
+                BuddyTrustService.record_action(expense, feuser)
+                if not expense.buddy_approved:
+                    BuddyEmailService.send_expense_approval_request(expense, feuser)
                 BuddyEmailService.notify_expense_created(expense, feuser)
                 if expense.project:
                     expense.project.update_lastmod()
@@ -370,11 +372,12 @@ def expense_create(request):
                 expense.save()
                 form.save_m2m()
                 if buddy:
-                    from buddies.services import BuddyExpenseService, BuddyEmailService
+                    from buddies.services import BuddyExpenseService, BuddyEmailService, BuddyTrustService
                     from budget.services import create_participant_overlays
                     _apply_solo_spendings(expense, buddy, feuser)
                     BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"], acting_feuser=feuser)
                     create_participant_overlays(expense)
+                    BuddyTrustService.record_action(expense, feuser)
                     BuddyEmailService.notify_expense_created(expense, feuser)
                     if expense.project:
                         expense.project.update_lastmod()
@@ -503,7 +506,7 @@ def expense_edit(request, uid):
                     (new_type == "dummy" and new_dummy and new_dummy != expense.upfront_payee_dummy) or
                     (new_type == "me" and expense.is_dummy)
                 )
-                from buddies.services import BuddyExpenseService, BuddyEmailService
+                from buddies.services import BuddyExpenseService, BuddyEmailService, BuddyTrustService
                 if payer_changed:
                     expense = BuddyExpenseService.change_upfront_payer(
                         expense,
@@ -517,10 +520,12 @@ def expense_edit(request, uid):
                             expense.buddy_approved = False
                             expense.save(update_fields=["buddy_approved"])
                     if new_type == "feuser" and new_feuser:
-                        BuddyEmailService.send_expense_approval_request(expense, feuser)
                         # Ownership changed hands: every remaining participant's
                         # approval no longer applies.
                         BuddyExpenseService.reset_participant_approvals(expense)
+                        BuddyTrustService.record_action(expense, feuser)
+                        if not expense.buddy_approved:
+                            BuddyEmailService.send_expense_approval_request(expense, feuser)
                         BuddyEmailService.notify_expense_updated(
                             expense, feuser, _old_title, _old_value, _old_participants,
                             extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
@@ -543,6 +548,7 @@ def expense_edit(request, uid):
                     )
                     if approval_reset:
                         BuddyExpenseService.reset_participant_approvals(expense)
+                        BuddyTrustService.record_action(expense, feuser)
                     else:
                         BuddyExpenseService.restore_approvals(expense, _old_approvals)
                 BuddyEmailService.notify_expense_updated(
@@ -571,6 +577,9 @@ def expense_edit(request, uid):
                         extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
                     )
 
+            if expense.is_buddies_settlement and not expense.buddy_approved:
+                from buddies.services import BuddyTrustService
+                BuddyTrustService.record_action(expense, feuser)
             if expense.is_buddies_settlement and not expense.buddy_approved:
                 # Notify the creditor using the pre-edit participant snapshot.
                 # We cannot rely on the post-edit spendings because the JS
@@ -851,6 +860,7 @@ def expense_clone(request, uid):
     project = original.project
     original.pk = None
     original.title = f"CLONE - {original.title}"
+    original.initiated_by_feuser = request.feuser
     original.save()
     original.tags.set(tags)
     if spendings:
@@ -865,6 +875,8 @@ def expense_clone(request, uid):
             )
             for bs in spendings
         ])
+        from buddies.services import BuddyTrustService
+        BuddyTrustService.record_action(original, request.feuser)
         BuddyEmailService.notify_expense_created(original, request.feuser)
         if project:
             project.update_lastmod()
