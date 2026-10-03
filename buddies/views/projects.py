@@ -713,6 +713,17 @@ def project_settings(request, project_id):
     dummy_members = [m for m in project.members.all() if m.dummy_id]
     merge_invites_in_project = BuddyQueryService.pending_merge_invites_incoming_for_project(feuser, project)
     merge_invites_out_project = BuddyQueryService.pending_merge_invites_outgoing_for_project(feuser, project) if is_admin else []
+    # Direct buddies for the invite autocomplete and the "already a contact"
+    # hints (invite email + offline-member name check). Existing members stay
+    # in the list for the hints but are never offered as suggestions.
+    member_ids = {m.feuser_id for m in project.members.all() if m.feuser_id}
+    direct_contacts = [
+        {"feuser": b, "is_member": b.pk in member_ids}
+        for b in sorted(
+            BuddyQueryService.get_actual_buddies(feuser),
+            key=lambda u: (u.first_name.lower(), u.last_name.lower(), u.email.lower()),
+        )
+    ] if is_admin else []
     return render(request, "buddies/project_settings.html", {
         "active_nav": "projects",
         "active_tab": "settings",
@@ -720,6 +731,7 @@ def project_settings(request, project_id):
         "group": project,
         "is_admin": is_admin,
         "can_edit_details": project.can_edit_details(feuser),
+        "direct_contacts": direct_contacts,
         "feuser_members": feuser_members,
         "dummy_members": dummy_members,
         "pending_invites": pending_invites,

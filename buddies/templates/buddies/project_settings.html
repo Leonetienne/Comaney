@@ -1,5 +1,5 @@
 {% extends "budget_base.html" %}
-{% load action_badges %}
+{% load action_badges static %}
 {% block title %}Comaney - {{ project.name }} - Settings{% endblock %}
 
 {% block content_class %} app-content--wide{% endblock %}
@@ -8,6 +8,7 @@
 <style>
   main.app-main { max-width: 1200px; }
 </style>
+<script src="{% static 'dist/project_member_add.js' %}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -172,7 +173,7 @@
     {% if not project.archived %}
     <div class="settings-group mt-1">
         <p class="settings-group-label">Add members</p>
-        <div class="settings-list">
+        <div class="settings-list settings-list--overflow-visible">
 
             <div class="settings-row">
                 <p class="settings-row__title">Invite by email</p>
@@ -184,22 +185,47 @@
                     <button type="button" class="btn add-member-btn" disabled>Send invite</button>
                 </div>
                 {% else %}
-                <form method="post" action="{% url 'projects:project_invite_member' project_id=group.uid %}" class="inline-form">
+                <form method="post" action="{% url 'projects:project_invite_member' project_id=group.uid %}" class="inline-form" id="project-invite-form">
                     {% csrf_token %}
-                    <input type="email" name="email" placeholder="Email address" required class="input-inline">
+                    <div class="contact-combobox">
+                        <input type="email" name="email" id="project-invite-email" placeholder="Email address" required
+                               class="input-inline" autocomplete="off" role="combobox"
+                               aria-autocomplete="list" aria-expanded="false" aria-controls="project-invite-suggestions"
+                               aria-describedby="project-invite-hint">
+                        <span class="contact-check" id="project-invite-check" aria-hidden="true">&#10003;</span>
+                        {# Every direct buddy, filtered client-side by build/js/project_member_add.js. #}
+                        <ul class="contact-suggestions" id="project-invite-suggestions" role="listbox" hidden>
+                            {% for c in direct_contacts %}
+                            <li class="contact-suggestion" role="option" hidden
+                                data-email="{{ c.feuser.email }}"
+                                data-first-name="{{ c.feuser.first_name }}"
+                                data-last-name="{{ c.feuser.last_name }}"
+                                data-member="{% if c.is_member %}1{% else %}0{% endif %}">
+                                {% include 'partials/_avatar.html' with user_obj=c.feuser %}
+                                <span class="contact-suggestion__text">
+                                    <span class="contact-suggestion__name">{{ c.feuser.first_name }} {{ c.feuser.last_name }}</span>
+                                    <span class="contact-suggestion__email">{{ c.feuser.email }}</span>
+                                </span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
                     <button type="submit" id="btn-group-invite" class="btn add-member-btn">Send invite</button>
                 </form>
+                <p class="input-hint" id="project-invite-hint" aria-live="polite"></p>
                 {% endif %}
             </div>
 
             <div class="settings-row">
                 <p class="settings-row__title">Add offline member</p>
                 <p class="settings-row__desc">For people who don't use Comaney. You can invite them to join later.</p>
-                <form method="post" action="{% url 'projects:project_add_dummy' project_id=group.uid %}" class="inline-form">
+                <form method="post" action="{% url 'projects:project_add_dummy' project_id=group.uid %}" class="inline-form" id="project-add-dummy-form">
                     {% csrf_token %}
-                    <input type="text" name="display_name" placeholder="Display name" maxlength="128" required class="input-inline">
+                    <input type="text" name="display_name" id="project-add-dummy-name" placeholder="Display name" maxlength="128" required
+                           class="input-inline" autocomplete="off" aria-describedby="project-add-dummy-hint">
                     <button type="submit" id="btn-group-add-dummy" class="btn add-member-btn">Add</button>
                 </form>
+                <p class="input-hint input-hint--multiline" id="project-add-dummy-hint" aria-live="polite"></p>
             </div>
 
         </div>

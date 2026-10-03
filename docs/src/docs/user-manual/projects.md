@@ -79,8 +79,10 @@ When you choose **Any member**, other members see a **Cosmetics** area on their 
 
 Admin only.
 
-1. On the project page, find the **Invite a member** form.
-2. Enter their email address and click **Invite**.
+1. On the project's **Settings** tab, find **Invite by email**.
+2. Enter their email address and click **Send invite**.
+
+Inviting one of your buddies? Just start typing part of their first name, last name, or email address. Matching buddies appear in a list below the field; click one to fill in their email. Below the field you can also see whether the address belongs to one of your buddies: a green check mark and **This buddy is in your contacts**, or a gray **This buddy is not in your contact list**.
 
 They receive an email with a link. Once they accept, they appear in the member list.
 
@@ -95,7 +97,9 @@ If the person you invite has chosen to accept your entries automatically, they j
 
 If someone in your project does not use Comaney, you can add them as an offline member.
 
-1. On the project page, find **Add an offline member**, enter a name, and click **Add**.
+1. On the project's **Settings** tab, find **Add offline member**, enter a name, and click **Add**.
+
+If the name you type matches one of your buddies (their first name, last name, or email address), a warning appears below the field. That person already has a Comaney account, so inviting them is usually the better choice. If you type an email address, you are reminded that an offline member is only a placeholder: nobody is invited or emailed. In both cases you can still add the offline member: click **Add** and confirm.
 
 You can log expenses on their behalf and settle their share yourself. You can also invite them to join Comaney later and link their account to the offline entry.
 
