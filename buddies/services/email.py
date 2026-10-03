@@ -181,6 +181,28 @@ class BuddyEmailService:
         )
 
     @staticmethod
+    def send_project_invite_auto_accepted(project, inviting_feuser, invitee):
+        """Info-only replacement for send_group_invite when the invitee
+        auto-accepts entries from inviting_feuser."""
+        site_url = getattr(settings, "SITE_URL", "")
+        inviter_name = _display_name(inviting_feuser)
+        _emit(
+            invitee,
+            type="group_activity",
+            subject=f"{inviter_name} added you to the project \"{project.name}\"",
+            message=f"{inviter_name} invited you to the project \"{project.name}\"; you joined automatically.",
+            template="emails/buddy_project_invite_auto_accepted.html",
+            ctx={
+                "project": project,
+                "initiating_name": inviter_name,
+                "project_url": f"{site_url}/projects/{project.uid}/",
+                "buddies_url": f"{site_url}/buddies/my-buddies/",
+            },
+            related_project=project,
+            related_feuser=inviting_feuser,
+        )
+
+    @staticmethod
     def send_rejection_notification(expense, rejecting_feuser, notifying_feuser, owner_rejected=False):
         rejecting_name = _display_name(rejecting_feuser)
         _emit(

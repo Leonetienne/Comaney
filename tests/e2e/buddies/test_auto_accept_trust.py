@@ -1,16 +1,17 @@
 """
 Buddy auto-accept trust (buddies/services/trust.py).
 
-B can switch on "Automatically accept expenses and settlements recorded by A"
-for a direct buddy A on My Buddies. From then on, anything A records that
-would otherwise wait on B is accepted right away and B only gets an
-info email:
+B can switch on "Automatically accept expenses, settlements and project
+invitations from A" for a direct buddy A on My Buddies. From then on, anything
+A records that would otherwise wait on B is accepted right away and B only
+gets an info email:
   - expenses A logs with B as the upfront payer (direct and in any project,
     as long as A and B are direct buddies),
   - settlements A records paying B back (B = creditor),
-  - B's participant approval indicator on expenses A records.
-Enabling the trust also accepts A's already-pending entries (never in archived
-projects, never legacy rows without a known initiator).
+  - B's participant approval indicator on expenses A records,
+  - invitations from A (as admin) into A's projects.
+Enabling the trust also accepts A's already-pending entries and invitations
+(never in archived projects, never legacy rows without a known initiator).
 
 Run: pytest tests/e2e/buddies/test_auto_accept_trust.py -v | tee logfile.log
 """
@@ -149,7 +150,7 @@ class TestAutoAcceptToggle:
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/my-buddies/"))
         time.sleep(1)
-        assert "Automatically accept expenses and settlements recorded by Toggle Actor" in driver.page_source
+        assert "Automatically accept expenses, settlements and project invitations from Toggle Actor" in driver.page_source
         assert not self._toggle(driver, ctx).is_selected()
 
     def test_enabling_asks_for_confirmation_with_warning(self, driver, w, ctx):
@@ -157,6 +158,7 @@ class TestAutoAcceptToggle:
         time.sleep(0.5)
         msg = driver.find_element(By.ID, "cdialog-msg").text
         assert "cannot be undone" in msg, f"Dialog must warn about the permanent change, got: {msg!r}"
+        assert "project invitation" in msg, f"Dialog must mention project invitations, got: {msg!r}"
         assert "Toggle Actor" in msg
 
     def test_cancel_keeps_it_off(self, driver, w, ctx):
@@ -738,3 +740,157 @@ class TestTrustRemovedWithBuddyLink:
     def test_reconnected_link_starts_untrusted(self, driver, w, ctx):
         _create_buddy_link(ctx["a"]["email"], ctx["b"]["email"])
         assert _trust_flag(ctx["b"]["email"], ctx["a"]["email"]) == "False"
+
+
+# ---------------------------------------------------------------------------
+# Project invitations
+# ---------------------------------------------------------------------------
+
+def _is_member(group_id: int, email: str) -> bool:
+    return _shell(
+        f"from buddies.models import ProjectMember; "
+        f"print(ProjectMember.objects.filter(group_id={group_id}, feuser__email='{email}').exists())"
+    ) == "True"
+
+
+def _open_invite_count(group_id: int, email: str) -> str:
+    return _shell(
+        f"from buddies.models import ProjectInvite; "
+        f"print(ProjectInvite.objects.filter(group_id={group_id}, invitee_email__iexact='{email}').count())"
+    )
+
+
+def _invite_via_settings(driver, group_id: int, email: str) -> None:
+    """Admin sends a project invitation through the Settings tab form."""
+    driver.get(_url(f"/projects/{group_id}/settings/"))
+    time.sleep(1)
+    form = driver.find_element(By.ID, "btn-group-invite").find_element(By.XPATH, "ancestor::form")
+    inp = form.find_element(By.CSS_SELECTOR, "input[name=email]")
+    driver.execute_script("arguments[0].value = arguments[1];", inp, email)
+    driver.find_element(By.ID, "btn-group-invite").click()
+    time.sleep(2)
+
+
+class TestProjectInviteAutoAccepted:
+    """A (admin) invites B, who trusts A: B joins right away."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Invite", last_name="Actor")
+        b = setup_user(None, None, first_name="Invite", last_name="Truster")
+        _create_buddy_link(a["email"], b["email"])
+        _set_trust(b["email"], a["email"])
+        group_id = int(_create_group(a["email"], "Trusted Invite Project"))
+        yield {"a": a, "b": b, "group_id": group_id}
+        cleanup_user(a["email"])
+        cleanup_user(b["email"])
+
+    def test_a_invites_b(self, driver, w, ctx):
+        ctx["seen_before"] = mailpit_seen_ids()
+        _login_as(driver, ctx["a"])
+        _invite_via_settings(driver, ctx["group_id"], ctx["b"]["email"])
+        assert "automatically accepts your invitations" in driver.page_source
+
+    def test_b_is_member(self, driver, w, ctx):
+        assert _is_member(ctx["group_id"], ctx["b"]["email"])
+
+    def test_no_open_invitation_left(self, driver, w, ctx):
+        assert _open_invite_count(ctx["group_id"], ctx["b"]["email"]) == "0"
+
+    def test_a_sees_b_in_member_list(self, driver, w, ctx):
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+        time.sleep(1)
+        assert "Invite Truster" in driver.page_source
+
+    def test_b_gets_joined_email(self, driver, w, ctx):
+        body = fetch_email(ctx["b"]["email"], "added you to the project",
+                           ignore_ids=ctx["seen_before"])
+        assert "Trusted Invite Project" in body
+        assert "/buddies/my-buddies/" in body
+
+    def test_b_gets_no_invitation_email(self, driver, w, ctx):
+        assert _no_email(ctx["b"]["email"], "invited you to join", ctx["seen_before"])
+
+    def test_a_gets_no_joined_email(self, driver, w, ctx):
+        assert _no_email(ctx["a"]["email"], "joined your group", ctx["seen_before"])
+
+    def test_b_sees_project(self, driver, w, ctx):
+        _login_as(driver, ctx["b"])
+        driver.get(_url("/projects/"))
+        time.sleep(1)
+        assert "Trusted Invite Project" in driver.page_source
+
+
+class TestProjectInviteNotTrusted:
+    """Only A trusts B: A's invitation to B stays a normal invitation."""
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Plain", last_name="Inviter")
+        b = setup_user(None, None, first_name="Plain", last_name="Invitee")
+        _create_buddy_link(a["email"], b["email"])
+        _set_trust(a["email"], b["email"])
+        group_id = int(_create_group(a["email"], "Plain Invite Project"))
+        yield {"a": a, "b": b, "group_id": group_id}
+        cleanup_user(a["email"])
+        cleanup_user(b["email"])
+
+    def test_invitation_stays_pending(self, driver, w, ctx):
+        seen = mailpit_seen_ids()
+        _login_as(driver, ctx["a"])
+        _invite_via_settings(driver, ctx["group_id"], ctx["b"]["email"])
+        assert "Project invitation sent" in driver.page_source
+        assert not _is_member(ctx["group_id"], ctx["b"]["email"])
+        assert _open_invite_count(ctx["group_id"], ctx["b"]["email"]) == "1"
+        fetch_email(ctx["b"]["email"], "invited you to join", ignore_ids=seen)
+
+
+class TestRetroactiveInviteAcceptOnEnable:
+    """
+    Open invitations from A into one live and one archived project. Enabling
+    the trust joins only the live one, silently.
+    """
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Retroinv", last_name="Actor")
+        b = setup_user(None, None, first_name="Retroinv", last_name="Truster")
+        link_pk = _create_buddy_link(a["email"], b["email"])
+        live_id = int(_create_group(a["email"], "Retro Live Project"))
+        archived_id = int(_create_group(a["email"], "Retro Gone Project"))
+        yield {"a": a, "b": b, "link_pk": link_pk,
+               "live_id": live_id, "archived_id": archived_id}
+        cleanup_user(a["email"])
+        cleanup_user(b["email"])
+
+    def test_a_invites_b_twice(self, driver, w, ctx):
+        _login_as(driver, ctx["a"])
+        _invite_via_settings(driver, ctx["live_id"], ctx["b"]["email"])
+        _invite_via_settings(driver, ctx["archived_id"], ctx["b"]["email"])
+        _shell(f"from buddies.models import Project; "
+               f"Project.objects.filter(pk={ctx['archived_id']}).update(archived=True)")
+        assert _open_invite_count(ctx["live_id"], ctx["b"]["email"]) == "1"
+        assert _open_invite_count(ctx["archived_id"], ctx["b"]["email"]) == "1"
+
+    def test_b_enables_trust(self, driver, w, ctx):
+        ctx["seen_before"] = mailpit_seen_ids()
+        _login_as(driver, ctx["b"])
+        driver.get(_url("/buddies/my-buddies/"))
+        time.sleep(1)
+        cb = driver.find_element(By.ID, f"auto-accept-{ctx['link_pk']}")
+        driver.execute_script("arguments[0].click();", cb)
+        _confirm(driver)
+        time.sleep(1)
+        assert "You joined 1 project." in driver.page_source
+
+    def test_joined_live_project(self, driver, w, ctx):
+        assert _is_member(ctx["live_id"], ctx["b"]["email"])
+        assert _open_invite_count(ctx["live_id"], ctx["b"]["email"]) == "0"
+
+    def test_archived_project_not_joined(self, driver, w, ctx):
+        assert not _is_member(ctx["archived_id"], ctx["b"]["email"])
+        assert _open_invite_count(ctx["archived_id"], ctx["b"]["email"]) == "1"
+
+    def test_no_email_for_retroactive_join(self, driver, w, ctx):
+        assert _no_email(ctx["b"]["email"], "added you to the project", ctx["seen_before"])
+        assert _no_email(ctx["a"]["email"], "joined your group", ctx["seen_before"])

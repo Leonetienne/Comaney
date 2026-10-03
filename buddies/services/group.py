@@ -42,6 +42,7 @@ class ProjectService:
           ('already_member', BuddyGroupMember)
           ('member', BuddyGroupMember) - DISABLE_EMAILING path
           ('invite', BuddyGroupInvite)
+          ('auto_joined', FeUser) - invitee auto-accepts the admin's entries (trust)
           ('onboarding', BuddyOnboardingInvite)
           ('onboarding_no_email', BuddyOnboardingInvite)
           ('registration_disabled', None)
@@ -91,6 +92,11 @@ class ProjectService:
                 group=group, inviting_feuser=admin_feuser, invitee_email=email
             )
             invite.save()
+            # Local import: trust -> lifecycle -> group would otherwise be circular.
+            from .trust import BuddyTrustService
+            if BuddyTrustService.trusts(invitee, admin_feuser):
+                BuddyTrustService.accept_project_invite(invite, invitee)
+                return ("auto_joined", invitee)
             BuddyEmailService.send_group_invite(invite, invitee)
             return ("invite", invite)
 
@@ -122,6 +128,16 @@ class ProjectService:
         if invite.invitee_email.lower() != accepting_feuser.email.lower():
             return None
 
+        return ProjectService.join_via_invite(invite, accepting_feuser)
+
+    @staticmethod
+    @transaction.atomic
+    def join_via_invite(invite, accepting_feuser, notify_inviter: bool = True) -> Project:
+        """
+        Shared conclusion of accepting a ProjectInvite: the manual accept above
+        and the buddy auto-accept trust (BuddyTrustService.accept_project_invite)
+        both end here. Callers have already validated the invite.
+        """
         group = invite.group
         inviting_feuser = invite.inviting_feuser
 
@@ -135,7 +151,8 @@ class ProjectService:
         from budget.scheduled_assignment import reset_project_assignment_to_equal_shares
         reset_project_assignment_to_equal_shares(group)
 
-        BuddyEmailService.send_group_invite_accepted(invite, _display_name(accepting_feuser))
+        if notify_inviter:
+            BuddyEmailService.send_group_invite_accepted(invite, _display_name(accepting_feuser))
         invite.delete()
         return group
 

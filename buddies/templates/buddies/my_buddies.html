@@ -63,7 +63,7 @@
                            data-name="{{ info.display_name }}"
                            {% if info.i_auto_accept %}checked{% endif %}>
                     <span class="toggle-switch-track"><span class="toggle-switch-thumb"></span></span>
-                    Automatically accept expenses and settlements recorded by {{ info.display_name }}
+                    Automatically accept expenses, settlements and project invitations from {{ info.display_name }}
                 </label>
                 {% endif %}
                 </div>
@@ -289,7 +289,8 @@
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
     // Auto-accept trust toggle (buddies/services/trust.py). Enabling needs an
-    // explicit OK because it also accepts that buddy's pending entries for good.
+    // explicit OK because it also accepts that buddy's pending entries and
+    // project invitations for good.
     document.querySelectorAll('.auto-accept-toggle').forEach(function (cb) {
         cb.addEventListener('change', async function () {
             const enabled = cb.checked;
@@ -297,8 +298,8 @@
             if (enabled) {
                 try {
                     await window.confirmDialog(
-                        'Automatically accept every expense and settlement ' + name + ' records for you? ' +
-                        'This also accepts all of ' + name + '\'s entries that are still waiting for your confirmation ' +
+                        'Automatically accept every expense, settlement and project invitation from ' + name + '? ' +
+                        'This also accepts all of ' + name + '\'s entries and invitations that are still waiting for your confirmation ' +
                         '(except in archived projects). Their approval history is changed permanently and cannot be undone.',
                         'Save'
                     );

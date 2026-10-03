@@ -1,0 +1,13 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2 style="margin:0 0 16px;font-size:1.2rem;color:#e0e0e0;">You joined a project automatically</h2>
+<p style="color:#ccc;line-height:1.6;">
+    <strong style="color:#e0e0e0;">{{ initiating_name }}</strong> invited you to the project <strong style="color:#e0e0e0;">{{ project.name }}</strong>.
+    Because you automatically accept entries from {{ initiating_name }}, you joined it right away. There is nothing you need to do.
+</p>
+<div style="margin:24px 0;text-align:center;">
+    <a href="{{ project_url }}" style="display:inline-block;background:#e0e0e0;color:#141414;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:600;">Open project</a>
+</div>
+{% include "emails/_auto_accept_footer.html" %}
+{% endblock %}

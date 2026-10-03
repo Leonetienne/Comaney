@@ -276,7 +276,8 @@ def set_auto_accept(request, link_id):
     """
     Toggle the current feuser's auto-accept of entries recorded by the buddy on
     the other side of this link. Enabling also accepts that buddy's pending
-    entries retroactively (see BuddyTrustService.set_auto_accept).
+    entries and project invitations retroactively (see
+    BuddyTrustService.set_auto_accept).
     """
     from ..services import BuddyTrustService
 
@@ -285,18 +286,25 @@ def set_auto_accept(request, link_id):
         raise Http404
     enabled = request.POST.get("enabled") == "1"
     other = link.other(request.feuser)
-    accepted = BuddyTrustService.set_auto_accept(request.feuser, other, enabled)
+    result = BuddyTrustService.set_auto_accept(request.feuser, other, enabled)
 
     name = _display_name(other)
     if enabled:
         msg = f"You now automatically accept entries from {name}."
-        if accepted:
-            msg += f" {accepted} pending entr{'y' if accepted == 1 else 'ies'} accepted."
+        if result.entries:
+            msg += f" {result.entries} pending entr{'y' if result.entries == 1 else 'ies'} accepted."
+        if result.projects:
+            msg += f" You joined {result.projects} project{'' if result.projects == 1 else 's'}."
     else:
         msg = f"You no longer automatically accept entries from {name}."
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return JsonResponse({"enabled": enabled, "accepted": accepted, "message": msg})
+        return JsonResponse({
+            "enabled": enabled,
+            "accepted_entries": result.entries,
+            "joined_projects": result.projects,
+            "message": msg,
+        })
     django_messages.success(request, msg)
     return redirect("buddies:my_buddies")
 

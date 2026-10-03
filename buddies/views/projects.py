@@ -791,6 +791,11 @@ def project_invite_member(request, project_id):
         django_messages.success(request, f"Project invitation sent to {email}.")
     elif outcome == "member":
         django_messages.success(request, f"{email} has been added to the project.")
+    elif outcome == "auto_joined":
+        django_messages.success(
+            request,
+            f"{email} automatically accepts your invitations and has been added to the project.",
+        )
     return redirect("projects:project_settings", project_id=project_id)
 
 

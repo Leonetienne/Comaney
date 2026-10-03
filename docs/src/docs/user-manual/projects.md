@@ -89,6 +89,8 @@ They receive an email with a link. Once they accept, they appear in the member l
 
 **Receiving a project invitation:** Go to **My Buddies**. The invitation appears under **Pending Invitations**. Click **View invite** to accept or decline.
 
+If the person you invite has chosen to accept your entries automatically, they join the project right away instead. See [Automatically accepting a buddy's entries](buddies/adding-buddies.md#automatically-accepting-a-buddys-entries).
+
 ## Adding an offline member
 
 If someone in your project does not use Comaney, you can add them as an offline member.

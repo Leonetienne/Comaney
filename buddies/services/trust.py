@@ -1,12 +1,21 @@
 from __future__ import annotations
 
+from typing import NamedTuple
+
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from ..models import BuddyLink, BuddySpending
+from ..models import BuddyLink, BuddySpending, ProjectInvite
 from .email import BuddyEmailService
+from .group import ProjectService
 from .lifecycle import BuddyLifecycleService
+
+
+class AutoAcceptResult(NamedTuple):
+    """What turning the trust on accepted retroactively."""
+    entries: int   # expenses/settlements/participant indicators
+    projects: int  # project invitations joined
 
 
 class BuddyTrustService:
@@ -20,8 +29,10 @@ class BuddyTrustService:
     - "Did you pay for this?": a pending non-settlement expense owned by the truster.
     - Settlement receipt: a pending settlement with the truster as creditor.
     - Participant approval indicator: the truster's neutral BuddySpending row.
+    Plus project invitations the actor (as project admin) sends the truster.
 
-    Expenses in archived projects are never touched.
+    Expenses in archived projects are never touched, and archived projects
+    are never joined.
     """
 
     @staticmethod
@@ -102,6 +113,32 @@ class BuddyTrustService:
         return changed
 
     @staticmethod
+    def accept_project_invite(invite, invitee, notify: bool = True):
+        """
+        Join `invitee` into the invite's project on their behalf, the same way a
+        manual accept does (ProjectService.join_via_invite), minus the "joined
+        your project" email to the inviter, who sees the new member right away.
+        Returns the project, or None for an expired/archived invite.
+        """
+        if not invite.is_valid() or invite.group.archived:
+            return None
+        inviter = invite.inviting_feuser
+        project = ProjectService.join_via_invite(invite, invitee, notify_inviter=False)
+        if notify:
+            BuddyEmailService.send_project_invite_auto_accepted(project, inviter, invitee)
+        return project
+
+    @staticmethod
+    def pending_invites_from(truster, actor):
+        """Open, unexpired invitations from `actor` to `truster` into non-archived projects."""
+        return (
+            ProjectInvite.objects
+            .filter(inviting_feuser=actor, invitee_email__iexact=truster.email,
+                    group__archived=False, expires_at__gt=timezone.now())
+            .select_related("group", "inviting_feuser")
+        )
+
+    @staticmethod
     def pending_from(truster, actor):
         """
         Expenses recorded by `actor` that currently wait on `truster` and would
@@ -129,12 +166,13 @@ class BuddyTrustService:
 
     @staticmethod
     @transaction.atomic
-    def set_auto_accept(truster, other, enabled: bool) -> int:
+    def set_auto_accept(truster, other, enabled: bool) -> AutoAcceptResult:
         """
         Turn `truster`'s auto-accept of entries from `other` on or off.
         Turning it on also accepts every pending entry `other` already recorded
-        (see pending_from), silently: the truster just chose this themselves.
-        Returns how many expenses were accepted retroactively.
+        (see pending_from) and joins every open project invitation from them
+        (see pending_invites_from), silently: the truster just chose this
+        themselves. Returns what was accepted retroactively.
         Raises BuddyLink.DoesNotExist if the two are not direct buddies.
         """
         link = BuddyLink.between(truster, other)
@@ -142,8 +180,13 @@ class BuddyTrustService:
             raise BuddyLink.DoesNotExist
         link.set_auto_accepts(truster, enabled)
         if not enabled:
-            return 0
-        return sum(
+            return AutoAcceptResult(0, 0)
+        entries = sum(
             1 for expense in BuddyTrustService.pending_from(truster, other)
             if BuddyTrustService._accept_for(expense, truster, other, notify=False)
         )
+        projects = sum(
+            1 for invite in BuddyTrustService.pending_invites_from(truster, other)
+            if BuddyTrustService.accept_project_invite(invite, truster, notify=False)
+        )
+        return AutoAcceptResult(entries, projects)

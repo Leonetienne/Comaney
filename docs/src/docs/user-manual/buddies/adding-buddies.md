@@ -46,17 +46,17 @@ This works for any member, not just the project admin. The option only appears i
 
 ## Automatically accepting a buddy's entries
 
-Normally, when a buddy records something for you, you have to confirm it: an expense where they marked you as the one who paid, or a settlement where they say they paid you back. If you trust a buddy to get it right, you can skip this step for them.
+Normally, when a buddy records something for you, you have to confirm it: an expense where they marked you as the one who paid, a settlement where they say they paid you back, or an invitation to one of their projects. If you trust a buddy to get it right, you can skip this step for them.
 
 **To turn it on:**
 
 1. Go to **My Buddies**.
-2. Next to the buddy, switch on **Automatically accept expenses and settlements recorded by ...**.
+2. Next to the buddy, switch on **Automatically accept expenses, settlements and project invitations from ...**.
 3. A confirmation box appears. Click **Save**.
 
-From then on, everything this buddy records for you is accepted right away, both for one-on-one expenses and in every project you share with them. You still get an email about each one, so nothing happens without you knowing. The small check mark that shows you agree to your share of their expenses is also set for you.
+From then on, everything this buddy records for you is accepted right away, both for one-on-one expenses and in every project you share with them. When they invite you to one of their projects, you join it straight away. You still get an email about each one, so nothing happens without you knowing. The small check mark that shows you agree to your share of their expenses is also set for you.
 
-Anything this buddy recorded earlier that is still waiting for you is accepted too, the moment you save. This cannot be undone. Expenses in archived projects are never changed.
+Anything this buddy recorded earlier that is still waiting for you is accepted too, the moment you save, and you join any project they already invited you to. This cannot be undone. Expenses in archived projects are never changed.
 
 **Good to know:**
 
