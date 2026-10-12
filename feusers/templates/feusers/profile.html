@@ -149,6 +149,30 @@
         {% if current_feuser.is_demo %}</fieldset>{% endif %}
     </div>
 
+    <div class="settings-card" id="section-expense-entry">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Expense entry</h2>
+        </div>
+        <p class="in-page-tip">Get a reminder before saving an expense that has no category or no tags, so it doesn't end up unclassified.</p>
+        {% if success == "expense_entry" %}<p class="success-msg">Saved.</p>{% endif %}
+        {% if current_feuser.is_demo %}
+        <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
+        <fieldset disabled style="border:none;padding:0;margin:0;">
+        {% endif %}
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="expense_entry">
+            {% for field in expense_entry_form %}
+                <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
+                {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+            {% endfor %}
+            <div class="form-actions">
+                <button type="submit" class="btn">Save changes</button>
+            </div>
+        </form>
+        {% if current_feuser.is_demo %}</fieldset>{% endif %}
+    </div>
+
     <div class="settings-card" id="section-early-access">
         <div class="settings-card-head">
             <h2 class="settings-card-title">Early access</h2>

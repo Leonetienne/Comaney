@@ -1,5 +1,5 @@
 {% extends "budget_base.html" %}
-{% load static %}
+{% load static unclassified_warning %}
 
 {% block title %}Comaney – {% if scheduled %}Edit scheduled expense{% else %}New scheduled expense{% endif %}{% endblock %}
 
@@ -114,7 +114,10 @@
 </div>
 </div>
 <script src="{% static 'dist/expense_tag_ai.js' %}" defer></script>
+{% unclassified_save_warning_js request.feuser %}
 <script>
+window.addUnclassifiedSaveWarning(document.getElementById('scheduled-form'));
+
 (function () {
     const startEl = document.getElementById('{{ form.repeat_base_date.id_for_label }}');
     const endEl   = document.getElementById('{{ form.end_on.id_for_label }}');

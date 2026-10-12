@@ -1,10 +1,11 @@
 {% extends "budget_base.html" %}
-{% load feuser_tags %}
+{% load feuser_tags unclassified_warning %}
 
 {% block title %}Comaney – Express Creation{% endblock %}
 
 {% block extra_head %}
 {% include "partials/_date_range_warning_js.html" %}
+{% unclassified_save_warning_js current_feuser %}
 {% if buddy_actual or buddy_dummy or buddy_groups %}
 <script>
 window.BUDDY_EXPENSE_CONFIG = {
@@ -922,23 +923,53 @@ document.querySelectorAll('.edit-type').forEach(sel => {
     });
 });
 
-// ── Serialize edits → preview_json before confirm submit ────────────────────
+// ── Checks before confirm submit (addSaveCheck in base.html) ────────────────
 var confirmForm = document.getElementById('confirm-form');
-var skipDateConfirm = false;
-confirmForm.addEventListener('submit', function (e) {
-    if (skipDateConfirm) { skipDateConfirm = false; return; }
 
+function selectedCards() {
+    return Array.from(document.querySelectorAll('#confirm-form input[name=selected]:checked'))
+        .map(function (selCb) { return selCb.closest('.preview-card'); });
+}
+
+window.addSaveCheck(confirmForm, function () {
     // Validate buddy sections for selected cards
     var allBuddyValid = true;
-    document.querySelectorAll('#confirm-form input[name=selected]:checked').forEach(function(selCb) {
-        var inst = _cardBuddy[selCb.value];
+    selectedCards().forEach(function (card) {
+        var inst = _cardBuddy[card.dataset.idx];
         if (inst && !inst.validate()) allBuddyValid = false;
     });
-    if (!allBuddyValid) { e.preventDefault(); return; }
+    return allBuddyValid ? null : false;
+}, { blocking: true });
 
+window.addSaveCheck(confirmForm, function () {
+    var outOfRangeTitles = selectedCards()
+        .filter(function (card) { return window.isDateOutsideDisplayRange(card.querySelector('.edit-date').value); })
+        .map(function (card) { return card.querySelector('.edit-title').value.trim(); });
+    if (!outOfRangeTitles.length) return null;
+    var range = window.getCurrentDateRange();
+    var single = outOfRangeTitles.length === 1;
+    var which = single ? '"' + outOfRangeTitles[0] + '"' : outOfRangeTitles.length + ' of the selected expenses';
+    return {
+        message: which + ' ' + (single ? 'has' : 'have') + ' a date outside your currently selected display period (' + range.from + ' to ' + range.to + '). ' +
+            (single ? 'It' : 'They') + ' will be saved, but won\'t show up in your expense list or dashboard until you change the date range.',
+        okLabel: 'Save anyway',
+    };
+});
+
+window.addUnclassifiedSaveWarning(confirmForm, function () {
+    return selectedCards().map(function (card) {
+        return {
+            type: card.querySelector('.edit-type').value,
+            hasCategory: !!card.querySelector('.edit-category').value,
+            hasTags: !!card.querySelector('.edit-tag-cb:checked'),
+        };
+    });
+});
+
+// ── Serialize edits → preview_json once every check passed ──────────────────
+confirmForm.addEventListener('submit', function () {
     const cards   = document.querySelectorAll('.preview-card[data-idx]');
     const payload = JSON.parse(document.getElementById('preview_json_input').value);
-    const outOfRangeTitles = [];
 
     cards.forEach(card => {
         const idx  = parseInt(card.dataset.idx, 10);
@@ -963,29 +994,9 @@ confirmForm.addEventListener('submit', function (e) {
             var state = inst.getState();
             if (state) Object.assign(item, state);
         }
-
-        const includeCb = card.querySelector('input[name=selected]');
-        if (includeCb && includeCb.checked && window.isDateOutsideDisplayRange(item.date_due)) {
-            outOfRangeTitles.push(item.title);
-        }
     });
 
     document.getElementById('preview_json_input').value = JSON.stringify(payload);
-
-    if (outOfRangeTitles.length) {
-        e.preventDefault();
-        var range = window.getCurrentDateRange();
-        var single = outOfRangeTitles.length === 1;
-        var which = single ? '"' + outOfRangeTitles[0] + '"' : outOfRangeTitles.length + ' of the selected expenses';
-        window.confirmDialog(
-            which + ' ' + (single ? 'has' : 'have') + ' a date outside your currently selected display period (' + range.from + ' to ' + range.to + '). ' +
-            (single ? 'It' : 'They') + ' will be saved, but won\'t show up in your expense list or dashboard until you change the date range.',
-            'Save anyway'
-        ).then(function () {
-            skipDateConfirm = true;
-            confirmForm.requestSubmit();
-        }).catch(function () {});
-    }
 });
 
 // ── Scroll to the Save button once the preview is ready ──────────────────────

@@ -5,6 +5,7 @@ Unclassified Expenses page: list, per-row save, bulk save, and AI-solve.
     POST /budget/unclassified/<uid>/save/        -> unclassified_save
     POST /budget/unclassified/<uid>/ai-solve/     -> unclassified_ai_solve
     POST /budget/unclassified/save-all/          -> unclassified_save_all
+    POST /budget/unclassified/save-warning/dismiss/ -> unclassified_save_warning_dismiss
 """
 import json
 import logging
@@ -231,3 +232,17 @@ def expense_ai_suggest_tags(request):
         return error
 
     return _ok(result)
+
+
+@feuser_required
+@require_http_methods(["POST"])
+def unclassified_save_warning_dismiss(request):
+    """The "Don't show again" button of the missing category/tags warning shown
+    before saving an expense (see _unclassified_save_warning_js.html). Turns the
+    warning off for good; it can be turned back on in the profile settings."""
+    feuser = request.feuser
+    if feuser.is_demo:
+        return _err("Not available on demo accounts.", status=403)
+    feuser.warn_unclassified_on_save = False
+    feuser.save(update_fields=["warn_unclassified_on_save"])
+    return _ok({"ok": True})

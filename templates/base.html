@@ -27,6 +27,49 @@
     <link rel="stylesheet" href="{% static 'dist/main.css' %}">
     {% block extra_head %}{% endblock %}
     <script>var AVATAR_COLORS = {% avatar_colors_json %};</script>
+    <script>
+    (function() {
+    // Checks run in order before a form is saved, each warning shown one after
+    // the other. check(form) returns:
+    //   null/undefined  nothing to say, go on
+    //   false           block the save (the check shows its own error)
+    //   {message, okLabel, extraLabel?, onExtra?}  ask; Cancel stops the save,
+    //                   the extra button runs onExtra(form) and then saves too
+    // Pass {blocking: true} for plain validation, so it runs before any warning.
+    // The form is submitted once, after the last check passed.
+    window.addSaveCheck = function(form, check, options) {
+        if (!form._saveChecks) {
+            form._saveChecks = { blocking: [], warnings: [] };
+            form.addEventListener('submit', runSaveChecks);
+        }
+        form._saveChecks[options && options.blocking ? 'blocking' : 'warnings'].push(check);
+    };
+
+    function runSaveChecks(e) {
+        const form = e.currentTarget;
+        if (form._saveChecksPassed) { form._saveChecksPassed = false; return; }
+        if (e.defaultPrevented) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const submitter = e.submitter;
+        const checks = form._saveChecks.blocking.concat(form._saveChecks.warnings);
+        checks.reduce(function(chain, check) {
+            return chain.then(function() {
+                const warning = check(form);
+                if (warning === false) return Promise.reject();
+                if (!warning) return;
+                return window.confirmDialog(warning.message, warning.okLabel, warning.extraLabel)
+                    .then(function(choice) {
+                        if (choice === 'extra' && warning.onExtra) return warning.onExtra(form);
+                    });
+            });
+        }, Promise.resolve()).then(function() {
+            form._saveChecksPassed = true;
+            form.requestSubmit(submitter);
+        }).catch(function() {});
+    }
+    })();
+    </script>
 </head>
 <body{% if current_feuser and current_feuser.custom_backdrop %} class="has-backdrop"{% endif %}>
     {% if current_feuser and current_feuser.custom_backdrop %}<img class="custom-backdrop" src="{{ current_feuser.backdrop_url }}" alt="" style="object-fit:{{ current_feuser.backdrop_mode }};opacity:{{ current_feuser.backdrop_opacity_decimal }};">{% if current_feuser.backdrop_css or current_feuser.backdrop_css_mobile %}<style id="backdrop-css-saved">{% if current_feuser.backdrop_css %}.custom-backdrop{ {{ current_feuser.backdrop_css|safe }} }{% endif %}{% if current_feuser.backdrop_css_mobile %}@media(max-width:768px){ .custom-backdrop{ {{ current_feuser.backdrop_css_mobile|safe }} } }{% endif %}</style>{% endif %}{% endif %}
@@ -46,6 +89,7 @@
             <p class="cdialog-msg" id="cdialog-msg"></p>
             <div class="cdialog-actions">
                 <button class="btn btn-danger" id="cdialog-ok">Delete</button>
+                <button class="btn btn-secondary" id="cdialog-extra" style="display:none;"></button>
                 <button class="btn btn-secondary" id="cdialog-cancel">Cancel</button>
             </div>
         </div>
@@ -200,33 +244,42 @@
         initToast(toastEl);
     };
 
-    window.confirmDialog = function(message, okLabel) {
+    // Resolves with 'ok', or with 'extra' when the optional third button
+    // (shown only when extraLabel is given) was clicked; rejects on cancel.
+    window.confirmDialog = function(message, okLabel, extraLabel) {
         return new Promise(function(resolve, reject) {
             const backdrop = document.getElementById('cdialog-backdrop');
             const msg      = document.getElementById('cdialog-msg');
             const okBtn    = document.getElementById('cdialog-ok');
+            const extraBtn = document.getElementById('cdialog-extra');
             const cancelBtn = document.getElementById('cdialog-cancel');
             const defaultOkLabel = 'Delete';
 
             msg.textContent = message;
             okBtn.textContent = okLabel || defaultOkLabel;
+            extraBtn.textContent = extraLabel || '';
+            extraBtn.style.display = extraLabel ? '' : 'none';
             backdrop.classList.add('cdialog-visible');
             okBtn.focus();
 
             function cleanup() {
                 backdrop.classList.remove('cdialog-visible');
                 okBtn.textContent = defaultOkLabel;
+                extraBtn.style.display = 'none';
                 okBtn.removeEventListener('click', onOk);
+                extraBtn.removeEventListener('click', onExtra);
                 cancelBtn.removeEventListener('click', onCancel);
                 backdrop.removeEventListener('click', onBackdrop);
                 document.removeEventListener('keydown', onKey);
             }
-            function onOk()       { cleanup(); resolve(); }
+            function onOk()       { cleanup(); resolve('ok'); }
+            function onExtra()    { cleanup(); resolve('extra'); }
             function onCancel()   { cleanup(); reject(); }
             function onBackdrop(e) { if (e.target === backdrop) { cleanup(); reject(); } }
             function onKey(e)     { if (e.key === 'Escape') { cleanup(); reject(); } }
 
             okBtn.addEventListener('click', onOk);
+            extraBtn.addEventListener('click', onExtra);
             cancelBtn.addEventListener('click', onCancel);
             backdrop.addEventListener('click', onBackdrop);
             document.addEventListener('keydown', onKey);

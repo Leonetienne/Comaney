@@ -56,7 +56,6 @@
     var currentMode    = 'single';
     var currentGroupId = null;
     var participants   = [];
-    var _skipPayerConfirm = false;
 
     // ── Mode switching ─────────────────────────────────────────────────────
 
@@ -255,30 +254,27 @@
 
     // ── Form submit guard ──────────────────────────────────────────────────
 
-    theForm.addEventListener('submit', function (e) {
+    // Runs through the shared save checks (addSaveCheck in base.html), so the
+    // payer warning queues up behind any other warning the page shows.
+    window.addSaveCheck(theForm, function () {
         // A direct buddy expense (single mode) always needs one participant.
         // A project expense (group mode) may have zero: the payer then covers
         // the whole cost alone, which the backend accepts. Only block single mode.
         if (cb.checked && participants.length === 0 && currentMode !== 'group') {
-            e.preventDefault();
             noParticipantsErr.style.display = 'block';
-            return;
+            return false;
         }
         noParticipantsErr.style.display = 'none';
-        if (!_skipPayerConfirm && cb.checked) {
-            var payerType = payerSel.value.split(':')[0];
-            if (payerType === 'feuser') {
-                e.preventDefault();
-                var name = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
-                window.confirmDialog(
-                    'This expense will be recorded on ' + name + '\'s account. ' + payerApprovalText(name) + ' You won\'t be able to edit it from your account afterwards.',
-                    'Save'
-                ).then(function () {
-                    _skipPayerConfirm = true;
-                    theForm.submit();
-                }).catch(function () {});
-            }
-        }
+        return null;
+    }, { blocking: true });
+
+    window.addSaveCheck(theForm, function () {
+        if (!cb.checked || payerSel.value.split(':')[0] !== 'feuser') return null;
+        var name = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
+        return {
+            message: 'This expense will be recorded on ' + name + '\'s account. ' + payerApprovalText(name) + ' You won\'t be able to edit it from your account afterwards.',
+            okLabel: 'Save',
+        };
     });
 
     // ── Checkbox toggle ────────────────────────────────────────────────────

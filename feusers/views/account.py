@@ -11,7 +11,7 @@ from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from ..forms import AISettingsForm, ChangeEmailForm, ChangePasswordForm, EarlyAccessSettingsForm, NotificationPreferencesForm, ProfileForm
+from ..forms import AISettingsForm, ChangeEmailForm, ChangePasswordForm, EarlyAccessSettingsForm, ExpenseEntrySettingsForm, NotificationPreferencesForm, ProfileForm
 from ..second_factor_registry import factor_type_for, get_all_factors, method_key_of
 from ..utils import _get_session_feuser
 from ..webauthn_helpers import rp_id_from_site_url
@@ -31,6 +31,7 @@ def profile(request):
     notifications_form  = NotificationPreferencesForm(instance=feuser)
     ai_form             = AISettingsForm(instance=feuser)
     early_access_form   = EarlyAccessSettingsForm(instance=feuser)
+    expense_entry_form  = ExpenseEntrySettingsForm(instance=feuser)
     email_form          = ChangeEmailForm(feuser=feuser)
     password_form       = ChangePasswordForm(feuser=feuser)
     success             = request.GET.get("success")
@@ -170,6 +171,15 @@ def profile(request):
                 early_access_form.save()
                 return redirect(f"{request.path}?success=early_access")
 
+        elif action == "expense_entry":
+            if feuser.is_demo:
+                return redirect(f"{request.path}?success=expense_entry")
+            expense_entry_form = ExpenseEntrySettingsForm(request.POST, instance=feuser)
+            if expense_entry_form.is_valid():
+                feuser.last_mod = timezone.now()
+                expense_entry_form.save()
+                return redirect(f"{request.path}?success=expense_entry")
+
         elif action == "email":
             if feuser.is_demo:
                 return redirect(f"{request.path}?success=email")
@@ -227,6 +237,7 @@ def profile(request):
         "notifications_form": notifications_form,
         "ai_form": ai_form,
         "early_access_form": early_access_form,
+        "expense_entry_form": expense_entry_form,
         "email_form": email_form,
         "password_form": password_form,
         "success": success,

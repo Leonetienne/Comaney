@@ -25,7 +25,7 @@ from .models import Category, Expense, ExpenseDataOverlay, Tag, TransactionType
 # Never surfaced as unclassified, regardless of category/tags state: a
 # settlement isn't a real spend, and a savings movement isn't the kind of
 # thing a category/tag meaningfully classifies.
-_EXCLUDED_TYPES = [TransactionType.SAVINGS_DEPOSIT, TransactionType.SAVINGS_WITHDRAWAL]
+EXCLUDED_TYPES = [TransactionType.SAVINGS_DEPOSIT, TransactionType.SAVINGS_WITHDRAWAL]
 
 
 def category_tag_catalog(feuser) -> tuple[list[dict], list[dict]]:
@@ -44,6 +44,26 @@ def category_tag_catalog(feuser) -> tuple[list[dict], list[dict]]:
     )
     return categories, tags
 
+
+
+def save_warning_config(feuser) -> dict:
+    """
+    Settings for the missing category/tags warning shown before saving an
+    expense (budget/partials/_unclassified_save_warning_js.html). The browser
+    only warns about what would make the saved expense show up on the
+    Unclassified Expenses page, and only about a field the feuser could have
+    filled in at all: a missing category counts only if they own a category,
+    missing tags only if they own a tag.
+    """
+    if not feuser.warn_unclassified_on_save:
+        return {"enabled": False}
+    return {
+        "enabled": True,
+        "hasCategories": Category.objects.filter(owning_feuser=feuser).exists(),
+        "hasTags": Tag.objects.filter(owning_feuser=feuser).exists(),
+        "excludedTypes": [str(t) for t in EXCLUDED_TYPES],
+        "canDismiss": not feuser.is_demo,
+    }
 
 def _problem(has_category: bool, has_tags: bool) -> str | None:
     if not has_category and not has_tags:
@@ -150,7 +170,7 @@ def get_unclassified_row(feuser, expense_uid) -> dict | None:
 def _own_rows(feuser) -> list[dict]:
     qs = (
         Expense.objects.filter(owning_feuser=feuser, is_buddies_settlement=False)
-        .exclude(type__in=_EXCLUDED_TYPES)
+        .exclude(type__in=EXCLUDED_TYPES)
         .select_related("category", "project")
         .prefetch_related("tags")
         .order_by("-date_created")
@@ -172,7 +192,7 @@ def _foreign_rows(feuser) -> list[dict]:
     qs = (
         Expense.objects.filter(pk__in=expense_ids, is_buddies_settlement=False)
         .exclude(owning_feuser=feuser)
-        .exclude(type__in=_EXCLUDED_TYPES)
+        .exclude(type__in=EXCLUDED_TYPES)
         .select_related("category", "owning_feuser", "project")
         .prefetch_related("tags")
         .order_by("-date_created")
@@ -206,7 +226,7 @@ def count_unclassified_expenses(feuser) -> int:
 
     own = (
         Expense.objects.filter(owning_feuser=feuser, is_buddies_settlement=False)
-        .exclude(type__in=_EXCLUDED_TYPES)
+        .exclude(type__in=EXCLUDED_TYPES)
         .filter(Q(category__isnull=True) | Q(tags__isnull=True))
         .distinct()
         .count()
@@ -231,7 +251,7 @@ def count_unclassified_expenses(feuser) -> int:
         Expense.objects.filter(pk__in=expense_ids, is_buddies_settlement=False)
         .exclude(owning_feuser=feuser)
         .exclude(pk__in=classified_ids)
-        .exclude(type__in=_EXCLUDED_TYPES)
+        .exclude(type__in=EXCLUDED_TYPES)
         .count()
     )
     return own + foreign

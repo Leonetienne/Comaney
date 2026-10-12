@@ -1,0 +1,49 @@
+{{ config|json_script:"unclassified-save-warning-config" }}
+<script>
+// Warns before saving an expense that would end up on the Unclassified Expenses
+// page; the rule and its settings come from budget/unclassified.py's
+// save_warning_config. A page registers a form with
+// window.addUnclassifiedSaveWarning(form, getItems), where getItems() returns
+// the expenses about to be saved as [{type, hasCategory, hasTags}]. Without
+// getItems, the form itself is one expense with plain type/category/tags
+// fields. One warning covers all of them, whatever is missing.
+(function () {
+    var cfg = JSON.parse(document.getElementById('unclassified-save-warning-config').textContent);
+    var dismissUrl = '{% url "budget:unclassified_save_warning_dismiss" %}';
+
+    function isUnclassified(item) {
+        if (cfg.excludedTypes.indexOf(item.type) !== -1) return false;
+        return (cfg.hasCategories && !item.hasCategory) || (cfg.hasTags && !item.hasTags);
+    }
+
+    function dismiss() {
+        cfg.enabled = false;
+        return fetch(dismissUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content },
+        }).catch(function () {});
+    }
+
+    function plainFormItems(form) {
+        return [{
+            type: form.elements.type.value,
+            hasCategory: !!form.elements.category.value,
+            hasTags: !!form.querySelector('input[name=tags]:checked'),
+        }];
+    }
+
+    window.addUnclassifiedSaveWarning = function (form, getItems) {
+        getItems = getItems || function () { return plainFormItems(form); };
+        window.addSaveCheck(form, function () {
+            if (!cfg.enabled || !getItems().some(isUnclassified)) return null;
+            return {
+                message: 'You are missing a category or tags. Expenses without them are harder to find and analyze later.',
+                okLabel: 'Save anyway',
+                extraLabel: cfg.canDismiss ? 'Don\'t show again' : null,
+                onExtra: dismiss,
+            };
+        });
+    };
+})();
+</script>

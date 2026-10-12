@@ -35,6 +35,19 @@
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+
+  // Phones: one full-width button per row, primary action on top, instead of
+  // a ragged wrap once a third button no longer fits next to the others.
+  @media (max-width: 560px) {
+    flex-direction: column;
+
+    > *,
+    .btn {
+      width: 100%;
+      margin: 0;
+      text-align: center;
+    }
+  }
 }
 
 .cdialog-title {

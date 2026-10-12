@@ -97,6 +97,15 @@ class EarlyAccessSettingsForm(forms.ModelForm):
         }
 
 
+class ExpenseEntrySettingsForm(forms.ModelForm):
+    class Meta:
+        model = FeUser
+        fields = ["warn_unclassified_on_save"]
+        labels = {
+            "warn_unclassified_on_save": "Warn me when saving an expense without a category or tags",
+        }
+
+
 class ChangeEmailForm(forms.Form):
     email = forms.EmailField(label="New email address")
     password = forms.CharField(label="Current password", widget=forms.PasswordInput)

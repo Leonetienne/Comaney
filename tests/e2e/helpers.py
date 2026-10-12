@@ -282,13 +282,17 @@ def get_api_key(driver, w) -> str:
     return key_el.get_attribute("value")
 
 
-def setup_user(driver, w, first_name: str = "", last_name: str = "") -> dict:
+def setup_user(driver, w, first_name: str = "", last_name: str = "",
+               unclassified_warning: bool = False) -> dict:
     """Create a confirmed user via management commands and generate an API key via shell.
 
     Bypasses the UI registration flow for speed. driver and w are accepted for
     call-site compatibility but are not used. Use register_user() + confirm_email()
     in tests that specifically exercise the registration UI.
     Pass first_name / last_name to give the user a visible display name.
+    The missing category/tags warning before saving an expense is off unless
+    unclassified_warning=True: every account owns default categories and tags,
+    so it would otherwise stop every unrelated test that saves an expense form.
     """
     email = f"sel.{uuid.uuid4().hex[:8]}@example.com"
     cmd = ["docker", "exec", DOCKER_WEB, "python", "manage.py",
@@ -304,6 +308,7 @@ def setup_user(driver, w, first_name: str = "", last_name: str = "") -> dict:
     key_result = subprocess.run(
         ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c",
          f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}');"
+         f" u.warn_unclassified_on_save = {unclassified_warning};"
          f" u.generate_api_key(); u.save(); print(u.api_key)"],
         capture_output=True, text=True, timeout=15,
     )

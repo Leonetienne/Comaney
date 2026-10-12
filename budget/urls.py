@@ -53,6 +53,7 @@ urlpatterns = [
 
     path("unclassified/", views.unclassified_list, name="unclassified_list"),
     path("unclassified/save-all/", views.unclassified_save_all, name="unclassified_save_all"),
+    path("unclassified/save-warning/dismiss/", views.unclassified_save_warning_dismiss, name="unclassified_save_warning_dismiss"),
     path("unclassified/<int:uid>/save/", views.unclassified_save, name="unclassified_save"),
     path("unclassified/<int:uid>/ai-solve/", views.unclassified_ai_solve, name="unclassified_ai_solve"),
 
