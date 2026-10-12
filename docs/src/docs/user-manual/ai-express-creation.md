@@ -67,19 +67,19 @@ You can always adjust who paid, who shares, and by how much before saving.
 
 ## Privacy
 
-Photos and descriptions you submit are sent to Anthropic's AI service for processing. Do not upload documents containing sensitive personal data such as identity card numbers or passport scans.
+Photos and descriptions you submit are sent to the AI service your administrator has set up, for processing. Do not upload documents containing sensitive personal data such as identity card numbers or passport scans.
 
-The data transmitted to Anthropic includes only your list of tags, categories, projects (names, descriptions, [AI preprompts](projects.md#ai-preprompt), and the names of their members), the names of your buddies, your custom instruction, your expense description and/or receipt picture.
+The data sent to it includes only your list of tags, categories, projects (names, descriptions, [AI preprompts](projects.md#ai-preprompt), and the names of their members), the names of your buddies, your custom instruction, your expense description and/or receipt picture.
 Comaney will never transmit your existing transactions.
 
-## AI Licensing
+## AI access
 
-Express creation requires an Anthropic API key. There are two ways this can work:
+Express creation needs access to the AI service your administrator has set up. There are two ways this can work:
 
-### (Most likely your case) If your administrator has set up a shared trial key
+### (Most likely your case) Shared access from your administrator
 
-A shared key may already be available. It has a small monthly budget per user (typically a few cents of API cost). Once your share is used up for the month, the feature becomes unavailable until the following month. The page will tell you if this is the case.
+Shared access may already be available. It may have a monthly budget per user. Once your share is used up for the month, the feature becomes unavailable until the following month. The page will tell you if this is the case.
 
-### Using your own key
+### Using your own settings
 
-If you have an Anthropic account, you can add your own API key in **Account Settings → Anthropic API key**. When your own key is set, it is used instead of the shared key, with no Comaney usage limits (Anthropic will bill you directly).
+Depending on the AI service, you can enter your own settings, such as your own API key, under **Account Settings → AI** (see [Your own AI settings](account-settings.md#ai)). They are then used instead of the shared access, with no Comaney usage limits (the AI service bills you directly).

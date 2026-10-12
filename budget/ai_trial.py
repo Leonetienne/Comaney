@@ -1,4 +1,4 @@
-"""Manages the billing-disabled flag for the shared Anthropic trial key."""
+"""Disabled flag for the shared AI access, and the admin emails about it."""
 from __future__ import annotations
 
 import logging
@@ -6,6 +6,8 @@ from pathlib import Path
 from smtplib import SMTPException
 
 from django.conf import settings
+
+from ai_providers.base import AIProvider, env_var_name
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +43,36 @@ def enable_trial() -> None:
         log.exception("Could not delete AI trial disabled flag at %s", _flag_path())
 
 
+def shared_key_setting(provider: AIProvider) -> str:
+    """Env var holding the provider's shared API key, or its settings prefix if it has none."""
+    if any(f.key == "api_key" for f in provider.get_config_fields()):
+        return env_var_name(provider.get_name(), "api_key")
+    return env_var_name(provider.get_name(), "") + "*"
+
+
+def invalid_key_text(provider: AIProvider) -> str:
+    return (
+        f"{provider.get_display_name()} rejected the shared API key (authentication error).\n\n"
+        "Users without their own AI settings get an error from every AI feature.\n\n"
+        "Steps to fix:\n"
+        f"  1. Set a valid {shared_key_setting(provider)} in your environment\n"
+        "  2. Restart the container\n"
+    )
+
+
+def billing_text(provider: AIProvider, reason: str, site_url: str) -> str:
+    billing_url = provider.get_billing_url()
+    top_up = f"at {billing_url}" if billing_url else "with your AI service"
+    return (
+        f"The shared {provider.get_display_name()} access has run out of credits.\n\n"
+        f"Error detail: {reason}\n\n"
+        "Shared AI access has been disabled automatically for all users without their own AI settings.\n\n"
+        "Steps to restore:\n"
+        f"  1. Top up the account {top_up}\n"
+        f"  2. Re-enable shared access at {site_url}/admin/ai-trial/\n"
+    )
+
+
 def notify_admin_invalid_trial_key() -> None:
     if getattr(settings, "DISABLE_EMAILING", False):
         return
@@ -50,16 +82,15 @@ def notify_admin_invalid_trial_key() -> None:
     from django.core.mail import EmailMultiAlternatives
     from django.template.loader import render_to_string
 
-    site_url = getattr(settings, "SITE_URL", "")
-    subject = "[Comaney] Trial API key is invalid — action required"
-    html_body = render_to_string("emails/trial_key_invalid.html", {"site_url": site_url})
-    text_body = (
-        "The shared Anthropic trial API key is invalid (authentication error).\n\n"
-        "Express Creation is returning errors to trial users.\n\n"
-        "Steps to fix:\n"
-        "  1. Set a valid AI_TRIAL_API_KEY in your environment\n"
-        "  2. Restart the container\n"
-    )
+    from ai_providers import get_provider
+
+    provider = get_provider()
+    subject = "[Comaney] Shared AI key is invalid: action required"
+    html_body = render_to_string("emails/trial_key_invalid.html", {
+        "provider_name": provider.get_display_name(),
+        "key_setting": shared_key_setting(provider),
+    })
+    text_body = invalid_key_text(provider)
     try:
         msg = EmailMultiAlternatives(subject, text_body, settings.DEFAULT_FROM_EMAIL, [email])
         msg.attach_alternative(html_body, "text/html")
@@ -111,16 +142,10 @@ def notify_admin_billing(reason: str) -> None:
         return
     from django.core.mail import send_mail
 
-    site_url = getattr(settings, "SITE_URL", "")
-    subject = "[Comaney] Trial API key out of funds — action required"
-    body = (
-        "The shared Anthropic trial API key has run out of credits.\n\n"
-        f"Error detail: {reason}\n\n"
-        "Express Creation has been automatically disabled for all trial users.\n\n"
-        "Steps to restore:\n"
-        "  1. Top up the Anthropic account at https://console.anthropic.com\n"
-        f"  2. Re-enable the feature at {site_url}/admin/ai-trial/\n"
-    )
+    from ai_providers import get_provider
+
+    subject = "[Comaney] Shared AI access out of funds: action required"
+    body = billing_text(get_provider(), reason, getattr(settings, "SITE_URL", ""))
     try:
         send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [email])
     except (SMTPException, OSError):

@@ -13,7 +13,7 @@ Each service has its own settings, all starting with `AI_PROVIDER_<NAME>_`.
 
 How users get access (details in each section):
 
-- **Shared access** (all services): the access you configure for the instance. Every user without their own key uses it, limited per user by [`AI_TRIAL_USAGE_LIMIT`](environment-variables.md#ai_trial_usage_limit). See [AI Trial Key](ai-trial-key.md). For `local` it can be switched off.
+- **Shared access** (all services): the access you configure for the instance. Every user without their own key uses it, limited per user by [`AI_TRIAL_USAGE_LIMIT`](environment-variables.md#ai_trial_usage_limit). See [AI Trial Key](shared-ai-access.md). For `local` it can be switched off.
 - **Own keys** (all services): users can enter their own key in their account settings; it wins over shared access and is not limited by Comaney. Without shared access, only these users can use AI.
 
 When you switch to another service, users' saved settings of the previous one are deleted automatically (see [`purge_inactive_ai_config`](console-commands.md#purge_inactive_ai_config)).

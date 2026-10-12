@@ -36,6 +36,7 @@ def current_feuser(request):
     ctx["ai_enabled"] = provider is not None
     ctx["ai_provider_display_name"] = provider.get_display_name() if provider else ""
     ctx["ai_provider_vendor_name"] = provider.get_vendor_name() if provider else ""
+    ctx["ai_provider_has_user_fields"] = bool(provider and provider.get_user_fields())
     ctx["sankey_studio_available"] = bool(feuser and feuser.enable_early_access)
     ctx["email_2fa_available"] = not settings.DISABLE_EMAILING
     ctx["unread_notification_count"] = (

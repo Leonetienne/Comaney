@@ -81,7 +81,7 @@ services:
       DEFAULT_FROM_EMAIL: "Comaney <noreply@example.com>"
       ADMIN_NOTIFICATION_EMAIL: "admin@example.com"
       GUNICORN_WORKERS: 2
-      # AI features with a shared Anthropic key (users can also bring their own key)
+      # AI features with shared access (users can also bring their own key); other services: see AI Providers
       AI_PROVIDER: claude
       AI_PROVIDER_CLAUDE_API_KEY: "sk-ant-..."
       AI_TRIAL_USAGE_LIMIT: 10         # per user and month, in US cents; 0 = no limit

@@ -86,7 +86,7 @@ nav:
     - Email Configuration: admin-manual/email.md
     - Cron Jobs: admin-manual/cron-jobs.md
     - AI Providers: admin-manual/ai-providers.md
-    - AI Trial Key: admin-manual/ai-trial-key.md
+    - Shared AI Access: admin-manual/shared-ai-access.md
     - Registration & Users: admin-manual/registration.md
     - Console Commands: admin-manual/console-commands.md
   - Developer Manual:

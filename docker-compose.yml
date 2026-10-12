@@ -53,6 +53,8 @@ services:
       #DISABLE_EMAILING: TRUE
       EMAIL_HOST: mailpit
       EMAIL_PORT: 1025
+      # AI: AI_PROVIDER and AI_PROVIDER_<NAME>_* come from .env (variants in
+      # docs/src/docs/dev-manual/local-ai-dev-stack.md)
     extra_hosts:
       # the Mac (or Linux host) running a native model server for AI_PROVIDER=local
       - "host.docker.internal:host-gateway"

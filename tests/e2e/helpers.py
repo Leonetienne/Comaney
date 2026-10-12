@@ -111,6 +111,22 @@ def stack_has_trial_key() -> bool:
     return _stack_has_trial_key
 
 
+_stack_ai_is_free = None
+
+
+def stack_ai_is_free() -> bool:
+    """Whether AI requests on the stack cost nothing (local provider at 0 cents per MTok); asked once per run."""
+    global _stack_ai_is_free
+    if _stack_ai_is_free is None:
+        out = run_cmd(
+            "shell", "-c",
+            "from ai_providers import get_provider; p = get_provider(); "
+            "print(bool(p and p.get_name() == 'local' and float(p.config('cents_per_mtok')) == 0))",
+        )
+        _stack_ai_is_free = out.strip().endswith("True")
+    return _stack_ai_is_free
+
+
 def ai_unavailable(reason: str, *, trial_only: bool = False):
     """Skip when the environment has no AI key, fail when one is configured.
     trial_only: the test runs on the shared trial key, so only that key counts."""

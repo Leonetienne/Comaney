@@ -176,9 +176,11 @@ services:
       ENABLE_REGISTRATION: "TRUE"   # disable after creating your account
       DISABLE_EMAILING: "TRUE"      # set up SMTP for full functionality
       GUNICORN_WORKERS: 1
-      # Optional: AI features (users can also bring their own key)
-      # AI_PROVIDER: claude
-      # AI_PROVIDER_CLAUDE_API_KEY: "sk-ant-..."   # shared key, optional
+      # Optional: AI features. AI_PROVIDER picks the service, its settings start with
+      # AI_PROVIDER_<NAME>_ (see Admin Manual: AI Providers). Example, a self-hosted model:
+      # AI_PROVIDER: local
+      # AI_PROVIDER_LOCAL_BASE_URL: "http://host.docker.internal:11434/v1"
+      # AI_PROVIDER_LOCAL_MODEL: "qwen3.8:27b"
       # AI_TRIAL_USAGE_LIMIT: 10      # per user and month, in US cents; 0 = no limit
     volumes:
       # Required: all uploaded images (avatars, backgrounds, project pictures) live in /app/data
@@ -238,9 +240,10 @@ docker exec -it comaney-web-1 python manage.py set_user_password you@example.com
 | `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | *(empty)* | SMTP credentials. |
 | `DEFAULT_FROM_EMAIL` | `noreply@comaney.local` | Sender address for outgoing emails. |
 | `ADMIN_NOTIFICATION_EMAIL` | *(unset)* | Receives system alerts. Also enables the contact form. |
-| `AI_PROVIDER` | *(unset)* | AI service for the AI features: `claude` or `none`. Unset = no AI. |
-| `AI_PROVIDER_CLAUDE_API_KEY` | *(unset)* | Shared Anthropic key for the AI trial feature (`AI_TRIAL_API_KEY` is the deprecated old name). |
-| `AI_TRIAL_USAGE_LIMIT` | `0` | Per-user monthly cap in US cents. |
+| `AI_PROVIDER` | *(unset)* | AI service for the AI features: `claude`, `deepseek`, `local` (any OpenAI-compatible server) or `none`. Unset = no AI. |
+| `AI_PROVIDER_<NAME>_*` | | Settings of the chosen AI service (key, model, ...). See **[Admin Manual: AI Providers](https://comaney.app/docs/admin-manual/ai-providers/)**. |
+| `AI_TRIAL_USAGE_LIMIT` | `0` | Per-user monthly cap in US cents for the shared AI access; `0` = no limit. |
+| `AI_TRIAL_API_KEY` | *(unset)* | Deprecated old name of the shared key setting; see the AI Providers page. |
 | `PUBLIC_PAGE_IMPRINT_MD` | *(unset)* | Path to a Markdown file served at `/impressum/`. |
 | `PUBLIC_PAGE_EUDATENSCHUTZ_MD` | *(unset)* | Path to a Markdown file served at `/datenschutzerklaerung/`. |
 | `GUNICORN_WORKERS` | `1` | Number of Gunicorn worker processes. |

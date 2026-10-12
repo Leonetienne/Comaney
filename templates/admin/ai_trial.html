@@ -13,29 +13,33 @@
 </style>
 {% endblock %}
 {% block content %}
-<h1>Express Creation — Trial API Status</h1>
+<h1>Shared AI access</h1>
 
 {% if disabled %}
 <p class="errornote">
-    The shared trial API is currently <strong>DISABLED</strong>.
+    Shared AI access is currently <strong>DISABLED</strong>.
 </p>
 {% if reason %}
 <p><strong>Reason:</strong> {{ reason }}</p>
 {% endif %}
-<p>Top up the Anthropic account at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>, then click the button below.</p>
+{% if billing_url %}
+<p>Top up the {{ provider_name }} account at <a href="{{ billing_url }}" target="_blank" rel="noopener">{{ billing_url }}</a>, then click the button below.</p>
+{% else %}
+<p>Fix the cause, then click the button below.</p>
+{% endif %}
 <form method="post">
     {% csrf_token %}
     <input type="hidden" name="action" value="enable">
-    <button type="submit" class="button">Re-enable trial API</button>
+    <button type="submit" class="button">Re-enable shared access</button>
 </form>
 {% else %}
 <p class="trial-status-p">
-    The shared trial API is currently <strong class="trial-status-enabled">ENABLED</strong>.
+    Shared AI access is currently <strong class="trial-status-enabled">ENABLED</strong>.
 </p>
 <form method="post">
     {% csrf_token %}
     <input type="hidden" name="action" value="disable">
-    <button type="submit" class="button">Manually disable trial API</button>
+    <button type="submit" class="button">Disable shared access</button>
 </form>
 {% endif %}
 

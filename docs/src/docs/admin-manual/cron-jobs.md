@@ -30,7 +30,7 @@ Comaney requires two management commands to run on a schedule inside the web con
 0 0 1 * * <user> docker compose -f /path/to/docker-compose.yml exec -T web python manage.py reset_trial_budgets
 ```
 
-**What it does:** Resets `ai_trial_budget_spent` to zero for every user. This allows each user a fresh allowance of the shared Anthropic trial key in the new calendar month.
+**What it does:** Resets `ai_trial_budget_spent` to zero for every user. This allows each user a fresh allowance of the [shared AI access](shared-ai-access.md) in the new calendar month.
 
 ## Setting up cron on the host
 

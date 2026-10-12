@@ -15,6 +15,7 @@ from selenium.webdriver.support.ui import Select
 from helpers import (
     _url, api_get, api_post, api_delete, run_cmd, setup_user, cleanup_user,
     ai_unavailable, stack_has_trial_key, get_ai_user_config, set_ai_user_config,
+    stack_ai_is_free,
 )
 
 DOCKER_WEB = "comaney-web-1"
@@ -287,7 +288,7 @@ class TestExpressCreation:
         if cost_els:
             cost_text = cost_els[0].text
             cost_val = float(re.search(r"([\d.]+)", cost_text).group(1))
-            assert cost_val > 0
+            assert cost_val == 0 if stack_ai_is_free() else cost_val > 0
         first_card = cards[0]
         title_area = first_card.find_element(By.CSS_SELECTOR, ".edit-title")
         driver.execute_script("arguments[0].value = 'XExpressTestEdited';", title_area)
@@ -304,7 +305,7 @@ class TestExpressCreation:
         ctx["express_created_expense_ids"] = [e["id"] for e in created]
         spent_after = _trial_meter_value(driver)
         if spent_before is not None and spent_after is not None:
-            assert spent_after > spent_before
+            assert spent_after == spent_before if stack_ai_is_free() else spent_after > spent_before
 
     def test_trial_budget_enforcement(self, driver, w, ctx):
         if not ctx.get("express_trial_ok"):
@@ -367,8 +368,16 @@ class TestExpressCreation:
             cards = _parse(driver, "Coffee 3€")
             assert cards, "First request should succeed"
             src = driver.page_source
-            assert "trial budget is now used up" in src.lower()
             assert "Monthly AI limit reached" not in src
+            if stack_ai_is_free():
+                # a free request never uses up the budget; reach the limit by hand
+                assert "trial budget is now used up" not in src.lower()
+                _shell(
+                    f"from feusers.models import FeUser; "
+                    f"FeUser.objects.filter(email='{email}').update(ai_trial_budget_spent={TINY_LIMIT})"
+                )
+            else:
+                assert "trial budget is now used up" in src.lower()
             all_exp = api_get("/api/v1/expenses/", ctx).json().get("expenses", [])
             for e in all_exp:
                 if "coffee" in e.get("title", "").lower():

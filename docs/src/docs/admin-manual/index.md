@@ -11,7 +11,7 @@ This manual covers everything needed to deploy and operate a Comaney instance. I
 | [Email Configuration](email.md) | SMTP setup, Mailpit for development |
 | [Cron Jobs](cron-jobs.md) | Required scheduled tasks and what they do |
 | [AI Providers](ai-providers.md) | Choosing Claude, DeepSeek or a self-hosted model, their settings, community providers |
-| [AI Trial Key](ai-trial-key.md) | Shared Anthropic key management |
+| [Shared AI Access](shared-ai-access.md) | Shared AI access, per-user limits, re-enabling |
 | [Registration & Users](registration.md) | Open vs. closed instances, user management |
 | [Console Commands](console-commands.md) | All management commands with usage reference |
 

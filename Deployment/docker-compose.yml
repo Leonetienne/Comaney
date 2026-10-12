@@ -22,6 +22,11 @@ services:
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@comaney.local}
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      # Optional AI features: AI_PROVIDER picks the service (claude, deepseek, local, none),
+      # its settings start with AI_PROVIDER_<NAME>_ (see the admin manual, "AI Providers").
+      # AI_PROVIDER: ${AI_PROVIDER}
+      # AI_PROVIDER_CLAUDE_API_KEY: ${AI_PROVIDER_CLAUDE_API_KEY}
+      # AI_TRIAL_USAGE_LIMIT: ${AI_TRIAL_USAGE_LIMIT:-10}
     volumes:
       - comaney_data:/app/data
 

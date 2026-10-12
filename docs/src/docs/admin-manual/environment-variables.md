@@ -311,7 +311,7 @@ Which AI service Comaney uses for its AI features (AI Express Creation, dashboar
 
 - `claude`: Claude by Anthropic
 - `deepseek`: DeepSeek
-- `local`: your own model on any OpenAI-compatible server
+- `local`: a model on any OpenAI-compatible server, your own or someone else's
 - the file name of a community provider you mounted
 - `none`: switch all AI features off; every AI button and page is hidden, and users' saved AI settings are kept
 
@@ -319,19 +319,7 @@ If it is unset, AI is off as well. There is one exception, so that an upgrade ne
 
 An unknown value, or invalid settings for the chosen AI service, also take the site down with a configuration error page that names the variable to fix. AI is never switched off silently: fix the setting, or set `AI_PROVIDER=none`.
 
-Settings of the chosen AI service start with `AI_PROVIDER_<NAME>_`, for example `AI_PROVIDER_CLAUDE_API_KEY`. The prefix scopes them: Comaney hands each AI service only the variables with its own prefix (a naming convention, not a security boundary). The settings of every built-in service, with examples, are on [AI Providers](ai-providers.md); the Claude settings are also listed below.
-
----
-
-### `AI_PROVIDER_CLAUDE_API_KEY`
-
-**Default:** *(empty; no shared access)*
-
-An Anthropic API key, used as the shared "trial" key with `AI_PROVIDER=claude`. Users without their own Anthropic key use this shared key, subject to `AI_TRIAL_USAGE_LIMIT`.
-
-If empty, only users with their own Anthropic key can use the AI features.
-
-For single-user instances or private instances where all users have their own key, you do not need to set this.
+Settings of the chosen AI service start with `AI_PROVIDER_<NAME>_`, for example `AI_PROVIDER_CLAUDE_API_KEY`. The prefix scopes them: Comaney hands each AI service only the variables with its own prefix (a naming convention, not a security boundary). The settings of every built-in service (keys, models, prices, ...), with examples, are on [AI Providers](ai-providers.md).
 
 ---
 
@@ -339,7 +327,7 @@ For single-user instances or private instances where all users have their own ke
 
 **Deprecated:** use `AI_PROVIDER_CLAUDE_API_KEY` instead.
 
-The old name of `AI_PROVIDER_CLAUDE_API_KEY`. It still works with `AI_PROVIDER=claude` (a warning is logged at startup). If both are set to different keys, the site shows a configuration error page. With any other `AI_PROVIDER` it is ignored.
+The old name of [`AI_PROVIDER_CLAUDE_API_KEY`](ai-providers.md#claude-claude). It still works with `AI_PROVIDER=claude` (a warning is logged at startup). If both are set to different keys, the site shows a configuration error page. With any other `AI_PROVIDER` it is ignored.
 
 ---
 
@@ -347,45 +335,11 @@ The old name of `AI_PROVIDER_CLAUDE_API_KEY`. It still works with `AI_PROVIDER=c
 
 **Default:** `0` (cents)
 
-The per-user, per-month spending cap on the shared trial key, in US cents. When a user's share of trial usage reaches this limit in the current calendar month, the AI features are disabled for that user until the next month. Users with their own AI settings are never limited.
+The per-user, per-month spending cap on the [shared AI access](shared-ai-access.md), in US cents. When a user's share of shared usage reaches this limit in the current calendar month, the AI features are disabled for that user until the next month. Users with their own AI settings are never limited.
 
-Example: `AI_TRIAL_USAGE_LIMIT=10` gives each user a $0.10/month allowance on the trial key.
+Example: `AI_TRIAL_USAGE_LIMIT=10` gives each user a $0.10/month allowance on the shared access.
 
-Set to `0` (the default) to impose no per-user limit: everyone without their own settings can use the shared key without a cap (only the AI service's own account budget applies). Spending is still recorded per user, and Comaney logs a startup warning so this is not set by accident.
-
----
-
-### `AI_PROVIDER_CLAUDE_EFFORT`
-
-**Default:** `medium`
-
-How much effort (thinking) the AI puts into each request: one of `low`, `medium`, `high`, `xhigh`, `max`. Higher levels can give better results on hard requests but are slower and use more tokens, which costs more and uses up the shared trial budget faster. `low` is the fastest and cheapest.
-
-Only used with `AI_PROVIDER=claude`. Any other value takes the site down with a configuration error page until it is fixed or removed.
-
----
-
-### `AI_PROVIDER_CLAUDE_MODEL`
-
-**Default:** `claude-sonnet-5-5`
-
-Which Claude model to use with `AI_PROVIDER=claude`. Comaney knows the prices of its default model. For any other model, also set `AI_PROVIDER_CLAUDE_PRICE_INPUT` and `AI_PROVIDER_CLAUDE_PRICE_OUTPUT`, otherwise the site shows a configuration error page (without prices, usage of the shared key could not be counted against the users' budgets).
-
----
-
-### `AI_PROVIDER_CLAUDE_MAX_TOKENS`
-
-**Default:** `8192`
-
-Upper limit for the length of one AI answer with `AI_PROVIDER=claude`, in tokens. Lower it to cap the cost of a single request; too low a value makes longer answers (for example many expenses from one receipt) fail.
-
----
-
-### `AI_PROVIDER_CLAUDE_PRICE_INPUT` / `AI_PROVIDER_CLAUDE_PRICE_OUTPUT`
-
-**Default:** *(unset; Comaney's built-in prices for the model)*
-
-Price of the model in US dollars per million input and output tokens, for example `3` and `15`. Set both or neither. Only needed for a model Comaney doesn't know, or if Anthropic's prices change before Comaney is updated. They are used to count AI costs against each user's budget on the shared key.
+Set to `0` (the default) to impose no per-user limit: everyone without their own settings can use the shared access without a cap (only the AI service's own account budget applies). Spending is still recorded per user, and Comaney logs a startup warning so this is not set by accident.
 
 ---
 
@@ -401,9 +355,9 @@ When the AI answers in a broken format, Comaney asks it once more to repair the 
 
 **Default:** `{app_root}/ai_trial_disabled.flag`
 
-Path to the flag file used to indicate that the AI trial feature has been globally disabled (e.g., because the Anthropic account ran out of credit). When this file exists, the trial feature is disabled for all users.
+Path to the flag file used to indicate that shared AI access has been globally disabled (e.g., because the AI service's account ran out of credit). When this file exists, shared access is disabled for all users.
 
-Normally you don't need to set this. Override it if the default path is not writable in your container setup. See [AI Trial Key](ai-trial-key.md) for management instructions.
+Normally you don't need to set this. Override it if the default path is not writable in your container setup. See [Shared AI Access](shared-ai-access.md) for management instructions.
 
 ---
 
