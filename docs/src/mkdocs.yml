@@ -85,6 +85,7 @@ nav:
     - Environment Variables: admin-manual/environment-variables.md
     - Email Configuration: admin-manual/email.md
     - Cron Jobs: admin-manual/cron-jobs.md
+    - AI Providers: admin-manual/ai-providers.md
     - AI Trial Key: admin-manual/ai-trial-key.md
     - Registration & Users: admin-manual/registration.md
     - Console Commands: admin-manual/console-commands.md
@@ -93,4 +94,5 @@ nav:
     - Architecture: dev-manual/architecture.md
     - Building Assets: dev-manual/building-assets.md
     - Testing: dev-manual/testing.md
+    - Writing an AI Provider: dev-manual/writing-an-ai-provider.md
     - User Defaults: dev-manual/user-defaults.md

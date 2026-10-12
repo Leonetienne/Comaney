@@ -28,7 +28,7 @@ All runtime dependencies are in `requirements.txt`:
 | `whitenoise` | Static file serving |
 | `PyYAML` | Dashboard card YAML parsing |
 | `anthropic` | Used only by the Claude AI provider (`ai_providers/claude.py`), imported lazily when a request is sent -- see [Architecture](architecture.md#ai-architecture) |
-| `httpx2` | HTTP client for AI providers that talk to an HTTP API directly; the same library the `anthropic` SDK is built on (never the older `httpx`) |
+| `httpx2` | HTTP client for AI providers that talk to an HTTP API directly (`ai_providers/openai_compat.py`); the same library the `anthropic` SDK is built on (never the older `httpx`). See [Writing an AI provider](writing-an-ai-provider.md) |
 | `Pillow` | Receipt image processing |
 | `pyotp` + `qrcode` | TOTP two-factor authentication |
 | `webauthn` | FIDO2/WebAuthn security key two-factor authentication |

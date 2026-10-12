@@ -310,13 +310,16 @@ Per-reset AI trial allowance for the demo user, in US cents. Overrides `AI_TRIAL
 Which AI service Comaney uses for its AI features (AI Express Creation, dashboard card assistant, Catalog Partnership mapping, Unclassified Expenses). Possible values:
 
 - `claude`: Claude by Anthropic
+- `deepseek`: DeepSeek
+- `local`: your own model on any OpenAI-compatible server
+- the file name of a community provider you mounted
 - `none`: switch all AI features off; every AI button and page is hidden, and users' saved AI settings are kept
 
 If it is unset, AI is off as well. There is one exception, so that an upgrade never switches AI off without you noticing: if other AI settings are present (`AI_TRIAL_API_KEY` or any variable starting with `AI_PROVIDER_`) but `AI_PROVIDER` is not set, the site shows a configuration error page asking you to set it.
 
 An unknown value, or invalid settings for the chosen AI service, also take the site down with a configuration error page that names the variable to fix. AI is never switched off silently: fix the setting, or set `AI_PROVIDER=none`.
 
-Settings of the chosen AI service start with `AI_PROVIDER_<NAME>_`, for example `AI_PROVIDER_CLAUDE_API_KEY`. Each AI service only ever sees its own settings.
+Settings of the chosen AI service start with `AI_PROVIDER_<NAME>_`, for example `AI_PROVIDER_CLAUDE_API_KEY`. Each AI service only ever sees its own settings. The settings of every built-in service, with examples, are on [AI Providers](ai-providers.md); the Claude settings are also listed below.
 
 ---
 
