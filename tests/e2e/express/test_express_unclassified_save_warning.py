@@ -13,7 +13,7 @@ import time
 import pytest
 from selenium.webdriver.common.by import By
 
-from helpers import _url, api_delete, api_get, cleanup_user, setup_user
+from helpers import _url, ai_unavailable, api_delete, api_get, cleanup_user, setup_user
 
 AI_TIMEOUT = 120
 WARNING_TEXT = "You are missing a category or tags"
@@ -48,12 +48,12 @@ class TestExpressCreationUnclassifiedWarning:
 
     def test_trial_available(self, driver, w, ctx):
         if not _trial_available(driver):
-            pytest.skip("AI trial not available in this environment")
+            ai_unavailable("AI trial not available in this environment")
         ctx["trial_ok"] = True
 
     def test_dialog_appears_for_item_without_tags(self, driver, w, ctx):
         if not ctx.get("trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         driver.execute_script("localStorage.removeItem('comaney_date_range');")
         driver.get(_url("/budget/ai/express-creation/"))
         time.sleep(1)
@@ -88,7 +88,7 @@ class TestExpressCreationUnclassifiedWarning:
 
     def test_cancel_keeps_batch_unsaved(self, driver, w, ctx):
         if not ctx.get("trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         driver.find_element(By.ID, "cdialog-cancel").click()
         time.sleep(1)
         assert not driver.find_elements(By.CSS_SELECTOR, ".success-banner")
@@ -97,7 +97,7 @@ class TestExpressCreationUnclassifiedWarning:
 
     def test_save_anyway_saves(self, driver, w, ctx):
         if not ctx.get("trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         driver.find_element(By.ID, "confirm-btn").click()
         time.sleep(0.7)
         driver.find_element(By.ID, "cdialog-ok").click()

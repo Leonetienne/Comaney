@@ -14,7 +14,7 @@ import time
 import pytest
 from selenium.webdriver.common.by import By
 
-from helpers import _url, api_get, api_delete, setup_user, cleanup_user
+from helpers import _url, ai_unavailable, api_get, api_delete, setup_user, cleanup_user
 
 AI_TIMEOUT = 120
 # The selected display range (2020-01) and the forced item date (2024-05-01)
@@ -55,12 +55,12 @@ class TestExpressCreationDateRangeWarning:
 
     def test_trial_available(self, driver, w, ctx):
         if not _trial_available(driver):
-            pytest.skip("AI trial not available in this environment")
+            ai_unavailable("AI trial not available in this environment")
         ctx["trial_ok"] = True
 
     def test_dialog_appears_for_out_of_range_item(self, driver, w, ctx):
         if not ctx.get("trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         _set_range(driver, _OUT_OF_RANGE_FROM, _OUT_OF_RANGE_TO)
         driver.get(_url("/budget/ai/express-creation/"))
         time.sleep(1)
@@ -93,7 +93,7 @@ class TestExpressCreationDateRangeWarning:
 
     def test_cancel_keeps_batch_unsaved(self, driver, w, ctx):
         if not ctx.get("trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         driver.find_element(By.ID, "cdialog-cancel").click()
         time.sleep(1)
         assert not driver.find_elements(By.CSS_SELECTOR, ".success-banner")
@@ -104,7 +104,7 @@ class TestExpressCreationDateRangeWarning:
 
     def test_confirm_saves_despite_warning(self, driver, w, ctx):
         if not ctx.get("trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         driver.find_element(By.ID, "confirm-btn").click()
         time.sleep(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()

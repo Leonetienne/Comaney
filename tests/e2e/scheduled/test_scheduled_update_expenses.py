@@ -181,15 +181,8 @@ class TestUpdateExpensesModal:
         title_before = "UE Deselect Before"
         title_after = "UE Deselect After"
 
-        # Base date two months in the past to get at least 2 occurrences
-        today = server_today()
-        year, month, day = today.split("-")
-        base_month = int(month) - 2
-        base_year = int(year)
-        if base_month < 1:
-            base_month += 12
-            base_year -= 1
-        base_date = f"{base_year}-{base_month:02d}-{day}"
+        # generation covers the whole financial year: 12 monthly occurrences
+        base_date = f"{server_today()[:4]}-01-01"
 
         sched_id = api_post("/api/v1/scheduled/", ctx, json={
             "title": title_before,
@@ -202,11 +195,7 @@ class TestUpdateExpensesModal:
         time.sleep(1)
 
         generated = _expenses_by_title(ctx, title_before)
-        if len(generated) < 2:
-            for e in generated:
-                api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-            api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
-            pytest.skip("Fewer than 2 generated expenses in range; skipping deselect test")
+        assert len(generated) >= 2, f"Expected at least 2 generated expenses, got {len(generated)}"
 
         # Sort by date_due so first row = earliest
         generated.sort(key=lambda e: e.get("date_due") or "")
@@ -255,14 +244,8 @@ class TestUpdateExpensesModal:
         title_before = "UE Unsettled Before"
         title_after = "UE Unsettled After"
 
-        today = server_today()
-        year, month, day = today.split("-")
-        base_month = int(month) - 2
-        base_year = int(year)
-        if base_month < 1:
-            base_month += 12
-            base_year -= 1
-        base_date = f"{base_year}-{base_month:02d}-{day}"
+        # generation covers the whole financial year: 12 monthly occurrences
+        base_date = f"{server_today()[:4]}-01-01"
 
         sched_id = api_post("/api/v1/scheduled/", ctx, json={
             "title": title_before,
@@ -275,11 +258,7 @@ class TestUpdateExpensesModal:
         time.sleep(1)
 
         generated = _expenses_by_title(ctx, title_before)
-        if len(generated) < 2:
-            for e in generated:
-                api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-            api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
-            pytest.skip("Fewer than 2 generated expenses in range; skipping unsettled test")
+        assert len(generated) >= 2, f"Expected at least 2 generated expenses, got {len(generated)}"
 
         generated.sort(key=lambda e: e.get("date_due") or "")
         settled_id = generated[0]["id"]

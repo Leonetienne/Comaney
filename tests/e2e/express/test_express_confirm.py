@@ -36,7 +36,7 @@ import time
 import pytest
 from selenium.webdriver.common.by import By
 
-from helpers import _url, api_get, setup_user, cleanup_user
+from helpers import _url, ai_unavailable, api_get, setup_user, cleanup_user
 
 DOCKER_WEB = "comaney-web-1"
 ASSET = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "projectpic.jpg")
@@ -375,7 +375,7 @@ class TestExpressNoProject:
     def test_none_tab_saves_without_project(self, driver, w, ctx):
         """Case 1: None tab (default) -> no project."""
         if not _ui_parse(driver, "Busticket 25 Euro"):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
         # None tab is the default; verify it is active
@@ -388,7 +388,7 @@ class TestExpressNoProject:
     def test_switch_to_none_after_project_saves_without_project(self, driver, w, ctx):
         """Case 3: switch from Project tab back to None -> no project."""
         if not _ui_parse(driver, "Schlafsack 40 Euro"):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
         _click_tab(driver, card, ".pcard-assign-project")
@@ -407,7 +407,7 @@ class TestExpressWithProject:
     def test_project_tab_assigns_project(self, driver, w, ctx):
         """Case 2: Project tab selected -> expense gets the project."""
         if not _ui_parse(driver, "Benzin 60 Euro Anfahrt"):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
         _click_tab(driver, card, ".pcard-assign-project")
@@ -426,7 +426,7 @@ class TestExpressDirectBuddy:
     def test_me_payer_volker_35pct(self, driver, w, ctx):
         """Case 4: me pays, Volker gets 35%."""
         if not _ui_parse(driver, "Bierkisten 60 Euro"):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
         _set_value(driver, card, "60.00")
@@ -447,7 +447,7 @@ class TestExpressDirectBuddy:
     def test_volker_payer_me_40pct(self, driver, w, ctx):
         """Case 5: Volker pays (is_dummy expense), me gets 40%."""
         if not _ui_parse(driver, "Zeltmiete 60 Euro"):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
         _set_value(driver, card, "60.00")
@@ -475,7 +475,7 @@ class TestExpressProjectPayment:
     def test_volker_payer_andreas_excluded_me_55pct(self, driver, w, ctx):
         """Case 6: Volker pays; Andreas deselected; me gets 55%."""
         if not _ui_parse(driver, "Campingausrüstung für Schanzenfest, 60 Euro"):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
         _set_value(driver, card, "60.00")
@@ -498,7 +498,7 @@ class TestExpressProjectPayment:
     def test_me_payer_andreas_excluded_volker_45pct(self, driver, w, ctx):
         """Case 7: me pays; Andreas deselected; Volker gets 45%."""
         if not _ui_parse(driver, "Verpflegung Schanzenfest 60 Euro"):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
         _set_value(driver, card, "60.00")
@@ -536,11 +536,10 @@ class TestExpressAiParticipation:
         desc = ("Campingausruestung fuer das Schanzenfest 2026, 60 Euro. "
                 "Andreas macht bei dieser Ausgabe nicht mit, alle anderen teilen sich das.")
         if not _ui_parse(driver, desc):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
-        if not _project_tab_active(card):
-            pytest.skip("AI did not assign the project; participation override not applicable")
+        assert _project_tab_active(card), "AI did not assign the project although the description names it"
         _confirm(driver)
 
         assert _expense_project_name(title, ctx["email"]) == "Schanzenfest 2026"
@@ -556,11 +555,10 @@ class TestExpressAiParticipation:
         desc = ("Verpflegung fuers Schanzenfest 2026, 60 Euro. "
                 "Andreas geht auf uns, setz seinen Anteil auf 0 Prozent.")
         if not _ui_parse(driver, desc):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
-        if not _project_tab_active(card):
-            pytest.skip("AI did not assign the project; participation override not applicable")
+        assert _project_tab_active(card), "AI did not assign the project although the description names it"
         _confirm(driver)
 
         assert _expense_project_name(title, ctx["email"]) == "Schanzenfest 2026"
@@ -579,11 +577,10 @@ class TestExpressAiParticipation:
         desc = ("Volker hat die Campingausruestung fuers Schanzenfest 2026 bezahlt, "
                 "60 Euro. Wir teilen uns die Kosten.")
         if not _ui_parse(driver, desc):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
-        if not _project_tab_active(card):
-            pytest.skip("AI did not assign the project; payer override not applicable")
+        assert _project_tab_active(card), "AI did not assign the project although the description names it"
         _confirm(driver)
 
         assert _expense_project_name(title, ctx["email"]) == "Schanzenfest 2026"
@@ -611,11 +608,10 @@ class TestExpressAiDirectBuddy:
                 "Ich habe bezahlt, wir teilen uns die Kosten 50/50. "
                 "Das hat nichts mit dem Schanzenfest zu tun.")
         if not _ui_parse(driver, desc):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
-        if not _buddy_tab_active(card):
-            pytest.skip("AI did not assign a direct buddy")
+        assert _buddy_tab_active(card), "AI did not assign a direct buddy although the description names it"
         _confirm(driver)
 
         # A direct buddy expense is personal (no project) and I am the payer.
@@ -640,7 +636,7 @@ class TestExpressViewExpensesLink:
     def test_all_project_links_to_project(self, driver, w, ctx):
         """Case 10: a single project expense -> link points to /projects/<uid>/."""
         if not _ui_parse(driver, "Stromgenerator 60 Euro"):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         _keep_only_first_card(driver)
         _click_tab(driver, card, ".pcard-assign-project")
@@ -653,7 +649,7 @@ class TestExpressViewExpensesLink:
     def test_all_direct_buddy_links_to_summary(self, driver, w, ctx):
         """Case 11: a single direct-buddy expense -> link points to /buddies/summary/."""
         if not _ui_parse(driver, "Pizza 30 Euro"):
-            pytest.skip("AI unavailable")
+            ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         _keep_only_first_card(driver)
         _click_tab(driver, card, ".pcard-assign-buddy")

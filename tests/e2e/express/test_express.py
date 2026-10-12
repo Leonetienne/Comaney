@@ -1,13 +1,11 @@
 """
 AI Express Creation tests.
 
-All tests skip gracefully when the AI trial key is not configured or
-the trial budget is exhausted. No hard failures for missing infrastructure.
+AI availability guards go through helpers.ai_unavailable.
 """
 import re
 import subprocess
 import time
-import warnings
 from pathlib import Path
 
 import pytest
@@ -16,11 +14,12 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import (
     _url, api_get, api_post, api_delete, run_cmd, setup_user, cleanup_user,
+    ai_unavailable, stack_has_trial_key,
 )
 
 DOCKER_WEB = "comaney-web-1"
 AI_TIMEOUT = 120
-ASSETS = Path(__file__).parent.parent / "tests" / "e2e" / "assets"
+ASSETS = Path(__file__).parent.parent / "assets"
 
 _CATEGORIES = [
     "Consumer Electronics",
@@ -217,16 +216,12 @@ class TestExpressCreation:
     def test_trial_available(self, driver, w, ctx):
         ok, reason = _trial_status(driver)
         if not ok:
-            warnings.warn(
-                f"Express Creation trial not available: {reason}",
-                UserWarning, stacklevel=2,
-            )
-            pytest.skip(reason)
+            ai_unavailable(reason)
         ctx["express_trial_ok"] = True
 
     def test_parse_button_disables_on_click(self, driver, w, ctx):
         if not ctx.get("express_trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         driver.get(_url("/budget/ai/express-creation/"))
         time.sleep(1)
         ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
@@ -236,7 +231,7 @@ class TestExpressCreation:
 
     def test_express_tv_purchase(self, driver, w, ctx):
         if not ctx.get("express_trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         cards = _parse(driver, "I bought a new TV. 500 euros paid upfront, 1000 from savings.")
         assert len(cards) == 2, f"Expected 2 items, got {len(cards)}"
         values = [_card_value(c) for c in cards]
@@ -250,7 +245,7 @@ class TestExpressCreation:
 
     def test_express_schanzenfest(self, driver, w, ctx):
         if not ctx.get("express_trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         cards = _parse(
             driver,
             "Went to attend the Schanzenfest, i spent 40€ on the train ticket and 15€ on drinks and snacks.",
@@ -266,10 +261,9 @@ class TestExpressCreation:
 
     def test_express_receipt(self, driver, w, ctx):
         if not ctx.get("express_trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         receipt = ASSETS / "receipt.jpeg"
-        if not receipt.exists():
-            pytest.skip("receipt.jpeg asset not found")
+        assert receipt.exists(), f"Test asset missing: {receipt}"
         cards = _parse(driver, image_path=receipt)
         assert cards, "AI produced zero items from receipt"
         all_text = " ".join(_card_title(c) + " " + _card_note(c) for c in cards)
@@ -283,7 +277,7 @@ class TestExpressCreation:
 
     def test_express_edit_submit_verify(self, driver, w, ctx):
         if not ctx.get("express_trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         driver.get(_url("/budget/ai/express-creation/"))
         time.sleep(0.5)
         spent_before = _trial_meter_value(driver)
@@ -314,7 +308,9 @@ class TestExpressCreation:
 
     def test_trial_budget_enforcement(self, driver, w, ctx):
         if not ctx.get("express_trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
+        if not stack_has_trial_key():
+            ai_unavailable("No shared AI trial key configured", trial_only=True)
 
         def _shell(code, timeout=10):
             r = subprocess.run(
@@ -402,7 +398,7 @@ class TestExpressCreation:
 
     def test_express_refusal_on_non_financial_input(self, driver, w, ctx):
         if not ctx.get("express_trial_ok"):
-            pytest.skip("Trial not available")
+            ai_unavailable("Trial not available")
         outcome = _parse_await_outcome(driver, "poster vom hofverkauf")
         assert outcome["modal"], "Expected refusal modal for non-financial input"
         assert not outcome["cards"], f"Expected no preview cards, got {len(outcome['cards'])}"

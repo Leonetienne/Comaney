@@ -4,8 +4,8 @@ Express Creation: buddy payment on preview cards.
 Functional tests bypass the AI parse step by POSTing the confirm form directly
 (action=confirm with a pre-built preview_json that includes buddy fields).
 
-One class covers the UI integration (buddy section visible in rendered cards)
-and skips gracefully when the AI trial is unavailable.
+One class covers the UI integration (buddy section visible in rendered cards),
+guarded by helpers.ai_unavailable.
 """
 import json
 import subprocess
@@ -17,7 +17,7 @@ import requests
 from selenium.webdriver.common.by import By
 
 from helpers import (
-    _url, api_get, api_delete, setup_user, cleanup_user,
+    _url, ai_unavailable, api_get, api_delete, setup_user, cleanup_user,
     session_cookies, fetch_email, mailpit_seen_ids,
 )
 
@@ -335,15 +335,15 @@ class TestExpressBuddyCardUI:
         driver.get(_url("/budget/ai/express-creation/"))
         time.sleep(1)
         if "/profile" in driver.current_url:
-            pytest.skip("No API key configured")
+            ai_unavailable("No API key configured")
         src = driver.page_source
         if "temporarily unavailable" in src or "Monthly AI limit reached" in src:
-            pytest.skip("AI trial not available")
+            ai_unavailable("AI trial not available")
         ctx["ai_ok"] = True
 
     def test_buddy_section_present_in_cards(self, driver, w, ctx):
         if not ctx.get("ai_ok"):
-            pytest.skip("AI not available")
+            ai_unavailable("AI not available")
         driver.get(_url("/budget/ai/express-creation/"))
         time.sleep(1)
         ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
@@ -355,7 +355,7 @@ class TestExpressBuddyCardUI:
                 break
             time.sleep(3)
         else:
-            pytest.skip("AI timed out — skipping UI buddy test")
+            pytest.fail("AI response timed out: no .preview-card appeared")
         cards = driver.find_elements(By.CSS_SELECTOR, ".preview-card")
         assert cards, "No preview cards rendered"
         first_card = cards[0]
@@ -365,10 +365,9 @@ class TestExpressBuddyCardUI:
 
     def test_toggle_shows_buddy_details(self, driver, w, ctx):
         if not ctx.get("ai_ok"):
-            pytest.skip("AI not available")
+            ai_unavailable("AI not available")
         cards = driver.find_elements(By.CSS_SELECTOR, ".preview-card")
-        if not cards:
-            pytest.skip("No preview cards")
+        assert cards, "No preview cards left over from the previous test"
         tab = cards[0].find_element(By.CSS_SELECTOR, ".pcard-assign-buddy")
         tab.click()
         time.sleep(0.5)
@@ -377,10 +376,9 @@ class TestExpressBuddyCardUI:
 
     def test_payer_dropdown_populated(self, driver, w, ctx):
         if not ctx.get("ai_ok"):
-            pytest.skip("AI not available")
+            ai_unavailable("AI not available")
         cards = driver.find_elements(By.CSS_SELECTOR, ".preview-card")
-        if not cards:
-            pytest.skip("No preview cards")
+        assert cards, "No preview cards left over from the previous test"
         # Direct Buddy tab must already be active from previous test; ensure it is
         tab = cards[0].find_element(By.CSS_SELECTOR, ".pcard-assign-buddy")
         tab.click()
@@ -409,10 +407,10 @@ class TestExpressBuddySliderAmounts:
         driver.get(_url("/budget/ai/express-creation/"))
         time.sleep(1)
         if "/profile" in driver.current_url:
-            pytest.skip("No API key configured")
+            ai_unavailable("No API key configured")
         src = driver.page_source
         if "temporarily unavailable" in src or "Monthly AI limit reached" in src:
-            pytest.skip("AI trial not available")
+            ai_unavailable("AI trial not available")
 
     def _parse_and_wait(self, driver):
         ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
@@ -424,7 +422,7 @@ class TestExpressBuddySliderAmounts:
                 break
             time.sleep(3)
         else:
-            pytest.skip("AI timed out")
+            pytest.fail("AI response timed out: no .preview-card appeared")
 
     def test_ai_available_and_cards_rendered(self, driver, w, ctx):
         self._check_ai(driver)
@@ -435,7 +433,7 @@ class TestExpressBuddySliderAmounts:
     def test_slider_amounts_uneven_split(self, driver, w, ctx):
         """30/70 split: each slider row must show the correct currency amount."""
         if not ctx.get("ai_ok"):
-            pytest.skip("AI not available")
+            ai_unavailable("AI not available")
 
         card = driver.find_elements(By.CSS_SELECTOR, ".preview-card")[0]
 
@@ -488,7 +486,7 @@ class TestExpressBuddySliderAmounts:
     def test_slider_amounts_update_on_value_change(self, driver, w, ctx):
         """Changing the expense value must immediately update all currency amount spans."""
         if not ctx.get("ai_ok"):
-            pytest.skip("AI not available")
+            ai_unavailable("AI not available")
 
         card = driver.find_elements(By.CSS_SELECTOR, ".preview-card")[0]
 

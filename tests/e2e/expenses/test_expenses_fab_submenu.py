@@ -13,7 +13,7 @@ import time
 import pytest
 from selenium.webdriver.common.by import By
 
-from helpers import _url, setup_user, cleanup_user
+from helpers import _url, ai_unavailable, setup_user, cleanup_user
 
 
 @pytest.fixture(scope="module")
@@ -93,5 +93,5 @@ class TestExpensesFabSubmenu:
         self._open(driver, w)
         ai_link = self._item_by_title(driver, "AI Express")
         if ai_link is None:
-            pytest.skip("AI Express not available for this test user (no trial key configured)")
+            ai_unavailable("AI Express not available for this test user")
         assert ai_link.get_attribute("href").endswith("/budget/ai/express-creation/")

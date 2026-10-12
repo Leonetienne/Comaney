@@ -1,18 +1,17 @@
 """
 AI-assisted dashboard card creation/editing.
 
-Visibility/error-envelope tests use a fake per-user API key (no real network call),
-and always clear it again so later tests see the environment's true baseline.
-The actual generate-flow test makes a real AI call and skips gracefully when no
-usable key (own or trial) is configured -- same pattern as tests/e2e/express/test_express.py.
+Visibility tests use a fake key or force the no-key state per test; the
+generate-flow test makes a real AI call (see helpers.ai_unavailable).
 """
+import ast
 import time
 
 import requests
 import pytest
 from selenium.webdriver.common.by import By
 
-from helpers import _url, run_cmd, setup_user, cleanup_user, session_cookies, BASE_URL, fill
+from helpers import _url, ai_unavailable, run_cmd, setup_user, cleanup_user, session_cookies, BASE_URL, fill
 
 AI_URL = BASE_URL + "/budget/dashboard/cards/ai/"
 CARDS_URL = BASE_URL + "/budget/dashboard/cards/"
@@ -28,13 +27,31 @@ def _set_fake_api_key(email: str) -> None:
     )
 
 
-def _clear_api_key(email: str) -> None:
+def _get_api_key(email: str) -> str:
+    out = run_cmd(
+        "shell", "-c",
+        f"from feusers.models import FeUser; print(repr(FeUser.objects.get(email='{email}').anthropic_api_key))",
+    )
+    return ast.literal_eval(out.strip().splitlines()[-1])
+
+
+def _set_api_key(email: str, key: str) -> None:
     run_cmd(
         "shell", "-c",
         f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}'); "
-        f"u.anthropic_api_key = ''; "
+        f"u.anthropic_api_key = {key!r}; "
         f"u.save(update_fields=['anthropic_api_key'])",
     )
+
+
+def _trial_disabled() -> bool:
+    out = run_cmd("shell", "-c", "from budget.ai_trial import trial_is_disabled; print(trial_is_disabled())")
+    return out.strip().endswith("True")
+
+
+def _set_trial_disabled(disabled: bool) -> None:
+    fn = "disable_trial('e2e: no-key visibility test')" if disabled else "enable_trial()"
+    run_cmd("shell", "-c", f"from budget.ai_trial import disable_trial, enable_trial; {fn}")
 
 
 def _set_disable_ai_ui(email: str, value: bool) -> None:
@@ -89,19 +106,35 @@ def _csrf(sess) -> str:
 
 @pytest.fixture
 def with_fake_key(ctx):
-    """Give the user a (non-functional) own API key, then clear it again so
-    later tests see the environment's true baseline (no own key)."""
+    """Fake own API key for the test, original key restored afterwards."""
+    original = _get_api_key(ctx["email"])
     _set_fake_api_key(ctx["email"])
     yield
-    _clear_api_key(ctx["email"])
+    _set_api_key(ctx["email"], original)
+
+
+@pytest.fixture
+def without_any_key(ctx):
+    """No own key and the trial-disabled flag set, both restored afterwards;
+    the flag is cleared only if this fixture set it."""
+    original = _get_api_key(ctx["email"])
+    was_disabled = _trial_disabled()
+    _set_api_key(ctx["email"], "")
+    if not was_disabled:
+        _set_trial_disabled(True)
+    try:
+        yield
+    finally:
+        if not was_disabled:
+            _set_trial_disabled(False)
+        _set_api_key(ctx["email"], original)
 
 
 class TestVisibility:
 
-    def test_hidden_without_any_key(self, driver, w, ctx):
-        """Fresh user with neither an own key nor a trial available: section absent."""
-        if _ai_available(driver):
-            pytest.skip("AI trial key is configured in this environment; cannot test the no-key case")
+    def test_hidden_without_any_key(self, driver, w, ctx, without_any_key):
+        """Neither an own key nor a trial available: section absent."""
+        assert not _ai_available(driver)
         assert not driver.find_elements(By.CSS_SELECTOR, ".dash-ai-section")
 
     def test_visible_with_own_key(self, driver, w, ctx, with_fake_key):
@@ -180,7 +213,7 @@ class TestGenerateFlow:
 
     def test_generate_fills_editor_without_saving(self, driver, w, ctx, sess):
         if not _ai_available(driver):
-            pytest.skip("No usable AI key (own or trial) configured in this environment")
+            ai_unavailable("No usable AI key (own or trial) for this account")
 
         before_count = len(sess.get(CARDS_URL).json()["cards"])
 

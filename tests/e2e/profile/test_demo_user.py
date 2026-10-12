@@ -23,7 +23,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
 from helpers import (
-    _url, run_cmd, setup_user, cleanup_user,
+    _url, ai_unavailable, run_cmd, setup_user, cleanup_user,
     fill, click, browser_login,
     DOCKER_WEB, PASSWORD,
 )
@@ -620,7 +620,7 @@ class TestSpecialAITrialBudget:
             "print(bool(settings.AI_TRIAL_API_KEY and settings.AI_TRIAL_USAGE_LIMIT and not trial_is_disabled()))"
         )
         if trial_available != "True":
-            pytest.skip("AI trial not configured")
+            ai_unavailable("AI trial not configured or disabled", trial_only=True)
 
         _demo_login_and_accept(driver, w, budget_ctx)
         driver.get(_url("/budget/ai/express-creation/"))
@@ -635,7 +635,7 @@ class TestSpecialAITrialBudget:
             "print(bool(settings.AI_TRIAL_API_KEY and settings.AI_TRIAL_USAGE_LIMIT and not trial_is_disabled()))"
         )
         if trial_available != "True":
-            pytest.skip("AI trial not configured")
+            ai_unavailable("AI trial not configured or disabled", trial_only=True)
 
         email = budget_ctx["email"]
         # Set spent >= special_ai_trial_budget (1 cent).

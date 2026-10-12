@@ -93,7 +93,7 @@ def _delete_card(sess, csrf, card_id):
 
 
 def _get_user_dash_id(email, order_clause=""):
-    """Return (dash_id, None) or (None, skip_reason) for the given user's first dashboard."""
+    """pk of the user's first dashboard; create_user makes default dashboards."""
     code = (
         "from feusers.models import FeUser; from budget.models import Dashboard; "
         "u = FeUser.objects.get(email='" + email + "'); "
@@ -106,9 +106,8 @@ def _get_user_dash_id(email, order_clause=""):
     )
     assert result.returncode == 0, result.stderr
     val = result.stdout.strip()
-    if val == "NONE":
-        return None, "User has no dashboard yet"
-    return int(val), None
+    assert val != "NONE", f"{email} has no dashboard although create_user makes defaults"
+    return int(val)
 
 
 def _dash_title_in_db(dash_id) -> str:
@@ -511,18 +510,14 @@ class TestPenTests:
 
     def test_cannot_read_other_users_dashboard(self, driver, w, ctx, ctx2, sess):
         """User1 list must not contain User2's dashboards."""
-        user2_dash_id, skip = _get_user_dash_id(ctx2["email"])
-        if skip:
-            pytest.skip(skip)
+        user2_dash_id = _get_user_dash_id(ctx2["email"])
 
         dash_ids = [d["id"] for d in _list_dashboards(sess)]
         assert user2_dash_id not in dash_ids, "User1 can see User2's dashboard in list!"
 
     def test_cannot_view_other_users_dashboard_page(self, driver, w, ctx, ctx2, sess):
         """User1 loading User2's dashboard URL must get 404."""
-        user2_dash_id, skip = _get_user_dash_id(ctx2["email"])
-        if skip:
-            pytest.skip(skip)
+        user2_dash_id = _get_user_dash_id(ctx2["email"])
 
         r = sess.get(BASE_URL + "/budget/dash/" + str(user2_dash_id) + "/")
         assert r.status_code == 404, \
@@ -530,9 +525,7 @@ class TestPenTests:
 
     def test_cannot_rename_other_users_dashboard(self, driver, w, ctx, ctx2, sess):
         """User1 PATCH on User2's dashboard must return 404 and leave title unchanged."""
-        user2_dash_id, skip = _get_user_dash_id(ctx2["email"])
-        if skip:
-            pytest.skip(skip)
+        user2_dash_id = _get_user_dash_id(ctx2["email"])
 
         csrf = _csrf(sess)
         r = _patch_json(sess, csrf, DASHBOARDS_URL + str(user2_dash_id) + "/",
@@ -544,9 +537,7 @@ class TestPenTests:
 
     def test_cannot_delete_other_users_dashboard(self, driver, w, ctx, ctx2, sess):
         """User1 DELETE on User2's dashboard must return 404."""
-        user2_dash_id, skip = _get_user_dash_id(ctx2["email"])
-        if skip:
-            pytest.skip(skip)
+        user2_dash_id = _get_user_dash_id(ctx2["email"])
 
         csrf = _csrf(sess)
         r = _delete_dashboard(sess, csrf, user2_dash_id)
@@ -558,9 +549,7 @@ class TestPenTests:
 
     def test_cannot_create_card_on_other_users_dashboard(self, driver, w, ctx, ctx2, sess):
         """User1 cannot POST a card onto User2's dashboard."""
-        user2_dash_id, skip = _get_user_dash_id(ctx2["email"])
-        if skip:
-            pytest.skip(skip)
+        user2_dash_id = _get_user_dash_id(ctx2["email"])
 
         csrf = _csrf(sess)
         r = _post_json(sess, csrf, CARDS_URL, {
@@ -572,9 +561,7 @@ class TestPenTests:
 
     def test_cannot_move_own_card_to_other_users_dashboard(self, driver, w, ctx, ctx2, sess):
         """User1 cannot PATCH their card's dashboard_id to User2's dashboard."""
-        user2_dash_id, skip = _get_user_dash_id(ctx2["email"])
-        if skip:
-            pytest.skip(skip)
+        user2_dash_id = _get_user_dash_id(ctx2["email"])
 
         csrf = _csrf(sess)
         card = _create_card(sess, csrf, ctx["first_dash_id"], "MoveTarget")
@@ -594,11 +581,9 @@ class TestPenTests:
 
     def test_cannot_reset_other_users_dashboard(self, driver, w, ctx, ctx2, sess):
         """User1 cannot reset User2's first dashboard."""
-        user2_dash_id, skip = _get_user_dash_id(
+        user2_dash_id = _get_user_dash_id(
             ctx2["email"], order_clause=".order_by('sorting','uid')"
         )
-        if skip:
-            pytest.skip(skip)
 
         csrf = _csrf(sess)
         r = _post_json(sess, csrf, RESET_URL, {"dashboard_id": user2_dash_id})

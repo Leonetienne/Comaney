@@ -170,8 +170,7 @@ class TestNonAdminDummyUpfrontRequiresApproval:
 
     def test_expense_appears_as_pending_in_project(self, driver, w, ctx):
         uid = ctx.get("expense_uid")
-        if not uid or uid == "none":
-            pytest.skip("expense not created")
+        assert uid and uid != "none", "The earlier test's expense was not created"
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
         time.sleep(1)

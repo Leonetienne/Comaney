@@ -36,6 +36,30 @@ def ai_test_api_key_args() -> list:
     return ["--anthropic-api-key", AI_API_KEY_TESTS] if AI_API_KEY_TESTS else []
 
 
+_stack_has_trial_key = None
+
+
+def stack_has_trial_key() -> bool:
+    """Whether the stack has a shared AI trial key; asked once per run."""
+    global _stack_has_trial_key
+    if _stack_has_trial_key is None:
+        out = run_cmd(
+            "shell", "-c",
+            "from django.conf import settings; print(bool(settings.AI_TRIAL_API_KEY))",
+        )
+        _stack_has_trial_key = out.strip().endswith("True")
+    return _stack_has_trial_key
+
+
+def ai_unavailable(reason: str, *, trial_only: bool = False):
+    """Skip when the environment has no AI key, fail when one is configured.
+    trial_only: the test runs on the shared trial key, so only that key counts."""
+    configured = stack_has_trial_key() or (not trial_only and bool(AI_API_KEY_TESTS))
+    if configured:
+        pytest.fail(f"AI is configured in this environment but unavailable: {reason}")
+    pytest.skip(reason)
+
+
 def _url(path: str) -> str:
     return f"{BASE_URL}{path}"
 

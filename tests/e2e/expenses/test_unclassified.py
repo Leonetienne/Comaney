@@ -15,7 +15,7 @@ import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
-from helpers import DOCKER_WEB, _url, cleanup_user, session_cookies, setup_user
+from helpers import DOCKER_WEB, _url, ai_unavailable, cleanup_user, session_cookies, setup_user
 
 
 def _shell(code: str) -> str:
@@ -399,7 +399,7 @@ class TestUnclassifiedExpensesAI:
 
     def test_ai_solve_updates_row_and_flips_to_retry(self, driver, w, ctx):
         if not _ai_gate_ok(driver):
-            pytest.skip("AI not available for this account")
+            ai_unavailable("AI not available for this account")
 
         uid = _create_expense(ctx["email"], "Netflix subscription", payee="Netflix")
         driver.get(_url("/budget/unclassified/"))
@@ -422,7 +422,7 @@ class TestUnclassifiedExpensesAI:
 
     def test_ai_resolve_all_and_save_all(self, driver, w, ctx):
         if not _ai_gate_ok(driver):
-            pytest.skip("AI not available for this account")
+            ai_unavailable("AI not available for this account")
 
         uid_a = _create_expense(ctx["email"], "Spotify subscription", payee="Spotify")
         uid_b = _create_expense(ctx["email"], "Gas station fill-up", payee="Shell")
@@ -468,7 +468,7 @@ class TestUnclassifiedExpensesAI:
             headers={"X-CSRFToken": csrftoken, "Referer": _url("/budget/unclassified/")},
         )
         if resp.status_code == 402:
-            pytest.skip("Shared AI trial not available/exhausted in this environment")
+            ai_unavailable("Shared AI trial not available/exhausted in this environment", trial_only=True)
         assert resp.status_code == 200, resp.text
 
         spent_after = _shell(

@@ -113,8 +113,7 @@ class TestSoloProjectExpenseCreation:
             f"e = Expense.objects.filter(project_id={ctx['gid']}, title='Solo Repair Cost').first(); "
             f"print(e.pk if e else 'none')"
         )
-        if exp_pk == "none":
-            pytest.skip("Expense not found via shell")
+        assert exp_pk != "none", "The earlier test's 'Solo Repair Cost' expense was not created"
         result = api_get(f"/api/v1/expenses/{exp_pk}/", ctx["a"])
         assert result.status_code == 200
         exp_data = result.json()
@@ -132,8 +131,7 @@ class TestSoloProjectExpenseCreation:
             f"e = Expense.objects.filter(project_id={ctx['gid']}, title='Solo Repair Cost').first(); "
             f"print(e.uid if e else 'none')"
         )
-        if exp_uid == "none":
-            pytest.skip("Expense not found via shell")
+        assert exp_uid != "none", "The earlier test's 'Solo Repair Cost' expense was not created"
         driver.get(_url(f"/budget/expenses/{exp_uid}/edit/"))
         time.sleep(1)
         project_tab = driver.find_element(By.ID, "assign-project")

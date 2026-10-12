@@ -89,8 +89,7 @@ class TestContact:
             if found:
                 break
             time.sleep(1)
-        if not found:
-            pytest.skip("Contact email not found in mailpit - ADMIN_NOTIFICATION_EMAIL may not route through it")
+        assert found, "Contact email not delivered to Mailpit within 20s"
 
     def test_required_fields(self, driver, w, ctx):
         if not _contact_available():

@@ -18,7 +18,7 @@ import urllib.parse
 import pytest
 from selenium.webdriver.common.by import By
 
-from helpers import _url, setup_user, cleanup_user
+from helpers import _url, ai_unavailable, setup_user, cleanup_user
 from bhelpers import _create_group, _shell
 
 PREPROMPT = "Put Robert and Mallory always at 0%, they're invited."
@@ -70,7 +70,7 @@ class TestProjectFabSubmenu:
         self._open(driver, w, ctx)
         ai_link = self._item_by_title(driver, "AI Express")
         if ai_link is None:
-            pytest.skip("AI Express not available for this test user (no trial key configured)")
+            ai_unavailable("AI Express not available for this test user")
         href = ai_link.get_attribute("href")
         assert "/budget/ai/express-creation/" in href
         prefill = urllib.parse.unquote(href.split("prefill=", 1)[1])
@@ -79,7 +79,7 @@ class TestProjectFabSubmenu:
     def test_clicking_ai_express_opens_prefilled_textarea(self, driver, w, ctx):
         self._open(driver, w, ctx)
         if self._item_by_title(driver, "AI Express") is None:
-            pytest.skip("AI Express not available for this test user (no trial key configured)")
+            ai_unavailable("AI Express not available for this test user")
         driver.find_element(By.CSS_SELECTOR, ".fab-toggle").click()
         time.sleep(0.3)
         self._item_by_title(driver, "AI Express").click()
@@ -90,7 +90,7 @@ class TestProjectFabSubmenu:
     def test_cursor_placed_after_preset_prompt(self, driver, w, ctx):
         """Continues on the AI Express page opened by the previous test."""
         if "/budget/ai/express-creation/" not in driver.current_url:
-            pytest.skip("AI Express not available for this test user (no trial key configured)")
+            ai_unavailable("AI Express not available for this test user")
         # A brand-new test user sees the one-time welcome modal; dismissing it
         # must hand focus back to the textarea.
         dismiss = driver.find_elements(By.ID, "intro-modal-dismiss")
@@ -120,7 +120,7 @@ class TestProjectFabSubmenu:
         self._open(driver, w, ctx)
         ai_link = self._item_by_title(driver, "AI Express")
         if ai_link is None:
-            pytest.skip("AI Express not available for this test user (no trial key configured)")
+            ai_unavailable("AI Express not available for this test user")
         prefill = urllib.parse.unquote(ai_link.get_attribute("href").split("prefill=", 1)[1])
         assert prefill == "Create all expenses for project 'Fab Menu Project'"
 
