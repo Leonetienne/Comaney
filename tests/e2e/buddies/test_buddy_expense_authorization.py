@@ -1,5 +1,5 @@
 """
-Regression tests for TICKET-02 — missing authorization on buddy-expense upfront
+Regression tests for TICKET-02: missing authorization on buddy-expense upfront
 payer & participants (cross-user record creation, IDOR).
 
 When creating a buddy/project expense, the server trusts the FeUser / DummyUser

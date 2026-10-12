@@ -517,7 +517,7 @@
   setHeight();
   window.addEventListener('resize', setHeight);
 
-  // Toggle each card based on progress — works for both scroll-down and scroll-up
+  // Toggle each card based on progress, works for both scroll-down and scroll-up
   function update() {
     var progress = -scroller.getBoundingClientRect().top;
     ORDER.forEach(function (idx, step) {

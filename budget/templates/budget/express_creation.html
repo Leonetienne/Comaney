@@ -84,7 +84,7 @@ window.BUDDY_EXPENSE_CONFIG = {
             <div class="image-zone-placeholder" id="image-placeholder">
                 <span class="icon">📎</span>
                 <span><strong>Drop image, paste (⌘V / Ctrl+V), or tap to choose</strong></span>
-                <small>Receipt photo · order screenshot · invoice — JPEG, PNG, WebP, GIF</small>
+                <small>Receipt photo · order screenshot · invoice · JPEG, PNG, WebP, GIF</small>
             </div>
             <div class="image-preview-wrap" id="image-preview-wrap">
                 <img id="preview-img" src="" alt="Attached image">
@@ -131,13 +131,13 @@ window.BUDDY_EXPENSE_CONFIG = {
     {% if preview_items %}
     <div class="preview-section">
         <div class="preview-header">
-            <h2>Preview — <span id="selected-count">{{ preview_items|length }}</span> of {{ preview_items|length }} selected</h2>
+            <h2>Preview: <span id="selected-count">{{ preview_items|length }}</span> of {{ preview_items|length }} selected</h2>
             <div class="preview-header-right">
                 <span class="preview-sum" id="selected-sum"></span>
                 <span class="select-toggle" id="toggle-all">Deselect all</span>
             </div>
         </div>
-        <p class="preview-hint">All fields are editable — click any field to adjust.</p>
+        <p class="preview-hint">All fields are editable; click any field to adjust.</p>
 
         <form method="post" id="confirm-form">
             {% csrf_token %}

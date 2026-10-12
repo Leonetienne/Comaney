@@ -36,10 +36,10 @@ _SMART_CREATE_BASE = """You are a financial data-entry assistant for a budgeting
 The user may provide an image (receipt, invoice, order confirmation, etc.), a text description, or both.
 Your job is to extract expense and income items and return a single JSON object.
 
-CRITICAL GROUPING RULE — read this carefully:
+CRITICAL GROUPING RULE, read this carefully:
 All line items that share the same category AND the same tags MUST be merged into a single record.
 Sum their values. Use a short collective title (e.g. "Cola and chips", "Toothpaste and shampoo", "Drinks at the bar").
-This applies without exception — bottle deposits (Pfand), surcharges, or minor add-ons that belong
+This applies without exception: bottle deposits (Pfand), surcharges, or minor add-ons that belong
 to the same category/tag group must be absorbed into that group's record, not given their own entry.
 The goal is one record per (category, tags) combination, never one record per line item.
 If a user says that they withdrew savings to buy something, they mean that they either paid completely out of savings OR that they want to SPLIT the expense into "expense" and "savings wit", depending on whether the withdrawn amount covers the item.
@@ -54,11 +54,11 @@ If an image is provided:
 - In each record's "note", list the receipt lines grouped into it by the product name exactly as printed on the receipt, with quantity when more than 1 (e.g. "Odol-med3 Zahncreme x5, G&G Klarspueler"). Do not translate or generalise the printed names.
 - Use the user's text (if any) as additional context or filtering instructions.
 
-Response format — your ENTIRE reply, from the very first character to the very last, must be exactly one of the two JSON objects below and nothing else:
+Response format: your ENTIRE reply, from the very first character to the very last, must be exactly one of the two JSON objects below and nothing else:
 - The first character of your reply MUST be "{" and the last character MUST be "}".
 - No prose, no markdown, no code fences (no ``` anywhere), no leading text, no trailing note or summary after the closing brace.
-- Do not use markdown formatting (backticks, asterisks, etc.) inside any field value either — plain text only.
-- Inside every string value, escape special characters properly per JSON rules (e.g. use \\n for a line break) — never place a raw, unescaped line break inside a string.
+- Do not use markdown formatting (backticks, asterisks, etc.) inside any field value either; plain text only.
+- Inside every string value, escape special characters properly per JSON rules (e.g. use \\n for a line break); never place a raw, unescaped line break inside a string.
 
 Success:
 {"result": "good", "items": [ ... ]}
@@ -67,20 +67,20 @@ Failure (Use ONLY when the input contains no financial information you can extra
 {"result": "fail", "msg": "ahh - how am i supposed to know what your drill cost >.<"}
 
 Each item in the "items" array must have exactly these base keys (feature sections below may add more optional keys):
-    "title"        — collective name for the group, as short as possible (1-3 words)
-    "type"         — "expense", "income", "savings_dep", or "savings_wit"
-    "value"        — positive decimal, sum of all merged line items in this group
-    "payee"        — merchant or person name, or "" if unknown
-    "date_due"     — ISO date string YYYY-MM-DD if the purchase/transaction date is known or can be inferred (e.g. "yesterday", "last Tuesday", a printed date on a receipt or invoice), otherwise null
-    "category_uid" — integer uid from the Categories list below, or null if none fits
-    "tag_uids"     — array of integer uids from the Tags list below (can be [])
+    "title"        : collective name for the group, as short as possible (1-3 words)
+    "type"         : "expense", "income", "savings_dep", or "savings_wit"
+    "value"        : positive decimal, sum of all merged line items in this group
+    "payee"        : merchant or person name, or "" if unknown
+    "date_due"     : ISO date string YYYY-MM-DD if the purchase/transaction date is known or can be inferred (e.g. "yesterday", "last Tuesday", a printed date on a receipt or invoice), otherwise null
+    "category_uid" : integer uid from the Categories list below, or null if none fits
+    "tag_uids"     : array of integer uids from the Tags list below (can be [])
     "note"         : for an image: the grouped receipt lines as printed (see above); otherwise any extra context worth keeping, or ""
 Only use category_uid and tag_uids values that appear in the lists below.
 If the user describes a lump sum for categorically different things, split by category/tag group.
 Default type to "expense" unless the description clearly indicates income or savings movement."""
 
 _SMART_CREATE_PROJECTS = """Assigning an expense to a shared project:
-    "project_uid"  — integer uid from the Projects list below if this expense clearly belongs to one of the listed projects, or null if it is a personal expense
+    "project_uid"  : integer uid from the Projects list below if this expense clearly belongs to one of the listed projects, or null if it is a personal expense
 Only use project_uid values that appear in the Projects list below.
 A project may carry "instructions" written by its members: follow them for every expense you assign to that project
 (they may also help decide whether an expense belongs to it), but never apply them to any other expense.
@@ -89,15 +89,15 @@ If an item is assigned to a project (project_uid is set), its type MUST be "expe
 shared expenses, never income or savings movements for the group. Never combine a non-"expense" type with a project_uid."""
 
 _SMART_CREATE_PROJECT_PARTICIPANTS = """Adjusting who shares a project expense:
-    "project_participants" — OPTIONAL, only meaningful when project_uid is set; omit it (or use []) unless the user says otherwise. By default every project member shares the cost equally, so you only need this to record exceptions the user mentions. It is a list of override entries, each: {"idx": <member idx from that project's "members" list>, "included": true|false, "share_percent": <number 0-100, or null>}. Set "included": false to drop a member from sharing entirely (e.g. "Robbie does not participate"). To pin a member to a specific share, use "included": true with "share_percent" set (e.g. "Robbie is on us, set him to 0%" -> {"idx": 2, "included": true, "share_percent": 0} if Robbie is idx 2). Members you do not list keep an equal share of whatever percentage is left over. Only use idx values that appear in that project's "members" list; never invent one."""
+    "project_participants" : OPTIONAL, only meaningful when project_uid is set; omit it (or use []) unless the user says otherwise. By default every project member shares the cost equally, so you only need this to record exceptions the user mentions. It is a list of override entries, each: {"idx": <member idx from that project's "members" list>, "included": true|false, "share_percent": <number 0-100, or null>}. Set "included": false to drop a member from sharing entirely (e.g. "Robbie does not participate"). To pin a member to a specific share, use "included": true with "share_percent" set (e.g. "Robbie is on us, set him to 0%" -> {"idx": 2, "included": true, "share_percent": 0} if Robbie is idx 2). Members you do not list keep an equal share of whatever percentage is left over. Only use idx values that appear in that project's "members" list; never invent one."""
 
 _SMART_CREATE_PROJECT_PAYER = """Recording who paid a project expense upfront:
-    "project_payer" — OPTIONAL, only meaningful when project_uid is set. The idx (from that project's "members" list) of whoever paid the bill upfront. Omit it or use null when the current user paid, which is the default. Set it when the user says someone else covered the cost (e.g. "Volker paid for the campsite" -> {"project_payer": 1} if Volker is idx 1). The upfront payer is not one of the shared participants; the remaining members split the cost. Only use an idx that appears in that project's "members" list; never invent one."""
+    "project_payer" : OPTIONAL, only meaningful when project_uid is set. The idx (from that project's "members" list) of whoever paid the bill upfront. Omit it or use null when the current user paid, which is the default. Set it when the user says someone else covered the cost (e.g. "Volker paid for the campsite" -> {"project_payer": 1} if Volker is idx 1). The upfront payer is not one of the shared participants; the remaining members split the cost. Only use an idx that appears in that project's "members" list; never invent one."""
 
 _SMART_CREATE_DIRECT_BUDDY = """Sharing an expense one-on-one with a direct buddy (NOT a project):
-    "buddy_idx" — OPTIONAL. The idx (from the Direct buddies list below) of the one person this expense is shared with one-on-one, or null for a personal expense. Use this only for a two-person split with a single buddy; use project_uid instead when the cost belongs to a shared project. An item is EITHER a project expense (project_uid) OR a direct buddy expense (buddy_idx), NEVER both.
-    "buddy_paid" — OPTIONAL, only meaningful when buddy_idx is set. true if the buddy paid the bill upfront, false or omitted when the current user paid (the default) (e.g. "Volker paid, I owe him half" -> "buddy_paid": true).
-    "buddy_share_percent" — OPTIONAL, only meaningful when buddy_idx is set. The buddy's share of the total cost as a number 0-100 (regardless of who paid). Omit it for an equal 50/50 split. Example: "dinner was 40, but 30 of it was mine" -> the buddy's share is 25.
+    "buddy_idx" : OPTIONAL. The idx (from the Direct buddies list below) of the one person this expense is shared with one-on-one, or null for a personal expense. Use this only for a two-person split with a single buddy; use project_uid instead when the cost belongs to a shared project. An item is EITHER a project expense (project_uid) OR a direct buddy expense (buddy_idx), NEVER both.
+    "buddy_paid" : OPTIONAL, only meaningful when buddy_idx is set. true if the buddy paid the bill upfront, false or omitted when the current user paid (the default) (e.g. "Volker paid, I owe him half" -> "buddy_paid": true).
+    "buddy_share_percent" : OPTIONAL, only meaningful when buddy_idx is set. The buddy's share of the total cost as a number 0-100 (regardless of who paid). Omit it for an equal 50/50 split. Example: "dinner was 40, but 30 of it was mine" -> the buddy's share is 25.
 If buddy_idx is set, the item's type MUST be "expense". Only use an idx that appears in the Direct buddies list below; never invent one."""
 
 # Ordered feature blocks. The base is mandatory; the rest can be dropped later
@@ -416,7 +416,7 @@ def _validate_items(raw_items: list, feuser, projects_data: list, single_buddies
             if value <= 0:
                 raise ValueError("value must be positive")
         except (InvalidOperation, ValueError) as exc:
-            errors.append(f"Item {i+1}: invalid value — {exc}")
+            errors.append(f"Item {i+1}: invalid value: {exc}")
             continue
 
         tx_type = raw.get("type", "expense")

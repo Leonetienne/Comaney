@@ -124,7 +124,7 @@ def _post_expense_with_dummy_payer(driver, project_id: int, dummy_pk: int,
 class TestNonAdminDummyUpfrontRequiresApproval:
     """
     Non-admin member creates a project expense with a dummy as upfront payer.
-    buddy_approved must be False — admin approval is required.
+    buddy_approved must be False: admin approval is required.
     """
 
     @pytest.fixture(scope="class")
@@ -181,7 +181,7 @@ class TestNonAdminDummyUpfrontRequiresApproval:
 class TestAdminDummyUpfrontAutoApproved:
     """
     Admin creates a project expense with a dummy as upfront payer.
-    buddy_approved must be True — admin exception, no extra approval needed.
+    buddy_approved must be True: admin exception, no extra approval needed.
     """
 
     @pytest.fixture(scope="class")

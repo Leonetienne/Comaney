@@ -63,6 +63,8 @@ docker exec -it comaney-web-1 python manage.py createsuperuser
 
 **Building frontend assets** (CSS and JS) is a separate step. See [Building Assets](building-assets.md). You need to build the frontend assets to have a working development instance.
 
+**AI features** in the dev stack need an AI service. To run them against a model on your own machine (with or without authentication), see [Local AI in the Dev Stack](local-ai-dev-stack.md).
+
 ## Key conventions
 
 - **Never use `request.user` or `@login_required`.** Comaney has its own user model (`FeUser`) and session auth. Use `@feuser_required` instead, which sets `request.feuser`.

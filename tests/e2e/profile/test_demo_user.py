@@ -111,7 +111,7 @@ def _get_csrf(session: requests.Session, path: str) -> str:
 def _require_demo_users():
     """Skip every test in this module when ENABLE_DEMO_USERS is not set on the server."""
     if not _demo_users_enabled():
-        warnings.warn("ENABLE_DEMO_USERS is not set on this server — skipping demo user tests.", UserWarning)
+        warnings.warn("ENABLE_DEMO_USERS is not set on this server, skipping demo user tests.", UserWarning)
         pytest.skip("ENABLE_DEMO_USERS is not set on this server")
 
 
@@ -763,7 +763,7 @@ class TestDemoProfileFieldRestrictions:
             f"from feusers.models import FeUser; "
             f"print(FeUser.objects.get(email='{demo_ctx['email']}').email_notifications)"
         )
-        # Should still be True — POST was silently ignored.
+        # Should still be True, POST was silently ignored.
         assert after == "True", "Demo user's notification preference was changed despite restriction"
 
     def test_server_blocks_email_change(self, demo_ctx):
@@ -932,7 +932,7 @@ class TestResetDemoUserSafety:
                 f"print(u.last_seen)"
             )
             assert demo_last_seen == "None", (
-                f"Demo user still has old last_seen={demo_last_seen!r} — was not actually reset"
+                f"Demo user still has old last_seen={demo_last_seen!r}, was not actually reset"
             )
 
         finally:

@@ -384,7 +384,7 @@ class TestReorder:
 
 
 # ---------------------------------------------------------------------------
-# TestUITabBar — browser smoke tests
+# TestUITabBar: browser smoke tests
 # ---------------------------------------------------------------------------
 
 class TestUITabBar:
@@ -491,7 +491,7 @@ class TestUITabBar:
 
 
 # ---------------------------------------------------------------------------
-# TestPenTests — cross-user isolation and auth guards
+# TestPenTests: cross-user isolation and auth guards
 # ---------------------------------------------------------------------------
 
 class TestPenTests:
@@ -521,7 +521,7 @@ class TestPenTests:
 
         r = sess.get(BASE_URL + "/budget/dash/" + str(user2_dash_id) + "/")
         assert r.status_code == 404, \
-            "User1 got %d for User2's dashboard — expected 404" % r.status_code
+            "User1 got %d for User2's dashboard, expected 404" % r.status_code
 
     def test_cannot_rename_other_users_dashboard(self, driver, w, ctx, ctx2, sess):
         """User1 PATCH on User2's dashboard must return 404 and leave title unchanged."""

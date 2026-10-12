@@ -7,7 +7,7 @@ Comaney uses email for:
 - Password reset links
 - Expense due-date notifications
 - Settlement notifications
-- Admin alerts (new registrations, AI trial key events, contact form submissions)
+- Admin alerts (new registrations, shared AI access problems, contact form submissions)
 
 ## Requirements
 

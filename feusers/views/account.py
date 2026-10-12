@@ -270,7 +270,7 @@ def account_export(request):
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
 
         # ------------------------------------------------------------------
-        # profile.csv — dynamic: all concrete fields except security tokens
+        # profile.csv: dynamic: all concrete fields except security tokens
         # ------------------------------------------------------------------
         _SKIP_FIELDS = {
             "password", "confirmation_token", "password_reset_token",
@@ -293,7 +293,7 @@ def account_export(request):
         zf.writestr("profile.csv", p.getvalue())
 
         # ------------------------------------------------------------------
-        # second_factors.csv — which 2FA methods are registered (type, label,
+        # second_factors.csv: which 2FA methods are registered (type, label,
         # primary flag, when added) and nothing else. Deliberately excludes
         # every method-specific secret/credential (TOTP secret, WebAuthn
         # public_key/credential_id, Email secret): those are live security
@@ -329,7 +329,7 @@ def account_export(request):
         zf.writestr("tags.csv", p.getvalue())
 
         # ------------------------------------------------------------------
-        # expenses.csv — own expenses (identical scheme used for foreign too).
+        # expenses.csv: own expenses (identical scheme used for foreign too).
         # category_id is kept as a raw FK; tag_ids are comma-separated UIDs.
         # ------------------------------------------------------------------
         _EXPENSE_SKIP = {"owning_feuser"}
@@ -371,7 +371,7 @@ def account_export(request):
         zf.writestr("dashboard_cards.csv", p.getvalue())
 
         # ------------------------------------------------------------------
-        # sankey_graph.json — the feuser's Sankey Studio node/edge layout
+        # sankey_graph.json: the feuser's Sankey Studio node/edge layout
         # (config_json is already the exact persisted shape, see
         # budget/models/sankey.py), included only if one has been saved.
         # ------------------------------------------------------------------
@@ -392,7 +392,7 @@ def account_export(request):
         BuddyExportService.write_buddy_csvs(zf, feuser)
 
         # ------------------------------------------------------------------
-        # expense_overlays.csv — feuser's personal category/tags/note on
+        # expense_overlays.csv: feuser's personal category/tags/note on
         # shared expenses (own or foreign).
         # category_id and tag_ids use raw IDs, consistent with expenses.csv.
         # ------------------------------------------------------------------
@@ -432,7 +432,7 @@ def account_export(request):
             ProjectExportService.write_project_csvs(zf, project, feuser, prefix=f"projects/{project.pk}/")
 
         # ------------------------------------------------------------------
-        # catalog_partnership.csv — co-members of the user's catalog partnership
+        # catalog_partnership.csv: co-members of the user's catalog partnership
         # (if any), identified by email address.
         # ------------------------------------------------------------------
         try:
@@ -454,7 +454,7 @@ def account_export(request):
             pass
 
         # ------------------------------------------------------------------
-        # pending_project_invites.csv — invites to join a project, sent by or
+        # pending_project_invites.csv: invites to join a project, sent by or
         # addressed to feuser, that haven't expired yet. Covers invites to
         # existing users (ProjectInvite) and to not-yet-registered email
         # addresses (BuddyOnboardingInvite with group set).
@@ -471,7 +471,7 @@ def account_export(request):
         zf.writestr("pending_project_invites.csv", p.getvalue())
 
         # ------------------------------------------------------------------
-        # pending_buddy_invites.csv — direct-buddy invites, sent by or
+        # pending_buddy_invites.csv: direct-buddy invites, sent by or
         # addressed to feuser, that haven't expired yet. Covers invites to
         # existing users (BuddyInvite) and to not-yet-registered email
         # addresses (BuddyOnboardingInvite with no group).
@@ -488,7 +488,7 @@ def account_export(request):
         zf.writestr("pending_buddy_invites.csv", p.getvalue())
 
         # ------------------------------------------------------------------
-        # pending_partnership_invites.csv — catalog partnership invites, sent
+        # pending_partnership_invites.csv: catalog partnership invites, sent
         # by or addressed to feuser, not yet accepted/declined.
         # ------------------------------------------------------------------
         _PARTNERSHIP_PENDING_STATUSES = [CatalogPartnershipInvite.STATUS_PENDING, CatalogPartnershipInvite.STATUS_IN_SETUP]
@@ -502,7 +502,7 @@ def account_export(request):
         zf.writestr("pending_partnership_invites.csv", p.getvalue())
 
         # ------------------------------------------------------------------
-        # pending_expense_approvals.csv — personal (non-project) expenses
+        # pending_expense_approvals.csv: personal (non-project) expenses
         # where someone else designated feuser as the upfront payer and
         # feuser hasn't yet confirmed they actually paid ("Did you pay for
         # this?"). Settlements and dummy-paid expenses use separate
