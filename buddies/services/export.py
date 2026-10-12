@@ -173,7 +173,13 @@ class BuddyExportService:
         personal_dummies = list(DummyUser.objects.filter(owning_feuser=feuser))
         p = io.StringIO()
         w = csv.writer(p)
-        w.writerow(["buddy_type", "id", "display_name", "email", "since"])
+        # i_auto_accept_theirs / they_auto_accept_mine: the buddy auto-accept
+        # trust in each direction (buddies/services/trust.py); empty for
+        # offline buddies, where it cannot exist.
+        w.writerow([
+            "buddy_type", "id", "display_name", "email", "since",
+            "i_auto_accept_theirs", "they_auto_accept_mine",
+        ])
         for link in BuddyLink.for_user(feuser).select_related("user_a", "user_b"):
             other = link.other(feuser)
             w.writerow([
@@ -182,11 +188,13 @@ class BuddyExportService:
                 _csv_safe(f"{other.first_name} {other.last_name}".strip()),
                 _csv_safe(other.email),
                 link.created_at.isoformat(),
+                link.auto_accepts(feuser),
+                link.auto_accepts(other),
             ])
         for dummy in personal_dummies:
             w.writerow([
                 "dummy", _identity_id(dummy_obj=dummy), _csv_safe(dummy.display_name), "",
-                dummy.created_at.isoformat(),
+                dummy.created_at.isoformat(), "", "",
             ])
         zf.writestr(f"{prefix}direct-buddies.csv", p.getvalue())
 

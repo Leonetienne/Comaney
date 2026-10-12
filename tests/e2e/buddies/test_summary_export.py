@@ -5,7 +5,8 @@ per-project export:
 - Contains direct-buddies.csv, direct-buddy-expenses.csv,
   direct-buddy-expense-participation.csv
 - direct-buddies.csv combines real-user and offline buddies into one roster,
-  identified by "u-<pk>"/"d-<pk>"
+  identified by "u-<pk>"/"d-<pk>", plus the buddy auto-accept trust in both
+  directions (i_auto_accept_theirs / they_auto_accept_mine, empty for offline)
 - direct-buddy-expenses.csv covers both directions of a direct-buddy
   relationship: expenses a buddy owns where the feuser participates, the
   feuser's own expenses shared with a buddy, and the feuser's own expenses
@@ -24,6 +25,7 @@ per-project export:
   export is all-time)
 - Unauthenticated request is redirected
 """
+import csv
 import io
 import time
 import zipfile
@@ -100,6 +102,45 @@ class TestBuddySummaryExport:
             _shell(f"from buddies.models import DummyUser; DummyUser.objects.filter(pk={dummy_pk}).delete()")
             cleanup_user(a["email"])
             cleanup_user(b["email"])
+
+    def test_direct_buddies_csv_has_auto_accept_trust(self, driver, w):
+        """direct-buddies.csv must show the auto-accept trust in both
+        directions, seen from the exporting feuser; empty for offline buddies."""
+        a = setup_user(driver, w, first_name="Trust", last_name="Exporter")
+        b = setup_user(None, None, first_name="Trust", last_name="TrustsMe")
+        c = setup_user(None, None, first_name="Trust", last_name="ITrust")
+        _create_buddy_link(a["email"], b["email"])
+        _create_buddy_link(a["email"], c["email"])
+        dummy_pk = None
+        try:
+            dummy_pk = int(_shell(
+                f"from feusers.models import FeUser; "
+                f"from buddies.models import BuddyLink, DummyUser; "
+                f"a = FeUser.objects.get(email='{a['email']}'); "
+                f"b = FeUser.objects.get(email='{b['email']}'); "
+                f"c = FeUser.objects.get(email='{c['email']}'); "
+                f"BuddyLink.between(a, b).set_auto_accepts(b, True); "
+                f"BuddyLink.between(a, c).set_auto_accepts(a, True); "
+                f"d, _ = DummyUser.objects.get_or_create(owning_feuser=a, display_name='TrustOfflineBuddy'); "
+                f"print(d.pk)"
+            ))
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                rows = list(csv.DictReader(io.StringIO(_read_csv(zf, "direct-buddies.csv"))))
+            by_email = {r["email"]: r for r in rows if r["buddy_type"] == "feuser"}
+            offline = next(r for r in rows if r["display_name"] == "TrustOfflineBuddy")
+
+            assert by_email[b["email"]]["i_auto_accept_theirs"] == "False"
+            assert by_email[b["email"]]["they_auto_accept_mine"] == "True"
+            assert by_email[c["email"]]["i_auto_accept_theirs"] == "True"
+            assert by_email[c["email"]]["they_auto_accept_mine"] == "False"
+            assert offline["i_auto_accept_theirs"] == ""
+            assert offline["they_auto_accept_mine"] == ""
+        finally:
+            if dummy_pk:
+                _shell(f"from buddies.models import DummyUser; DummyUser.objects.filter(pk={dummy_pk}).delete()")
+            for u in (a, b, c):
+                cleanup_user(u["email"])
 
     def test_buddy_owned_expense_in_export(self, driver, w):
         a = setup_user(driver, w, first_name="Bud", last_name="OwnerTest")
