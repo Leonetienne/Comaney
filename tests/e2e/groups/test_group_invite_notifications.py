@@ -129,8 +129,7 @@ class TestGroupInviteOnboarding:
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
-        inp = driver.find_element(
-            By.XPATH, "//button[@id='btn-group-invite']/preceding-sibling::input[@name='email']")
+        inp = driver.find_element(By.ID, "project-invite-email")
         driver.execute_script("arguments[0].value = arguments[1];", inp, ctx["nonexistent_email"])
         driver.find_element(By.ID, "btn-group-invite").click()
         time.sleep(1)
