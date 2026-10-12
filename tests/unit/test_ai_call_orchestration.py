@@ -2,9 +2,11 @@
 The provider-neutral AI-call orchestration in budget/ai_service.py, driven
 through the real AIService with a scripted fake provider: request building
 per feature, JSON repair, envelope handling, usage merging and trial billing.
+Also the AI_NOTIFY_ADMIN_JSON_REPAIR switch in budget/ai_trial.py.
 Run with: venv/bin/pytest tests/unit/test_ai_call_orchestration.py -v
 """
 from decimal import Decimal
+from types import SimpleNamespace as NS
 
 import pytest
 
@@ -188,3 +190,32 @@ class TestJsonRepair:
         assert float(service.feuser.ai_trial_budget_spent) == 1.25
         assert effects.repair_mails == []
 
+
+class TestJsonRepairNotificationSwitch:
+
+    @pytest.fixture
+    def sent(self, monkeypatch):
+        import django.core.mail
+        sent = []
+        monkeypatch.setattr(django.core.mail, "send_mail", lambda *args, **kwargs: sent.append(args))
+        return sent
+
+    def _settings(self, monkeypatch, notify):
+        from budget import ai_trial
+        monkeypatch.setattr(ai_trial, "settings", NS(
+            DISABLE_EMAILING=False, ADMIN_NOTIFICATION_EMAIL="admin@example.com",
+            DEFAULT_FROM_EMAIL="noreply@example.com", AI_NOTIFY_ADMIN_JSON_REPAIR=notify,
+        ))
+
+    def test_sends_when_enabled(self, monkeypatch, sent):
+        from budget.ai_trial import notify_admin_json_repair_fallback
+        self._settings(monkeypatch, True)
+        notify_admin_json_repair_fallback("express_creation", resolved=True)
+        assert len(sent) == 1
+        assert "express_creation" in sent[0][0]
+
+    def test_silent_when_disabled(self, monkeypatch, sent):
+        from budget.ai_trial import notify_admin_json_repair_fallback
+        self._settings(monkeypatch, False)
+        notify_admin_json_repair_fallback("express_creation", resolved=False)
+        assert sent == []

@@ -76,8 +76,9 @@ def notify_admin_json_repair_fallback(feature: str, resolved: bool) -> None:
     second AI call was made to try to recover it. Purely an operational
     signal for the admin -- never includes any user data or response
     content, just which feature hit this and whether the retry fixed it.
+    Switched off with AI_NOTIFY_ADMIN_JSON_REPAIR=FALSE.
     """
-    if getattr(settings, "DISABLE_EMAILING", False):
+    if getattr(settings, "DISABLE_EMAILING", False) or not getattr(settings, "AI_NOTIFY_ADMIN_JSON_REPAIR", True):
         return
     email = getattr(settings, "ADMIN_NOTIFICATION_EMAIL", "")
     if not email:

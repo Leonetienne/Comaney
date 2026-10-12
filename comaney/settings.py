@@ -166,6 +166,8 @@ DEMO_USER_AI_BUDGET = int(os.environ.get("DEMO_USER_AI_BUDGET", "0") or "0")  # 
 
 AI_TRIAL_USAGE_LIMIT  = float(os.environ.get("AI_TRIAL_USAGE_LIMIT", "0"))  # cents
 AI_TRIAL_DISABLED_FLAG = os.environ.get("AI_TRIAL_DISABLED_FLAG", str(BASE_DIR / "ai_trial_disabled.flag"))
+# admin email whenever an AI response needed the JSON-repair call; default on
+AI_NOTIFY_ADMIN_JSON_REPAIR = os.environ.get("AI_NOTIFY_ADMIN_JSON_REPAIR", "TRUE").upper() in ("1", "TRUE", "YES")
 
 # AI_PROVIDER picks one file in ai_providers/; unset or "none" = no AI.
 # Django-free, see ai_providers.resolve_ai_provider for every rule.

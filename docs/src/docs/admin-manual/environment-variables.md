@@ -386,6 +386,14 @@ Price of the model in US dollars per million input and output tokens, for exampl
 
 ---
 
+### `AI_NOTIFY_ADMIN_JSON_REPAIR`
+
+**Default:** `TRUE`
+
+When the AI answers in a broken format, Comaney asks it once more to repair the answer and emails `ADMIN_NOTIFICATION_EMAIL` about it (no user data, only which feature was affected and whether the repair worked). Set to `FALSE` to stop these emails, for example if they become frequent with a weaker model.
+
+---
+
 ### `AI_TRIAL_DISABLED_FLAG`
 
 **Default:** `{app_root}/ai_trial_disabled.flag`
