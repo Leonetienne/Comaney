@@ -43,12 +43,15 @@ This applies without exception — bottle deposits (Pfand), surcharges, or minor
 to the same category/tag group must be absorbed into that group's record, not given their own entry.
 The goal is one record per (category, tags) combination, never one record per line item.
 If a user says that they withdrew savings to buy something, they mean that they either paid completely out of savings OR that they want to SPLIT the expense into "expense" and "savings wit", depending on whether the withdrawn amount covers the item.
+The "savings_wit" item IS the spending of the amount paid from savings: never also add an "expense" item for that same amount. Example: "bought a TV, 500 paid upfront, 1000 from savings" is exactly two items: an "expense" of 500 and a "savings_wit" of 1000.
 All generated items IN SUM must match the value stated by the user!
 
 If an image is provided:
 - Read every line item, assign each a category and tags, then apply the grouping rule above.
 - A supermarket receipt will typically produce very few records (e.g. Groceries, Hygiene, Drinks, Household), not one per product.
 - The payee is the store or vendor name from the receipt header.
+- Add up each record's value from its receipt lines (price x quantity, deposits included), then check that all records together equal the total printed on the receipt (e.g. "SUMME", "Total"); if they don't, recount before answering.
+- In each record's "note", list the receipt lines grouped into it by the product name exactly as printed on the receipt, with quantity when more than 1 (e.g. "Odol-med3 Zahncreme x5, G&G Klarspueler"). Do not translate or generalise the printed names.
 - Use the user's text (if any) as additional context or filtering instructions.
 
 Response format — your ENTIRE reply, from the very first character to the very last, must be exactly one of the two JSON objects below and nothing else:
@@ -71,7 +74,7 @@ Each item in the "items" array must have exactly these base keys (feature sectio
     "date_due"     — ISO date string YYYY-MM-DD if the purchase/transaction date is known or can be inferred (e.g. "yesterday", "last Tuesday", a printed date on a receipt or invoice), otherwise null
     "category_uid" — integer uid from the Categories list below, or null if none fits
     "tag_uids"     — array of integer uids from the Tags list below (can be [])
-    "note"         — any extra context worth keeping, or ""
+    "note"         : for an image: the grouped receipt lines as printed (see above); otherwise any extra context worth keeping, or ""
 Only use category_uid and tag_uids values that appear in the lists below.
 If the user describes a lump sum for categorically different things, split by category/tag group.
 Default type to "expense" unless the description clearly indicates income or savings movement."""
