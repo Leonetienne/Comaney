@@ -262,6 +262,7 @@ class ProjectExportService:
         w.writerow(["uid", project.pk])
         w.writerow(["name", _csv_safe(project.name)])
         w.writerow(["description", _csv_safe(project.description)])
+        w.writerow(["ai_preprompt", _csv_safe(project.ai_preprompt)])
         w.writerow(["admin_id", _identity_id(feuser_obj=project.admin_feuser, self_feuser=feuser)])
         w.writerow(["has_picture", project.group_picture])
         w.writerow(["created_at", project.created_at.isoformat()])

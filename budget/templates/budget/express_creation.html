@@ -282,6 +282,16 @@ window.BUDDY_EXPENSE_CONFIG = {
 <script>
 const SESSION_KEY = 'express_creation_img';
 
+{% if prefilled %}
+// ── Preset prompt: put the cursor after it so the user can type right away ──
+(function () {
+    const input = document.querySelector('#parse-form .smart-input');
+    if (!input) return;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+}());
+{% endif %}
+
 // ── Image zone ──────────────────────────────────────────────────────────────
 (function () {
     const zone        = document.getElementById('image-zone');

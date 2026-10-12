@@ -53,6 +53,10 @@ class TestProjectExport:
         b = setup_user(None, None, first_name="Bob", last_name="Buddy")
         o = setup_user(None, None, first_name="Olivia", last_name="Outsider")
         gid = int(_create_group(a["email"], "Export Test Project"))
+        _shell(
+            "from buddies.models import Project; "
+            f"Project.objects.filter(pk={gid}).update(ai_preprompt='Bob always pays 0%')"
+        )
         _add_group_member(gid, b["email"])
         exp_id = int(_create_group_expense(
             a["email"], b["email"], gid,
@@ -89,6 +93,7 @@ class TestProjectExport:
 
         assert "Export Test Project" in meta_csv, "Project name missing from meta.csv"
         assert "admin_id,self" in meta_csv, "Admin id (self) missing from meta.csv"
+        assert "ai_preprompt,Bob always pays 0%" in meta_csv, "AI preprompt missing from meta.csv"
 
     def test_members_csv_has_roster(self, driver, w, ctx):
         """The exporting admin (Eve, logged in) shows up as "self"; other

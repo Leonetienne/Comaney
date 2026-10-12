@@ -27,9 +27,12 @@
         }).finally(callback);
     }
 
+    var previousFocus = null;
+
     function close() {
         modal.classList.remove('cdialog-visible');
         modal.setAttribute('aria-hidden', 'true');
+        if (previousFocus) previousFocus.focus();
     }
 
     document.getElementById('intro-modal-ok').addEventListener('click', function () {
@@ -46,6 +49,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         modal.classList.add('cdialog-visible');
         modal.setAttribute('aria-hidden', 'false');
+        previousFocus = document.activeElement !== document.body ? document.activeElement : null;
         document.getElementById('intro-modal-ok').focus();
     });
 }());

@@ -71,9 +71,13 @@ By default, only the admin can change the project's name, description, and pictu
    - **Any member**: every member can edit the name, description, and picture.
 3. Your choice is saved as soon as you pick it.
 
-This setting is purely cosmetic: it only covers the name, description, and picture. Everything that actually manages the project — inviting or removing members, transferring admin rights, archiving, and deleting — always stays admin only.
+This setting is purely cosmetic: it only covers the name, description, and picture. Everything that actually manages the project (inviting or removing members, transferring admin rights, archiving, and deleting) always stays admin only.
 
 When you choose **Any member**, other members see a **Cosmetics** area on their Settings tab where they can make these changes.
+
+## AI preprompt
+
+Instructions that AI Express should always follow for this project, e.g. "Put Robert and Mallory always at 0%, they're invited." Set it on the **Settings** tab; it is added to the text whenever you start AI Express from the project's **+** button.
 
 ## Inviting members
 

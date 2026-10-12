@@ -1,7 +1,9 @@
 """Project detail floating action button opens a submenu of small circular
 bubbles ("Manual" / "AI"); "Manual" preserves the existing ?project=&back=
 flow, and "AI" deep-links to Express Creation with the smart-input textarea
-pre-filled with a prompt naming the project.
+pre-filled with a prompt naming the project, followed by the project's AI
+preprompt (if set) and a trailing space, with the cursor placed after it so the
+user can type right away.
 
 The bubbles are hidden via opacity/pointer-events (not display:none) so the
 open/close animation can transition, and looked up by their stable `title`
@@ -16,7 +18,18 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _create_group
+from bhelpers import _create_group, _shell
+
+PREPROMPT = "Put Robert and Mallory always at 0%, they're invited."
+
+
+def _set_disable_ai_ui(email: str, value: bool) -> None:
+    _shell(
+        "from feusers.models import FeUser; "
+        f"u = FeUser.objects.get(email='{email}'); "
+        f"u.disable_ai_ui = {value}; "
+        "u.save(update_fields=['disable_ai_ui'])"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -71,4 +84,71 @@ class TestProjectFabSubmenu:
         self._item_by_title(driver, "AI Express").click()
         time.sleep(1)
         textarea = driver.find_element(By.CSS_SELECTOR, ".smart-input")
-        assert textarea.get_attribute("value") == "Create all expenses for project 'Fab Menu Project'"
+        assert textarea.get_attribute("value") == "Create all expenses for project 'Fab Menu Project' "
+
+    def test_cursor_placed_after_preset_prompt(self, driver, w, ctx):
+        """Continues on the AI Express page opened by the previous test."""
+        if "/budget/ai/express-creation/" not in driver.current_url:
+            pytest.skip("AI Express not available for this test user (no trial key configured)")
+        # A brand-new test user sees the one-time welcome modal; dismissing it
+        # must hand focus back to the textarea.
+        dismiss = driver.find_elements(By.ID, "intro-modal-dismiss")
+        if dismiss and dismiss[0].is_displayed():
+            dismiss[0].click()
+            time.sleep(0.5)
+        textarea = driver.find_element(By.CSS_SELECTOR, ".smart-input")
+        state = driver.execute_script(
+            "var t = arguments[0];"
+            "return [document.activeElement === t, t.selectionStart, t.selectionEnd, t.value.length];",
+            textarea,
+        )
+        focused, start, end, length = state
+        assert focused, "The prefilled textarea must have focus"
+        assert start == end == length, "The cursor must sit after the preset prompt"
+
+    def test_preprompt_saved_from_settings(self, driver, w, ctx):
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+        time.sleep(1)
+        textarea = driver.find_element(By.ID, "project-ai-preprompt")
+        driver.execute_script("arguments[0].value = arguments[1];", textarea, PREPROMPT)
+        driver.find_element(By.ID, "btn-rename-project").click()
+        time.sleep(1)
+        assert driver.find_element(By.ID, "project-ai-preprompt").get_attribute("value") == PREPROMPT
+
+    def test_preprompt_appended_to_ai_express_prefill(self, driver, w, ctx):
+        self._open(driver, w, ctx)
+        if self._item_by_title(driver, "AI Express") is None:
+            pytest.skip("AI Express not available for this test user (no trial key configured)")
+        driver.find_element(By.CSS_SELECTOR, ".fab-toggle").click()
+        time.sleep(0.3)
+        self._item_by_title(driver, "AI Express").click()
+        time.sleep(1)
+        textarea = driver.find_element(By.CSS_SELECTOR, ".smart-input")
+        assert textarea.get_attribute("value") == (
+            f"Create all expenses for project 'Fab Menu Project'. {PREPROMPT} "
+        )
+
+    def test_preprompt_hidden_when_ai_ui_disabled(self, driver, w, ctx):
+        _set_disable_ai_ui(ctx["email"], True)
+        try:
+            driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+            time.sleep(1)
+            assert not driver.find_elements(By.ID, "project-ai-preprompt"), \
+                "AI preprompt field must be hidden when 'Hide all AI features' is on"
+            assert "AI preprompt" not in driver.page_source
+        finally:
+            _set_disable_ai_ui(ctx["email"], False)
+
+    def test_rename_without_preprompt_field_keeps_preprompt(self, driver, w, ctx):
+        """Saving the rename form while the preprompt field is hidden must not wipe it."""
+        _set_disable_ai_ui(ctx["email"], True)
+        try:
+            driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+            time.sleep(1)
+            driver.find_element(By.ID, "btn-rename-project").click()
+            time.sleep(1)
+        finally:
+            _set_disable_ai_ui(ctx["email"], False)
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+        time.sleep(1)
+        assert driver.find_element(By.ID, "project-ai-preprompt").get_attribute("value") == PREPROMPT

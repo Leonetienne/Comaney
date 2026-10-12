@@ -27,6 +27,9 @@ class Project(models.Model):
         default=PERMISSION_LAXITY_ADMIN_ONLY,
         choices=PERMISSION_LAXITY_CHOICES,
     )
+    # Instructions prepended to AI Express when started from this project,
+    # e.g. "Put Robert and Mallory always at 0%, they're invited".
+    ai_preprompt = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     archived = models.BooleanField(default=False)
     last_mod = models.DateTimeField(default=timezone.now)
@@ -42,12 +45,18 @@ class Project(models.Model):
         import re
         return re.sub(r'\s+', ' ', self.description).strip()
 
+    @property
+    def ai_express_prefill(self) -> str:
+        """Text AI Express opens with when started from this project."""
+        from budget.express_prefill import project_prefill
+        return project_prefill(self.name, self.ai_preprompt)
+
     def update_lastmod(self):
         self.last_mod = timezone.now()
         self.save(update_fields=["last_mod"])
 
     def can_edit_details(self, feuser) -> bool:
-        """True if feuser may edit the project's name, description and picture.
+        """True if feuser may edit the project's name, description, picture and AI preprompt.
 
         The admin always may. Other members may only when the project's
         permission_laxity is set to PERMISSION_LAXITY_MEMBERS.

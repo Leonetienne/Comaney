@@ -26,6 +26,7 @@ from ..express_service import (
     build_express_system_prompt,
 )
 from ..expense_factory import create_expense
+from ..express_prefill import with_typing_space
 from ..models import Category, Tag, TransactionType
 from .expenses import _buddy_context
 
@@ -46,9 +47,12 @@ def express_creation(request):
 
     categories = list(Category.objects.filter(owning_feuser=feuser).values("uid", "title"))
     tags = list(Tag.objects.filter(owning_feuser=feuser).values("uid", "title"))
+    # Preset text (e.g. from a project's + button), ending in a space so typing can continue it
+    prefill = with_typing_space(request.GET.get("prefill", "")) if request.method != "POST" else ""
     context = {
         "active_nav":         "express_creation",
-        "description":        request.GET.get("prefill", "") if request.method != "POST" else "",
+        "description":        prefill,
+        "prefilled":          bool(prefill),
         "preview_items":      None,
         "preview_json":       "",
         "usage":              None,

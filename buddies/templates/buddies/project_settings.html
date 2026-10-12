@@ -277,7 +277,7 @@
 
         <div class="settings-row">
             <p class="settings-row__title">Who can edit cosmetics</p>
-            <p class="settings-row__desc">Choose who may change the project's name, description and picture. This is purely cosmetic: everything that actually manages the project stays admin only.</p>
+            <p class="settings-row__desc">Choose who may change the project's name, description{% if ai_smart_create_available %}, picture and AI preprompt{% else %} and picture{% endif %}. This is purely cosmetic: everything that actually manages the project stays admin only.</p>
             <form method="post" action="{% url 'projects:project_set_permission_laxity' project_id=project.uid %}" class="stacked-form" id="permission-laxity-form">
                 {% csrf_token %}
                 <select name="permission_laxity" class="input-inline" id="select-permission-laxity">

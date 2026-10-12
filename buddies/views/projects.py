@@ -16,6 +16,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
+from budget.express_prefill import AI_PREPROMPT_MAX_LENGTH
 from budget.models import Expense
 from budget.query_parser import apply_query, has_date_filter, visible_tag_titles
 from feusers.models import FeUser
@@ -1224,9 +1225,16 @@ def project_rename(request, project_id):
         django_messages.error(request, "Project name must be 128 characters or fewer.")
         return redirect("projects:project_settings", project_id=project_id)
     description = request.POST.get("description", "").strip()
+    # The preprompt field is only shown to feusers with AI features enabled;
+    # a form without it must leave the stored preprompt alone.
+    ai_preprompt = request.POST.get("ai_preprompt", project.ai_preprompt).strip()
+    if len(ai_preprompt) > AI_PREPROMPT_MAX_LENGTH:
+        django_messages.error(request, f"The AI preprompt must be {AI_PREPROMPT_MAX_LENGTH} characters or fewer.")
+        return redirect("projects:project_settings", project_id=project_id)
     project.name = name
     project.description = description
-    project.save(update_fields=["name", "description"])
+    project.ai_preprompt = ai_preprompt
+    project.save(update_fields=["name", "description", "ai_preprompt"])
     project.update_lastmod()
     return redirect("projects:project_settings", project_id=project_id)
 

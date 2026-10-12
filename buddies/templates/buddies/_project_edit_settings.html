@@ -1,17 +1,22 @@
 {% comment %}
-Editable project detail rows (name/description + picture). Shown to the admin
+Editable project detail rows (name/description, picture, AI preprompt). Shown to the admin
 and, when permission_laxity allows it, to any member. Requires `project` in context.
 {% endcomment %}
 
 <div class="settings-row">
     <p class="settings-row__title">Rename project</p>
-    <p class="settings-row__desc">Update the project name and optional description.</p>
+    <p class="settings-row__desc">Update the project name{% if ai_smart_create_available %}, optional description and optional AI preprompt{% else %} and optional description{% endif %}.</p>
     <form method="post" action="{% url 'projects:project_rename' project_id=project.uid %}" class="stacked-form">
         {% csrf_token %}
         <label for="project-rename-name">Project name</label>
         <input type="text" id="project-rename-name" name="name" value="{{ project.name }}" maxlength="128" required>
         <label for="project-rename-desc">Description <span class="text-muted font-xs">(optional)</span></label>
         <textarea id="project-rename-desc" name="description" maxlength="500" rows="3">{{ project.description }}</textarea>
+        {% if ai_smart_create_available %}
+        <label for="project-ai-preprompt">AI preprompt <span class="text-muted font-xs">(optional)</span></label>
+        <p class="text-muted font-xs m-0">Added to AI Express whenever someone starts it from this project with the + button.</p>
+        <textarea id="project-ai-preprompt" name="ai_preprompt" maxlength="500" rows="3" placeholder="e.g. Put Robert and Mallory always at 0%, they're invited.">{{ project.ai_preprompt }}</textarea>
+        {% endif %}
         <button type="submit" id="btn-rename-project" class="btn mt-sm">Save</button>
     </form>
 </div>
