@@ -161,6 +161,7 @@ When adding any new feature: if it sends email, modifies another user's data, or
 | `DEFAULT_FROM_EMAIL` | sender address |
 | `AI_TRIAL_API_KEY` / `AI_TRIAL_USAGE_LIMIT` | shared trial key (cents) |
 | `YUBICO_CLIENT_ID` / `YUBICO_SECRET_KEY` | Yubico OTP validation API credentials; YubiKey OTP second factor is hidden unless both are set |
+| `AI_PROVIDER_CLAUDE_EFFORT` | Claude effort: `low`/`medium`/`high`/`xhigh`/`max`, default `medium`; invalid value = misconfigured page (`budget/ai_service.py::resolve_effort`) |
 | `YUBICO_SERVER` | Yubico OTP validation server; defaults to `https://api.yubico.com` |
 | `SITE_URL` | used in email links |
 | `ALLOWED_HOSTS` | comma-separated; `*` only under DEBUG, empty (must configure) in prod |

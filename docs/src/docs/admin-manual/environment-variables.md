@@ -327,6 +327,16 @@ Set to `0` to impose no per-user limit (only the overall Anthropic account budge
 
 ---
 
+### `AI_PROVIDER_CLAUDE_EFFORT`
+
+**Default:** `medium`
+
+How much effort (thinking) the AI puts into each request: one of `low`, `medium`, `high`, `xhigh`, `max`. Higher levels can give better results on hard requests but are slower and use more tokens, which costs more and uses up the shared trial budget faster. `low` is the fastest and cheapest.
+
+Any other value takes the site down with a configuration error page until it is fixed or removed.
+
+---
+
 ### `AI_TRIAL_DISABLED_FLAG`
 
 **Default:** `{app_root}/ai_trial_disabled.flag`

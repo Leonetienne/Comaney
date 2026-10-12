@@ -16,8 +16,9 @@ from budget.ai_service import _compute_usage_cost as compute_usage_cost
 
 
 def test_typical_request_cost():
+    """Claude Sonnet 5.5: $2 input / $10 output per MTok."""
     usage = compute_usage_cost(input_tok=4000, output_tok=300, cache_write_tok=0, cache_read_tok=0)
-    assert usage["cost_usd"] == round((4000 / 1_000_000) * 3.00 + (300 / 1_000_000) * 15.00, 6)
+    assert usage["cost_usd"] == round((4000 / 1_000_000) * 2.00 + (300 / 1_000_000) * 10.00, 6)
     assert usage["cost_cents"] == round(usage["cost_usd"] * 100, 4)
     assert usage["cost_cents"] > 0
 
@@ -29,6 +30,7 @@ def test_cache_heavy_tiny_request_not_rounded_to_zero():
     against: such requests would silently escape trial-budget accounting)."""
     usage = compute_usage_cost(input_tok=0, output_tok=5, cache_write_tok=0, cache_read_tok=100)
     assert usage["cost_cents"] > 0
+    assert usage["cost_cents"] == 0.007
     assert round(usage["cost_cents"], 1) == 0.0, (
         "This case is only meaningful if it would have rounded to 0.0 cents at 1-decimal precision"
     )
@@ -43,5 +45,22 @@ def test_zero_usage_is_zero_cost():
 def test_cache_write_and_read_priced_independently():
     write_only = compute_usage_cost(0, 0, cache_write_tok=1_000_000, cache_read_tok=0)
     read_only = compute_usage_cost(0, 0, cache_write_tok=0, cache_read_tok=1_000_000)
-    assert write_only["cost_usd"] == 3.75
-    assert read_only["cost_usd"] == 0.30
+    assert write_only["cost_usd"] == 2.50
+    assert read_only["cost_usd"] == 0.20
+
+
+def test_input_and_output_per_mtok():
+    assert compute_usage_cost(1_000_000, 0, 0, 0)["cost_usd"] == 2.00
+    assert compute_usage_cost(0, 1_000_000, 0, 0)["cost_usd"] == 10.00
+
+
+def test_fallback_model_has_its_own_price_row():
+    """Sonnet 5 (fallback target for Sonnet 5.5) bills at its own rates."""
+    usage = compute_usage_cost(1_000_000, 1_000_000, 0, 0, model="claude-sonnet-5")
+    assert usage["cost_usd"] == 12.00
+
+
+def test_unknown_model_billed_at_default_rates():
+    """Unknown model bills at Sonnet 5.5 rates."""
+    usage = compute_usage_cost(1_000_000, 0, 0, 0, model="claude-something-new")
+    assert usage["cost_usd"] == 2.00

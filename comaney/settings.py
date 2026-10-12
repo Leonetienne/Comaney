@@ -167,6 +167,13 @@ DEMO_USER_AI_BUDGET = int(os.environ.get("DEMO_USER_AI_BUDGET", "0") or "0")  # 
 AI_TRIAL_API_KEY      = os.environ.get("AI_TRIAL_API_KEY", "")
 AI_TRIAL_USAGE_LIMIT  = float(os.environ.get("AI_TRIAL_USAGE_LIMIT", "0"))  # cents
 AI_TRIAL_DISABLED_FLAG = os.environ.get("AI_TRIAL_DISABLED_FLAG", str(BASE_DIR / "ai_trial_disabled.flag"))
+
+from budget.ai_service import resolve_effort  # noqa: E402  Django-free
+
+AI_CLAUDE_EFFORT, _ai_effort_error = resolve_effort(os.environ.get("AI_PROVIDER_CLAUDE_EFFORT"))
+if _ai_effort_error and not SYSTEM_MISCONFIGURED:
+    SYSTEM_MISCONFIGURED = True
+    SYSTEM_MISCONFIGURED_MSG = _ai_effort_error
 ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "")
 
 YUBICO_CLIENT_ID  = os.environ.get("YUBICO_CLIENT_ID", "")

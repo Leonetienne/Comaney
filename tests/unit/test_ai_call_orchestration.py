@@ -21,6 +21,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
+from budget.ai_service import AIRefusalError
 from budget.ai_service import _extract_json_object as extract_json_object
 from budget.ai_service import _merge_usage as merge_usage
 from budget.ai_service import _record_ai_usage as record_ai_usage
@@ -56,7 +57,11 @@ def call_and_repair_sim(primary_call, repair_call, notify, feature="test_feature
     except json.JSONDecodeError:
         pass
 
-    repair_raw, repair_usage = repair_call()
+    try:
+        repair_raw, repair_usage = repair_call()
+    except AIRefusalError as exc:
+        exc.usage = merge_usage(usage, exc.usage or {})
+        raise
     combined = merge_usage(usage, repair_usage)
     try:
         parsed = extract_json_object(repair_raw)
@@ -161,3 +166,17 @@ class TestCallAndRepairFallback:
             call_and_repair_sim(primary, repair, lambda f, r: notified.append((f, r)))
         assert exc_info.value.usage["cost_cents"] == 1.5
         assert notified == [("test_feature", False)]
+
+    def test_refused_repair_call_carries_combined_usage(self):
+        """Refusal on the repair call carries primary + repair usage for billing."""
+        def primary():
+            return "not json at all", _usage(1.0)
+
+        def repair():
+            raise AIRefusalError("declined", usage=_usage(0.25))
+
+        notified = []
+        with pytest.raises(AIRefusalError) as exc_info:
+            call_and_repair_sim(primary, repair, lambda f, r: notified.append((f, r)))
+        assert exc_info.value.usage["cost_cents"] == 1.25
+        assert notified == []

@@ -28,8 +28,9 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
+from types import SimpleNamespace
 
 from django.conf import settings
 
@@ -45,10 +46,14 @@ class AIError(Exception):
 
 
 class AIRefusalError(AIError):
-    """AI returned {"result": "fail", "msg": "..."}"""
-    def __init__(self, msg: str, raw: str = ""):
+    """AI answered {"result": "fail", "msg": "..."}, or its safety classifiers
+    refused the request even after the server-side fallback."""
+    def __init__(self, msg: str, raw: str = "", usage: dict | None = None):
         super().__init__(msg)
         self.raw = raw
+        # classifier refusals only: cost of the declined attempts, billed by
+        # AIService. Envelope "fail" usage is billed before raising.
+        self.usage = usage
 
 
 class AIInvalidResponseError(AIError):
@@ -88,35 +93,153 @@ class AITransientError(AIError):
 # Agent config / pricing / JSON repair -- implementation details of _call*
 # ---------------------------------------------------------------------------
 
+_DEFAULT_MODEL = "claude-sonnet-5-5"
+
+# thinking is always on for this model, effort is the control
+# (AI_PROVIDER_CLAUDE_EFFORT, see resolve_effort)
+DEFAULT_EFFORT = "medium"
+EFFORT_CHOICES = ("low", "medium", "high", "xhigh", "max")
+_EFFORT_ENV_VAR = "AI_PROVIDER_CLAUDE_EFFORT"
+
+
+def resolve_effort(value: str | None) -> tuple[str, str | None]:
+    """(effort, error) for AI_PROVIDER_CLAUDE_EFFORT; blank means DEFAULT_EFFORT,
+    an invalid value returns an error for the misconfigured page. Django-free."""
+    effort = (value or "").strip().lower()
+    if not effort:
+        return DEFAULT_EFFORT, None
+    if effort not in EFFORT_CHOICES:
+        return DEFAULT_EFFORT, (
+            f"{_EFFORT_ENV_VAR} must be one of {', '.join(EFFORT_CHOICES)} "
+            f"(or unset for the default, {DEFAULT_EFFORT})."
+        )
+    return effort, None
+
+# on a classifier refusal the API retries on Anthropic's recommended fallback model
+_FALLBACK_BETA = "server-side-fallback-2026-07-01"
+
+
 @dataclass
 class AgentConfig:
     provider: str = "claude"
     api_key: str = ""
-    model: str = "claude-sonnet-4-6"
+    model: str = _DEFAULT_MODEL
     max_tokens: int = 8192
+    effort: str = field(default_factory=lambda: settings.AI_CLAUDE_EFFORT)
 
 
-_PRICE_INPUT       = 3.00
-_PRICE_OUTPUT      = 15.00
-_PRICE_CACHE_WRITE = 3.75
-_PRICE_CACHE_READ  = 0.30
+# USD per MTok: (input, output, 5 min cache write, cache read); includes the
+# fallback target (Sonnet 5 for Sonnet 5.5)
+_MODEL_PRICES = {
+    "claude-sonnet-5-5": (2.00, 10.00, 2.50, 0.20),
+    "claude-sonnet-5":   (2.00, 10.00, 2.50, 0.20),
+}
+
+# pre-output refusals Anthropic bills; mid-output refusals are always billed
+_BILLED_PRE_OUTPUT_REFUSALS = {"bio", "frontier_llm", "reasoning_extraction"}
+
+_REFUSAL_MESSAGE = "The AI declined this request. Rephrasing it or leaving out the objected part may help."
 
 
-def _compute_usage_cost(input_tok: int, output_tok: int, cache_write_tok: int, cache_read_tok: int) -> dict:
-    """cost_usd/cost_cents for a Claude API call from its token usage.
+def _model_prices(model: str) -> tuple[float, float, float, float]:
+    prices = _MODEL_PRICES.get(model)
+    if prices is None:
+        _log.warning("No price known for AI model %r; billing it at %s rates.", model, _DEFAULT_MODEL)
+        prices = _MODEL_PRICES[_DEFAULT_MODEL]
+    return prices
+
+
+def _compute_usage_cost(
+    input_tok: int, output_tok: int, cache_write_tok: int, cache_read_tok: int,
+    model: str = _DEFAULT_MODEL,
+) -> dict:
+    """cost_usd/cost_cents for a Claude API call from its token usage, at the
+    given model's rates.
 
     cost_cents is kept at the same 4-decimal precision as
     FeUser.ai_trial_budget_spent (a DecimalField(decimal_places=4)): rounding
     to fewer decimals silently truncates cheap, cache-heavy requests to 0.0,
     under-billing trial usage instead of just under-displaying it.
     """
+    price_in, price_out, price_cw, price_cr = _model_prices(model)
     cost = (
-        (input_tok       / 1_000_000) * _PRICE_INPUT +
-        (output_tok      / 1_000_000) * _PRICE_OUTPUT +
-        (cache_write_tok / 1_000_000) * _PRICE_CACHE_WRITE +
-        (cache_read_tok  / 1_000_000) * _PRICE_CACHE_READ
+        (input_tok       / 1_000_000) * price_in +
+        (output_tok      / 1_000_000) * price_out +
+        (cache_write_tok / 1_000_000) * price_cw +
+        (cache_read_tok  / 1_000_000) * price_cr
     )
     return {"cost_usd": round(cost, 6), "cost_cents": round(cost * 100, 4)}
+
+
+def _usage_from_response(response) -> dict:
+    """Usage and cost of a response, each attempt in usage.iterations priced at its
+    own model. Rescued declined attempts report no category, so they're billed."""
+    u = response.usage
+    iterations = list(getattr(u, "iterations", None) or [])
+    if not iterations:
+        iterations = [SimpleNamespace(
+            model=getattr(response, "model", "") or _DEFAULT_MODEL,
+            input_tokens=getattr(u, "input_tokens", 0) or 0,
+            output_tokens=getattr(u, "output_tokens", 0) or 0,
+            cache_creation_input_tokens=getattr(u, "cache_creation_input_tokens", 0) or 0,
+            cache_read_input_tokens=getattr(u, "cache_read_input_tokens", 0) or 0,
+        )]
+
+    final_unbilled_refusal = False
+    if getattr(response, "stop_reason", None) == "refusal":
+        category = getattr(getattr(response, "stop_details", None), "category", None)
+        final_unbilled_refusal = category not in _BILLED_PRE_OUTPUT_REFUSALS
+
+    totals = {"input_tokens": 0, "output_tokens": 0, "cache_write_tokens": 0, "cache_read_tokens": 0}
+    cost_usd = 0.0
+    for index, attempt in enumerate(iterations):
+        input_tok       = getattr(attempt, "input_tokens", 0) or 0
+        output_tok      = getattr(attempt, "output_tokens", 0) or 0
+        cache_write_tok = getattr(attempt, "cache_creation_input_tokens", 0) or 0
+        cache_read_tok  = getattr(attempt, "cache_read_input_tokens", 0) or 0
+        is_last = index == len(iterations) - 1
+        if is_last and final_unbilled_refusal and output_tok == 0:
+            continue
+        totals["input_tokens"] += input_tok
+        totals["output_tokens"] += output_tok
+        totals["cache_write_tokens"] += cache_write_tok
+        totals["cache_read_tokens"] += cache_read_tok
+        cost_usd += _compute_usage_cost(
+            input_tok, output_tok, cache_write_tok, cache_read_tok,
+            model=getattr(attempt, "model", "") or _DEFAULT_MODEL,
+        )["cost_usd"]
+
+    return {
+        **totals,
+        "total_tokens": sum(totals.values()),
+        "cost_usd": round(cost_usd, 6),
+        "cost_cents": round(cost_usd * 100, 4),
+    }
+
+
+def _parse_response(response) -> tuple[str, dict]:
+    """(text, usage) of a response. A refusal raises AIRefusalError with usage;
+    text is the first "text" block, thinking and fallback blocks may precede it."""
+    usage = _usage_from_response(response)
+
+    if getattr(response, "stop_reason", None) == "refusal":
+        category = getattr(getattr(response, "stop_details", None), "category", None)
+        _log.warning("AI request refused by the model's safety classifiers (category=%r).", category)
+        raise AIRefusalError(_REFUSAL_MESSAGE, usage=usage)
+
+    raw = ""
+    for block in response.content:
+        if getattr(block, "type", None) == "text":
+            raw = block.text.strip()
+            break
+
+    if not raw:
+        _log.error("_parse_response: empty response. blocks: %r", response.content)
+        raise ValueError(
+            f"Claude returned an empty response. Content blocks: "
+            f"{[getattr(b, 'type', '?') for b in response.content]}"
+        )
+    return raw, usage
 
 
 def _merge_usage(*usages: dict) -> dict:
@@ -263,7 +386,7 @@ class AIService:
         mappings. There is no meaningful "fail" case for this prompt (an
         unmatched source just maps to null), so unlike the other two features
         it doesn't use the {"result": "good"/"fail"} envelope."""
-        config = AgentConfig(api_key=self.api_key, max_tokens=1024)
+        config = AgentConfig(api_key=self.api_key, max_tokens=4096)
         messages = [{"role": "user", "content": user_message}]
         parsed, raw = self._call_for_json(config, system_prompt, messages, feature="partnership_ai", envelope=False)
         mappings = parsed.get("mappings")
@@ -284,7 +407,7 @@ class AIService:
         AI can't confidently match just comes back null -- so this skips the
         {"result": "good"/"fail"} envelope too. Returns
         {"category_idx": int|None, "tag_idxs": list[int]}."""
-        config = AgentConfig(api_key=self.api_key, max_tokens=1024)
+        config = AgentConfig(api_key=self.api_key, max_tokens=4096)
         messages = [{"role": "user", "content": "Suggest the missing classification for this expense."}]
         parsed, raw = self._call_for_json(
             config, system_prompt, messages, feature="unclassified_solve", envelope=False,
@@ -314,7 +437,7 @@ class AIService:
         """
         try:
             parsed, usage, raw = self._call_and_repair(config, system_prompt, messages, feature=feature)
-        except AIInvalidResponseError as exc:
+        except (AIInvalidResponseError, AIRefusalError) as exc:
             self._record_usage(exc.usage)
             raise
         self._record_usage(usage)
@@ -372,11 +495,15 @@ class AIService:
 
         repair_config = AgentConfig(
             provider=config.provider, api_key=config.api_key,
-            model=config.model, max_tokens=config.max_tokens,
+            model=config.model, max_tokens=config.max_tokens, effort=config.effort,
         )
-        repair_raw, repair_usage = self._call(
-            repair_config, _JSON_REPAIR_SYSTEM, [{"role": "user", "content": raw}],
-        )
+        try:
+            repair_raw, repair_usage = self._call(
+                repair_config, _JSON_REPAIR_SYSTEM, [{"role": "user", "content": raw}],
+            )
+        except AIRefusalError as exc:
+            exc.usage = _merge_usage(usage, exc.usage or {})
+            raise
         combined_usage = _merge_usage(usage, repair_usage)
 
         try:
@@ -408,9 +535,8 @@ class AIService:
 
     @staticmethod
     def _call_claude(config: AgentConfig, system_prompt: str | list[dict], messages: list[dict]) -> tuple[str, dict]:
-        """Raw Anthropic API call. Returns (response_text, usage_dict). The
-        only place in the codebase that constructs an anthropic.Anthropic
-        client or calls .messages.create."""
+        """Raw Anthropic API call, the only place that constructs an anthropic
+        client. Beta endpoint for fallbacks="default"; parsing in _parse_response."""
         import anthropic
 
         if isinstance(system_prompt, str):
@@ -425,41 +551,16 @@ class AIService:
             system = system_prompt
 
         client = anthropic.Anthropic(api_key=config.api_key)
-        response = client.messages.create(
-            model=config.model or "claude-sonnet-4-6",
+        response = client.beta.messages.create(
+            model=config.model or _DEFAULT_MODEL,
             max_tokens=config.max_tokens,
             system=system,
             messages=messages,
+            output_config={"effort": config.effort},
+            betas=[_FALLBACK_BETA],
+            fallbacks="default",
         )
-
-        raw = ""
-        for block in response.content:
-            if getattr(block, "type", None) == "text":
-                raw = block.text.strip()
-                break
-
-        if not raw:
-            _log.error("_call_claude: empty response. blocks: %r", response.content)
-            raise ValueError(
-                f"Claude returned an empty response. Content blocks: "
-                f"{[getattr(b, 'type', '?') for b in response.content]}"
-            )
-
-        u = response.usage
-        input_tok       = getattr(u, "input_tokens", 0)
-        output_tok      = getattr(u, "output_tokens", 0)
-        cache_write_tok = getattr(u, "cache_creation_input_tokens", 0)
-        cache_read_tok  = getattr(u, "cache_read_input_tokens", 0)
-
-        usage = {
-            "input_tokens":       input_tok,
-            "output_tokens":      output_tok,
-            "cache_write_tokens": cache_write_tok,
-            "cache_read_tokens":  cache_read_tok,
-            "total_tokens":       input_tok + output_tok + cache_write_tok + cache_read_tok,
-            **_compute_usage_cost(input_tok, output_tok, cache_write_tok, cache_read_tok),
-        }
-        return raw, usage
+        return _parse_response(response)
 
     def _classify_exception(self, exc: Exception) -> AIError:
         """
