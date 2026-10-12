@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 import re
 import zipfile
 from smtplib import SMTPException
@@ -11,6 +12,9 @@ from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from ai_providers import get_provider
+
+from .. import ai_user_config
 from ..forms import AISettingsForm, ChangeEmailForm, ChangePasswordForm, EarlyAccessSettingsForm, ExpenseEntrySettingsForm, NotificationPreferencesForm, ProfileForm
 from ..second_factor_registry import factor_type_for, get_all_factors, method_key_of
 from ..utils import _get_session_feuser
@@ -273,7 +277,6 @@ def account_export(request):
             "password_reset_expires", "twofa_recovery_hash",
             "email_change_token",
         }
-        _MASK_FIELDS = {"anthropic_api_key"}
         p = io.StringIO()
         w = csv.writer(p)
         w.writerow(["field", "value"])
@@ -281,8 +284,9 @@ def account_export(request):
             if field.name in _SKIP_FIELDS:
                 continue
             value = getattr(feuser, field.name)
-            if field.name in _MASK_FIELDS:
-                value = ("********" + value[-4:]) if value else ""
+            if field.name == "ai_user_config":
+                # secret AI settings masked per ConfigField.secret
+                value = json.dumps(ai_user_config.export_value(value, get_provider()), sort_keys=True)
             elif hasattr(value, "isoformat"):
                 value = value.isoformat()
             w.writerow([field.name, _csv_safe(value)])

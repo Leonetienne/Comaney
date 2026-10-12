@@ -15,7 +15,7 @@ import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
-from helpers import DOCKER_WEB, _url, ai_unavailable, cleanup_user, session_cookies, setup_user
+from helpers import DOCKER_WEB, _url, ai_unavailable, cleanup_user, session_cookies, set_ai_user_config, setup_user
 
 
 def _shell(code: str) -> str:
@@ -37,12 +37,7 @@ def _set_disable_ai_ui(email: str, value: bool) -> None:
 
 
 def _set_api_key(email: str, key: str) -> None:
-    _shell(
-        f"from feusers.models import FeUser\n"
-        f"u = FeUser.objects.get(email={email!r})\n"
-        f"u.anthropic_api_key = {key!r}\n"
-        f"u.save(update_fields=['anthropic_api_key'])"
-    )
+    set_ai_user_config(email, {"api_key": key} if key else {})
 
 
 def _create_expense(email, title, *, category=None, tag_titles=None, payee="", type="expense"):
@@ -449,11 +444,10 @@ class TestUnclassifiedExpensesAI:
         feature. Force this account off its dedicated test key (if any) so
         it falls back to the shared trial key, mirroring how
         tests/e2e/express/test_express.py manipulates trial fields directly."""
+        _set_api_key(ctx["email"], "")
         spent_before = _shell(
             f"from feusers.models import FeUser\n"
             f"u = FeUser.objects.get(email={ctx['email']!r})\n"
-            f"u.anthropic_api_key = ''\n"
-            f"u.save(update_fields=['anthropic_api_key'])\n"
             f"print(u.ai_trial_budget_spent)"
         )
         uid = _create_expense(ctx["email"], "Amazon order", payee="Amazon")

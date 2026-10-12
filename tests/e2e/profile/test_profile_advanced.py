@@ -1,6 +1,6 @@
 """
 Advanced profile features:
-- AI settings form: save anthropic API key and custom instructions via browser
+- AI settings form: save the own AI API key and custom instructions via browser
 - Email notifications toggle via profile form checkbox in browser
 - Password change via profile form in browser (old password rejected, new accepted)
 """
@@ -56,10 +56,10 @@ def ctx(driver, w):
 
 class TestAISettings:
 
-    def test_save_anthropic_api_key(self, driver, w, ctx):
+    def test_save_own_api_key(self, driver, w, ctx):
         driver.get(_url("/profile/"))
         time.sleep(1)
-        fill(w, By.ID, "id_anthropic_api_key", "sk-ant-api03-testkey5678")
+        fill(w, By.ID, "id_ai_api_key", "sk-ant-api03-testkey5678")
         _submit_form(driver, "ai")
         time.sleep(2)
         assert "Saved." in driver.page_source
@@ -67,7 +67,7 @@ class TestAISettings:
     def test_masked_key_shown_in_form(self, driver, w, ctx):
         driver.get(_url("/profile/"))
         time.sleep(1)
-        value = driver.find_element(By.ID, "id_anthropic_api_key").get_attribute("value")
+        value = driver.find_element(By.ID, "id_ai_api_key").get_attribute("value")
         assert value.startswith("****"), "Key must be masked in the form field"
         assert value.endswith("5678"), "Last 4 chars must be visible"
 
@@ -89,7 +89,7 @@ class TestAISettings:
     def test_clear_api_key(self, driver, w, ctx):
         driver.get(_url("/profile/"))
         time.sleep(1)
-        driver.find_element(By.ID, "id_anthropic_api_key").clear()
+        driver.find_element(By.ID, "id_ai_api_key").clear()
         fill(w, By.ID, "id_ai_custom_instructions", "")
         _submit_form(driver, "ai")
         time.sleep(2)

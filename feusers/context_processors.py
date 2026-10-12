@@ -3,6 +3,9 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
+from ai_providers import get_provider
+
+from .ai_user_config import has_own_access
 from .help_fab import get_help_fab as _get_help_fab
 from .intros import CURRENT_UPGRADE_INTRO_VERSION
 from .models import FeUser, Notification
@@ -23,9 +26,14 @@ def current_feuser(request):
     ctx["demo_user_password"] = settings.DEMO_USER_PASSWORD
     feuser = ctx["current_feuser"]
     from budget.ai_trial import trial_is_disabled
-    trial_ok = bool(settings.AI_TRIAL_API_KEY and settings.AI_TRIAL_USAGE_LIMIT and not trial_is_disabled())
+    provider = get_provider()
+    trial_ok = bool(
+        provider and provider.has_shared_access()
+        and settings.AI_TRIAL_USAGE_LIMIT and not trial_is_disabled()
+    )
+    own_ok = bool(feuser and has_own_access(feuser.ai_user_config, provider))
     ctx["ai_smart_create_available"] = bool(
-        ((feuser and feuser.anthropic_api_key) or trial_ok)
+        (own_ok or trial_ok)
         and not (feuser and feuser.disable_ai_ui)
     )
     ctx["sankey_studio_available"] = bool(feuser and feuser.enable_early_access)

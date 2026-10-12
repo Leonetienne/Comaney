@@ -3,7 +3,8 @@ Account data export (ZIP):
 - Returns application/zip
 - Contains all expected CSV files
 - Expense and category data appears in the correct CSV
-- anthropic_api_key is masked (only last 4 chars visible)
+- own AI settings (ai_user_config): secret fields masked (only last 4 chars
+  visible), entries of another provider fully masked
 - second_factors.csv: registered 2FA methods (type, label, primary flag,
   created_at) only - never the underlying secret/credential (TOTP secret,
   WebAuthn public_key/credential_id, Email 2FA secret)
@@ -35,7 +36,9 @@ Account data export (ZIP):
 - sankey_graph.json: the feuser's saved Sankey Studio node/edge layout
   (config_json as persisted), only present once the feuser has saved one
 """
+import csv
 import io
+import json
 import subprocess
 import time
 import zipfile
@@ -48,7 +51,7 @@ from helpers import (
     _url, fill,
     api_post, api_patch, api_delete, server_today,
     session_cookies, setup_user, cleanup_user,
-    run_cmd, ai_test_api_key_args,
+    run_cmd, ai_test_api_key_args, get_ai_user_config, set_ai_user_config,
 )
 from bhelpers import _get_pk, _create_group, _add_group_member, _create_group_expense
 
@@ -150,30 +153,48 @@ class TestDataExport:
             profile_csv = _read_csv(zf, "profile.csv")
         assert ctx["email"] in profile_csv
 
-    def test_anthropic_key_masked_in_export(self, driver, w, ctx):
+    def test_own_ai_key_masked_in_export(self, driver, w, ctx):
         fake_key = "sk-ant-api03-exporttest9999"
-        driver.get(_url("/profile/"))
-        time.sleep(1)
-        fill(w, By.ID, "id_anthropic_api_key", fake_key)
-        fill(w, By.ID, "id_ai_custom_instructions", "")
-        _submit_form(driver, "ai")
-        time.sleep(2)
-        assert "Saved." in driver.page_source
+        original = get_ai_user_config(ctx["email"])
+        try:
+            driver.get(_url("/profile/"))
+            time.sleep(1)
+            fill(w, By.ID, "id_ai_api_key", fake_key)
+            fill(w, By.ID, "id_ai_custom_instructions", "")
+            _submit_form(driver, "ai")
+            time.sleep(2)
+            assert "Saved." in driver.page_source
 
-        resp = _get_export(driver)
-        with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-            profile_csv = _read_csv(zf, "profile.csv")
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                profile = dict(csv.reader(io.StringIO(_read_csv(zf, "profile.csv"))))
 
-        assert fake_key not in profile_csv, "Full API key must not appear in export"
-        assert "9999" in profile_csv, "Last 4 chars of key must be visible in export"
+            assert fake_key not in "".join(profile.values()), "Full API key must not appear in export"
+            assert "anthropic_api_key" not in profile
+            exported = json.loads(profile["ai_user_config"])
+            # one entry: the active provider's, whichever that is
+            assert list(exported.values()) == [{"api_key": "********9999"}], exported
+        finally:
+            set_ai_user_config(ctx["email"], original)
 
-        # Clear the key
-        driver.get(_url("/profile/"))
-        time.sleep(1)
-        driver.find_element(By.ID, "id_anthropic_api_key").clear()
-        fill(w, By.ID, "id_ai_custom_instructions", "")
-        _submit_form(driver, "ai")
-        time.sleep(2)
+    def test_other_providers_ai_entry_fully_masked_in_export(self, driver, w, ctx):
+        """An entry of a provider that is not active (left over while no
+        provider was active) is masked completely, last 4 included."""
+        leftover = "sk-leftover-secret-7777"
+        original = get_ai_user_config(ctx["email"])
+        _shell(
+            f"from feusers.models import FeUser; u = FeUser.objects.get(email='{ctx['email']}'); "
+            f"u.ai_user_config = {{**u.ai_user_config, 'retired': {{'api_key': '{leftover}'}}}}; "
+            f"u.save(update_fields=['ai_user_config'])"
+        )
+        try:
+            resp = _get_export(driver)
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+                profile = dict(csv.reader(io.StringIO(_read_csv(zf, "profile.csv"))))
+            assert "7777" not in profile["ai_user_config"]
+            assert json.loads(profile["ai_user_config"])["retired"] == {"api_key": "********"}
+        finally:
+            set_ai_user_config(ctx["email"], original)
 
     def test_second_factors_metadata_in_export_without_secrets(self, driver, w, ctx):
         """GDPR access requests must see which 2FA methods exist (type, label,

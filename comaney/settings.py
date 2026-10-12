@@ -179,13 +179,6 @@ if _ai_provider_error and not SYSTEM_MISCONFIGURED:
     SYSTEM_MISCONFIGURED = True
     SYSTEM_MISCONFIGURED_MSG = _ai_provider_error
 
-# shared key while AIService still talks to Claude directly; also honours
-# the deprecated AI_TRIAL_API_KEY alias
-AI_TRIAL_API_KEY = (
-    _ai_provider.config("api_key")
-    if _ai_provider is not None and _ai_provider.get_name() == "claude" else ""
-)
-
 ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "")
 
 YUBICO_CLIENT_ID  = os.environ.get("YUBICO_CLIENT_ID", "")

@@ -329,20 +329,20 @@ class TestDemoUserServerEnforcement:
         )
         assert exists == "True", "Demo user was deleted but should not have been"
 
-    def test_cannot_set_anthropic_api_key(self, demo_ctx):
+    def test_cannot_set_own_ai_key(self, demo_ctx):
         s = _http_session(demo_ctx["email"], demo_ctx["password"])
         csrf = _get_csrf(s, "/profile/")
         s.post(_url("/profile/"), data={
             "csrfmiddlewaretoken": csrf,
             "action": "ai",
-            "anthropic_api_key": "sk-ant-hacked-key-123",
+            "ai_api_key": "sk-ant-hacked-key-123",
             "ai_custom_instructions": "",
         }, allow_redirects=True, timeout=10)
-        key = _shell(
+        config = _shell(
             f"from feusers.models import FeUser; "
-            f"print(FeUser.objects.get(email='{demo_ctx['email']}').anthropic_api_key)"
+            f"print(FeUser.objects.get(email='{demo_ctx['email']}').ai_user_config)"
         )
-        assert "hacked" not in key, "Demo user's Anthropic key was set despite restriction"
+        assert "hacked" not in config, "Demo user's own AI key was set despite restriction"
 
     def test_cannot_generate_rest_api_key(self, demo_ctx):
         s = _http_session(demo_ctx["email"], demo_ctx["password"])
@@ -616,8 +616,9 @@ class TestSpecialAITrialBudget:
     def test_special_budget_displayed_in_express_ui(self, driver, w, budget_ctx):
         """The AI express UI must show the special limit, not the global one."""
         trial_available = _shell(
-            "from django.conf import settings; from budget.ai_trial import trial_is_disabled; "
-            "print(bool(settings.AI_TRIAL_API_KEY and settings.AI_TRIAL_USAGE_LIMIT and not trial_is_disabled()))"
+            "from django.conf import settings; from ai_providers import get_provider; "
+            "from budget.ai_trial import trial_is_disabled; p = get_provider(); "
+            "print(bool(p and p.has_shared_access() and settings.AI_TRIAL_USAGE_LIMIT and not trial_is_disabled()))"
         )
         if trial_available != "True":
             ai_unavailable("AI trial not configured or disabled", trial_only=True)
@@ -631,8 +632,9 @@ class TestSpecialAITrialBudget:
     def test_special_budget_enforced(self, driver, w, budget_ctx):
         """Set spent to equal the special limit and verify the UI blocks AI."""
         trial_available = _shell(
-            "from django.conf import settings; from budget.ai_trial import trial_is_disabled; "
-            "print(bool(settings.AI_TRIAL_API_KEY and settings.AI_TRIAL_USAGE_LIMIT and not trial_is_disabled()))"
+            "from django.conf import settings; from ai_providers import get_provider; "
+            "from budget.ai_trial import trial_is_disabled; p = get_provider(); "
+            "print(bool(p and p.has_shared_access() and settings.AI_TRIAL_USAGE_LIMIT and not trial_is_disabled()))"
         )
         if trial_available != "True":
             ai_unavailable("AI trial not configured or disabled", trial_only=True)
@@ -799,7 +801,7 @@ class TestDemoProfileFieldRestrictions:
         s.post(_url("/profile/"), data={
             "csrfmiddlewaretoken": csrf,
             "action": "ai",
-            "anthropic_api_key": "",
+            "ai_api_key": "",
             "ai_custom_instructions": "Hacked instructions",
         }, allow_redirects=True, timeout=10)
         instructions = _shell(

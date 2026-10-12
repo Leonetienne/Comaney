@@ -36,6 +36,7 @@ from django.conf import settings
 
 from ai_providers import get_provider
 from ai_providers.base import AIRequest, ImageInput, SystemPart
+from feusers.ai_user_config import has_own_access, own_entry
 
 # Errors live in ai_providers/errors.py (providers raise them too); re-exported
 # here so `from budget.ai_service import AIError, ...` keeps working.
@@ -137,38 +138,42 @@ class AIService:
         self.provider = get_provider()
         if self.provider is None:
             raise AIBudgetExceededError("AI is not configured on this server.")
-        self.api_key, self.is_trial, self.trial_limit, self.trial_spent, blocked = self.trial_state_for(feuser)
+        has_access, self.is_trial, self.trial_limit, self.trial_spent, blocked = self.trial_state_for(feuser)
         if blocked:
             raise AIBudgetExceededError("Trial budget exhausted.")
-        if not self.api_key:
-            raise AIBudgetExceededError("No AI API key configured.")
+        if not has_access:
+            raise AIBudgetExceededError("No AI access configured.")
         # the feuser's own settings for the provider; {} = shared access
-        self.user_config: dict = {} if self.is_trial else {"api_key": self.api_key}
+        self.user_config: dict = {} if self.is_trial else own_entry(feuser.ai_user_config, self.provider)
         # Usage dict from the most recent call, success or failed-after-repair
         # (see _record_usage) -- feature views read this to show the cost pill
         # without threading a return value through every exception branch.
         self.last_usage: dict | None = None
 
     @staticmethod
-    def trial_state_for(feuser) -> tuple[str, bool, float, float, bool]:
+    def trial_state_for(feuser) -> tuple[bool, bool, float, float, bool]:
         """
-        Return (api_key, is_trial, trial_limit, trial_spent, trial_blocked)
+        Return (has_access, is_trial, trial_limit, trial_spent, trial_blocked)
         for display purposes (e.g. the express-creation banner, the
         dashboard's ai_trial_blocked flag) without constructing a full
         AIService, which would raise the moment the trial is blocked.
+        Own settings complete for the active provider win; otherwise the
+        provider's shared access, if it has one and a trial limit applies.
         """
-        if feuser.anthropic_api_key:
-            return feuser.anthropic_api_key, False, 0, 0, False
-        trial_key = settings.AI_TRIAL_API_KEY
+        provider = get_provider()
+        if provider is None:
+            return False, False, 0, 0, False
+        if has_own_access(feuser.ai_user_config, provider):
+            return True, False, 0, 0, False
         if feuser.special_ai_trial_budget is not None:
             trial_limit = float(feuser.special_ai_trial_budget)
         else:
             trial_limit = settings.AI_TRIAL_USAGE_LIMIT
-        if not trial_key or not trial_limit:
-            return "", False, 0, 0, False
+        if not provider.has_shared_access() or not trial_limit:
+            return False, False, 0, 0, False
         spent = float(feuser.ai_trial_budget_spent or 0)
         blocked = spent >= trial_limit
-        return trial_key, True, trial_limit, spent, blocked
+        return True, True, trial_limit, spent, blocked
 
     # -----------------------------------------------------------------
     # Feature entry points -- preprompt to validated JSON response

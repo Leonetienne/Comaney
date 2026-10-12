@@ -36,6 +36,6 @@ For a complete backup of everything in your account, go to **Account Settings** 
 - All dashboard cards
 
 !!! note
-    Your Anthropic API key is redacted in the export for security.
+    Secret AI settings, such as your own API key, are redacted in the export for security.
 
 This format is useful if you want to move your data to another system or keep a full archive. If you just need a spreadsheet for a single month, the expense csv export is simpler.

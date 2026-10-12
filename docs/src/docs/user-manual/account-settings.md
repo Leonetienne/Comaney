@@ -121,7 +121,7 @@ These settings control the [AI Express Creation](ai-express-creation.md) feature
 
 | Setting | What it does |
 |---|---|
-| **Anthropic API key** | Your personal API key from Anthropic. If you add one, the AI feature uses your key with no usage limit in Comaney (Anthropic's own billing still applies). The key is stored securely and only the last four characters are shown after saving. |
+| **Your own AI settings** | Which fields appear here depends on the AI service your administrator has set up (for example an API key from that service). If you fill them in, the AI features use your own account with no usage limit in Comaney (the AI service's own billing still applies). Secret values such as keys are stored securely and only their last four characters are shown after saving. Empty a field and save to remove it. |
 | **Custom instructions** | Text passed to the AI before it processes your receipt or description. Use it to set rules for how expenses should be categorised or tagged. |
 
 **Example custom instructions:**

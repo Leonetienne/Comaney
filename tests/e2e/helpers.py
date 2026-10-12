@@ -6,6 +6,7 @@ User lifecycle: each test file creates its own user via setup_user(), and
 cleans up via cleanup_user().  cleanup_user() uses docker exec so it is
 safe regardless of browser state (TOTP enabled, logged out, etc.).
 """
+import json
 import os
 import re
 import subprocess
@@ -25,27 +26,53 @@ CLICK_PACE  = 0.15
 DOCKER_WEB  = "comaney-web-1"
 SUBMIT_BTN  = "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)"
 
-# Dedicated Anthropic key for e2e test accounts, so AI spend during test runs
-# is billed and monitored separately from the app's shared trial key. Set on
-# every test account immediately at creation time (see ai_test_api_key_args()).
+# Dedicated AI key for e2e test accounts, so AI spend during test runs is
+# billed and monitored separately from the app's shared trial access. Set as
+# the active provider's api_key on every test account immediately at creation
+# time (see ai_test_api_key_args()).
 AI_API_KEY_TESTS = os.environ.get("AI_API_KEY_TESTS", "")
 
 
 def ai_test_api_key_args() -> list:
-    """--anthropic-api-key args to pass to the create_user command, if configured."""
-    return ["--anthropic-api-key", AI_API_KEY_TESTS] if AI_API_KEY_TESTS else []
+    """--ai-config args to pass to the create_user command, if configured."""
+    return ["--ai-config", f"api_key={AI_API_KEY_TESTS}"] if AI_API_KEY_TESTS else []
+
+
+def set_ai_user_config(email: str, values: dict) -> None:
+    """Replace the account's own AI settings for the active provider, e.g.
+    {"api_key": "..."}; {} clears them. Like saving the profile form, this
+    leaves no entry of another provider behind."""
+    run_cmd(
+        "shell", "-c",
+        "from ai_providers import get_provider; from feusers.models import FeUser; "
+        f"u = FeUser.objects.get(email={email!r}); "
+        f"u.ai_user_config = {{get_provider().get_name(): {values!r}}} if {values!r} else {{}}; "
+        "u.save(update_fields=['ai_user_config'])",
+    )
+
+
+def get_ai_user_config(email: str) -> dict:
+    """The account's own AI settings for the active provider ({} if none)."""
+    out = run_cmd(
+        "shell", "-c",
+        "import json; from ai_providers import get_provider; from feusers.models import FeUser; "
+        f"u = FeUser.objects.get(email={email!r}); "
+        "print(json.dumps(u.ai_user_config.get(get_provider().get_name(), {})))",
+    )
+    return json.loads(out.strip().splitlines()[-1])
 
 
 _stack_has_trial_key = None
 
 
 def stack_has_trial_key() -> bool:
-    """Whether the stack has a shared AI trial key; asked once per run."""
+    """Whether the stack's AI provider has shared (trial) access; asked once per run."""
     global _stack_has_trial_key
     if _stack_has_trial_key is None:
         out = run_cmd(
             "shell", "-c",
-            "from django.conf import settings; print(bool(settings.AI_TRIAL_API_KEY))",
+            "from ai_providers import get_provider; p = get_provider(); "
+            "print(bool(p and p.has_shared_access()))",
         )
         _stack_has_trial_key = out.strip().endswith("True")
     return _stack_has_trial_key

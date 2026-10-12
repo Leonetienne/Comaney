@@ -22,6 +22,8 @@ Comaney requires two management commands to run on a schedule inside the web con
 
 5. **Resets the demo user (if enabled).** When `ENABLE_DEMO_USERS=TRUE`, checks whether the demo account's `last_seen` is older than one week. If so, deletes the account and recreates it with a clean slate. See [Demo user](environment-variables.md#demo-user) for configuration.
 
+6. **Deletes AI settings of inactive providers.** Users' saved AI settings for a provider other than the active `AI_PROVIDER` are removed (`purge_inactive_ai_config`). Nothing is removed while no provider is active.
+
 ### `reset_trial_budgets`: monthly (1st of each month)
 
 ```cron

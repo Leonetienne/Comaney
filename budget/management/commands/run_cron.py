@@ -31,5 +31,8 @@ class Command(BaseCommand):
         self.stdout.write("\n-- reset_demo_user --")
         call_command("reset_demo_user", stdout=self.stdout)
 
+        self.stdout.write("\n-- purge_inactive_ai_config --")
+        call_command("purge_inactive_ai_config", stdout=self.stdout)
+
         self.stdout.write(self.style.SUCCESS("\n=== done ==="))
 

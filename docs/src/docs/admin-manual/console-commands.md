@@ -30,6 +30,14 @@ docker exec -it comaney-web-1 python manage.py create_user alice@example.com
 docker exec -it comaney-web-1 python manage.py create_user alice@example.com -p "SecurePass1"
 ```
 
+Optional: `--ai-config KEY=VALUE` (repeatable) sets one of the user's own AI settings for the active AI provider, for example their own API key:
+
+```bash
+docker exec -it comaney-web-1 python manage.py create_user alice@example.com --ai-config api_key=sk-...
+```
+
+The keys are the provider's user settings (`api_key` for Claude). An unknown key, a value the provider rejects, or no active AI provider (`AI_PROVIDER`) stops the command without creating the account.
+
 Exits with an error if the email is already in use or the password is empty.
 
 ---
@@ -98,13 +106,25 @@ These are intended to run on a schedule. See [Cron Jobs](cron-jobs.md) for the r
 
 ### run_cron
 
-Runs all scheduled maintenance tasks in sequence: scheduled expense generation, auto-settle, allowance transitions, and expense notifications.
+Runs all scheduled maintenance tasks in sequence: scheduled expense generation, auto-settle, allowance transitions, expense notifications, the demo user reset check, and `purge_inactive_ai_config`.
 
 ```
 python manage.py run_cron [--year YEAR --month MONTH]
 ```
 
 The optional `--year` and `--month` flags override the current financial month for all users, which is useful for testing or manual backfills.
+
+---
+
+### purge_inactive_ai_config
+
+Deletes every user's saved AI settings that belong to an AI provider other than the active one (for example their old Claude key after switching `AI_PROVIDER` to another provider). The active provider's settings are kept.
+
+```
+python manage.py purge_inactive_ai_config
+```
+
+Does nothing while no AI provider is active (`AI_PROVIDER` unset or `none`), so saved settings survive an upgrade until `AI_PROVIDER` is set. Runs automatically at container start (after the database migrations) and as part of `run_cron`.
 
 ---
 

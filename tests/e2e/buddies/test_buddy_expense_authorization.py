@@ -30,7 +30,7 @@ import pytest
 
 from helpers import (
     _url, http_session, form_login, create_confirmed_user, cleanup_user,
-    mailpit_seen_ids, fetch_email,
+    mailpit_seen_ids, fetch_email, set_ai_user_config,
 )
 from bhelpers import _shell, _get_pk
 
@@ -191,12 +191,7 @@ class TestExpressConfirmAuthorization:
     def test_express_confirm_cannot_create_expense_for_stranger(self, sess, attacker, victim):
         # The confirm branch needs an API key present (else it redirects to profile).
         # The confirm path itself never calls the AI, so a dummy key is fine.
-        _shell(
-            f"from feusers.models import FeUser; "
-            f"u = FeUser.objects.get(email='{attacker['email']}'); "
-            f"u.anthropic_api_key = 'sk-ant-dummy-for-test'; "
-            f"u.save(update_fields=['anthropic_api_key'])"
-        )
+        set_ai_user_config(attacker["email"], {"api_key": "sk-ant-dummy-for-test"})
         title = f"EXPRESS-IDOR-{int(time.time())}"
         preview = [{
             "title": title,

@@ -18,7 +18,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import (
     _url, ai_unavailable, api_get, api_delete, setup_user, cleanup_user,
-    session_cookies, fetch_email, mailpit_seen_ids,
+    session_cookies, fetch_email, mailpit_seen_ids, set_ai_user_config,
 )
 
 DOCKER_WEB = "comaney-web-1"
@@ -35,13 +35,8 @@ def _shell(code: str) -> str:
 
 
 def _set_fake_api_key(email: str) -> None:
-    """Give the user a non-empty anthropic_api_key so the confirm action is reachable."""
-    _shell(
-        f"from feusers.models import FeUser; "
-        f"u = FeUser.objects.get(email='{email}'); "
-        f"u.anthropic_api_key = 'sk-test-fake-key'; "
-        f"u.save(update_fields=['anthropic_api_key'])"
-    )
+    """Give the user their own (fake) AI key so the confirm action is reachable."""
+    set_ai_user_config(email, {"api_key": "sk-test-fake-key"})
 
 
 def _get_pk(email: str) -> int:

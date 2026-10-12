@@ -1,5 +1,8 @@
 from django import forms
 
+from ai_providers import get_provider
+
+from . import ai_user_config
 from .models import FeUser
 
 
@@ -53,16 +56,19 @@ class NotificationPreferencesForm(forms.ModelForm):
 
 
 class AISettingsForm(forms.ModelForm):
+    """AI card of the profile. Besides the plain model fields it carries the
+    active provider's own user settings, one form field per ConfigField of
+    get_user_fields() (named "ai_<key>", see feusers/ai_user_config.py).
+    Extra fields exist only for an active provider with user fields."""
+
     class Meta:
         model = FeUser
-        fields = ["disable_ai_ui", "anthropic_api_key", "ai_custom_instructions"]
+        fields = ["disable_ai_ui", "ai_custom_instructions"]
         labels = {
             "disable_ai_ui": "Hide all AI features",
-            "anthropic_api_key": "Anthropic API key",
             "ai_custom_instructions": "Custom instructions",
         }
         widgets = {
-            "anthropic_api_key": forms.PasswordInput(render_value=True, attrs={"autocomplete": "off"}),
             "ai_custom_instructions": forms.Textarea(attrs={
                 "rows": 5,
                 "maxlength": 4096,
@@ -77,15 +83,37 @@ class AISettingsForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        key = self.instance.anthropic_api_key if self.instance and self.instance.pk else ""
-        if key:
-            self.initial["anthropic_api_key"] = "********" + key[-4:]
+        self.provider = get_provider()
+        self.user_fields = self.provider.get_user_fields() if self.provider else []
+        initial = ai_user_config.initial_values(self.provider, self.instance.ai_user_config) if self.user_fields else {}
+        # own settings sit between the checkbox and the custom instructions
+        instructions = self.fields.pop("ai_custom_instructions")
+        for f in self.user_fields:
+            name = ai_user_config.form_field_name(f)
+            if name in self.fields:
+                raise ValueError(f"AI user field {f.key!r} clashes with the form field {name!r}")
+            self.fields[name] = ai_user_config.form_field(f)
+            self.initial[name] = initial.get(f.key, "")
+        self.fields["ai_custom_instructions"] = instructions
 
-    def clean_anthropic_api_key(self):
-        value = self.cleaned_data.get("anthropic_api_key", "")
-        if value.startswith("*"):
-            return self.instance.anthropic_api_key
-        return value
+    def clean(self):
+        cleaned = super().clean()
+        if not self.user_fields:
+            return cleaned
+        submitted = {f.key: self.data.get(ai_user_config.form_field_name(f), "") for f in self.user_fields}
+        self.ai_entry, errors = ai_user_config.clean_submission(self.provider, submitted, self.instance.ai_user_config)
+        for key, message in errors.items():
+            if key == ai_user_config.NON_FIELD:
+                self.add_error(None, message)
+            else:
+                self.add_error(ai_user_config.FIELD_PREFIX + key, message)
+        return cleaned
+
+    def save(self, commit=True):
+        if self.user_fields:
+            # writes only the active provider's entry; any other is dropped
+            self.instance.ai_user_config = ai_user_config.with_entry(self.provider.get_name(), self.ai_entry)
+        return super().save(commit=commit)
 
 
 class EarlyAccessSettingsForm(forms.ModelForm):

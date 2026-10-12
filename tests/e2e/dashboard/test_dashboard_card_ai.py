@@ -4,14 +4,13 @@ AI-assisted dashboard card creation/editing.
 Visibility tests use a fake key or force the no-key state per test; the
 generate-flow test makes a real AI call (see helpers.ai_unavailable).
 """
-import ast
 import time
 
 import requests
 import pytest
 from selenium.webdriver.common.by import By
 
-from helpers import _url, ai_unavailable, run_cmd, setup_user, cleanup_user, session_cookies, BASE_URL, fill
+from helpers import _url, ai_unavailable, get_ai_user_config, run_cmd, set_ai_user_config, setup_user, cleanup_user, session_cookies, BASE_URL, fill
 
 AI_URL = BASE_URL + "/budget/dashboard/cards/ai/"
 CARDS_URL = BASE_URL + "/budget/dashboard/cards/"
@@ -19,29 +18,7 @@ AI_TIMEOUT = 120
 
 
 def _set_fake_api_key(email: str) -> None:
-    run_cmd(
-        "shell", "-c",
-        f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}'); "
-        f"u.anthropic_api_key = 'sk-test-fake-key'; "
-        f"u.save(update_fields=['anthropic_api_key'])",
-    )
-
-
-def _get_api_key(email: str) -> str:
-    out = run_cmd(
-        "shell", "-c",
-        f"from feusers.models import FeUser; print(repr(FeUser.objects.get(email='{email}').anthropic_api_key))",
-    )
-    return ast.literal_eval(out.strip().splitlines()[-1])
-
-
-def _set_api_key(email: str, key: str) -> None:
-    run_cmd(
-        "shell", "-c",
-        f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}'); "
-        f"u.anthropic_api_key = {key!r}; "
-        f"u.save(update_fields=['anthropic_api_key'])",
-    )
+    set_ai_user_config(email, {"api_key": "sk-test-fake-key"})
 
 
 def _trial_disabled() -> bool:
@@ -107,19 +84,19 @@ def _csrf(sess) -> str:
 @pytest.fixture
 def with_fake_key(ctx):
     """Fake own API key for the test, original key restored afterwards."""
-    original = _get_api_key(ctx["email"])
+    original = get_ai_user_config(ctx["email"])
     _set_fake_api_key(ctx["email"])
     yield
-    _set_api_key(ctx["email"], original)
+    set_ai_user_config(ctx["email"], original)
 
 
 @pytest.fixture
 def without_any_key(ctx):
     """No own key and the trial-disabled flag set, both restored afterwards;
     the flag is cleared only if this fixture set it."""
-    original = _get_api_key(ctx["email"])
+    original = get_ai_user_config(ctx["email"])
     was_disabled = _trial_disabled()
-    _set_api_key(ctx["email"], "")
+    set_ai_user_config(ctx["email"], {})
     if not was_disabled:
         _set_trial_disabled(True)
     try:
@@ -127,7 +104,7 @@ def without_any_key(ctx):
     finally:
         if not was_disabled:
             _set_trial_disabled(False)
-        _set_api_key(ctx["email"], original)
+        set_ai_user_config(ctx["email"], original)
 
 
 class TestVisibility:

@@ -115,7 +115,11 @@
         <div class="settings-card-head">
             <h2 class="settings-card-title">AI</h2>
         </div>
-        <p class="in-page-tip">Use your own Anthropic API key to remove usage limits and define custom instructions for how expenses are classified.</p>
+        {% if ai_form.user_fields %}
+        <p class="in-page-tip">Use your own {{ ai_form.provider.get_display_name }} settings to remove usage limits and define custom instructions for how expenses are classified.</p>
+        {% else %}
+        <p class="in-page-tip">Define custom instructions for how expenses are classified.</p>
+        {% endif %}
         {% if success == "ai" %}<p class="success-msg">Saved.</p>{% endif %}
         {% if current_feuser.is_demo %}
         <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
@@ -127,7 +131,7 @@
             {% for field in ai_form %}
                 {% if field.html_name == "disable_ai_ui" %}
                     <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
-                {% elif field.html_name == "anthropic_api_key" %}
+                {% elif field.widget_type == "password" %}
                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                     <div class="pw-wrap">
                         {{ field }}
@@ -140,8 +144,10 @@
                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                     {{ field }}
                 {% endif %}
+                {% if field.help_text %}<small class="form-hint-sm">{{ field.help_text }}</small>{% endif %}
                 {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
             {% endfor %}
+            {% for e in ai_form.non_field_errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
             <div class="form-actions">
                 <button type="submit" class="btn">Save changes</button>
             </div>

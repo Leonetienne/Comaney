@@ -14,7 +14,7 @@ import pytest
 import requests
 from selenium.webdriver.common.by import By
 
-from helpers import _url, run_cmd, setup_user, cleanup_user, session_cookies
+from helpers import _url, run_cmd, setup_user, cleanup_user, session_cookies, set_ai_user_config
 
 ADD_EXPENSE_URL = "/budget/expenses/add/"
 MANUAL_URL      = "/budget/expenses/new/"
@@ -23,21 +23,11 @@ RECURRING_URL   = "/budget/scheduled/new/"
 
 
 def _set_fake_api_key(email: str) -> None:
-    run_cmd(
-        "shell", "-c",
-        f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}'); "
-        f"u.anthropic_api_key = 'sk-test-fake-key'; "
-        f"u.save(update_fields=['anthropic_api_key'])",
-    )
+    set_ai_user_config(email, {"api_key": "sk-test-fake-key"})
 
 
 def _clear_api_key(email: str) -> None:
-    run_cmd(
-        "shell", "-c",
-        f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}'); "
-        f"u.anthropic_api_key = ''; "
-        f"u.save(update_fields=['anthropic_api_key'])",
-    )
+    set_ai_user_config(email, {})
 
 
 def _set_disable_ai_ui(email: str, value: bool) -> None:

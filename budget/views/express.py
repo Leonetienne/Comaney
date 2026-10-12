@@ -38,9 +38,9 @@ def express_creation(request):
     from ..ai_trial import trial_is_disabled
 
     feuser = request.feuser
-    api_key, is_trial, trial_limit, trial_spent, trial_blocked = AIService.trial_state_for(feuser)
+    has_access, is_trial, trial_limit, trial_spent, trial_blocked = AIService.trial_state_for(feuser)
 
-    if not api_key:
+    if not has_access:
         return redirect("profile")
 
     trial_disabled = is_trial and trial_is_disabled()
