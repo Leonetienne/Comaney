@@ -164,16 +164,26 @@ DEMO_USER_EMAIL     = os.environ.get("DEMO_USER_EMAIL", "")
 DEMO_USER_PASSWORD  = os.environ.get("DEMO_USER_PASSWORD", "")
 DEMO_USER_AI_BUDGET = int(os.environ.get("DEMO_USER_AI_BUDGET", "0") or "0")  # cents; 0 = use global limit
 
-AI_TRIAL_API_KEY      = os.environ.get("AI_TRIAL_API_KEY", "")
 AI_TRIAL_USAGE_LIMIT  = float(os.environ.get("AI_TRIAL_USAGE_LIMIT", "0"))  # cents
 AI_TRIAL_DISABLED_FLAG = os.environ.get("AI_TRIAL_DISABLED_FLAG", str(BASE_DIR / "ai_trial_disabled.flag"))
 
-from budget.ai_service import resolve_effort  # noqa: E402  Django-free
+# AI_PROVIDER picks one file in ai_providers/; unset or "none" = no AI.
+# Django-free, see ai_providers.resolve_ai_provider for every rule.
+import ai_providers  # noqa: E402
 
-AI_CLAUDE_EFFORT, _ai_effort_error = resolve_effort(os.environ.get("AI_PROVIDER_CLAUDE_EFFORT"))
-if _ai_effort_error and not SYSTEM_MISCONFIGURED:
+_ai_provider, _ai_provider_error = ai_providers.resolve_ai_provider(os.environ)
+ai_providers.set_provider(_ai_provider)
+if _ai_provider_error and not SYSTEM_MISCONFIGURED:
     SYSTEM_MISCONFIGURED = True
-    SYSTEM_MISCONFIGURED_MSG = _ai_effort_error
+    SYSTEM_MISCONFIGURED_MSG = _ai_provider_error
+
+# shared key while AIService still talks to Claude directly; also honours
+# the deprecated AI_TRIAL_API_KEY alias
+AI_TRIAL_API_KEY = (
+    _ai_provider.config("api_key")
+    if _ai_provider is not None and _ai_provider.get_name() == "claude" else ""
+)
+
 ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "")
 
 YUBICO_CLIENT_ID  = os.environ.get("YUBICO_CLIENT_ID", "")

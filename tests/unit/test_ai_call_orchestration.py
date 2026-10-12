@@ -1,76 +1,25 @@
 """
-Unit tests for the shared AI-call orchestration in budget/ai_service.py:
-_merge_usage, _record_ai_usage (real imports -- see their docstring), and a
-mirror of AIService._call_and_repair's retry/merge/notify control flow.
-
-budget.ai_service has no module-level Django/DB imports, so _merge_usage and
-_record_ai_usage are imported and exercised directly. AIService._call_and_repair
-itself calls AIService._call, which does `import anthropic` and touches
-django.conf.settings (via AIService.__init__/trial_state_for) -- neither
-anthropic nor a configured settings module is available in this local venv,
-so that one retry/merge/notify control flow is still mirrored here with the
-two AI calls and the admin notifier injected as fakes.
+The provider-neutral AI-call orchestration in budget/ai_service.py, driven
+through the real AIService with a scripted fake provider: request building
+per feature, JSON repair, envelope handling, usage merging and trial billing.
 Run with: venv/bin/pytest tests/unit/test_ai_call_orchestration.py -v
 """
-import json
-import os
-import sys
 from decimal import Decimal
 
 import pytest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
-from budget.ai_service import AIRefusalError
-from budget.ai_service import _extract_json_object as extract_json_object
+from ai_providers.base import SystemPart
+from budget.ai_service import AIInvalidResponseError, AIRefusalError
 from budget.ai_service import _merge_usage as merge_usage
 from budget.ai_service import _record_ai_usage as record_ai_usage
+from tests.unit.ai_fakes import FakeFeuser, FakeProvider, TrialSideEffects, make_service
+
+GOOD = '{"result": "good", "items": [{"title": "Coffee"}]}'
 
 
-class FakeFeuser:
-    def __init__(self, spent=None):
-        self.ai_trial_budget_spent = spent
-        self.save_calls = 0
-
-    def save(self, update_fields=None):
-        self.save_calls += 1
-
-
-# ── Mirror of AIService._call_and_repair's retry/merge/notify control flow ─
-
-class RepairExhaustedError(Exception):
-    def __init__(self, usage):
-        self.usage = usage
-
-
-def call_and_repair_sim(primary_call, repair_call, notify, feature="test_feature"):
-    """
-    Mirror of AIService._call_and_repair: the two AI calls and the
-    admin-notify hook are injected as fakes (primary_call/repair_call each
-    return (raw_text, usage) like AIService._call does) so the retry decision,
-    usage merging, and notification behavior can be verified without Django,
-    anthropic, or a real Anthropic call.
-    """
-    raw, usage = primary_call()
-    try:
-        return extract_json_object(raw), usage, raw
-    except json.JSONDecodeError:
-        pass
-
-    try:
-        repair_raw, repair_usage = repair_call()
-    except AIRefusalError as exc:
-        exc.usage = merge_usage(usage, exc.usage or {})
-        raise
-    combined = merge_usage(usage, repair_usage)
-    try:
-        parsed = extract_json_object(repair_raw)
-    except json.JSONDecodeError as exc:
-        notify(feature, False)
-        raise RepairExhaustedError(combined) from exc
-
-    notify(feature, True)
-    return parsed, combined, repair_raw
+@pytest.fixture
+def effects(monkeypatch):
+    return TrialSideEffects().install(monkeypatch)
 
 
 def _usage(cost_cents):
@@ -92,6 +41,13 @@ class TestMergeUsage:
         merged = merge_usage(_usage(3.0))
         assert merged["cost_cents"] == 3.0
         assert merged["total_tokens"] == 15
+
+    def test_keys_reported_by_only_one_provider_call_are_kept(self):
+        merged = merge_usage({"cost_cents": 1.0, "reasoning_tokens": 7}, {"cost_cents": 0.5})
+        assert merged == {"cost_cents": 1.5, "reasoning_tokens": 7}
+
+    def test_cost_cents_keeps_four_decimals(self):
+        assert merge_usage({"cost_cents": 0.00004}, {"cost_cents": 0.00004})["cost_cents"] == 0.0001
 
 
 class TestRecordAiUsage:
@@ -121,62 +77,114 @@ class TestRecordAiUsage:
         assert feuser.ai_trial_budget_spent == Decimal("0.75")
 
 
-class TestCallAndRepairFallback:
+class TestRequestsPerFeature:
 
-    def test_repair_skipped_when_primary_parses(self):
-        def primary():
-            return '{"result": "good", "items": []}', _usage(1.0)
+    def test_express_text_only(self, effects):
+        provider = FakeProvider((GOOD, 1.0))
+        items = make_service(provider).prompt_express_expense_gen("sys", "coffee 3 euro")
+        request = provider.requests[0]
+        assert items == [{"title": "Coffee"}]
+        assert request.feature == "express_creation"
+        assert request.system == [SystemPart("sys")]
+        assert request.user_text == "coffee 3 euro"
+        assert request.images == []
+        assert request.max_tokens == 8192
 
-        def repair_should_not_run():
-            raise AssertionError("repair should not be called when primary parses fine")
+    def test_express_with_image_and_no_text(self, effects):
+        provider = FakeProvider((GOOD, 1.0))
+        make_service(provider).prompt_express_expense_gen("sys", "", image_b64="QUJD", image_type="image/png")
+        request = provider.requests[0]
+        assert [(i.data_b64, i.media_type) for i in request.images] == [("QUJD", "image/png")]
+        assert "extract all expense items" in request.user_text
 
-        notified = []
-        parsed, usage, raw = call_and_repair_sim(
-            primary, repair_should_not_run, lambda f, r: notified.append((f, r)),
-        )
-        assert parsed == {"result": "good", "items": []}
-        assert usage["cost_cents"] == 1.0
-        assert notified == []
+    def test_dashboard_card_keeps_system_parts(self, effects):
+        provider = FakeProvider(('{"result": "good", "yaml": "type: cell"}', 1.0))
+        parts = [SystemPart("docs"), SystemPart("context")]
+        assert make_service(provider).prompt_dashboard_card_yaml(parts, "a card") == "type: cell"
+        assert provider.requests[0].system == parts
+        assert provider.requests[0].feature == "dashboard_card_ai"
 
-    def test_repair_recovers_broken_primary_response(self):
-        def primary():
-            return "Sure! Here's your JSON, hope it helps somehow", _usage(1.0)
+    def test_partnership_mapping_has_no_envelope(self, effects):
+        provider = FakeProvider(('{"mappings": [{"a": 1}]}', 1.0))
+        assert make_service(provider).prompt_partnership_mapping("sys", "map these") == [{"a": 1}]
+        assert provider.requests[0].max_tokens == 4096
 
-        def repair():
-            return '{"result": "good", "items": [{"title": "Fixed"}]}', _usage(0.5)
+    def test_unclassified_solve_has_no_envelope(self, effects):
+        provider = FakeProvider(('{"category_idx": 2, "tag_idxs": "bad"}', 1.0))
+        assert make_service(provider).prompt_unclassified_solve("sys") == {"category_idx": 2, "tag_idxs": []}
+        assert provider.requests[0].feature == "unclassified_solve"
 
-        notified = []
-        parsed, usage, raw = call_and_repair_sim(
-            primary, repair, lambda f, r: notified.append((f, r)),
-        )
-        assert parsed["items"][0]["title"] == "Fixed"
-        # Combined cost of both calls, not just the repair call.
-        assert usage["cost_cents"] == 1.5
-        assert notified == [("test_feature", True)]
 
-    def test_repair_also_fails_raises_with_combined_usage(self):
-        def primary():
-            return "not json at all", _usage(1.0)
+class TestEnvelope:
 
-        def repair():
-            return "still not json", _usage(0.5)
+    def test_fail_envelope_is_a_refusal_and_still_billed(self, effects):
+        service = make_service(FakeProvider(('{"result": "fail", "msg": "no expenses found"}', 0.5)))
+        with pytest.raises(AIRefusalError, match="no expenses found"):
+            service.prompt_express_expense_gen("sys", "hello")
+        assert float(service.feuser.ai_trial_budget_spent) == 0.5
 
-        notified = []
-        with pytest.raises(RepairExhaustedError) as exc_info:
-            call_and_repair_sim(primary, repair, lambda f, r: notified.append((f, r)))
-        assert exc_info.value.usage["cost_cents"] == 1.5
-        assert notified == [("test_feature", False)]
+    def test_missing_result_is_invalid(self, effects):
+        with pytest.raises(AIInvalidResponseError):
+            make_service(FakeProvider(('{"items": []}', 0.5))).prompt_express_expense_gen("sys", "x")
 
-    def test_refused_repair_call_carries_combined_usage(self):
-        """Refusal on the repair call carries primary + repair usage for billing."""
-        def primary():
-            return "not json at all", _usage(1.0)
+    def test_non_object_is_invalid(self, effects):
+        with pytest.raises(AIInvalidResponseError):
+            make_service(FakeProvider(("[1, 2]", 0.5))).prompt_partnership_mapping("sys", "x")
 
-        def repair():
-            raise AIRefusalError("declined", usage=_usage(0.25))
 
-        notified = []
-        with pytest.raises(AIRefusalError) as exc_info:
-            call_and_repair_sim(primary, repair, lambda f, r: notified.append((f, r)))
-        assert exc_info.value.usage["cost_cents"] == 1.25
-        assert notified == []
+class TestBilling:
+
+    def test_success_bills_trial_and_sets_last_usage(self, effects):
+        service = make_service(FakeProvider((GOOD, 1.25)), spent=Decimal("2"))
+        service.prompt_express_expense_gen("sys", "x")
+        assert service.feuser.ai_trial_budget_spent == Decimal("3.25")
+        assert service.trial_spent == 3.25
+        assert service.last_usage["cost_cents"] == 1.25
+        assert service.last_usage["total_tokens"] == 15
+
+    def test_own_credentials_are_not_billed_but_cost_is_shown(self, effects):
+        service = make_service(FakeProvider((GOOD, 1.25)), is_trial=False, spent=Decimal("2"))
+        service.prompt_express_expense_gen("sys", "x")
+        assert service.feuser.ai_trial_budget_spent == Decimal("2")
+        assert service.last_usage["cost_cents"] == 1.25
+
+
+class TestJsonRepair:
+
+    def test_repair_skipped_when_primary_parses(self, effects):
+        provider = FakeProvider((GOOD, 1.0))
+        make_service(provider).prompt_express_expense_gen("sys", "x")
+        assert len(provider.requests) == 1
+        assert effects.repair_mails == []
+
+    def test_repair_recovers_broken_primary_response(self, effects):
+        provider = FakeProvider(("Sure! Here's your JSON, hope it helps", 1.0), (GOOD, 0.5))
+        service = make_service(provider)
+        assert service.prompt_express_expense_gen("sys", "x") == [{"title": "Coffee"}]
+        repair = provider.requests[1]
+        assert repair.feature == "json_repair"
+        assert repair.user_text == "Sure! Here's your JSON, hope it helps"
+        assert repair.max_tokens == 8192
+        assert "JSON repair" in repair.system[0].text
+        # combined cost of both calls is billed, not just the repair call
+        assert float(service.feuser.ai_trial_budget_spent) == 1.5
+        assert effects.repair_mails == [("express_creation", True)]
+
+    def test_repair_also_fails_bills_combined_usage(self, effects):
+        provider = FakeProvider(("not json at all", 1.0), ("still not json", 0.5))
+        service = make_service(provider)
+        with pytest.raises(AIInvalidResponseError) as excinfo:
+            service.prompt_express_expense_gen("sys", "x")
+        assert excinfo.value.usage["cost_cents"] == 1.5
+        assert float(service.feuser.ai_trial_budget_spent) == 1.5
+        assert effects.repair_mails == [("express_creation", False)]
+
+    def test_refused_repair_call_carries_combined_usage(self, effects):
+        provider = FakeProvider(("not json at all", 1.0), AIRefusalError("declined", usage={"cost_cents": 0.25}))
+        service = make_service(provider)
+        with pytest.raises(AIRefusalError) as excinfo:
+            service.prompt_express_expense_gen("sys", "x")
+        assert excinfo.value.usage["cost_cents"] == 1.25
+        assert float(service.feuser.ai_trial_budget_spent) == 1.25
+        assert effects.repair_mails == []
+

@@ -176,8 +176,9 @@ services:
       ENABLE_REGISTRATION: "TRUE"   # disable after creating your account
       DISABLE_EMAILING: "TRUE"      # set up SMTP for full functionality
       GUNICORN_WORKERS: 1
-      # Optional: shared Anthropic key for the AI features (users can also bring their own key)
-      # AI_TRIAL_API_KEY: "sk-ant-..."
+      # Optional: AI features (users can also bring their own key)
+      # AI_PROVIDER: claude
+      # AI_PROVIDER_CLAUDE_API_KEY: "sk-ant-..."   # shared key, optional
       # AI_TRIAL_USAGE_LIMIT: 10      # per user and month, in US cents; 0 = no limit
     volumes:
       # Required: all uploaded images (avatars, backgrounds, project pictures) live in /app/data
@@ -237,7 +238,8 @@ docker exec -it comaney-web-1 python manage.py set_user_password you@example.com
 | `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | *(empty)* | SMTP credentials. |
 | `DEFAULT_FROM_EMAIL` | `noreply@comaney.local` | Sender address for outgoing emails. |
 | `ADMIN_NOTIFICATION_EMAIL` | *(unset)* | Receives system alerts. Also enables the contact form. |
-| `AI_TRIAL_API_KEY` | *(unset)* | Shared Anthropic key for the AI trial feature. |
+| `AI_PROVIDER` | *(unset)* | AI service for the AI features: `claude` or `none`. Unset = no AI. |
+| `AI_PROVIDER_CLAUDE_API_KEY` | *(unset)* | Shared Anthropic key for the AI trial feature (`AI_TRIAL_API_KEY` is the deprecated old name). |
 | `AI_TRIAL_USAGE_LIMIT` | `0` | Per-user monthly cap in US cents. |
 | `PUBLIC_PAGE_IMPRINT_MD` | *(unset)* | Path to a Markdown file served at `/impressum/`. |
 | `PUBLIC_PAGE_EUDATENSCHUTZ_MD` | *(unset)* | Path to a Markdown file served at `/datenschutzerklaerung/`. |

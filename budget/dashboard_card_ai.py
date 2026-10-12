@@ -124,6 +124,8 @@ def generate_card_yaml(
     /AIAuthenticationError/AIBillingError/AITransientError, or
     budget.dashboard_cards.CardConfigError if the AI's output doesn't pass validation.
     """
+    from ai_providers.base import SystemPart
+
     from .ai_service import AIService
     from .dashboard_cards import parse_card_config
 
@@ -137,17 +139,11 @@ def generate_card_yaml(
     if custom:
         context_parts.append(f"User's custom instructions: {custom}")
 
+    # two cacheable parts: the docs-derived instructions rarely change, the
+    # per-user context changes per request
     system_prompt = [
-        {
-            "type": "text",
-            "text": _SYSTEM_INSTRUCTIONS + "\n" + _build_docs_reference(),
-            "cache_control": {"type": "ephemeral"},
-        },
-        {
-            "type": "text",
-            "text": "\n\n".join(context_parts),
-            "cache_control": {"type": "ephemeral"},
-        },
+        SystemPart(_SYSTEM_INSTRUCTIONS + "\n" + _build_docs_reference()),
+        SystemPart("\n\n".join(context_parts)),
     ]
 
     service = AIService(feuser)  # raises AIBudgetExceededError up front if blocked/no key

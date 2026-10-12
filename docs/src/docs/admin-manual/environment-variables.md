@@ -303,15 +303,40 @@ Per-reset AI trial allowance for the demo user, in US cents. Overrides `AI_TRIAL
 
 ## AI / Express Creation
 
-### `AI_TRIAL_API_KEY`
+### `AI_PROVIDER`
 
-**Default:** *(empty; trial feature disabled)*
+**Default:** *(unset; no AI)*
 
-An Anthropic API key used as a shared "trial" key for the AI Express Creation feature. Users without their own Anthropic key will use this shared key, subject to `AI_TRIAL_USAGE_LIMIT`.
+Which AI service Comaney uses for its AI features (AI Express Creation, dashboard card assistant, Catalog Partnership mapping, Unclassified Expenses). Possible values:
 
-If empty, only users with their own Anthropic key can use Express Creation.
+- `claude`: Claude by Anthropic
+- `none`: switch all AI features off
+
+If it is unset, AI is off as well. There is one exception, so that an upgrade never switches AI off without you noticing: if other AI settings are present (`AI_TRIAL_API_KEY` or any variable starting with `AI_PROVIDER_`) but `AI_PROVIDER` is not set, the site shows a configuration error page asking you to set it.
+
+An unknown value, or invalid settings for the chosen AI service, also take the site down with a configuration error page that names the variable to fix. AI is never switched off silently: fix the setting, or set `AI_PROVIDER=none`.
+
+Settings of the chosen AI service start with `AI_PROVIDER_<NAME>_`, for example `AI_PROVIDER_CLAUDE_API_KEY`. Each AI service only ever sees its own settings.
+
+---
+
+### `AI_PROVIDER_CLAUDE_API_KEY`
+
+**Default:** *(empty; no shared access)*
+
+An Anthropic API key, used as the shared "trial" key with `AI_PROVIDER=claude`. Users without their own Anthropic key use this shared key, subject to `AI_TRIAL_USAGE_LIMIT`.
+
+If empty, only users with their own Anthropic key can use the AI features.
 
 For single-user instances or private instances where all users have their own key, you do not need to set this.
+
+---
+
+### `AI_TRIAL_API_KEY`
+
+**Deprecated:** use `AI_PROVIDER_CLAUDE_API_KEY` instead.
+
+The old name of `AI_PROVIDER_CLAUDE_API_KEY`. It still works with `AI_PROVIDER=claude` (a warning is logged at startup). If both are set to different keys, the site shows a configuration error page. With any other `AI_PROVIDER` it is ignored.
 
 ---
 
@@ -333,7 +358,31 @@ Set to `0` to impose no per-user limit (only the overall Anthropic account budge
 
 How much effort (thinking) the AI puts into each request: one of `low`, `medium`, `high`, `xhigh`, `max`. Higher levels can give better results on hard requests but are slower and use more tokens, which costs more and uses up the shared trial budget faster. `low` is the fastest and cheapest.
 
-Any other value takes the site down with a configuration error page until it is fixed or removed.
+Only used with `AI_PROVIDER=claude`. Any other value takes the site down with a configuration error page until it is fixed or removed.
+
+---
+
+### `AI_PROVIDER_CLAUDE_MODEL`
+
+**Default:** `claude-sonnet-5-5`
+
+Which Claude model to use with `AI_PROVIDER=claude`. Comaney knows the prices of its default model. For any other model, also set `AI_PROVIDER_CLAUDE_PRICE_INPUT` and `AI_PROVIDER_CLAUDE_PRICE_OUTPUT`, otherwise the site shows a configuration error page (without prices, usage of the shared key could not be counted against the users' budgets).
+
+---
+
+### `AI_PROVIDER_CLAUDE_MAX_TOKENS`
+
+**Default:** `8192`
+
+Upper limit for the length of one AI answer with `AI_PROVIDER=claude`, in tokens. Lower it to cap the cost of a single request; too low a value makes longer answers (for example many expenses from one receipt) fail.
+
+---
+
+### `AI_PROVIDER_CLAUDE_PRICE_INPUT` / `AI_PROVIDER_CLAUDE_PRICE_OUTPUT`
+
+**Default:** *(unset; Comaney's built-in prices for the model)*
+
+Price of the model in US dollars per million input and output tokens, for example `3` and `15`. Set both or neither. Only needed for a model Comaney doesn't know, or if Anthropic's prices change before Comaney is updated. They are used to count AI costs against each user's budget on the shared key.
 
 ---
 

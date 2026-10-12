@@ -31,8 +31,9 @@ services:
       # Note: disabling email also disables email verification on registration.
       DISABLE_EMAILING: "TRUE"
       GUNICORN_WORKERS: 1
-      # Optional: shared Anthropic key for the AI features (users can also bring their own key)
-      # AI_TRIAL_API_KEY: "sk-ant-..."
+      # Optional: AI features (users can also bring their own key)
+      # AI_PROVIDER: claude
+      # AI_PROVIDER_CLAUDE_API_KEY: "sk-ant-..."   # shared key, optional
       # AI_TRIAL_USAGE_LIMIT: 10      # per user and month, in US cents; 0 = no limit
     volumes:
       # Required: all uploaded images (avatars, backgrounds, project pictures) live in /app/data
@@ -80,8 +81,9 @@ services:
       DEFAULT_FROM_EMAIL: "Comaney <noreply@example.com>"
       ADMIN_NOTIFICATION_EMAIL: "admin@example.com"
       GUNICORN_WORKERS: 2
-      # Shared Anthropic key for the AI features (users can also bring their own key)
-      AI_TRIAL_API_KEY: "sk-ant-..."
+      # AI features with a shared Anthropic key (users can also bring their own key)
+      AI_PROVIDER: claude
+      AI_PROVIDER_CLAUDE_API_KEY: "sk-ant-..."
       AI_TRIAL_USAGE_LIMIT: 10         # per user and month, in US cents; 0 = no limit
       # Legal pages (Impressum / Datenschutzerklaerung), mounted below
       PUBLIC_PAGE_IMPRINT_MD: /pages/imprint.md

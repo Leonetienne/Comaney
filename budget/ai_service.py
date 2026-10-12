@@ -1,23 +1,25 @@
 """
 Single entry point for every AI feature in the app: express expense creation,
 dashboard card AI assist, partnership tag/category mapping, and Unclassified
-Expenses AI-solve. Nothing outside this file constructs an
-anthropic.Anthropic client, calls .messages.create, or hand-parses an AI
-JSON response -- it all goes through one AIService instance:
+Expenses AI-solve. Nothing outside this file talks to the AI provider or
+hand-parses an AI JSON response -- it all goes through one AIService instance:
 
-    service  = AIService(feuser)                     # raises AIBudgetExceededError up front if blocked/no key
+    service  = AIService(feuser)                     # raises AIBudgetExceededError up front if blocked/no access
     items    = service.prompt_express_expense_gen(system_prompt, description, image_b64=..., image_type=...)
     yaml     = service.prompt_dashboard_card_yaml(system_prompt, description)
     mapping  = service.prompt_partnership_mapping(system_prompt, user_message)
     solution = service.prompt_unclassified_solve(system_prompt)
 
-AIService owns HOW to talk to the AI safely: provider dispatch, JSON-response
-recovery (one repair retry), envelope parsing, own-key/trial-key resolution,
-budget billing, and error classification (auth/billing/rate-limit -> typed
-exceptions here, plus the side effects of disabling the shared trial key and
-notifying the admin -- see budget.ai_trial). It deliberately knows nothing
-about categories, tags, projects, or dashboard cards: each feature module
-(budget.express_service, budget.dashboard_card_ai,
+AIService owns HOW to talk to the AI safely and is provider-neutral: it builds
+an ai_providers.AIRequest and hands it to the active provider
+(ai_providers.get_provider(), picked by AI_PROVIDER), which owns everything
+vendor-specific (SDK, model, prices, mapping vendor errors to the typed
+errors in ai_providers.errors). AIService owns JSON-response recovery (one
+repair retry), envelope parsing, own-credentials/shared-access resolution,
+budget billing, and the side effects of a failing shared access (disabling
+the shared trial access and notifying the admin -- see budget.ai_trial). It
+deliberately knows nothing about categories, tags, projects, or dashboard
+cards: each feature module (budget.express_service, budget.dashboard_card_ai,
 buddies.services.partnership_ai, budget.unclassified_ai) owns assembling its
 own system prompt text and interpreting the returned payload for saving.
 Mixing that business logic in here would just trade "AI plumbing scattered
@@ -28,233 +30,53 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
 from decimal import Decimal
-from types import SimpleNamespace
 
 from django.conf import settings
 
+from ai_providers import get_provider
+from ai_providers.base import AIRequest, ImageInput, SystemPart
+
+# Errors live in ai_providers/errors.py (providers raise them too); re-exported
+# here so `from budget.ai_service import AIError, ...` keeps working.
+from ai_providers.errors import (  # noqa: F401
+    AIAuthenticationError,
+    AIBillingError,
+    AIBudgetExceededError,
+    AIError,
+    AIInvalidResponseError,
+    AIRefusalError,
+    AITransientError,
+    AIVisionUnsupportedError,
+)
+
 _log = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# Errors
-# ---------------------------------------------------------------------------
-
-class AIError(Exception):
-    """Base class for every error AIService raises."""
-
-
-class AIRefusalError(AIError):
-    """AI answered {"result": "fail", "msg": "..."}, or its safety classifiers
-    refused the request even after the server-side fallback."""
-    def __init__(self, msg: str, raw: str = "", usage: dict | None = None):
-        super().__init__(msg)
-        self.raw = raw
-        # classifier refusals only: cost of the declined attempts, billed by
-        # AIService. Envelope "fail" usage is billed before raising.
-        self.usage = usage
-
-
-class AIInvalidResponseError(AIError):
-    """AI returned unparseable or structurally unexpected output."""
-    def __init__(self, raw: str = "", cause: Exception | None = None, usage: dict | None = None):
-        super().__init__("Invalid response")
-        self.raw = raw
-        self.cause = cause
-        # Set only when raised after a JSON-repair fallback was attempted --
-        # the combined cost of the primary + repair calls, so the caller can
-        # still bill it even though the request ultimately failed. None for
-        # every other raise site (nothing extra was spent).
-        self.usage = usage
-
-
-class AIBudgetExceededError(AIError):
-    """Trial or user budget is exhausted, or no API key is configured at all."""
-
-
-class AIAuthenticationError(AIError):
-    """The configured API key was rejected by Anthropic."""
-
-
-class AIBillingError(AIError):
-    """The shared trial key (or the feuser's own key) is out of credits."""
-
-
-class AITransientError(AIError):
-    """Rate limit, overload, or connectivity issue -- safe to retry later."""
-    def __init__(self, message: str, *, overloaded: bool = False, detail: str = ""):
-        super().__init__(message)
-        self.overloaded = overloaded
-        self.detail = detail
+_INVALID_SHARED_KEY_MESSAGE = (
+    "The server is misconfigured: the trial API key is invalid. "
+    "Please contact the server administrator."
+)
 
 
 # ---------------------------------------------------------------------------
-# Agent config / pricing / JSON repair -- implementation details of _call*
+# Usage / JSON helpers -- implementation details of _call*
 # ---------------------------------------------------------------------------
-
-_DEFAULT_MODEL = "claude-sonnet-5-5"
-
-# thinking is always on for this model, effort is the control
-# (AI_PROVIDER_CLAUDE_EFFORT, see resolve_effort)
-DEFAULT_EFFORT = "medium"
-EFFORT_CHOICES = ("low", "medium", "high", "xhigh", "max")
-_EFFORT_ENV_VAR = "AI_PROVIDER_CLAUDE_EFFORT"
-
-
-def resolve_effort(value: str | None) -> tuple[str, str | None]:
-    """(effort, error) for AI_PROVIDER_CLAUDE_EFFORT; blank means DEFAULT_EFFORT,
-    an invalid value returns an error for the misconfigured page. Django-free."""
-    effort = (value or "").strip().lower()
-    if not effort:
-        return DEFAULT_EFFORT, None
-    if effort not in EFFORT_CHOICES:
-        return DEFAULT_EFFORT, (
-            f"{_EFFORT_ENV_VAR} must be one of {', '.join(EFFORT_CHOICES)} "
-            f"(or unset for the default, {DEFAULT_EFFORT})."
-        )
-    return effort, None
-
-# on a classifier refusal the API retries on Anthropic's recommended fallback model
-_FALLBACK_BETA = "server-side-fallback-2026-07-01"
-
-
-@dataclass
-class AgentConfig:
-    provider: str = "claude"
-    api_key: str = ""
-    model: str = _DEFAULT_MODEL
-    max_tokens: int = 8192
-    effort: str = field(default_factory=lambda: settings.AI_CLAUDE_EFFORT)
-
-
-# USD per MTok: (input, output, 5 min cache write, cache read); includes the
-# fallback target (Sonnet 5 for Sonnet 5.5)
-_MODEL_PRICES = {
-    "claude-sonnet-5-5": (2.00, 10.00, 2.50, 0.20),
-    "claude-sonnet-5":   (2.00, 10.00, 2.50, 0.20),
-}
-
-# pre-output refusals Anthropic bills; mid-output refusals are always billed
-_BILLED_PRE_OUTPUT_REFUSALS = {"bio", "frontier_llm", "reasoning_extraction"}
-
-_REFUSAL_MESSAGE = "The AI declined this request. Rephrasing it or leaving out the objected part may help."
-
-
-def _model_prices(model: str) -> tuple[float, float, float, float]:
-    prices = _MODEL_PRICES.get(model)
-    if prices is None:
-        _log.warning("No price known for AI model %r; billing it at %s rates.", model, _DEFAULT_MODEL)
-        prices = _MODEL_PRICES[_DEFAULT_MODEL]
-    return prices
-
-
-def _compute_usage_cost(
-    input_tok: int, output_tok: int, cache_write_tok: int, cache_read_tok: int,
-    model: str = _DEFAULT_MODEL,
-) -> dict:
-    """cost_usd/cost_cents for a Claude API call from its token usage, at the
-    given model's rates.
-
-    cost_cents is kept at the same 4-decimal precision as
-    FeUser.ai_trial_budget_spent (a DecimalField(decimal_places=4)): rounding
-    to fewer decimals silently truncates cheap, cache-heavy requests to 0.0,
-    under-billing trial usage instead of just under-displaying it.
-    """
-    price_in, price_out, price_cw, price_cr = _model_prices(model)
-    cost = (
-        (input_tok       / 1_000_000) * price_in +
-        (output_tok      / 1_000_000) * price_out +
-        (cache_write_tok / 1_000_000) * price_cw +
-        (cache_read_tok  / 1_000_000) * price_cr
-    )
-    return {"cost_usd": round(cost, 6), "cost_cents": round(cost * 100, 4)}
-
-
-def _usage_from_response(response) -> dict:
-    """Usage and cost of a response, each attempt in usage.iterations priced at its
-    own model. Rescued declined attempts report no category, so they're billed."""
-    u = response.usage
-    iterations = list(getattr(u, "iterations", None) or [])
-    if not iterations:
-        iterations = [SimpleNamespace(
-            model=getattr(response, "model", "") or _DEFAULT_MODEL,
-            input_tokens=getattr(u, "input_tokens", 0) or 0,
-            output_tokens=getattr(u, "output_tokens", 0) or 0,
-            cache_creation_input_tokens=getattr(u, "cache_creation_input_tokens", 0) or 0,
-            cache_read_input_tokens=getattr(u, "cache_read_input_tokens", 0) or 0,
-        )]
-
-    final_unbilled_refusal = False
-    if getattr(response, "stop_reason", None) == "refusal":
-        category = getattr(getattr(response, "stop_details", None), "category", None)
-        final_unbilled_refusal = category not in _BILLED_PRE_OUTPUT_REFUSALS
-
-    totals = {"input_tokens": 0, "output_tokens": 0, "cache_write_tokens": 0, "cache_read_tokens": 0}
-    cost_usd = 0.0
-    for index, attempt in enumerate(iterations):
-        input_tok       = getattr(attempt, "input_tokens", 0) or 0
-        output_tok      = getattr(attempt, "output_tokens", 0) or 0
-        cache_write_tok = getattr(attempt, "cache_creation_input_tokens", 0) or 0
-        cache_read_tok  = getattr(attempt, "cache_read_input_tokens", 0) or 0
-        is_last = index == len(iterations) - 1
-        if is_last and final_unbilled_refusal and output_tok == 0:
-            continue
-        totals["input_tokens"] += input_tok
-        totals["output_tokens"] += output_tok
-        totals["cache_write_tokens"] += cache_write_tok
-        totals["cache_read_tokens"] += cache_read_tok
-        cost_usd += _compute_usage_cost(
-            input_tok, output_tok, cache_write_tok, cache_read_tok,
-            model=getattr(attempt, "model", "") or _DEFAULT_MODEL,
-        )["cost_usd"]
-
-    return {
-        **totals,
-        "total_tokens": sum(totals.values()),
-        "cost_usd": round(cost_usd, 6),
-        "cost_cents": round(cost_usd * 100, 4),
-    }
-
-
-def _parse_response(response) -> tuple[str, dict]:
-    """(text, usage) of a response. A refusal raises AIRefusalError with usage;
-    text is the first "text" block, thinking and fallback blocks may precede it."""
-    usage = _usage_from_response(response)
-
-    if getattr(response, "stop_reason", None) == "refusal":
-        category = getattr(getattr(response, "stop_details", None), "category", None)
-        _log.warning("AI request refused by the model's safety classifiers (category=%r).", category)
-        raise AIRefusalError(_REFUSAL_MESSAGE, usage=usage)
-
-    raw = ""
-    for block in response.content:
-        if getattr(block, "type", None) == "text":
-            raw = block.text.strip()
-            break
-
-    if not raw:
-        _log.error("_parse_response: empty response. blocks: %r", response.content)
-        raise ValueError(
-            f"Claude returned an empty response. Content blocks: "
-            f"{[getattr(b, 'type', '?') for b in response.content]}"
-        )
-    return raw, usage
-
 
 def _merge_usage(*usages: dict) -> dict:
-    """Combine usage dicts from a primary call + its JSON-repair retry into one."""
-    keys = ("input_tokens", "output_tokens", "cache_write_tokens", "cache_read_tokens", "total_tokens")
+    """Combine usage dicts from a primary call + its JSON-repair retry into one.
+    Provider-neutral: every numeric key any of them reports is summed."""
+    keys = sorted({k for u in usages for k, v in u.items() if isinstance(v, (int, float))})
     merged = {k: sum(u.get(k, 0) for u in usages) for k in keys}
-    merged["cost_usd"] = round(sum(u.get("cost_usd", 0) for u in usages), 6)
+    if "cost_usd" in merged:
+        merged["cost_usd"] = round(merged["cost_usd"], 6)
     merged["cost_cents"] = round(sum(u.get("cost_cents", 0) for u in usages), 4)
     return merged
 
 
 def _record_ai_usage(feuser, is_trial: bool, usage: dict | None) -> None:
     """Bill a completed AI call's cost against the feuser's trial budget. A
-    no-op off-trial (a feuser with their own Anthropic key pays Anthropic
-    directly) or when usage is falsy."""
+    no-op off-trial (a feuser with their own credentials pays their AI
+    provider directly) or when usage is falsy."""
     if not (is_trial and usage):
         return
     feuser.ai_trial_budget_spent = (feuser.ai_trial_budget_spent or Decimal(0)) + Decimal(str(usage["cost_cents"]))
@@ -304,19 +126,24 @@ If you cannot find a coherent JSON object to recover at all, reply with exactly:
 
 class AIService:
     """
-    One instance per feuser per request. Resolves the feuser's API key (own
-    key wins over the shared trial key) up front and raises
+    One instance per feuser per request. Resolves the feuser's access (own
+    credentials win over the shared trial access) up front and raises
     AIBudgetExceededError immediately if there's nothing usable, so a feature
     method is never called with a prompt it can't actually send.
     """
 
     def __init__(self, feuser):
         self.feuser = feuser
+        self.provider = get_provider()
+        if self.provider is None:
+            raise AIBudgetExceededError("AI is not configured on this server.")
         self.api_key, self.is_trial, self.trial_limit, self.trial_spent, blocked = self.trial_state_for(feuser)
         if blocked:
             raise AIBudgetExceededError("Trial budget exhausted.")
         if not self.api_key:
             raise AIBudgetExceededError("No AI API key configured.")
+        # the feuser's own settings for the provider; {} = shared access
+        self.user_config: dict = {} if self.is_trial else {"api_key": self.api_key}
         # Usage dict from the most recent call, success or failed-after-repair
         # (see _record_usage) -- feature views read this to show the cost pill
         # without threading a return value through every exception branch.
@@ -354,28 +181,25 @@ class AIService:
         """Express expense creation: extract expense/income items from a
         description and/or receipt image. Returns the raw "items" list
         (still needs express_service._validate_items before it's trusted)."""
-        content: list[dict] = []
-        if image_b64:
-            content.append({
-                "type": "image",
-                "source": {"type": "base64", "media_type": image_type, "data": image_b64},
-            })
-        content.append({
-            "type": "text",
-            "text": description or "Please analyse this image and extract all expense items.",
-        })
-        config = AgentConfig(api_key=self.api_key, max_tokens=8192)
-        messages = [{"role": "user", "content": content}]
-        parsed, _raw = self._call_for_json(config, system_prompt, messages, feature="express_creation")
+        request = AIRequest(
+            feature="express_creation",
+            system=_system_parts(system_prompt),
+            user_text=description or "Please analyse this image and extract all expense items.",
+            images=[ImageInput(data_b64=image_b64, media_type=image_type)] if image_b64 else [],
+            max_tokens=8192,
+        )
+        parsed, _raw = self._call_for_json(request)
         return parsed.get("items", [])
 
-    def prompt_dashboard_card_yaml(self, system_prompt: str | list[dict], description: str) -> str:
+    def prompt_dashboard_card_yaml(self, system_prompt: str | list[SystemPart], description: str) -> str:
         """Dashboard card AI assist: generate/edit one card's YAML config
         from a natural-language description. Returns a non-empty YAML string
         (still needs dashboard_cards.parse_card_config to be schema-valid)."""
-        config = AgentConfig(api_key=self.api_key, max_tokens=8192)
-        messages = [{"role": "user", "content": description}]
-        parsed, raw = self._call_for_json(config, system_prompt, messages, feature="dashboard_card_ai")
+        request = AIRequest(
+            feature="dashboard_card_ai", system=_system_parts(system_prompt),
+            user_text=description, max_tokens=8192,
+        )
+        parsed, raw = self._call_for_json(request)
         yaml_str = parsed.get("yaml")
         if not isinstance(yaml_str, str) or not yaml_str.strip():
             raise AIInvalidResponseError(raw)
@@ -386,9 +210,11 @@ class AIService:
         mappings. There is no meaningful "fail" case for this prompt (an
         unmatched source just maps to null), so unlike the other two features
         it doesn't use the {"result": "good"/"fail"} envelope."""
-        config = AgentConfig(api_key=self.api_key, max_tokens=4096)
-        messages = [{"role": "user", "content": user_message}]
-        parsed, raw = self._call_for_json(config, system_prompt, messages, feature="partnership_ai", envelope=False)
+        request = AIRequest(
+            feature="partnership_ai", system=_system_parts(system_prompt),
+            user_text=user_message, max_tokens=4096,
+        )
+        parsed, raw = self._call_for_json(request, envelope=False)
         mappings = parsed.get("mappings")
         if not isinstance(mappings, list):
             raise AIInvalidResponseError(raw)
@@ -407,11 +233,11 @@ class AIService:
         AI can't confidently match just comes back null -- so this skips the
         {"result": "good"/"fail"} envelope too. Returns
         {"category_idx": int|None, "tag_idxs": list[int]}."""
-        config = AgentConfig(api_key=self.api_key, max_tokens=4096)
-        messages = [{"role": "user", "content": "Suggest the missing classification for this expense."}]
-        parsed, raw = self._call_for_json(
-            config, system_prompt, messages, feature="unclassified_solve", envelope=False,
+        request = AIRequest(
+            feature="unclassified_solve", system=_system_parts(system_prompt),
+            user_text="Suggest the missing classification for this expense.", max_tokens=4096,
         )
+        parsed, raw = self._call_for_json(request, envelope=False)
         tag_idxs = parsed.get("tag_idxs")
         return {
             "category_idx": parsed.get("category_idx"),
@@ -422,21 +248,18 @@ class AIService:
     # Shared core
     # -----------------------------------------------------------------
 
-    def _call_for_json(
-        self, config: AgentConfig, system_prompt: str | list[dict], messages: list[dict],
-        *, feature: str, envelope: bool = True,
-    ) -> tuple[dict, str]:
+    def _call_for_json(self, request: AIRequest, *, envelope: bool = True) -> tuple[dict, str]:
         """
         Call the AI, recover a JSON object from the response (one repair
         retry on parse failure, see _call_and_repair), and -- for every
-        feature except partnership mapping -- enforce the
-        {"result": "good"/"fail", ...} envelope every prompt in this app
+        feature except partnership mapping and unclassified solve -- enforce
+        the {"result": "good"/"fail", ...} envelope every prompt in this app
         asks for. Bills usage before returning or raising either way, so
         callers never touch usage billing themselves.
         Returns (parsed_dict, raw_text).
         """
         try:
-            parsed, usage, raw = self._call_and_repair(config, system_prompt, messages, feature=feature)
+            parsed, usage, raw = self._call_and_repair(request)
         except (AIInvalidResponseError, AIRefusalError) as exc:
             self._record_usage(exc.usage)
             raise
@@ -459,9 +282,7 @@ class AIService:
         if self.is_trial:
             self.trial_spent = float(self.feuser.ai_trial_budget_spent)
 
-    def _call_and_repair(
-        self, config: AgentConfig, system_prompt: str | list[dict], messages: list[dict], *, feature: str,
-    ) -> tuple[object, dict, str]:
+    def _call_and_repair(self, request: AIRequest) -> tuple[object, dict, str]:
         """
         The one retry every AI feature wants: if the model's raw response
         doesn't parse as JSON at all (see _extract_json_object) -- most often
@@ -480,27 +301,25 @@ class AIService:
         Raises AIInvalidResponseError (with .usage set to the combined cost
         spent so far) if the response still can't be parsed after repair.
         """
-        from .ai_trial import notify_admin_json_repair_fallback
+        from . import ai_trial
 
-        raw, usage = self._call(config, system_prompt, messages)
-        _log.debug("%s raw response: %r", feature, raw)
+        raw, usage = self._call(request)
+        _log.debug("%s raw response: %r", request.feature, raw)
 
         try:
             return _extract_json_object(raw), usage, raw
         except json.JSONDecodeError as exc:
             _log.warning(
                 "%s JSON parse failure, attempting AI repair. raw=%r exc=%s",
-                feature, raw, exc,
+                request.feature, raw, exc,
             )
 
-        repair_config = AgentConfig(
-            provider=config.provider, api_key=config.api_key,
-            model=config.model, max_tokens=config.max_tokens, effort=config.effort,
+        repair_request = AIRequest(
+            feature="json_repair", system=[SystemPart(_JSON_REPAIR_SYSTEM)],
+            user_text=raw, max_tokens=request.max_tokens,
         )
         try:
-            repair_raw, repair_usage = self._call(
-                repair_config, _JSON_REPAIR_SYSTEM, [{"role": "user", "content": raw}],
-            )
+            repair_raw, repair_usage = self._call(repair_request)
         except AIRefusalError as exc:
             exc.usage = _merge_usage(usage, exc.usage or {})
             raise
@@ -511,116 +330,43 @@ class AIService:
         except json.JSONDecodeError as repair_exc:
             _log.error(
                 "%s JSON repair also failed. raw=%r repair_raw=%r exc=%s",
-                feature, raw, repair_raw, repair_exc,
+                request.feature, raw, repair_raw, repair_exc,
             )
-            notify_admin_json_repair_fallback(feature, resolved=False)
+            ai_trial.notify_admin_json_repair_fallback(request.feature, resolved=False)
             raise AIInvalidResponseError(raw, repair_exc, usage=combined_usage) from repair_exc
 
-        _log.info("%s JSON repair succeeded after primary parse failure.", feature)
-        notify_admin_json_repair_fallback(feature, resolved=True)
+        _log.info("%s JSON repair succeeded after primary parse failure.", request.feature)
+        ai_trial.notify_admin_json_repair_fallback(request.feature, resolved=True)
         return parsed, combined_usage, repair_raw
 
-    def _call(self, config: AgentConfig, system_prompt: str | list[dict], messages: list[dict]) -> tuple[str, dict]:
-        """Dispatch to the configured provider, translating any failure into
-        one of this module's typed AIError subclasses (see
-        _classify_exception) so callers never need to import anthropic."""
-        if config.provider != "claude":
-            raise ValueError(f"Unsupported AI provider: {config.provider!r}")
+    def _call(self, request: AIRequest) -> tuple[str, dict]:
+        """One provider call -> (text, usage incl. cost_cents). Providers raise
+        only typed AIErrors; a failing shared access additionally disables the
+        trial and notifies the admin here, for every AI feature alike."""
+        from . import ai_trial
+
         try:
-            return self._call_claude(config, system_prompt, messages)
+            response = self.provider.send(request, self.user_config)
+        except AIAuthenticationError as exc:
+            if not self.is_trial:
+                raise
+            ai_trial.notify_admin_invalid_trial_key()
+            raise AIAuthenticationError(_INVALID_SHARED_KEY_MESSAGE) from exc
+        except AIBillingError as exc:
+            if not self.is_trial:
+                raise
+            ai_trial.disable_trial(exc.detail)
+            ai_trial.notify_admin_billing(exc.detail)
+            raise AIBillingError(exc.detail) from exc
         except AIError:
             raise
-        except Exception as exc:
-            raise self._classify_exception(exc) from exc
+        except Exception as exc:  # a provider must raise typed errors only; never leak a raw one
+            _log.exception("AI provider %s raised an untyped error", self.provider.get_name())
+            raise AIError(f"Unexpected error: {exc}") from exc
+        return response.text, {**response.usage, "cost_cents": response.cost_cents}
 
-    @staticmethod
-    def _call_claude(config: AgentConfig, system_prompt: str | list[dict], messages: list[dict]) -> tuple[str, dict]:
-        """Raw Anthropic API call, the only place that constructs an anthropic
-        client. Beta endpoint for fallbacks="default"; parsing in _parse_response."""
-        import anthropic
 
-        if isinstance(system_prompt, str):
-            system = [
-                {
-                    "type": "text",
-                    "text": system_prompt,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ]
-        else:
-            system = system_prompt
-
-        client = anthropic.Anthropic(api_key=config.api_key)
-        response = client.beta.messages.create(
-            model=config.model or _DEFAULT_MODEL,
-            max_tokens=config.max_tokens,
-            system=system,
-            messages=messages,
-            output_config={"effort": config.effort},
-            betas=[_FALLBACK_BETA],
-            fallbacks="default",
-        )
-        return _parse_response(response)
-
-    def _classify_exception(self, exc: Exception) -> AIError:
-        """
-        Turn an anthropic SDK exception into a typed AIError, firing the
-        trial-key side effects (disable + admin email) inline so every AI
-        feature gets the same protection express creation used to have
-        alone: previously only express.py's view disabled the shared trial
-        key and notified the admin on a billing/auth failure, so dashboard
-        card AI and partnership AI could silently exhaust or break the
-        shared key with nobody finding out.
-        """
-        import anthropic
-
-        if isinstance(exc, anthropic.AuthenticationError):
-            if self.is_trial:
-                from .ai_trial import notify_admin_invalid_trial_key
-                notify_admin_invalid_trial_key()
-                return AIAuthenticationError(
-                    "The server is misconfigured: the trial API key is invalid. "
-                    "Please contact the server administrator."
-                )
-            return AIAuthenticationError("Invalid API key. Please update it in your profile.")
-
-        if isinstance(exc, anthropic.PermissionDeniedError):
-            return AIAuthenticationError(
-                "API key does not have permission to use this model. Please check your Anthropic account."
-            )
-
-        if isinstance(exc, anthropic.RateLimitError):
-            if self._looks_like_billing(exc):
-                return self._handle_billing(str(exc))
-            return AITransientError("Anthropic rate limit reached. Please wait a moment and try again.")
-
-        if isinstance(exc, anthropic.InternalServerError):
-            return AITransientError(
-                "Anthropic is temporarily overloaded. Please try again in a moment.",
-                overloaded=True, detail=str(exc),
-            )
-
-        if isinstance(exc, anthropic.APIConnectionError):
-            return AITransientError("Could not reach the Anthropic API. Please check your internet connection.")
-
-        if isinstance(exc, anthropic.APIStatusError):
-            if self._looks_like_billing(exc):
-                return self._handle_billing(str(exc))
-            return AITransientError(f"Anthropic API error {exc.status_code}: {exc.message}")
-
-        return AIError(f"Unexpected error: {exc}")
-
-    @staticmethod
-    def _looks_like_billing(exc: Exception) -> bool:
-        msg = str(exc).lower()
-        return "credit" in msg or "billing" in msg or "balance" in msg
-
-    def _handle_billing(self, reason: str) -> AIBillingError:
-        if self.is_trial:
-            from .ai_trial import disable_trial, notify_admin_billing
-            disable_trial(reason)
-            notify_admin_billing(reason)
-            return AIBillingError(reason)
-        return AIBillingError(
-            "Insufficient Anthropic credits. Please top up your account at console.anthropic.com."
-        )
+def _system_parts(system_prompt: str | list[SystemPart]) -> list[SystemPart]:
+    if isinstance(system_prompt, str):
+        return [SystemPart(system_prompt)]
+    return list(system_prompt)

@@ -3,7 +3,7 @@ AI express expense creation: system-prompt assembly, image handling, and
 item validation.
 
 The view layer lives in budget/views/express.py. The actual AI round trip
-(talking to Claude, JSON-response recovery, trial-budget billing, error
+(talking to the AI provider, JSON-response recovery, trial-budget billing, error
 classification) is not here -- it's budget.ai_service.AIService, the single
 shared entry point used by every AI feature in the app. This module only
 owns what's specific to express creation: building the system prompt text,

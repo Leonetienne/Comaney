@@ -4,12 +4,15 @@ The AI trial key is a shared Anthropic API key that allows users without their o
 
 ## Setup
 
-Set two environment variables:
+Set these environment variables:
 
 ```
-AI_TRIAL_API_KEY=sk-ant-...your-key...
+AI_PROVIDER=claude
+AI_PROVIDER_CLAUDE_API_KEY=sk-ant-...your-key...
 AI_TRIAL_USAGE_LIMIT=10
 ```
+
+`AI_TRIAL_API_KEY` is the deprecated old name of `AI_PROVIDER_CLAUDE_API_KEY` and still works. See [`AI_PROVIDER`](environment-variables.md#ai_provider).
 
 `AI_TRIAL_USAGE_LIMIT` is in US cents. Setting it to `10` gives each user a $0.10/month allowance. Set to `0` for no per-user limit (only your Anthropic account's overall budget applies).
 Please note that the enforced limit is an approximation and no exact limit.
