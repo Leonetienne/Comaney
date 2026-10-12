@@ -95,4 +95,5 @@ nav:
     - Building Assets: dev-manual/building-assets.md
     - Testing: dev-manual/testing.md
     - Writing an AI Provider: dev-manual/writing-an-ai-provider.md
+    - Local AI in the Dev Stack: dev-manual/local-ai-dev-stack.md
     - User Defaults: dev-manual/user-defaults.md

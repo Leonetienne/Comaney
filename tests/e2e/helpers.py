@@ -33,9 +33,28 @@ SUBMIT_BTN  = "button[type=submit]:not(#logout-button):not(#sidebar-logout-butto
 AI_API_KEY_TESTS = os.environ.get("AI_API_KEY_TESTS", "")
 
 
+_provider_takes_user_api_key = None
+
+
+def provider_takes_user_api_key() -> bool:
+    """Whether the stack's AI provider has an api_key user setting; asked once per run."""
+    global _provider_takes_user_api_key
+    if _provider_takes_user_api_key is None:
+        out = run_cmd(
+            "shell", "-c",
+            "from ai_providers import get_provider; p = get_provider(); "
+            "print(any(f.key == 'api_key' for f in (p.get_user_fields() if p else [])))",
+        )
+        _provider_takes_user_api_key = out.strip().endswith("True")
+    return _provider_takes_user_api_key
+
+
 def ai_test_api_key_args() -> list:
-    """--ai-config args to pass to the create_user command, if configured."""
-    return ["--ai-config", f"api_key={AI_API_KEY_TESTS}"] if AI_API_KEY_TESTS else []
+    """--ai-config args to pass to the create_user command, if a test key is
+    configured and the active provider takes one."""
+    if not AI_API_KEY_TESTS or not provider_takes_user_api_key():
+        return []
+    return ["--ai-config", f"api_key={AI_API_KEY_TESTS}"]
 
 
 def set_ai_user_config(email: str, values: dict) -> None:

@@ -2,3 +2,4 @@ pytest
 selenium
 pyotp
 requests
+httpx2>=2.0,<3

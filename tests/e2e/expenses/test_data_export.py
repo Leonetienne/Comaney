@@ -52,6 +52,7 @@ from helpers import (
     api_post, api_patch, api_delete, server_today,
     session_cookies, setup_user, cleanup_user,
     run_cmd, ai_test_api_key_args, get_ai_user_config, set_ai_user_config,
+    provider_takes_user_api_key,
 )
 from bhelpers import _get_pk, _create_group, _add_group_member, _create_group_expense
 
@@ -156,14 +157,19 @@ class TestDataExport:
     def test_own_ai_key_masked_in_export(self, driver, w, ctx):
         fake_key = "sk-ant-api03-exporttest9999"
         original = get_ai_user_config(ctx["email"])
+        takes_key = provider_takes_user_api_key()
         try:
-            driver.get(_url("/profile/"))
-            time.sleep(1)
-            fill(w, By.ID, "id_ai_api_key", fake_key)
-            fill(w, By.ID, "id_ai_custom_instructions", "")
-            _submit_form(driver, "ai")
-            time.sleep(2)
-            assert "Saved." in driver.page_source
+            if takes_key:
+                driver.get(_url("/profile/"))
+                time.sleep(1)
+                fill(w, By.ID, "id_ai_api_key", fake_key)
+                fill(w, By.ID, "id_ai_custom_instructions", "")
+                _submit_form(driver, "ai")
+                time.sleep(2)
+                assert "Saved." in driver.page_source
+            else:
+                # provider without user fields: a stored value is undeclared and must be fully masked
+                set_ai_user_config(ctx["email"], {"api_key": fake_key})
 
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
@@ -173,7 +179,8 @@ class TestDataExport:
             assert "anthropic_api_key" not in profile
             exported = json.loads(profile["ai_user_config"])
             # one entry: the active provider's, whichever that is
-            assert list(exported.values()) == [{"api_key": "********9999"}], exported
+            masked = "********9999" if takes_key else "********"
+            assert list(exported.values()) == [{"api_key": masked}], exported
         finally:
             set_ai_user_config(ctx["email"], original)
 

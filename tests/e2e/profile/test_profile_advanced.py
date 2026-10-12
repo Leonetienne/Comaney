@@ -13,7 +13,7 @@ from selenium.webdriver.common.by import By
 from helpers import (
     BASE_URL, _url, fill, browser_login,
     api_get, api_patch, session_cookies,
-    setup_user, cleanup_user, PASSWORD,
+    setup_user, cleanup_user, PASSWORD, provider_takes_user_api_key,
 )
 
 NEW_PASSWORD = "R41n3RWlnKl3R"
@@ -59,6 +59,10 @@ class TestAISettings:
     def test_save_own_api_key(self, driver, w, ctx):
         driver.get(_url("/profile/"))
         time.sleep(1)
+        if not provider_takes_user_api_key():
+            # provider without user settings
+            assert not driver.find_elements(By.ID, "id_ai_api_key")
+            return
         fill(w, By.ID, "id_ai_api_key", "sk-ant-api03-testkey5678")
         _submit_form(driver, "ai")
         time.sleep(2)
@@ -67,6 +71,9 @@ class TestAISettings:
     def test_masked_key_shown_in_form(self, driver, w, ctx):
         driver.get(_url("/profile/"))
         time.sleep(1)
+        if not provider_takes_user_api_key():
+            assert not driver.find_elements(By.ID, "id_ai_api_key")
+            return
         value = driver.find_element(By.ID, "id_ai_api_key").get_attribute("value")
         assert value.startswith("****"), "Key must be masked in the form field"
         assert value.endswith("5678"), "Last 4 chars must be visible"
@@ -89,7 +96,8 @@ class TestAISettings:
     def test_clear_api_key(self, driver, w, ctx):
         driver.get(_url("/profile/"))
         time.sleep(1)
-        driver.find_element(By.ID, "id_ai_api_key").clear()
+        if provider_takes_user_api_key():
+            driver.find_element(By.ID, "id_ai_api_key").clear()
         fill(w, By.ID, "id_ai_custom_instructions", "")
         _submit_form(driver, "ai")
         time.sleep(2)

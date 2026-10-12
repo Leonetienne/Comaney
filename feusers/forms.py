@@ -98,6 +98,7 @@ class AISettingsForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        self.ai_entry = {}
         if not self.user_fields:
             return cleaned
         submitted = {f.key: self.data.get(ai_user_config.form_field_name(f), "") for f in self.user_fields}
@@ -110,8 +111,8 @@ class AISettingsForm(forms.ModelForm):
         return cleaned
 
     def save(self, commit=True):
-        if self.user_fields:
-            # writes only the active provider's entry; any other is dropped
+        if self.provider:
+            # writes only the active provider's entry (none without user fields); any other is dropped
             self.instance.ai_user_config = ai_user_config.with_entry(self.provider.get_name(), self.ai_entry)
         return super().save(commit=commit)
 

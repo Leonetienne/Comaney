@@ -8,8 +8,12 @@ the active provider's user fields:
   them for every user and keeps the active provider's entry
 - create_user --ai-config KEY=VALUE sets them (bad input rejected)
 - demo users can neither see an editable form nor save via a direct POST
+- a provider without user fields (e.g. local): no own-settings field, saving
+  still drops other providers' entries, create_user refuses --ai-config
 
-Provider-neutral: the expected labels and field keys are asked from the stack.
+Provider-neutral: the expected labels and field keys are asked from the stack,
+and each test asserts the branch of the active provider (secret api_key user
+field, or no user fields at all).
 Run with: pytest -v tests/e2e/profile/test_ai_user_settings.py | tee logfile.log
 """
 import json
@@ -71,10 +75,20 @@ def _submit_ai_form(driver):
 @pytest.fixture(scope="module")
 def fields():
     f = _user_fields()
-    assert any(x["key"] == "api_key" and x["secret"] for x in f), (
-        "These tests expect the active provider to declare a secret api_key user field"
+    assert not f or any(x["key"] == "api_key" and x["secret"] for x in f), (
+        "These tests cover providers with a secret api_key user field or with no user fields"
     )
     return f
+
+
+@pytest.fixture(scope="module")
+def takes_key(fields) -> bool:
+    return bool(fields)
+
+
+def _own_settings_inputs(driver) -> list:
+    return [el for el in driver.find_elements(By.CSS_SELECTOR, "#section-ai [id^='id_ai_']")
+            if el.get_attribute("id") != "id_ai_custom_instructions"]
 
 
 @pytest.fixture(scope="module")
@@ -89,6 +103,10 @@ class TestProfileForm:
     def test_labels_come_from_provider(self, driver, w, ctx, fields):
         driver.get(_url("/profile/#section-ai"))
         time.sleep(1)
+        if not fields:
+            assert _own_settings_inputs(driver) == []
+            assert driver.find_element(By.ID, "id_ai_custom_instructions").is_displayed()
+            return
         for f in fields:
             label = driver.find_element(By.CSS_SELECTOR, f"label[for='id_ai_{f['key']}']")
             assert label.text.strip() == f["label"]
@@ -96,9 +114,16 @@ class TestProfileForm:
             if f["secret"]:
                 assert el.get_attribute("type") == "password"
 
-    def test_save_shows_masked_value(self, driver, w, ctx):
+    def test_save_shows_masked_value(self, driver, w, ctx, takes_key):
         driver.get(_url("/profile/#section-ai"))
         time.sleep(1)
+        if not takes_key:
+            fill(w, By.ID, "id_ai_custom_instructions", "No-key provider save")
+            _submit_ai_form(driver)
+            assert "Saved." in driver.page_source
+            assert _own_settings_inputs(driver) == []
+            assert _raw_config(ctx["email"]) == {}
+            return
         fill(w, By.ID, "id_ai_api_key", KEY)
         _submit_ai_form(driver)
         assert "Saved." in driver.page_source
@@ -107,23 +132,28 @@ class TestProfileForm:
         assert KEY not in driver.page_source
         assert get_ai_user_config(ctx["email"]) == {"api_key": KEY}
 
-    def test_resave_without_change_keeps_key(self, driver, w, ctx):
+    def test_resave_without_change_keeps_key(self, driver, w, ctx, takes_key):
         driver.get(_url("/profile/#section-ai"))
         time.sleep(1)
         fill(w, By.ID, "id_ai_custom_instructions", "Re-save test")
         _submit_ai_form(driver)
         assert "Saved." in driver.page_source
-        assert get_ai_user_config(ctx["email"]) == {"api_key": KEY}
+        assert get_ai_user_config(ctx["email"]) == ({"api_key": KEY} if takes_key else {})
 
-    def test_saving_drops_other_providers_entries(self, driver, w, ctx):
+    def test_saving_drops_other_providers_entries(self, driver, w, ctx, takes_key):
         _set_raw_config(ctx["email"], {**_raw_config(ctx["email"]), "retired": {"api_key": "sk-old"}})
         driver.get(_url("/profile/#section-ai"))
         time.sleep(1)
         _submit_ai_form(driver)
         assert "Saved." in driver.page_source
-        assert _raw_config(ctx["email"]) == {_active_provider(): {"api_key": KEY}}
+        expected = {_active_provider(): {"api_key": KEY}} if takes_key else {}
+        assert _raw_config(ctx["email"]) == expected
 
-    def test_clearing_removes_key(self, driver, w, ctx):
+    def test_clearing_removes_key(self, driver, w, ctx, takes_key):
+        if not takes_key:
+            # provider without user settings
+            assert _raw_config(ctx["email"]) == {}
+            return
         driver.get(_url("/profile/#section-ai"))
         time.sleep(1)
         fill(w, By.ID, "id_ai_api_key", "")
@@ -159,9 +189,13 @@ class TestCreateUserAiConfig:
         )
         return email, r
 
-    def test_sets_active_provider_entry(self):
+    def test_sets_active_provider_entry(self, takes_key):
         email, r = self._create("--ai-config", "api_key=sk-a=b-cli1")
         try:
+            if not takes_key:
+                assert r.returncode != 0
+                assert "Unknown AI setting" in r.stderr and "sk-a=b-cli1" not in r.stderr
+                return
             assert r.returncode == 0, r.stderr
             assert _raw_config(email) == {_active_provider(): {"api_key": "sk-a=b-cli1"}}
         finally:
@@ -208,7 +242,8 @@ class TestDemoUser:
         time.sleep(1)
         card = driver.find_element(By.ID, "section-ai")
         assert "Not available on demo accounts." in card.text
-        assert not driver.find_element(By.ID, "id_ai_api_key").is_enabled()
+        assert not driver.find_element(By.ID, "id_ai_custom_instructions").is_enabled()
+        assert all(not el.is_enabled() for el in _own_settings_inputs(driver))
 
     def test_server_rejects_demo_post(self, driver, demo):
         s = requests.Session()

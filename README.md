@@ -278,6 +278,10 @@ pytest ./tests/ -vsx
 
 See [Dev Manual: Testing](https://comaney.app/docs/dev-manual/testing/) for full details.
 
+### Local AI model
+
+The dev stack can run against a self-hosted model on your machine (`AI_PROVIDER=local`), with or without authentication. On a Mac the model server runs natively for GPU access; plain `docker compose up -d` is unchanged. See [Dev Manual: Local AI in the Dev Stack](https://comaney.app/docs/dev-manual/local-ai-dev-stack/).
+
 ### Building the Docker image
 
 ```bash
