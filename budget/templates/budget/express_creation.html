@@ -46,8 +46,12 @@ window.BUDDY_EXPENSE_CONFIG = {
     {% if is_trial %}
     <div class="trial-banner">
         You're using the shared trial key.
+        {% if trial_limit is not None %}
         <span class="trial-meter">{{ trial_spent }} / {{ trial_limit }} ¢ used this month</span>
         — add your own key in <a href="{% url 'profile' %}">your profile</a> to remove this limit.
+        {% else %}
+        <span class="trial-meter">{{ trial_spent }} ¢ used this month</span>
+        {% endif %}
     </div>
     {% endif %}
 

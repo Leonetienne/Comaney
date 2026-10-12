@@ -179,6 +179,16 @@ if _ai_provider_error and not SYSTEM_MISCONFIGURED:
     SYSTEM_MISCONFIGURED = True
     SYSTEM_MISCONFIGURED_MSG = _ai_provider_error
 
+import logging  # noqa: E402
+
+from budget.ai_availability import unlimited_shared_warning  # noqa: E402
+
+_unlimited_warning = unlimited_shared_warning(
+    bool(_ai_provider and _ai_provider.has_shared_access()), AI_TRIAL_USAGE_LIMIT,
+)
+if _unlimited_warning:
+    logging.getLogger("comaney.settings").warning(_unlimited_warning)
+
 ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "")
 
 YUBICO_CLIENT_ID  = os.environ.get("YUBICO_CLIENT_ID", "")

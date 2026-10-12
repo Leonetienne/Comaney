@@ -310,7 +310,7 @@ Per-reset AI trial allowance for the demo user, in US cents. Overrides `AI_TRIAL
 Which AI service Comaney uses for its AI features (AI Express Creation, dashboard card assistant, Catalog Partnership mapping, Unclassified Expenses). Possible values:
 
 - `claude`: Claude by Anthropic
-- `none`: switch all AI features off
+- `none`: switch all AI features off; every AI button and page is hidden, and users' saved AI settings are kept
 
 If it is unset, AI is off as well. There is one exception, so that an upgrade never switches AI off without you noticing: if other AI settings are present (`AI_TRIAL_API_KEY` or any variable starting with `AI_PROVIDER_`) but `AI_PROVIDER` is not set, the site shows a configuration error page asking you to set it.
 
@@ -344,11 +344,11 @@ The old name of `AI_PROVIDER_CLAUDE_API_KEY`. It still works with `AI_PROVIDER=c
 
 **Default:** `0` (cents)
 
-The per-user, per-month spending cap on the shared trial key, in US cents. When a user's share of trial usage reaches this limit in the current calendar month, Express Creation is disabled for that user until the next month.
+The per-user, per-month spending cap on the shared trial key, in US cents. When a user's share of trial usage reaches this limit in the current calendar month, the AI features are disabled for that user until the next month. Users with their own AI settings are never limited.
 
 Example: `AI_TRIAL_USAGE_LIMIT=10` gives each user a $0.10/month allowance on the trial key.
 
-Set to `0` to impose no per-user limit (only the overall Anthropic account budget applies).
+Set to `0` (the default) to impose no per-user limit: everyone without their own settings can use the shared key without a cap (only the AI service's own account budget applies). Spending is still recorded per user, and Comaney logs a startup warning so this is not set by accident.
 
 ---
 

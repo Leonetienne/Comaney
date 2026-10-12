@@ -38,12 +38,15 @@ from ai_providers import get_provider
 from ai_providers.base import AIRequest, ImageInput, SystemPart
 from feusers.ai_user_config import has_own_access, own_entry
 
+from .ai_availability import NO_AI, AIAccess, resolve_access
+
 # Errors live in ai_providers/errors.py (providers raise them too); re-exported
 # here so `from budget.ai_service import AIError, ...` keeps working.
 from ai_providers.errors import (  # noqa: F401
     AIAuthenticationError,
     AIBillingError,
     AIBudgetExceededError,
+    AIDisabledError,
     AIError,
     AIInvalidResponseError,
     AIRefusalError,
@@ -137,12 +140,17 @@ class AIService:
         self.feuser = feuser
         self.provider = get_provider()
         if self.provider is None:
-            raise AIBudgetExceededError("AI is not configured on this server.")
-        has_access, self.is_trial, self.trial_limit, self.trial_spent, blocked = self.trial_state_for(feuser)
-        if blocked:
-            raise AIBudgetExceededError("Trial budget exhausted.")
-        if not has_access:
+            raise AIDisabledError("AI is not configured on this server.")
+        access = self.access_for(feuser)
+        if not access.has_access:
             raise AIBudgetExceededError("No AI access configured.")
+        if access.is_shared and access.shared_disabled:
+            raise AIBudgetExceededError("The shared AI access is temporarily unavailable.")
+        if access.blocked:
+            raise AIBudgetExceededError("Trial budget exhausted.")
+        self.is_trial = access.is_shared
+        self.trial_limit = access.limit
+        self.trial_spent = access.spent
         # the feuser's own settings for the provider; {} = shared access
         self.user_config: dict = {} if self.is_trial else own_entry(feuser.ai_user_config, self.provider)
         # Usage dict from the most recent call, success or failed-after-repair
@@ -151,29 +159,35 @@ class AIService:
         self.last_usage: dict | None = None
 
     @staticmethod
-    def trial_state_for(feuser) -> tuple[bool, bool, float, float, bool]:
-        """
-        Return (has_access, is_trial, trial_limit, trial_spent, trial_blocked)
-        for display purposes (e.g. the express-creation banner, the
-        dashboard's ai_trial_blocked flag) without constructing a full
-        AIService, which would raise the moment the trial is blocked.
-        Own settings complete for the active provider win; otherwise the
-        provider's shared access, if it has one and a trial limit applies.
-        """
+    def access_for(feuser) -> AIAccess:
+        """The feuser's AI access (budget/ai_availability.py) from the live
+        provider, settings and trial-disabled flag. feuser None = anonymous."""
+        from .ai_trial import trial_is_disabled
+
         provider = get_provider()
         if provider is None:
-            return False, False, 0, 0, False
-        if has_own_access(feuser.ai_user_config, provider):
-            return True, False, 0, 0, False
-        if feuser.special_ai_trial_budget is not None:
-            trial_limit = float(feuser.special_ai_trial_budget)
-        else:
-            trial_limit = settings.AI_TRIAL_USAGE_LIMIT
-        if not provider.has_shared_access() or not trial_limit:
-            return False, False, 0, 0, False
-        spent = float(feuser.ai_trial_budget_spent or 0)
-        blocked = spent >= trial_limit
-        return True, True, trial_limit, spent, blocked
+            return NO_AI
+        shared = provider.has_shared_access()
+        return resolve_access(
+            provider_active=True,
+            own_complete=bool(feuser) and has_own_access(feuser.ai_user_config, provider),
+            shared_available=shared,
+            global_limit=settings.AI_TRIAL_USAGE_LIMIT,
+            special_budget=feuser.special_ai_trial_budget if feuser else None,
+            spent=float(feuser.ai_trial_budget_spent or 0) if feuser else 0.0,
+            shared_disabled=shared and trial_is_disabled(),
+        )
+
+    @staticmethod
+    def trial_state_for(feuser) -> tuple[bool, bool, float | None, float, bool]:
+        """
+        (has_access, is_trial, trial_limit, trial_spent, trial_blocked) for
+        display purposes (e.g. the dashboard's ai_trial_blocked flag) without
+        constructing a full AIService, which raises once the trial is
+        blocked. trial_limit None = no limit.
+        """
+        a = AIService.access_for(feuser)
+        return a.has_access, a.is_shared, a.limit, a.spent, a.blocked
 
     # -----------------------------------------------------------------
     # Feature entry points -- preprompt to validated JSON response

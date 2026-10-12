@@ -1,15 +1,12 @@
 """
 Per-user AI settings (FeUser.ai_user_config): form field generation from a
 provider's ConfigFields, masking, validation, saving only the active
-provider's entry, purging inactive providers, export masking, create_user's
---ai-config parsing, and AIService's own-vs-shared access resolution.
+provider's entry, purging inactive providers, export masking and
+create_user's --ai-config parsing. AIService access resolution: test_ai_availability.py.
 Run with: venv/bin/pytest tests/unit/test_ai_user_config.py -v
 """
-from types import SimpleNamespace
-
 import pytest
 
-import ai_providers
 from ai_providers.base import AIProvider, ConfigField
 from feusers import ai_user_config as cfg
 
@@ -288,64 +285,3 @@ class TestParseConfigArgs:
         with pytest.raises(ValueError) as e:
             cfg.parse_config_args([SECRET])
         assert SECRET not in str(e.value)
-
-
-class TestTrialStateFor:
-    """AIService.trial_state_for() / __init__ access resolution with an
-    active fake provider and stand-in Django settings."""
-
-    @pytest.fixture
-    def env(self, monkeypatch):
-        from budget import ai_service
-        monkeypatch.setattr(ai_service, "settings", SimpleNamespace(AI_TRIAL_USAGE_LIMIT=100))
-        previous = ai_providers.get_provider()
-        yield ai_service
-        ai_providers.set_provider(previous)
-
-    @staticmethod
-    def _feuser(config=None, spent=0, special=None):
-        return SimpleNamespace(
-            ai_user_config=config or {}, ai_trial_budget_spent=spent,
-            special_ai_trial_budget=special,
-        )
-
-    def test_no_provider(self, env):
-        ai_providers.set_provider(None)
-        assert env.AIService.trial_state_for(self._feuser({"fake": {"api_key": "k"}})) == (False, False, 0, 0, False)
-
-    def test_own_complete_config_wins(self, env):
-        ai_providers.set_provider(SettingsProvider())
-        assert env.AIService.trial_state_for(self._feuser({"fake": {"api_key": "k"}})) == (True, False, 0, 0, False)
-
-    def test_foreign_entry_falls_back_to_shared(self, env):
-        ai_providers.set_provider(SettingsProvider())
-        assert env.AIService.trial_state_for(self._feuser({"claude": {"api_key": "k"}}, spent=5)) == (True, True, 100.0, 5.0, False)
-
-    def test_shared_blocked_at_limit(self, env):
-        ai_providers.set_provider(SettingsProvider())
-        assert env.AIService.trial_state_for(self._feuser(spent=100)) == (True, True, 100.0, 100.0, True)
-
-    def test_special_budget_overrides_limit(self, env):
-        ai_providers.set_provider(SettingsProvider())
-        assert env.AIService.trial_state_for(self._feuser(special=10, spent=3))[2] == 10.0
-
-    def test_no_shared_access_no_own(self, env):
-        ai_providers.set_provider(SettingsProvider(shared=False))
-        assert env.AIService.trial_state_for(self._feuser()) == (False, False, 0, 0, False)
-
-    def test_service_gets_own_entry_as_user_config(self, env):
-        ai_providers.set_provider(SettingsProvider())
-        service = env.AIService(self._feuser({"fake": {"api_key": "k", "region": "eu"}, "claude": {"api_key": "x"}}))
-        assert service.is_trial is False
-        assert service.user_config == {"api_key": "k", "region": "eu"}
-
-    def test_service_on_shared_access_gets_empty_user_config(self, env):
-        ai_providers.set_provider(SettingsProvider())
-        service = env.AIService(self._feuser({"claude": {"api_key": "x"}}))
-        assert service.is_trial is True
-        assert service.user_config == {}
-
-    def test_service_without_any_access_raises(self, env):
-        ai_providers.set_provider(SettingsProvider(shared=False))
-        with pytest.raises(env.AIBudgetExceededError):
-            env.AIService(self._feuser())

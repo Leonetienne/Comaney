@@ -40,6 +40,10 @@ class AIBudgetExceededError(AIError):
     """Trial or user budget is exhausted, or no usable AI access is configured at all."""
 
 
+class AIDisabledError(AIBudgetExceededError):
+    """No AI provider is active (AI_PROVIDER unset or none)."""
+
+
 class AIAuthenticationError(AIError):
     """The configured credentials were rejected by the AI provider."""
 

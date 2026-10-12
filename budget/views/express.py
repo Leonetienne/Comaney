@@ -35,15 +35,13 @@ _log = logging.getLogger(__name__)
 
 @feuser_required
 def express_creation(request):
-    from ..ai_trial import trial_is_disabled
-
     feuser = request.feuser
-    has_access, is_trial, trial_limit, trial_spent, trial_blocked = AIService.trial_state_for(feuser)
-
-    if not has_access:
+    access = AIService.access_for(feuser)
+    if not access.has_access:
         return redirect("profile")
-
-    trial_disabled = is_trial and trial_is_disabled()
+    is_trial, trial_limit, trial_blocked = access.is_shared, access.limit, access.blocked
+    trial_spent = access.spent
+    trial_disabled = access.is_shared and access.shared_disabled
 
     categories = list(Category.objects.filter(owning_feuser=feuser).values("uid", "title"))
     tags = list(Tag.objects.filter(owning_feuser=feuser).values("uid", "title"))
@@ -147,7 +145,7 @@ def express_creation(request):
                         context["usage"] = service.last_usage
                     if service.is_trial:
                         context["trial_spent"] = round(service.trial_spent, 1)
-                        if service.trial_spent >= trial_limit:
+                        if trial_limit is not None and service.trial_spent >= trial_limit:
                             context["trial_just_exhausted"] = True
 
         elif action == "confirm":

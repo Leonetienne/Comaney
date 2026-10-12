@@ -5,7 +5,6 @@ from django.utils import timezone
 
 from ai_providers import get_provider
 
-from .ai_user_config import has_own_access
 from .help_fab import get_help_fab as _get_help_fab
 from .intros import CURRENT_UPGRADE_INTRO_VERSION
 from .models import FeUser, Notification
@@ -25,17 +24,16 @@ def current_feuser(request):
     ctx["demo_user_email"] = settings.DEMO_USER_EMAIL
     ctx["demo_user_password"] = settings.DEMO_USER_PASSWORD
     feuser = ctx["current_feuser"]
-    from budget.ai_trial import trial_is_disabled
+    from budget.ai_availability import ai_ui_available
+    from budget.ai_service import AIService
     provider = get_provider()
-    trial_ok = bool(
-        provider and provider.has_shared_access()
-        and settings.AI_TRIAL_USAGE_LIMIT and not trial_is_disabled()
+    ctx["ai_smart_create_available"] = ai_ui_available(
+        AIService.access_for(feuser), bool(feuser and feuser.disable_ai_ui),
     )
-    own_ok = bool(feuser and has_own_access(feuser.ai_user_config, provider))
-    ctx["ai_smart_create_available"] = bool(
-        (own_ok or trial_ok)
-        and not (feuser and feuser.disable_ai_ui)
-    )
+    ctx["ai_enabled"] = provider is not None
+    ctx["ai_provider_display_name"] = provider.get_display_name() if provider else ""
+    ctx["ai_provider_vendor_name"] = provider.get_vendor_name() if provider else ""
+    ctx["ai_sends_data_off_server"] = bool(provider and provider.sends_data_off_server())
     ctx["sankey_studio_available"] = bool(feuser and feuser.enable_early_access)
     ctx["email_2fa_available"] = not settings.DISABLE_EMAILING
     ctx["unread_notification_count"] = (

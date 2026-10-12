@@ -14,14 +14,17 @@ AI_TRIAL_USAGE_LIMIT=10
 
 `AI_TRIAL_API_KEY` is the deprecated old name of `AI_PROVIDER_CLAUDE_API_KEY` and still works. See [`AI_PROVIDER`](environment-variables.md#ai_provider).
 
-`AI_TRIAL_USAGE_LIMIT` is in US cents. Setting it to `10` gives each user a $0.10/month allowance. Set to `0` for no per-user limit (only your Anthropic account's overall budget applies).
+`AI_TRIAL_USAGE_LIMIT` is in US cents. Setting it to `10` gives each user a $0.10/month allowance. Set to `0` for no per-user limit (only your Anthropic account's overall budget applies); Comaney logs a warning at startup in that case, since spending on the shared key is then unlimited.
 Please note that the enforced limit is an approximation and no exact limit.
 
 ## How it works
 
+- Users who have filled in their own AI settings (see [Account settings](../user-manual/account-settings.md#ai)) always use those and are never limited by Comaney. Everyone else uses the shared key.
 - Each user has a `ai_trial_budget_spent` counter on their account (reset to zero monthly by the `reset_trial_budgets` cron job).
-- Every AI request, from any of the three features above, records its API cost (in cents) against the user's counter.
-- When a user's counter reaches `AI_TRIAL_USAGE_LIMIT`, all three AI features are disabled for that user until the next reset.
+- Every AI request on the shared key, from any of the features above, records its API cost (in cents) against the user's counter, also when there is no limit.
+- When a user's counter reaches `AI_TRIAL_USAGE_LIMIT`, all AI features are disabled for that user until the next reset. With `AI_TRIAL_USAGE_LIMIT=0` this never happens.
+- A per-user budget set with `create_user --ai-trial-budget` or `DEMO_USER_AI_BUDGET` replaces `AI_TRIAL_USAGE_LIMIT` for that account and is always a real cap: `0` there means no shared AI for that account.
+- With `AI_PROVIDER=none` (or unset) every AI feature is hidden for everyone; users' saved AI settings are kept.
 - If the Anthropic API returns a billing error (account out of credit) or an authentication error (invalid key), on any of the three features, the trial feature is **globally disabled** and a flag file is created. The feature stays disabled until an admin re-enables it.
 
 ## The trial flag file
@@ -38,6 +41,7 @@ The page shows:
 
 - Whether the trial is currently enabled or disabled.
 - The reason for disabling (if applicable).
+- The per-user monthly limit, "unlimited" for `AI_TRIAL_USAGE_LIMIT=0`, or that no shared key is configured.
 - A button to **re-enable** the trial (deletes the flag file).
 
 ## Re-enabling after exhaustion

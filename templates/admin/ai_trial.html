@@ -39,6 +39,16 @@
 </form>
 {% endif %}
 
+<p class="trial-mt" id="trial-limit">
+    {% if not shared_available %}
+    Shared AI access: off. Only users with their own AI settings can use AI.
+    {% elif limit is None %}
+    Per-user monthly limit: unlimited (<code>AI_TRIAL_USAGE_LIMIT=0</code>).
+    {% else %}
+    Per-user monthly limit: {{ limit|floatformat:"-2" }} ¢ (<code>AI_TRIAL_USAGE_LIMIT</code>).
+    {% endif %}
+</p>
+
 <p class="trial-mt">
     <a href="{% url 'admin:index' %}">&larr; Back to admin</a>
 </p>
