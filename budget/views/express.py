@@ -7,6 +7,8 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from ai_providers import get_provider
+
 from ..ai_service import (
     AIAuthenticationError,
     AIBillingError,
@@ -15,6 +17,8 @@ from ..ai_service import (
     AIRefusalError,
     AIService,
     AITransientError,
+    AIVisionUnsupportedError,
+    VISION_UNSUPPORTED_MESSAGE,
 )
 from ..decorators import feuser_required
 from ..express_service import (
@@ -81,13 +85,16 @@ def express_creation(request):
             image_b64 = ""
             image_type = "image/jpeg"
             image_file = request.FILES.get("image_file")
-            if image_file:
-                image_b64, image_type = _prepare_image(image_file)
             context["description"] = description
-            if not description and not image_b64:
+            if image_file and not get_provider().supports_vision():
+                context["ai_error"] = VISION_UNSUPPORTED_MESSAGE
+                context["ai_error_is_validation"] = True
+            elif not description and not image_file:
                 context["ai_error"] = "Please enter a description or attach an image."
                 context["ai_error_is_validation"] = True
             else:
+                if image_file:
+                    image_b64, image_type = _prepare_image(image_file)
                 # Reuse this same request's buddy-widget data (context["projects_data"]/
                 # ["single_buddies_data"]) for the catalog, so the AI's idx values always
                 # line up with the widget's own member/buddy arrays -- see _build_catalog.
@@ -137,6 +144,8 @@ def express_creation(request):
                         context["ai_error"] = str(exc)
                 except AIBudgetExceededError as exc:
                     context["ai_error"] = str(exc) or "AI budget exceeded."
+                except AIVisionUnsupportedError as exc:
+                    context["ai_error"] = str(exc)
                 except Exception as exc:
                     context["ai_error"] = f"Unexpected error: {exc}"
 

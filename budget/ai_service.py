@@ -56,6 +56,8 @@ from ai_providers.errors import (  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
+VISION_UNSUPPORTED_MESSAGE = "The configured AI cannot read images."
+
 _INVALID_SHARED_KEY_MESSAGE = (
     "The server is misconfigured: the trial API key is invalid. "
     "Please contact the server administrator."
@@ -200,6 +202,8 @@ class AIService:
         """Express expense creation: extract expense/income items from a
         description and/or receipt image. Returns the raw "items" list
         (still needs express_service._validate_items before it's trusted)."""
+        if image_b64 and not self.provider.supports_vision():
+            raise AIVisionUnsupportedError(VISION_UNSUPPORTED_MESSAGE)
         request = AIRequest(
             feature="express_creation",
             system=_system_parts(system_prompt),

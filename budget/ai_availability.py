@@ -67,6 +67,12 @@ def ai_ui_available(access: AIAccess, disable_ai_ui: bool) -> bool:
     return not (access.is_shared and access.shared_disabled)
 
 
+def vision_available(ai_available: bool, supports_vision: bool) -> bool:
+    """Image input (receipt photos) is offered: AI is available and the
+    provider reads images."""
+    return ai_available and supports_vision
+
+
 def unlimited_shared_warning(shared_available: bool, global_limit: float) -> str | None:
     """Startup warning text when shared access runs without a per-user limit."""
     if shared_available and global_limit <= 0:

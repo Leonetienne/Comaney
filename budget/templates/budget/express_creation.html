@@ -64,7 +64,11 @@ window.BUDDY_EXPENSE_CONFIG = {
 
     <!-- Parse form -->
     <div class="add-buddy-panel">
-    <p class="page-tip" style="margin-bottom:1rem;">Describe what you bought, attach a receipt photo, or both — Claude will extract and categorise the items for you to review and edit.</p>
+    {% if ai_vision_available %}
+    <p class="page-tip" style="margin-bottom:1rem;">Describe what you bought, attach a receipt photo, or both. The AI extracts and categorises the items for you to review and edit.</p>
+    {% else %}
+    <p class="page-tip" style="margin-bottom:1rem;">Describe what you bought. The AI extracts and categorises the items for you to review and edit.</p>
+    {% endif %}
     <form method="post" enctype="multipart/form-data" id="parse-form">
         {% csrf_token %}
         <input type="hidden" name="action" value="parse">
@@ -72,10 +76,10 @@ window.BUDDY_EXPENSE_CONFIG = {
         <textarea
             name="description"
             class="smart-input"
-            placeholder="Type something like 'I bought groceries for 20{{ current_feuser.currency }}, toothpaste for 5{{ current_feuser.currency }} and new wine glasses for 16{{ current_feuser.currency }}' or add any additional instructions."
+            placeholder="Type something like 'I bought groceries for 20{{ current_feuser.currency }}, toothpaste for 5{{ current_feuser.currency }} and new wine glasses for 16{{ current_feuser.currency }}'{% if ai_vision_available %} or add any additional instructions{% endif %}."
         >{{ description }}</textarea>
 
-        <!-- Image zone -->
+        {% if ai_vision_available %}
         <div class="image-zone" id="image-zone">
             <div class="image-zone-placeholder" id="image-placeholder">
                 <span class="icon">📎</span>
@@ -88,6 +92,7 @@ window.BUDDY_EXPENSE_CONFIG = {
             </div>
             <input type="file" id="img-file-input" name="image_file" accept="image/*" style="display:none">
         </div>
+        {% endif %}
 
         <div class="parse-actions">
             <button type="submit" class="btn ai-btn" id="parse-btn">✦ Analyse with AI</button>
@@ -296,6 +301,7 @@ const SESSION_KEY = 'express_creation_img';
 }());
 {% endif %}
 
+{% if ai_vision_available %}
 // ── Image zone ──────────────────────────────────────────────────────────────
 (function () {
     const zone        = document.getElementById('image-zone');
@@ -369,6 +375,7 @@ const SESSION_KEY = 'express_creation_img';
     });
     removeBtn.addEventListener('click', clearImage);
 })();
+{% endif %}
 
 {% if created_count is not None %}
 try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}

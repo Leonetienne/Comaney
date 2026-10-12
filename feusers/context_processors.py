@@ -24,11 +24,14 @@ def current_feuser(request):
     ctx["demo_user_email"] = settings.DEMO_USER_EMAIL
     ctx["demo_user_password"] = settings.DEMO_USER_PASSWORD
     feuser = ctx["current_feuser"]
-    from budget.ai_availability import ai_ui_available
+    from budget.ai_availability import ai_ui_available, vision_available
     from budget.ai_service import AIService
     provider = get_provider()
     ctx["ai_smart_create_available"] = ai_ui_available(
         AIService.access_for(feuser), bool(feuser and feuser.disable_ai_ui),
+    )
+    ctx["ai_vision_available"] = vision_available(
+        ctx["ai_smart_create_available"], bool(provider and provider.supports_vision()),
     )
     ctx["ai_enabled"] = provider is not None
     ctx["ai_provider_display_name"] = provider.get_display_name() if provider else ""
