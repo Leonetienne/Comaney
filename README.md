@@ -176,8 +176,12 @@ services:
       ENABLE_REGISTRATION: "TRUE"   # disable after creating your account
       DISABLE_EMAILING: "TRUE"      # set up SMTP for full functionality
       GUNICORN_WORKERS: 1
+      # Optional: shared Anthropic key for the AI features (users can also bring their own key)
+      # AI_TRIAL_API_KEY: "sk-ant-..."
+      # AI_TRIAL_USAGE_LIMIT: 10      # per user and month, in US cents; 0 = no limit
     volumes:
-      - comaney_data:/app/data      # required: profile pictures and persistent app data
+      # Required: all uploaded images (avatars, backgrounds, project pictures) live in /app/data
+      - ./comaney/data:/app/data
 
   mariadb:
     image: mariadb:lts
@@ -188,14 +192,10 @@ services:
       MARIADB_PASSWORD: "change-me"
       MARIADB_ROOT_PASSWORD: "change-root-too"
     volumes:
-      - mariadb_data:/var/lib/mysql
-
-volumes:
-  mariadb_data:
-  comaney_data:
+      - ./comaney/mariadb:/var/lib/mysql
 ```
 
-> **Important:** the `comaney_data` volume is required. Comaney stores user-generated files (profile pictures, etc.) under `/app/data` inside the container and will refuse to start if that path is not a persistent mount.
+> **Important:** the `/app/data` mount is required. Comaney stores every uploaded image (avatars, backgrounds, project pictures) under `/app/data` inside the container; without a persistent mount there, they are lost whenever the container is recreated, and the app shows a configuration error page instead of starting normally. Point the left side at any host directory you back up.
 
 ### First-run steps
 

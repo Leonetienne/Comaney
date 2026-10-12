@@ -31,8 +31,12 @@ services:
       # Note: disabling email also disables email verification on registration.
       DISABLE_EMAILING: "TRUE"
       GUNICORN_WORKERS: 1
+      # Optional: shared Anthropic key for the AI features (users can also bring their own key)
+      # AI_TRIAL_API_KEY: "sk-ant-..."
+      # AI_TRIAL_USAGE_LIMIT: 10      # per user and month, in US cents; 0 = no limit
     volumes:
-      - comaney_data:/app/data   # persistent user data (profile pictures, etc.)
+      # Required: all uploaded images (avatars, backgrounds, project pictures) live in /app/data
+      - ./comaney/data:/app/data
 
   mariadb:
     image: mariadb:lts
@@ -43,11 +47,7 @@ services:
       MARIADB_PASSWORD: "change-me"
       MARIADB_ROOT_PASSWORD: "change-root-too"
     volumes:
-      - mariadb_data:/var/lib/mysql
-
-volumes:
-  mariadb_data:
-  comaney_data:
+      - ./comaney/mariadb:/var/lib/mysql
 ```
 
 ## Production docker-compose.yml (with SMTP and HTTPS)
@@ -80,8 +80,18 @@ services:
       DEFAULT_FROM_EMAIL: "Comaney <noreply@example.com>"
       ADMIN_NOTIFICATION_EMAIL: "admin@example.com"
       GUNICORN_WORKERS: 2
+      # Shared Anthropic key for the AI features (users can also bring their own key)
+      AI_TRIAL_API_KEY: "sk-ant-..."
+      AI_TRIAL_USAGE_LIMIT: 10         # per user and month, in US cents; 0 = no limit
+      # Legal pages (Impressum / Datenschutzerklaerung), mounted below
+      PUBLIC_PAGE_IMPRINT_MD: /pages/imprint.md
+      PUBLIC_PAGE_EUDATENSCHUTZ_MD: /pages/dsgvo.md
     volumes:
-      - comaney_data:/app/data   # persistent user data (profile pictures, AI trial flag, etc.)
+      # Required: all uploaded images (avatars, backgrounds, project pictures) live in /app/data
+      - /srv/comaney/data:/app/data
+      # Legal pages content
+      - /srv/comaney/imprint.md:/pages/imprint.md:ro
+      - /srv/comaney/dsgvo.md:/pages/dsgvo.md:ro
 
   mariadb:
     image: mariadb:lts
@@ -92,11 +102,7 @@ services:
       MARIADB_PASSWORD: "strong-db-password"
       MARIADB_ROOT_PASSWORD: "strong-root-password"
     volumes:
-      - mariadb_data:/var/lib/mysql
-
-volumes:
-  mariadb_data:
-  comaney_data:
+      - /srv/comaney/mariadb:/var/lib/mysql
 ```
 
 ## Transport security behind a reverse proxy
@@ -135,16 +141,18 @@ Because `ALLOWED_HOSTS` no longer falls back to a wildcard in production, you **
 
 ## The /data volume
 
-Comaney stores user-generated files under `/app/data` inside the container. **This directory must be a persistent mounted volume** — if it is missing, the application will refuse to start and display a configuration error page instead.
+Comaney stores every uploaded file under `/app/data` inside the container. This path is fixed by the image; you only choose where it lives on the host (e.g. `/srv/comaney/data:/app/data`). **It must be a persistent mount**: without it, the app will refuse to start.
 
 What is stored there:
 
 | Path | Contents |
 |------|----------|
-| `/app/data/media/ppics/` | User profile pictures (resized JPEG, one per user) |
-| `/app/data/ai_trial_disabled.flag` | AI trial deactivation flag (written by the admin panel) |
+| `/app/data/media/ppics/` | User avatars (JPEG, one per user) |
+| `/app/data/media/backdrops/` | Personal backgrounds (PNG, one per user, visible only to their owner) |
+| `/app/data/media/bgpics/` | Project pictures (WebP, one per project) |
+| `/app/data/media/offline-buddy-ppic/` | Avatars of offline buddies and offline members (JPEG) |
 
-Always mount a named volume (or a host path) to `/app/data`. Do not use a `tmpfs` mount, as data would be lost on container restart.
+Always mount a host directory (or a named volume) to `/app/data`, and include it in your backups.
 
 ## First run
 
