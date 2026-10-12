@@ -326,7 +326,7 @@ class TestExpressCreation:
         email = ctx["email"]
         TINY_LIMIT = 1  # cents
 
-        # setup_user() unconditionally applies AI_API_KEY_TESTS if the host
+        # setup_user() applies the provider's AI_API_KEY_TESTS key if the host
         # env var is set (see ai_test_api_key_args() in helpers.py), giving
         # ctx's user their own AI key. _trial_state() treats any user with
         # complete own AI settings as is_trial=False and skips all budget

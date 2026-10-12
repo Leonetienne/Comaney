@@ -27,34 +27,48 @@ DOCKER_WEB  = "comaney-web-1"
 SUBMIT_BTN  = "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)"
 
 # Dedicated AI key for e2e test accounts, so AI spend during test runs is
-# billed and monitored separately from the app's shared trial access. Set as
-# the active provider's api_key on every test account immediately at creation
-# time (see ai_test_api_key_args()).
-AI_API_KEY_TESTS = os.environ.get("AI_API_KEY_TESTS", "")
+# billed and monitored separately from the app's shared trial access. One per
+# provider (AI_API_KEY_TESTS_<NAME>, plain AI_API_KEY_TESTS is Claude's), so a
+# key never reaches another provider's server. Set as the active provider's
+# api_key on every test account at creation time (see ai_test_api_key_args()).
+_provider_info = None
 
 
-_provider_takes_user_api_key = None
-
-
-def provider_takes_user_api_key() -> bool:
-    """Whether the stack's AI provider has an api_key user setting; asked once per run."""
-    global _provider_takes_user_api_key
-    if _provider_takes_user_api_key is None:
+def _stack_provider() -> tuple[str, bool]:
+    """(active provider name or "", whether it has an api_key user field); asked once per run."""
+    global _provider_info
+    if _provider_info is None:
         out = run_cmd(
             "shell", "-c",
             "from ai_providers import get_provider; p = get_provider(); "
-            "print(any(f.key == 'api_key' for f in (p.get_user_fields() if p else [])))",
+            "print(p.get_name() if p else '', any(f.key == 'api_key' for f in (p.get_user_fields() if p else [])))",
         )
-        _provider_takes_user_api_key = out.strip().endswith("True")
-    return _provider_takes_user_api_key
+        name, _, takes_key = out.strip().splitlines()[-1].rpartition(" ")
+        _provider_info = (name, takes_key == "True")
+    return _provider_info
+
+
+def provider_takes_user_api_key() -> bool:
+    """Whether the stack's AI provider has an api_key user setting."""
+    return _stack_provider()[1]
+
+
+def ai_test_api_key() -> str:
+    """The e2e test key for the stack's active provider, "" if none is configured."""
+    name, takes_key = _stack_provider()
+    if not takes_key:
+        return ""
+    key = os.environ.get(f"AI_API_KEY_TESTS_{name.upper()}", "")
+    if not key and name == "claude":
+        key = os.environ.get("AI_API_KEY_TESTS", "")
+    return key
 
 
 def ai_test_api_key_args() -> list:
     """--ai-config args to pass to the create_user command, if a test key is
-    configured and the active provider takes one."""
-    if not AI_API_KEY_TESTS or not provider_takes_user_api_key():
-        return []
-    return ["--ai-config", f"api_key={AI_API_KEY_TESTS}"]
+    configured for the active provider."""
+    key = ai_test_api_key()
+    return ["--ai-config", f"api_key={key}"] if key else []
 
 
 def set_ai_user_config(email: str, values: dict) -> None:
@@ -100,7 +114,7 @@ def stack_has_trial_key() -> bool:
 def ai_unavailable(reason: str, *, trial_only: bool = False):
     """Skip when the environment has no AI key, fail when one is configured.
     trial_only: the test runs on the shared trial key, so only that key counts."""
-    configured = stack_has_trial_key() or (not trial_only and bool(AI_API_KEY_TESTS))
+    configured = stack_has_trial_key() or (not trial_only and bool(ai_test_api_key()))
     if configured:
         pytest.fail(f"AI is configured in this environment but unavailable: {reason}")
     pytest.skip(reason)

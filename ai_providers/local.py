@@ -1,7 +1,8 @@
 """
 A self-hosted model behind any OpenAI-compatible server (llama.cpp's
 llama-server, Ollama, LM Studio, vLLM, SGLang, MLX-LM, LocalAI, Docker Model
-Runner, ...). The API key is optional and sent as a Bearer token when set.
+Runner, ...). The API key is optional and sent as a Bearer token when set;
+a user's own key takes precedence over the instance key.
 """
 from __future__ import annotations
 
@@ -19,9 +20,6 @@ class LocalProvider(OpenAICompatibleProvider):
     def get_display_name(self) -> str:
         return "Self-hosted model"
 
-    def sends_data_off_server(self) -> bool:
-        return False
-
     def get_base_url(self) -> str:
         return self.config("base_url")
 
@@ -32,6 +30,8 @@ class LocalProvider(OpenAICompatibleProvider):
             ConfigField("model", "Model", required=True),
             ConfigField("api_key", "API key", secret=True,
                         help_text="Sent as a Bearer token if set."),
+            ConfigField("shared_access", "Shared access", choices=("true", "false"), default="true",
+                        help_text="false: only users with their own API key can use AI."),
             ConfigField("max_tokens", "Max tokens", pattern=r"[1-9][0-9]*", default="8192"),
             ConfigField("supports_vision", "Model reads images", choices=("true", "false"), default="false"),
             ConfigField("cents_per_mtok", "Cost in cents per million tokens", pattern=_NUMBER, default="0"),
@@ -39,8 +39,12 @@ class LocalProvider(OpenAICompatibleProvider):
             ConfigField("timeout", "Timeout (seconds)", pattern=r"[1-9][0-9]*", default="600"),
         ]
 
+    def get_user_fields(self) -> list[ConfigField]:
+        return [ConfigField("api_key", "API key", secret=True, required=True,
+                            help_text="Your personal key for this AI server, if it issues one.")]
+
     def has_shared_access(self) -> bool:
-        return True
+        return self.config("shared_access") == "true"
 
     def supports_vision(self) -> bool:
         return self.config("supports_vision") == "true"

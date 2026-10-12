@@ -132,9 +132,6 @@ class AIProvider:
     def get_billing_url(self) -> str:
         return ""
 
-    def sends_data_off_server(self) -> bool:
-        return True
-
     # configuration
 
     def get_config_fields(self) -> list[ConfigField]:

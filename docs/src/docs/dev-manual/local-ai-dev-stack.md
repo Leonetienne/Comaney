@@ -114,6 +114,8 @@ curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer <your key>" h
 
 The key lives only in your `.env`; never commit it.
 
+**Per-user keys instead of the instance key.** For a gateway that gives each person their own key, leave `AI_PROVIDER_LOCAL_API_KEY` out and add `AI_PROVIDER_LOCAL_SHARED_ACCESS=false`; each account then enters its key under Profile, "AI", **API key**. The e2e tests give their accounts the key from `AI_API_KEY_TESTS_LOCAL` (the plain `AI_API_KEY_TESTS` is the Claude test key and is never sent to this provider).
+
 ### Back to Claude
 
 Comment out every `AI_PROVIDER=local` and `AI_PROVIDER_LOCAL_*` line, restore `AI_PROVIDER=claude`, recreate `web`.

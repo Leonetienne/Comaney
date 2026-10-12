@@ -39,7 +39,7 @@ class TestConfig:
         assert p.config("model") == DEFAULT_MODEL == "deepseek-flash"
         assert p.config("max_tokens") == "8192"
         assert p.chat_url() == BASE_URL + "/chat/completions"
-        assert p.get_vendor_name() == "DeepSeek" and p.sends_data_off_server()
+        assert p.get_vendor_name() == "DeepSeek"
 
     def test_shared_access_only_with_instance_key(self):
         assert not _provider().has_shared_access()

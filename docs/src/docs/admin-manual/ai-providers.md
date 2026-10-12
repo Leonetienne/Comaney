@@ -13,8 +13,8 @@ Each service has its own settings, all starting with `AI_PROVIDER_<NAME>_`.
 
 How users get access (details in each section):
 
-- **Shared access** (all services): the access you configure for the instance. Every user without their own key uses it, limited per user by [`AI_TRIAL_USAGE_LIMIT`](environment-variables.md#ai_trial_usage_limit). See [AI Trial Key](ai-trial-key.md). For `local` this is the only kind of access.
-- **Own keys** (`claude`, `deepseek`): users can enter their own key in their account settings; it wins over shared access and is not limited by Comaney. Without a shared key, only these users can use AI.
+- **Shared access** (all services): the access you configure for the instance. Every user without their own key uses it, limited per user by [`AI_TRIAL_USAGE_LIMIT`](environment-variables.md#ai_trial_usage_limit). See [AI Trial Key](ai-trial-key.md). For `local` it can be switched off.
+- **Own keys** (all services): users can enter their own key in their account settings; it wins over shared access and is not limited by Comaney. Without shared access, only these users can use AI.
 
 When you switch to another service, users' saved settings of the previous one are deleted automatically (see [`purge_inactive_ai_config`](console-commands.md#purge_inactive_ai_config)).
 
@@ -112,6 +112,7 @@ Any server that offers the OpenAI-compatible Chat Completions API (`POST <base U
 | `AI_PROVIDER_LOCAL_BASE_URL` | yes | | Base URL **including the version part**, e.g. `http://host.docker.internal:11434/v1` or `https://ai.example.org/v1`. Must start with `http://` or `https://`. |
 | `AI_PROVIDER_LOCAL_MODEL` | yes | | Model name exactly as the server knows it (e.g. `qwen3.8:27b`, or an alias such as `medium` on a gateway). |
 | `AI_PROVIDER_LOCAL_API_KEY` | no | *(empty)* | Key for servers that require one. See Authentication. |
+| `AI_PROVIDER_LOCAL_SHARED_ACCESS` | no | `true` | `false`: only users with their own API key can use AI. See Authentication. |
 | `AI_PROVIDER_LOCAL_SUPPORTS_VISION` | no | `false` | `true` turns on the receipt photo upload. Set it only if the model and server read images. |
 | `AI_PROVIDER_LOCAL_CENTS_PER_MTOK` | no | `0` | Cost in US cents per million tokens, input and output alike, counted against users' budgets. |
 | `AI_PROVIDER_LOCAL_MAX_TOKENS` | no | `8192` | Upper limit for the length of one answer (whole number). |
@@ -121,7 +122,9 @@ Any server that offers the OpenAI-compatible Chat Completions API (`POST <base U
 
 - **Without authentication:** leave `AI_PROVIDER_LOCAL_API_KEY` empty. Requests carry no `Authorization` header at all. Only for servers reachable from the Comaney container alone, never from the internet.
 - **With authentication:** set `AI_PROVIDER_LOCAL_API_KEY`; it is sent as `Authorization: Bearer <key>`. Use the key the server was started with (e.g. `llama-server --api-key`, `vllm serve --api-key`), the token you created in the server (LM Studio), or the key the endpoint's operator gave you. For a server without its own key check, put a reverse proxy with authentication in front of it (see Common servers).
-- **No own keys per user:** the account settings have no AI key field with this provider. Everyone uses the one configured key, limited per user by `AI_TRIAL_USAGE_LIMIT` (`0` for no limit).
+- **Shared access:** with `AI_PROVIDER_LOCAL_SHARED_ACCESS=true` (default), every user without a key of their own uses the server with `AI_PROVIDER_LOCAL_API_KEY` (or without a key if it is empty), limited per user by `AI_TRIAL_USAGE_LIMIT` (`0` for no limit). Comaney cannot tell whether a server needs a key, so this switch decides it.
+- **Own key per user:** the account settings show the field **API key** under "AI". A user's own key always wins over `AI_PROVIDER_LOCAL_API_KEY` and is not limited by Comaney. Useful for gateways that hand out a key per person, each with its own quota.
+- **Only own keys:** set `AI_PROVIDER_LOCAL_SHARED_ACCESS=false` for a gateway without a key for the whole instance. Otherwise users without their own key reach the server unauthenticated, the rejection counts as a broken shared key, shared access is switched off and you get an email.
 - A wrong or missing key shows users "Self-hosted model rejected the API key".
 
 ### Images
@@ -131,10 +134,6 @@ Whether receipt photos work depends on the model and the server (some need an ex
 ### Cost
 
 `AI_PROVIDER_LOCAL_CENTS_PER_MTOK` times the tokens the server reports (`prompt_tokens` + `completion_tokens`, which usually includes the model's thinking). A server that reports no token usage costs 0 (logged once). With the default `0`, usage is still recorded but costs nothing.
-
-### Data protection
-
-Comaney treats this provider as "data stays on your own server". That is true for a model on your own hardware; if `AI_PROVIDER_LOCAL_BASE_URL` points at someone else's endpoint, inform your users accordingly.
 
 ### Common servers
 
@@ -192,6 +191,16 @@ With authentication, an OpenAI-compatible endpoint run by someone else:
       AI_PROVIDER_LOCAL_MODEL: "medium"                   # the operator's model name or alias
       AI_PROVIDER_LOCAL_API_KEY: "sk-..."                 # from the operator
       AI_PROVIDER_LOCAL_CENTS_PER_MTOK: 50                # what the operator charges, if anything
+```
+
+A gateway that hands out a key per person, no key for the whole instance: every user enters their own key in their account settings.
+
+```yaml
+    environment:
+      AI_PROVIDER: local
+      AI_PROVIDER_LOCAL_BASE_URL: "https://ai.example.org/v1"
+      AI_PROVIDER_LOCAL_MODEL: "medium"
+      AI_PROVIDER_LOCAL_SHARED_ACCESS: "false"            # only users with their own key
 ```
 
 ---

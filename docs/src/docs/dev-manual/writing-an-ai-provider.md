@@ -80,7 +80,6 @@ Read an instance value with `self.config("key")` (default applied). Cross-field 
 | `get_display_name()` | required | Shown to users, e.g. "DeepSeek" |
 | `get_vendor_name()` | `""` | Company the data is sent to; empty for self-hosted |
 | `get_privacy_policy_url()` / `get_billing_url()` | `""` | Linked where relevant |
-| `sends_data_off_server()` | `True` | `False` for a model on the admin's own hardware |
 | `has_shared_access()` | `True` | The instance config alone can serve requests |
 | `user_config_complete(values)` | all required user fields set | The user's own settings can serve requests |
 | `supports_vision()` | `False` | Drives the receipt photo upload and the server-side image check |

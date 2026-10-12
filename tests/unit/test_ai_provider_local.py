@@ -1,6 +1,7 @@
 """
-Local (self-hosted) provider: required fields, defaults, optional auth, vision
-flag parsing, max-token capping, cost per MTok, identity.
+Local (self-hosted) provider: required fields, defaults, optional auth, per-user
+API key and its precedence, shared access switch, vision flag parsing,
+max-token capping, cost per MTok, identity.
 Run with: venv/bin/pytest tests/unit/test_ai_provider_local.py -v
 """
 import json
@@ -33,9 +34,9 @@ class Recorder:
         return HTTPResult(200, json.dumps({"choices": [{"message": {"content": "ok"}}], "usage": self.usage}))
 
 
-def _send(provider, rec, **request):
+def _send(provider, rec, user_config=None, **request):
     provider._fetch = rec
-    return provider.send(AIRequest("f", [], "u", **request), {})
+    return provider.send(AIRequest("f", [], "u", **request), user_config or {})
 
 
 class TestConfig:
@@ -60,12 +61,31 @@ class TestConfig:
         p = _load()
         assert p.get_display_name() == "Self-hosted model"
         assert p.get_vendor_name() == ""
-        assert not p.sends_data_off_server()
-        assert p.has_shared_access()
-        assert p.get_user_fields() == []
 
-    def test_no_user_fields_means_never_own_access(self):
-        assert not _load().user_config_complete({"api_key": "x"})
+    def test_shared_access_by_default(self):
+        assert _load().config("shared_access") == "true"
+        assert _load().has_shared_access()
+
+    @pytest.mark.parametrize("value, expected", [("true", True), ("FALSE", False), ("false", False)])
+    def test_shared_access_switch(self, value, expected):
+        assert _load(SHARED_ACCESS=value).has_shared_access() is expected
+
+    def test_invalid_shared_access(self):
+        with pytest.raises(ProviderConfigError, match="AI_PROVIDER_LOCAL_SHARED_ACCESS"):
+            _load(SHARED_ACCESS="no")
+
+
+class TestUserFields:
+
+    def test_api_key_user_field(self):
+        (f,) = _load().get_user_fields()
+        assert (f.key, f.label, f.secret, f.required) == ("api_key", "API key", True, True)
+
+    @pytest.mark.parametrize("values, expected", [
+        ({"api_key": "sk-user"}, True), ({"api_key": ""}, False), ({}, False),
+    ])
+    def test_own_settings_complete_only_with_key(self, values, expected):
+        assert _load().user_config_complete(values) is expected
 
     @pytest.mark.parametrize("value, expected", [("true", True), ("TRUE", True), ("True", True), ("false", False)])
     def test_vision_flag(self, value, expected):
@@ -97,6 +117,21 @@ class TestCall:
         rec = Recorder()
         _send(_load(API_KEY="sk-local"), rec)
         assert rec.calls[0][1]["Authorization"] == "Bearer sk-local"
+
+    def test_user_key_beats_instance_key(self):
+        rec = Recorder()
+        _send(_load(API_KEY="sk-instance"), rec, user_config={"api_key": "sk-user"})
+        assert rec.calls[0][1]["Authorization"] == "Bearer sk-user"
+
+    def test_user_key_without_instance_key(self):
+        rec = Recorder()
+        _send(_load(SHARED_ACCESS="false"), rec, user_config={"api_key": "sk-user"})
+        assert rec.calls[0][1]["Authorization"] == "Bearer sk-user"
+
+    def test_instance_key_on_shared_access(self):
+        rec = Recorder()
+        _send(_load(API_KEY="sk-instance"), rec, user_config={})
+        assert rec.calls[0][1]["Authorization"] == "Bearer sk-instance"
 
     def test_url_timeout_and_max_tokens(self):
         rec = Recorder()

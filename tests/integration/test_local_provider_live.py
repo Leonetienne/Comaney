@@ -55,8 +55,9 @@ class HeaderRecorder:
         return http_fetch(url, headers, payload, timeout)
 
 
-def _ask(provider, text, **request):
-    return provider.send(AIRequest("live_test", [SystemPart("Answer briefly.")], text, max_tokens=4096, **request), {})
+def _ask(provider, text, user_config=None, **request):
+    request = AIRequest("live_test", [SystemPart("Answer briefly.")], text, max_tokens=4096, **request)
+    return provider.send(request, user_config or {})
 
 
 @pytest.fixture(scope="module")
@@ -97,6 +98,30 @@ def test_missing_key_rejected():
 def test_wrong_key_rejected():
     with pytest.raises(AIAuthenticationError):
         _ask(_provider(api_key=API_KEY + "-wrong"), "pong?")
+
+
+@needs_key
+def test_per_user_key_without_instance_key(warm):
+    provider = _provider(api_key="", SHARED_ACCESS="false")
+    assert not provider.has_shared_access()
+    assert _ask(provider, "Reply with the single word: pong", user_config={"api_key": API_KEY}).text
+
+
+@needs_key
+def test_per_user_key_beats_wrong_instance_key(warm):
+    provider = _provider(api_key=API_KEY + "-wrong")
+    assert _ask(provider, "Reply with the single word: pong", user_config={"api_key": API_KEY}).text
+
+
+@needs_key
+def test_wrong_per_user_key_rejected_without_shared_side_effects(monkeypatch):
+    side_effects = TrialSideEffects()
+    side_effects.install(monkeypatch)
+    service = make_service(_provider(api_key="", SHARED_ACCESS="false"), is_trial=False)
+    service.user_config = {"api_key": API_KEY + "-wrong"}
+    with pytest.raises(AIAuthenticationError):
+        service.prompt_partnership_mapping("Reply with {}.", "Go.")
+    assert side_effects.invalid_key_mails == 0 and side_effects.disabled == []
 
 
 @pytest.mark.skipif(not VISION, reason="LOCAL_AI_TEST_VISION is not true")
