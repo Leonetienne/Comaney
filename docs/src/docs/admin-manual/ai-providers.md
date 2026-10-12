@@ -1,20 +1,20 @@
 # AI Providers
 
-Comaney's AI features (AI Express Creation, the dashboard card assistant, Catalog Partnership mapping and Unclassified Expenses) work with one AI service at a time. You pick it with [`AI_PROVIDER`](environment-variables.md#ai_provider):
+Comaney's AI features (AI Express Creation, the dashboard card assistant, Catalog Partnership mapping and Unclassified Expenses) need an AI service. You pick it with [`AI_PROVIDER`](environment-variables.md#ai_provider):
 
 | `AI_PROVIDER` | Service | Data leaves your server | Reads receipt photos |
 |---|---|---|---|
 | `claude` | Claude by Anthropic | yes | yes |
 | `deepseek` | DeepSeek | yes | depends on the model |
-| `local` | Your own model on any OpenAI-compatible server | no (it goes to your own server) | if you say so |
+| `local` | A model on any OpenAI-compatible server, your own or someone else's | not if the model runs on your own server | if you say so |
 | `none` or unset | AI switched off | | |
 
-Each service has its own settings, all starting with `AI_PROVIDER_<NAME>_`. A service only ever sees its own settings. Invalid settings take the site down with a configuration error page naming the variable to fix.
+Each service has its own settings, all starting with `AI_PROVIDER_<NAME>_`.
 
-How users get access, for every service except `local` (details in each section):
+How users get access (details in each section):
 
-- **Shared access:** you set the service's API key, and every user without their own key uses it, limited per user by [`AI_TRIAL_USAGE_LIMIT`](environment-variables.md#ai_trial_usage_limit). See [AI Trial Key](ai-trial-key.md).
-- **Own keys:** without a shared key, only users who enter their own key in their account settings can use AI.
+- **Shared access** (all services): the access you configure for the instance. Every user without their own key uses it, limited per user by [`AI_TRIAL_USAGE_LIMIT`](environment-variables.md#ai_trial_usage_limit). See [AI Trial Key](ai-trial-key.md). For `local` this is the only kind of access.
+- **Own keys** (`claude`, `deepseek`): users can enter their own key in their account settings; it wins over shared access and is not limited by Comaney. Without a shared key, only these users can use AI.
 
 When you switch to another service, users' saved settings of the previous one are deleted automatically (see [`purge_inactive_ai_config`](console-commands.md#purge_inactive_ai_config)).
 
@@ -210,4 +210,4 @@ services:
       AI_PROVIDER_OPENROUTER_API_KEY: "..."
 ```
 
-The provider's own documentation lists its `AI_PROVIDER_<NAME>_*` settings. A file that cannot be loaded, or that rejects its settings, takes the site down with a configuration error page. Writing one: [Writing an AI provider](../dev-manual/writing-an-ai-provider.md).
+The provider's own documentation lists its `AI_PROVIDER_<NAME>_*` settings. A provider file runs as part of Comaney with access to everything Comaney can reach, including all environment variables and the database connection; mount only files you trust. A file that cannot be loaded, or that rejects its settings, takes the site down with a configuration error page. Writing one: [Writing an AI provider](../dev-manual/writing-an-ai-provider.md).

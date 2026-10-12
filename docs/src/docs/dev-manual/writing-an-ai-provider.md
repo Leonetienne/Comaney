@@ -7,6 +7,7 @@ Rules:
 - The file must not import Django or touch the database, settings, emails or the trial flag; `ai_providers/` is imported from `comaney/settings.py`.
 - `get_name()` must equal the file name (`ai_providers/openrouter.py` -> `"openrouter"`): lower-case letters, digits and underscores.
 - A provider raises only the typed errors from `ai_providers/errors.py`. Trial side effects (disabling shared access, admin emails) belong to `AIService`, not to the provider.
+- Read options only through `self.config(key)` and the `user_config` passed to `send()`, never from `os.environ`. The `AI_PROVIDER_<NAME>_` prefix scopes settings by convention; Comaney does not sandbox provider code.
 - Never put a secret value into an error message or log line.
 
 ## Minimal example
