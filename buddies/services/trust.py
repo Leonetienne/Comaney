@@ -44,6 +44,16 @@ class BuddyTrustService:
         return bool(link and link.auto_accepts(truster))
 
     @staticmethod
+    def trusters_of(actor) -> set[int]:
+        """Pks of every direct buddy who auto-accepts entries recorded by `actor`."""
+        as_a = BuddyLink.objects.filter(user_a=actor, user_b_auto_accepts_from_a=True)
+        as_b = BuddyLink.objects.filter(user_b=actor, user_a_auto_accepts_from_b=True)
+        return (
+            set(as_a.values_list("user_b_id", flat=True))
+            | set(as_b.values_list("user_a_id", flat=True))
+        )
+
+    @staticmethod
     def record_action(expense, actor, notify: bool = True):
         """
         Call after `actor` created an expense/settlement or changed it in a way

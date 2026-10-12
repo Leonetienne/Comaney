@@ -161,7 +161,9 @@ class BuddyQueryService:
         Serialize active project membership for JSON injection into the expense form.
         Returns a list of project dicts with member info. Excludes archived projects.
         """
+        from .trust import BuddyTrustService
         projects = BuddyQueryService.get_active_projects_for_feuser(feuser)
+        trusters = BuddyTrustService.trusters_of(feuser)
         result = []
         for project in projects:
             members = []
@@ -177,6 +179,7 @@ class BuddyQueryService:
                         "id": fu.pk,
                         "name": name,
                         "is_me": fu.pk == feuser.pk,
+                        "autoAccepts": fu.pk in trusters,
                         "ppicUrl": fu.ppic_url if fu.profile_picture else "",
                         "initials": fu.initials,
                         "avatarColor": _avatar_color(fu.initials),

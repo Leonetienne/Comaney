@@ -55,11 +55,13 @@ def _buddy_context(feuser) -> dict:
     Querying it twice would risk two different row orderings breaking the
     idx-based correspondence between the AI's catalog and the widget's arrays.
     """
-    from buddies.services import BuddyQueryService
+    from buddies.services import BuddyQueryService, BuddyTrustService
     actual = list(BuddyQueryService.get_actual_buddies(feuser))
+    trusters = BuddyTrustService.trusters_of(feuser)
     dummy = list(BuddyQueryService.get_dummy_buddies(feuser))
     single_buddies = [
         *[{"type": "feuser", "id": b.pk, "name": f"{b.first_name} {b.last_name}".strip() or b.email, "email": b.email,
+           "autoAccepts": b.pk in trusters,
            "ppicUrl": b.ppic_url if b.profile_picture else "", "initials": b.initials, "avatarColor": _avatar_color(b.initials)} for b in actual],
         *[{"type": "dummy", "id": d.uid, "name": d.display_name + " (offline member)",
            "ppicUrl": d.ppic_url if d.profile_picture else "", "initials": d.initials, "avatarColor": _avatar_color(d.initials)} for d in dummy],

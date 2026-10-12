@@ -22,7 +22,7 @@ Any expense can be turned into a shared expense. You decide who is involved, how
     If you select another person as the one who paid, the expense will not appear in your expense list, because the money did not come out of your own pocket.
     
     - If the other person is an offline buddy or offline project member, the expense will appear on the **Buddy Expenses** page instead.
-    - If the other person is a real user, the expense will be created for them, in their account. They will have to approve it. The expense will also appear on the **Buddy Expenses** page. 
+    - If the other person is a real user, the expense will be created for them, in their account. They will have to approve it, unless they have chosen to accept your entries automatically; the form tells you which applies before you save. The expense will also appear on the **Buddy Expenses** page. 
 
 ## Where shared expenses appear
 

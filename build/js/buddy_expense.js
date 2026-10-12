@@ -114,7 +114,7 @@
             opts.push({value: 'me:' + ME_PK, text: 'Me (' + ME_NAME + ')'});
             singleBuddies.forEach(function (b) {
                 if (b.type === 'feuser') {
-                    opts.push({value: 'feuser:' + b.id, text: b.name + (b.email ? ' (' + b.email + ')' : '')});
+                    opts.push({value: 'feuser:' + b.id, text: b.name + (b.email ? ' (' + b.email + ')' : ''), autoAccepts: b.autoAccepts});
                 } else {
                     opts.push({value: 'dummy:' + b.id, text: b.name});
                 }
@@ -127,7 +127,7 @@
                     var prefix = m.is_me ? 'me' : m.type;
                     var vid    = m.is_me ? ME_PK : m.id;
                     var label  = m.is_me ? 'Me (' + m.name + ')' : m.name;
-                    var entry  = {value: prefix + ':' + vid, text: label};
+                    var entry  = {value: prefix + ':' + vid, text: label, autoAccepts: m.autoAccepts};
                     if (m.is_me) { meEntry = entry; } else { others.push(entry); }
                 });
                 if (meEntry) opts.push(meEntry);
@@ -138,6 +138,7 @@
             var el = document.createElement('option');
             el.value = o.value;
             el.textContent = o.text;
+            if (o.autoAccepts) el.dataset.autoAccepts = '1';
             payerSel.appendChild(el);
         });
         if (Array.from(payerSel.options).some(function (o) { return o.value === prevVal; })) {
@@ -225,6 +226,15 @@
 
     // ── Payer notice ───────────────────────────────────────────────────────
 
+    // A payer who trusts the current feuser (buddy auto-accept) approves the
+    // expense the moment it is saved, so don't claim it still needs approval.
+    function payerApprovalText(name) {
+        var opt = payerSel.options[payerSel.selectedIndex];
+        return (opt && opt.dataset.autoAccepts)
+            ? name + ' accepts your entries automatically, so no approval is needed.'
+            : 'It will require ' + name + '\'s approval.';
+    }
+
     function updatePayerNotice() {
         if (!payerNotice) return;
         var payerType = payerSel.value.split(':')[0];
@@ -236,7 +246,7 @@
         } else if (payerType === 'feuser') {
             var name2 = esc(payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim());
             payerNotice.className = 'warning-box';
-            payerNotice.innerHTML = '<p><strong>Heads up:</strong> This expense will be recorded on <strong>' + name2 + '\'s</strong> account and will require their approval. Once saved, you won\'t be able to edit it from your account.</p>';
+            payerNotice.innerHTML = '<p><strong>Heads up:</strong> This expense will be recorded on <strong>' + name2 + '\'s</strong> account. ' + payerApprovalText('<strong>' + name2 + '</strong>') + ' Once saved, you won\'t be able to edit it from your account.</p>';
             payerNotice.style.display = 'block';
         } else {
             payerNotice.style.display = 'none';
@@ -261,7 +271,7 @@
                 e.preventDefault();
                 var name = payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim();
                 window.confirmDialog(
-                    'This expense will be recorded on ' + name + '\'s account and requires their approval. You won\'t be able to edit it from your account afterwards.',
+                    'This expense will be recorded on ' + name + '\'s account. ' + payerApprovalText(name) + ' You won\'t be able to edit it from your account afterwards.',
                     'Save'
                 ).then(function () {
                     _skipPayerConfirm = true;

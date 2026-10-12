@@ -502,7 +502,7 @@ function initCardBuddy(cardEl) {
             opts.push({v:'me:'+ME_PK, t:'Me ('+ME_NAME+')'});
             singles.forEach(function(b) {
                 opts.push(b.type === 'feuser'
-                    ? {v:'feuser:'+b.id, t:b.name+(b.email?' ('+b.email+')':'')}
+                    ? {v:'feuser:'+b.id, t:b.name+(b.email?' ('+b.email+')':''), auto:b.autoAccepts}
                     : {v:'dummy:'+b.id,  t:b.name});
             });
         } else {
@@ -511,7 +511,7 @@ function initCardBuddy(cardEl) {
                 // Current user first, then other members
                 var meEntry = null, others = [];
                 grp.members.forEach(function(m) {
-                    var entry = {v:(m.is_me?'me':m.type)+':'+(m.is_me?ME_PK:m.id), t:m.is_me?'Me ('+m.name+')':m.name};
+                    var entry = {v:(m.is_me?'me':m.type)+':'+(m.is_me?ME_PK:m.id), t:m.is_me?'Me ('+m.name+')':m.name, auto:m.autoAccepts};
                     if (m.is_me) meEntry = entry; else others.push(entry);
                 });
                 if (meEntry) opts.push(meEntry);
@@ -519,7 +519,9 @@ function initCardBuddy(cardEl) {
             }
         }
         opts.forEach(function(o) {
-            var el = document.createElement('option'); el.value = o.v; el.textContent = o.t; payerSel.appendChild(el);
+            var el = document.createElement('option'); el.value = o.v; el.textContent = o.t;
+            if (o.auto) el.dataset.autoAccepts = '1';
+            payerSel.appendChild(el);
         });
         // On fresh activation keep prev selection only if it still exists; otherwise default to first (= me)
         if (prev && opts.some(function(o) { return o.v === prev; })) payerSel.value = prev;
@@ -537,7 +539,11 @@ function initCardBuddy(cardEl) {
         } else if (pt === 'feuser') {
             var n2 = esc(payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim());
             payerNotice.className = 'warning-box box--spaced';
-            payerNotice.innerHTML = '<p><strong>Heads up:</strong> This expense will be recorded on <strong>'+n2+'\'s</strong> account and will require their approval.</p>';
+            // A payer who trusts the current feuser (buddy auto-accept) approves it on save.
+            var approval = payerSel.options[payerSel.selectedIndex].dataset.autoAccepts
+                ? '<strong>'+n2+'</strong> accepts your entries automatically, so no approval is needed.'
+                : 'It will require <strong>'+n2+'\'s</strong> approval.';
+            payerNotice.innerHTML = '<p><strong>Heads up:</strong> This expense will be recorded on <strong>'+n2+'\'s</strong> account. '+approval+'</p>';
             payerNotice.style.display = 'block';
         } else { payerNotice.style.display = 'none'; }
     }

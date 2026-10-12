@@ -275,6 +275,102 @@ class TestDirectExpenseAutoAccepted:
 
 
 # ---------------------------------------------------------------------------
+# Expense form wording when the upfront payer trusts the current feuser
+# ---------------------------------------------------------------------------
+
+def _pick_payer(driver, pk: int) -> None:
+    driver.execute_script(
+        f"var sel = document.getElementById('buddy-upfront-select');"
+        f"sel.value = 'feuser:{pk}';"
+        f"sel.dispatchEvent(new Event('change', {{bubbles: true}}));"
+    )
+    time.sleep(0.4)
+
+
+def _payer_notice(driver) -> str:
+    return driver.find_element(By.ID, "buddy-payer-notice").text
+
+
+def _submit_dialog_text(driver) -> str:
+    """Click Finish, read the payer confirm dialog, then cancel it."""
+    driver.find_element(By.CSS_SELECTOR,
+        "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)").click()
+    time.sleep(0.5)
+    msg = driver.find_element(By.ID, "cdialog-msg").text
+    driver.find_element(By.ID, "cdialog-cancel").click()
+    time.sleep(0.3)
+    return msg
+
+
+class TestPayerApprovalWording:
+    """
+    B trusts A, C does not. When A picks B as upfront payer, the form must not
+    claim B still has to approve it (B accepts automatically); for C it must.
+    """
+
+    TRUSTED = "accepts your entries automatically"
+    UNTRUSTED = "require"
+
+    @pytest.fixture(scope="class")
+    def ctx(self, driver, w):
+        a = setup_user(driver, w, first_name="Wording", last_name="Actor")
+        b = setup_user(None, None, first_name="Wording", last_name="Truster")
+        c = setup_user(None, None, first_name="Wording", last_name="Skeptic")
+        _create_buddy_link(a["email"], b["email"])
+        _create_buddy_link(a["email"], c["email"])
+        _set_trust(b["email"], a["email"])
+        group_id = int(_create_group(a["email"], "Wording Project"))
+        _add_group_member(group_id, b["email"])
+        _add_group_member(group_id, c["email"])
+        yield {"a": a, "b_pk": _get_pk(b["email"]), "c_pk": _get_pk(c["email"]),
+               "group_id": group_id}
+        for u in (a, b, c):
+            cleanup_user(u["email"])
+
+    def _open_form(self, driver, ctx, tab_id):
+        _login_as(driver, ctx["a"])
+        driver.get(_url("/budget/expenses/new/"))
+        time.sleep(1)
+        driver.find_element(By.ID, "id_title").send_keys("Wording Expense")
+        driver.find_element(By.ID, "id_value").send_keys("20.00")
+        driver.execute_script(f"document.getElementById('id_date_due').value = '{server_today()}';")
+        driver.find_element(By.ID, tab_id).click()
+        time.sleep(0.5)
+
+    def test_direct_trusting_payer(self, driver, w, ctx):
+        self._open_form(driver, ctx, "assign-buddy")
+        _pick_payer(driver, ctx["b_pk"])
+        notice = _payer_notice(driver)
+        assert self.TRUSTED in notice
+        assert self.UNTRUSTED not in notice
+        msg = _submit_dialog_text(driver)
+        assert self.TRUSTED in msg
+        assert self.UNTRUSTED not in msg
+
+    def test_direct_untrusting_payer(self, driver, w, ctx):
+        self._open_form(driver, ctx, "assign-buddy")
+        _pick_payer(driver, ctx["c_pk"])
+        notice = _payer_notice(driver)
+        assert self.UNTRUSTED in notice
+        assert self.TRUSTED not in notice
+        msg = _submit_dialog_text(driver)
+        assert self.UNTRUSTED in msg
+        assert self.TRUSTED not in msg
+
+    def test_project_trusting_payer(self, driver, w, ctx):
+        self._open_form(driver, ctx, "assign-project")
+        _pick_payer(driver, ctx["b_pk"])
+        assert self.TRUSTED in _payer_notice(driver)
+        assert self.TRUSTED in _submit_dialog_text(driver)
+
+    def test_project_untrusting_payer(self, driver, w, ctx):
+        self._open_form(driver, ctx, "assign-project")
+        _pick_payer(driver, ctx["c_pk"])
+        assert self.UNTRUSTED in _payer_notice(driver)
+        assert self.UNTRUSTED in _submit_dialog_text(driver)
+
+
+# ---------------------------------------------------------------------------
 # Trust is directional
 # ---------------------------------------------------------------------------
 
