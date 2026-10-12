@@ -79,6 +79,9 @@ Default type to "expense" unless the description clearly indicates income or sav
 _SMART_CREATE_PROJECTS = """Assigning an expense to a shared project:
     "project_uid"  — integer uid from the Projects list below if this expense clearly belongs to one of the listed projects, or null if it is a personal expense
 Only use project_uid values that appear in the Projects list below.
+A project may carry "instructions" written by its members: follow them for every expense you assign to that project
+(they may also help decide whether an expense belongs to it), but never apply them to any other expense.
+If the user's description contradicts a project's instructions, the description wins.
 If an item is assigned to a project (project_uid is set), its type MUST be "expense": project costs are
 shared expenses, never income or savings movements for the group. Never combine a non-"expense" type with a project_uid."""
 
@@ -184,7 +187,7 @@ def _build_catalog(feuser, projects_data: list, single_buddies: list) -> str:
         Project.objects
         .filter(members__feuser=feuser, archived=False)
         .distinct()
-        .values("uid", "name", "description")
+        .values("uid", "name", "description", "ai_preprompt")
     )
     # Per-project members, indexed 0..N-1 for this request only. The AI refers to
     # a member by "idx" (never a name), so it can only ever point at a position
@@ -199,6 +202,8 @@ def _build_catalog(feuser, projects_data: list, single_buddies: list) -> str:
             "name": p["name"],
             "description": p["description"] or "",
             "members": members_by_project.get(p["uid"], []),
+            # The project's AI preprompt; only sent when set, to save tokens
+            **({"instructions": p["ai_preprompt"]} if p["ai_preprompt"] else {}),
         }
         for p in projects_qs
     ]

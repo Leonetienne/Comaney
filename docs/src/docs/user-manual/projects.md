@@ -77,7 +77,7 @@ When you choose **Any member**, other members see a **Cosmetics** area on their 
 
 ## AI preprompt
 
-Instructions that AI Express should always follow for this project, e.g. "Put Robert and Mallory always at 0%, they're invited." Set it on the **Settings** tab; it is added to the text whenever you start AI Express from the project's **+** button.
+Instructions that [AI Express](ai-express-creation.md) follows for every expense it puts into this project, e.g. "Put Robert and Mallory always at 0%, they're invited." Set it on the **Settings** tab.
 
 ## Inviting members
 

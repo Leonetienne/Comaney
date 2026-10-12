@@ -4,7 +4,7 @@ Express creation lets you log expenses by describing them in plain language or t
 
 ## How to use it
 
-1. Click **Add Expense** in the navigation, then choose **Create with AI**. Or, from the **Expenses** page or a project page, click the **+** button and choose **AI Express**; from a project page this also pre-fills the description with a prompt to create all of that project's expenses, plus the project's [AI preprompt](projects.md#ai-preprompt), if set.
+1. Click **Add Expense** in the navigation, then choose **Create with AI**. Or, from the **Expenses** page or a project page, click the **+** button and choose **AI Express**; from a project page this also pre-fills the description with a prompt to create all of that project's expenses, which you can edit before submitting.
 2. Either:
     - **Take a photo or upload an image** of a receipt, invoice, or any document with prices.
     - **Type a description** of what you bought. For example: "Bought groceries at REWE for 37.50 and a coffee for 4.20".
@@ -69,7 +69,7 @@ You can always adjust who paid, who shares, and by how much before saving.
 
 Photos and descriptions you submit are sent to Anthropic's AI service for processing. Do not upload documents containing sensitive personal data such as identity card numbers or passport scans.
 
-The data transmitted to Anthropic includes only your list of tags, categories, projects (names, descriptions, and the names of their members), the names of your buddies, your custom instruction, your expense description and/or receipt picture.
+The data transmitted to Anthropic includes only your list of tags, categories, projects (names, descriptions, [AI preprompts](projects.md#ai-preprompt), and the names of their members), the names of your buddies, your custom instruction, your expense description and/or receipt picture.
 Comaney will never transmit your existing transactions.
 
 ## AI Licensing

@@ -4,6 +4,7 @@ from .project import (  # noqa: F401
     PERMISSION_LAXITY_ADMIN_ONLY,
     PERMISSION_LAXITY_MEMBERS,
     PERMISSION_LAXITY_CHOICES,
+    AI_PREPROMPT_MAX_LENGTH,
 )
 from .dummy_user import DummyUser  # noqa: F401
 from .project_member import ProjectMember, BuddyGroupMember  # noqa: F401

@@ -14,7 +14,7 @@ and, when permission_laxity allows it, to any member. Requires `project` in cont
         <textarea id="project-rename-desc" name="description" maxlength="500" rows="3">{{ project.description }}</textarea>
         {% if ai_smart_create_available %}
         <label for="project-ai-preprompt">AI preprompt <span class="text-muted font-xs">(optional)</span></label>
-        <p class="text-muted font-xs m-0">Added to AI Express whenever someone starts it from this project with the + button.</p>
+        <p class="text-muted font-xs m-0">AI Express follows this for every expense it assigns to this project.</p>
         <textarea id="project-ai-preprompt" name="ai_preprompt" maxlength="500" rows="3" placeholder="e.g. Put Robert and Mallory always at 0%, they're invited.">{{ project.ai_preprompt }}</textarea>
         {% endif %}
         <button type="submit" id="btn-rename-project" class="btn mt-sm">Save</button>

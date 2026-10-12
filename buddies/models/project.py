@@ -15,6 +15,9 @@ PERMISSION_LAXITY_CHOICES = [
 ]
 
 
+AI_PREPROMPT_MAX_LENGTH = 500
+
+
 class Project(models.Model):
     uid = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=128)
@@ -27,8 +30,8 @@ class Project(models.Model):
         default=PERMISSION_LAXITY_ADMIN_ONLY,
         choices=PERMISSION_LAXITY_CHOICES,
     )
-    # Instructions prepended to AI Express when started from this project,
-    # e.g. "Put Robert and Mallory always at 0%, they're invited".
+    # Instructions AI Express follows for every expense it assigns to this
+    # project, e.g. "Put Robert and Mallory always at 0%, they're invited".
     ai_preprompt = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     archived = models.BooleanField(default=False)
@@ -44,12 +47,6 @@ class Project(models.Model):
     def description_inline(self) -> str:
         import re
         return re.sub(r'\s+', ' ', self.description).strip()
-
-    @property
-    def ai_express_prefill(self) -> str:
-        """Text AI Express opens with when started from this project."""
-        from budget.express_prefill import project_prefill
-        return project_prefill(self.name, self.ai_preprompt)
 
     def update_lastmod(self):
         self.last_mod = timezone.now()

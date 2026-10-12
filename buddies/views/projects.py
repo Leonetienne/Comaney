@@ -16,13 +16,12 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
-from budget.express_prefill import AI_PREPROMPT_MAX_LENGTH
 from budget.models import Expense
 from budget.query_parser import apply_query, has_date_filter, visible_tag_titles
 from feusers.models import FeUser
 from ..debt_utils import compute_net_member_spending
 from ..models import Project, ProjectInvite, ProjectMember, BuddySpending, DummyUser
-from ..models import PERMISSION_LAXITY_CHOICES
+from ..models import AI_PREPROMPT_MAX_LENGTH, PERMISSION_LAXITY_CHOICES
 from ..services import BuddyArchiveService, ProjectService, ProjectExportService, BuddyQueryService, _display_name
 
 

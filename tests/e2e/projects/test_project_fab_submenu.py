@@ -1,9 +1,10 @@
 """Project detail floating action button opens a submenu of small circular
 bubbles ("Manual" / "AI"); "Manual" preserves the existing ?project=&back=
 flow, and "AI" deep-links to Express Creation with the smart-input textarea
-pre-filled with a prompt naming the project, followed by the project's AI
-preprompt (if set) and a trailing space, with the cursor placed after it so the
-user can type right away.
+pre-filled with a prompt naming the project and a trailing space, with the
+cursor placed after it so the user can type right away. The project's AI
+preprompt is deliberately NOT part of that text: it reaches the AI through the
+catalog instead (see test_express_project_preprompt.py).
 
 The bubbles are hidden via opacity/pointer-events (not display:none) so the
 open/close animation can transition, and looked up by their stable `title`
@@ -115,18 +116,13 @@ class TestProjectFabSubmenu:
         time.sleep(1)
         assert driver.find_element(By.ID, "project-ai-preprompt").get_attribute("value") == PREPROMPT
 
-    def test_preprompt_appended_to_ai_express_prefill(self, driver, w, ctx):
+    def test_preprompt_not_in_ai_express_prefill(self, driver, w, ctx):
         self._open(driver, w, ctx)
-        if self._item_by_title(driver, "AI Express") is None:
+        ai_link = self._item_by_title(driver, "AI Express")
+        if ai_link is None:
             pytest.skip("AI Express not available for this test user (no trial key configured)")
-        driver.find_element(By.CSS_SELECTOR, ".fab-toggle").click()
-        time.sleep(0.3)
-        self._item_by_title(driver, "AI Express").click()
-        time.sleep(1)
-        textarea = driver.find_element(By.CSS_SELECTOR, ".smart-input")
-        assert textarea.get_attribute("value") == (
-            f"Create all expenses for project 'Fab Menu Project'. {PREPROMPT} "
-        )
+        prefill = urllib.parse.unquote(ai_link.get_attribute("href").split("prefill=", 1)[1])
+        assert prefill == "Create all expenses for project 'Fab Menu Project'"
 
     def test_preprompt_hidden_when_ai_ui_disabled(self, driver, w, ctx):
         _set_disable_ai_ui(ctx["email"], True)
