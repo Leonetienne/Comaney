@@ -607,6 +607,8 @@ def api_key_permissions(request):
     user = _get_session_feuser(request)
     if not user:
         return redirect("login")
+    if user.is_demo:
+        return redirect("profile")
     user.api_key_permissions = permissions.from_form(request.POST, CONCERNS)
     user.last_mod = timezone.now()
     user.save(update_fields=["api_key_permissions", "last_mod"])

@@ -173,6 +173,7 @@ An API key lets other apps or scripts access your Comaney account without loggin
 
 - If you have no key yet, click **Generate API key** to create one.
 - Once generated, the key is shown in a text box. Click the copy icon to copy it to your clipboard.
+- **Restrict** chooses, per area, whether apps using the key may read or also write. See [Restricting the API key](api-access.md#restricting-the-api-key).
 - **Revoke** deletes the key entirely and disables API access.
 
 ---

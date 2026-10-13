@@ -121,7 +121,7 @@ SCSS and JS source files in `build/` are compiled to `static/dist/` by the build
 
 Exactly one factor (of any type) is `is_primary=True` per user at a time, enforced by `second_factor_service.set_primary()`. A single global `FeUser.twofa_recovery_hash` (not per-method) protects the whole account: it is generated once on a user's first-ever factor, and consuming it via `second_factor_service.consume_recovery_code()` deletes every factor of every method, since a user who needed the recovery code has just proven they can reach none of them.
 
-**Bearer token auth (REST API):** The `Authorization: Bearer <key>` header is read on every API request. The key is looked up against `FeUser.api_key` in the database.
+**Bearer token auth (REST API):** The `Authorization: Bearer <key>` header is read on every API request. The key is looked up against `FeUser.api_key` in the database, and the operation runs only if `FeUser.api_key_permissions` allows its concern and access (403 otherwise). Agent keys use the same permission model (`api/permissions.py::KeyAccess`); browser session callers are not limited.
 
 **Agent key auth (MCP):** `/mcp` accepts only agent keys, never the API key, and the REST API never accepts agent keys. The key is hashed and looked up in `AgentKey`; demo users have none. A browser `Origin` header must name the site itself.
 
