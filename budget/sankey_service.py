@@ -1,7 +1,7 @@
 """
 Sankey Studio: graph model, routing/partition algorithm, and generation.
 
-See sankey-studio-spec.md for the full design rationale.
+Requirements: specs/requirements/sankey.md.
 
 Node keys: "tag:<pk>" / "category:<pk>" / "project:<pk>" for real catalog
 entities (all three types thrown into one pool), "connector:<token>" for an

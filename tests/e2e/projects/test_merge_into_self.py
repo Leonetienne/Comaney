@@ -2,7 +2,7 @@
 Project offline-member self-merge: an admin merges a project's offline
 member directly into themselves. Immediate, like dummy-into-dummy merge -
 there's no second party to ask. Reuses the same transfer primitives as
-accepting a normal merge-into-member request (merge-spec.md: project
+accepting a normal merge-into-member request (specs/requirements/buddies.md: project
 self-merge behaves like any other merge), including the owner-exclusion
 guard that drops (rather than wrongly creates) a participation row on an
 expense the admin already owns.

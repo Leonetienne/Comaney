@@ -318,7 +318,7 @@ class ProjectService:
         the merge ("self-merge"). Immediate, like
         merge_group_dummy_into_dummy_now - there's no second party to ask.
         Otherwise reuses the exact same transfer primitives as accepting a
-        normal merge-into-member request: per merge-spec.md, project
+        normal merge-into-member request: per specs/requirements/buddies.md, project
         self-merge behaves like any other merge. Returns 'already_pending'
         if dummy has an outstanding merge request, otherwise 'ok'.
         """
