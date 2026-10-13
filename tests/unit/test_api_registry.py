@@ -1,11 +1,11 @@
 """
-api/registry.py argument validation and mcp_server/permissions.py, both Django-free.
+api/registry.py argument validation and api/permissions.py, both Django-free.
 Run with: venv/bin/pytest tests/unit/test_api_registry.py -v
 """
 import pytest
 
 from api.registry import CONCERNS, READ, WRITE, Operation, OpError, validate_args
-from mcp_server import permissions
+from api import permissions
 
 
 def _op(params, required=()):

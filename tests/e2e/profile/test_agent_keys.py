@@ -30,7 +30,7 @@ def _card(driver):
 def _stored_permissions(email, label):
     return _shell(
         "import json; from mcp_server.models import AgentKey; "
-        f"print(json.dumps(AgentKey.objects.get(feuser__email='{email}', label='{label}').effective_permissions(), sort_keys=True))"
+        f"print(json.dumps(AgentKey.objects.get(feuser__email='{email}', label='{label}').access.perms, sort_keys=True))"
     )
 
 
@@ -60,9 +60,9 @@ class TestAgentKeys:
     def test_restrict_with_write_including_read(self, driver, w, ctx):
         card = _card(driver)
         row = card.find_element(By.CSS_SELECTOR, ".agent-key-row")
-        row.find_element(By.CSS_SELECTOR, ".agent-key-restrict-toggle").click()
+        row.find_element(By.CSS_SELECTOR, ".key-restrict-toggle").click()
         time.sleep(0.3)
-        for box in row.find_elements(By.CSS_SELECTOR, ".agent-key-permissions input[type=checkbox]"):
+        for box in row.find_elements(By.CSS_SELECTOR, ".key-permissions input[type=checkbox]"):
             if box.is_selected():
                 driver.execute_script("arguments[0].click();", box)
         driver.execute_script("arguments[0].click();", row.find_element(By.NAME, "write_projects"))
@@ -72,7 +72,6 @@ class TestAgentKeys:
         stored = _stored_permissions(ctx["email"], "Laptop")
         assert '"projects": {"read": true, "write": true}' in stored
         assert '"expenses": {"read": false, "write": false}' in stored
-        assert "Restricted" in _card(driver).find_element(By.CSS_SELECTOR, ".agent-key-row").text
 
     def test_revoke(self, driver, w, ctx):
         card = _card(driver)

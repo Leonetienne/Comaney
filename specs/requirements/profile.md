@@ -162,9 +162,9 @@ Covers:
 ## API key
 
 ### API key generation
-`req~profile.api-key.generate~1`
+`req~profile.api-key.generate~2`
 
-When a feuser generates or regenerates an API key, the system shall create a new random key, replacing any previous key, and show it with a copy button.
+When a feuser without an API key generates one, the system shall create a new random key and show it with a copy button.
 
 Covers:
 - `feat~profile~1`

@@ -31,6 +31,7 @@ urlpatterns = [
     path("twofa/factor/<str:method_key>/<int:factor_id>/test/",   views.factor_test,        name="factor_test"),
     path("twofa/recovery/regenerate/",                     views.recovery_regenerate,  name="recovery_regenerate"),
     path("api-key/generate/", views.api_key_generate, name="api_key_generate"),
+    path("api-key/permissions/", views.api_key_permissions, name="api_key_permissions"),
     path("api-key/revoke/",   views.api_key_revoke,   name="api_key_revoke"),
     path("contact/",          views.contact,           name="contact"),
     path("credits/",          views.credits_page,      name="credits"),

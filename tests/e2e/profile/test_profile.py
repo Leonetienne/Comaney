@@ -32,6 +32,8 @@ class TestProfile:
 
     def test_generate_api_key(self, driver, w, ctx):
         driver.get(_url("/profile/"))
+        click(w, By.XPATH, "//form[contains(@action,'api-key/revoke')]//button")
+        wait_url(w, "/profile/")
         click(w, By.XPATH, "//form[contains(@action,'api-key/generate')]//button")
         wait_url(w, "/profile/")
         key_el = w.until(EC.presence_of_element_located((By.ID, "api-key-display")))

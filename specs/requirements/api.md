@@ -1,6 +1,6 @@
 # REST API
 
-Sources: `api/registry.py`, `api/operations/`, `api/rest.py`, `api/Comaney_API.postman_collection.json`,
+Sources: `api/registry.py`, `api/operations/`, `api/rest.py`, `api/permissions.py`, `api/Comaney_API.postman_collection.json`,
 docs `user-manual/api-access.md`.
 
 ## General
@@ -23,10 +23,38 @@ Covers:
 
 Tags: Security
 
-### Session callers and CSRF
-`req~api.csrf~1`
+### API key permissions
+`req~api.key-permissions~1`
 
-If an API request without a Bearer header authenticates through the browser session and uses an unsafe method, then the system shall require a valid CSRF token and answer 403 otherwise.
+The system shall limit requests authenticated by the API key to the key's permissions, using the concerns and the write-includes-read rule of agent keys (see [mcp.md](mcp.md)), and answer a request the key does not allow with 403 naming the missing concern and permission, performing no part of it.
+
+Covers:
+- `feat~api~1`
+
+Tags: Security
+
+### API key default permissions
+`req~api.key-permissions.default~1`
+
+The system shall give the API key read and write on every concern by default and keep its permissions when the key is revoked and a new one generated.
+
+Covers:
+- `feat~api~1`
+
+### API key restrict panel
+`req~api.key-permissions.panel~1`
+
+When a feuser clicks "Restrict" on the API key, the system shall show the agent key Restrict panel for it.
+
+Covers:
+- `feat~api~1`
+
+Tags: UI
+
+### Session callers and CSRF
+`req~api.csrf~2`
+
+If an API request without a Bearer header authenticates through the browser session and uses an unsafe method, then the system shall require a valid CSRF token and answer 403 otherwise. Session callers are not limited by the API key's permissions.
 
 Covers:
 - `feat~api~1`

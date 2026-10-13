@@ -5,10 +5,10 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from api import permissions
 from api.registry import CONCERNS
 from budget.decorators import feuser_required
 
-from . import permissions
 from .models import LABEL_MAX_LENGTH, AgentKey
 
 _FLASH_KEY = "_flash_agent_key"
@@ -23,14 +23,7 @@ def profile_context(request, feuser) -> dict:
     keys = list(AgentKey.objects.filter(feuser=feuser))
     return {
         "agent_keys": [
-            {
-                "key": key,
-                "restricted": key.is_restricted(),
-                "rows": [
-                    {"concern": c, "label": label, **key.effective_permissions()[c]}
-                    for c, label in CONCERNS.items()
-                ],
-            }
+            {"key": key, "rows": key.access.rows()}
             for key in keys
         ],
         "agent_key_flash": request.session.pop(_FLASH_KEY, None),

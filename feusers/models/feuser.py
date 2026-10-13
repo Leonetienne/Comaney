@@ -8,6 +8,8 @@ from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 from django.utils import timezone
 
+from api import permissions
+
 PASSWORD_RESET_TOKEN_EXPIRY_HOURS = 1
 
 
@@ -33,6 +35,8 @@ class FeUser(models.Model):
     pending_email = models.EmailField(blank=True)
     email_change_token = models.CharField(max_length=64, blank=True, db_index=True)
     api_key = models.CharField(max_length=64, blank=True, null=True, unique=True, db_index=True)
+    # {concern: {"read": bool, "write": bool}}, kept when the key is revoked
+    api_key_permissions = models.JSONField(default=permissions.full_access)
     email_notifications = models.BooleanField(default=True)
     notify_expense_reminders = models.BooleanField(default=True)
     notify_expense_settled = models.BooleanField(default=True)
@@ -120,6 +124,10 @@ class FeUser(models.Model):
 
     def revoke_api_key(self) -> None:
         self.api_key = None
+
+    @property
+    def api_key_access(self) -> permissions.KeyAccess:
+        return permissions.KeyAccess(self.api_key_permissions)
 
     @property
     def has_2fa_enabled(self) -> bool:

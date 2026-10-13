@@ -441,15 +441,14 @@
             </button>
         </div>
         <div class="settings-apikey-actions">
-            <form method="post" action="{% url 'api_key_generate' %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-secondary btn-sm">Regenerate</button>
-            </form>
+            <button type="button" class="btn btn-secondary btn-sm key-restrict-toggle" aria-controls="key-permissions-api" aria-expanded="false">Restrict</button>
             <form method="post" action="{% url 'api_key_revoke' %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger btn-sm">Revoke</button>
             </form>
         </div>
+        {% url 'api_key_permissions' as permissions_url %}
+        {% include "feusers/partials/_key_permissions.html" with key_ref="api" action=permissions_url rows=current_feuser.api_key_access.rows %}
         {% else %}
         <form method="post" action="{% url 'api_key_generate' %}">
             {% csrf_token %}
@@ -487,35 +486,19 @@
             <li class="twofa-factor-row agent-key-row" data-agent-key="{{ item.key.pk }}">
                 <div class="twofa-factor-meta">
                     <span class="twofa-factor-label">{{ item.key.label }}</span>
-                    <span class="agent-key-access {% if item.restricted %}agent-key-access--restricted{% endif %}">{% if item.restricted %}Restricted{% else %}Full access{% endif %}</span>
                 </div>
                 <div class="twofa-factor-info">
                     <span class="twofa-factor-date"><code>{{ item.key.prefix }}…</code> · created {{ item.key.created_at|date:"Y-m-d" }} · {% if item.key.last_used_at %}last used {{ item.key.last_used_at|date:"Y-m-d H:i" }}{% else %}never used{% endif %}</span>
                 </div>
                 <div class="twofa-factor-actions">
-                    <button type="button" class="btn btn-secondary btn-sm agent-key-restrict-toggle" aria-expanded="false">Restrict</button>
+                    <button type="button" class="btn btn-secondary btn-sm key-restrict-toggle" aria-controls="key-permissions-{{ item.key.pk }}" aria-expanded="false">Restrict</button>
                     <form method="post" action="{% url 'agent_key_revoke' item.key.pk %}" class="confirm-form" data-confirm="Revoke &quot;{{ item.key.label }}&quot;? The assistant using it loses access at once." data-ok="Revoke">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-danger btn-sm">Revoke</button>
                     </form>
                 </div>
-                <form method="post" action="{% url 'agent_key_permissions' item.key.pk %}" class="agent-key-permissions" hidden>
-                    {% csrf_token %}
-                    <table class="agent-key-permission-table">
-                        <thead><tr><th scope="col">Data</th><th scope="col">Read</th><th scope="col">Write</th></tr></thead>
-                        <tbody>
-                        {% for row in item.rows %}
-                        <tr>
-                            <th scope="row">{{ row.label }}</th>
-                            <td><input type="checkbox" name="read_{{ row.concern }}" aria-label="Read {{ row.label }}" class="agent-key-read"{% if row.read %} checked{% endif %}></td>
-                            <td><input type="checkbox" name="write_{{ row.concern }}" aria-label="Write {{ row.label }}" class="agent-key-write"{% if row.write %} checked{% endif %}></td>
-                        </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                    <p class="form-hint-sm">Write includes read. Manual lookups stay available to every key.</p>
-                    <button type="submit" class="btn btn-sm">Save permissions</button>
-                </form>
+                {% url 'agent_key_permissions' item.key.pk as permissions_url %}
+                {% include "feusers/partials/_key_permissions.html" with key_ref=item.key.pk action=permissions_url rows=item.rows hint="Manual lookups stay available to every key." %}
             </li>
             {% endfor %}
         </ul>
@@ -827,17 +810,16 @@ document.querySelectorAll('[data-copy-target]').forEach(function (btn) {
         });
     });
 });
-document.querySelectorAll('.agent-key-row').forEach(function (row) {
-    const toggle = row.querySelector('.agent-key-restrict-toggle');
-    const panel = row.querySelector('.agent-key-permissions');
+document.querySelectorAll('.key-restrict-toggle').forEach(function (toggle) {
+    const panel = document.getElementById(toggle.getAttribute('aria-controls'));
     toggle.addEventListener('click', function () {
         panel.hidden = !panel.hidden;
         toggle.setAttribute('aria-expanded', String(!panel.hidden));
     });
     // write includes read
     panel.querySelectorAll('tbody tr').forEach(function (tr) {
-        const read = tr.querySelector('.agent-key-read');
-        const write = tr.querySelector('.agent-key-write');
+        const read = tr.querySelector('.key-read');
+        const write = tr.querySelector('.key-write');
         write.addEventListener('change', function () { if (write.checked) read.checked = true; });
         read.addEventListener('change', function () { if (!read.checked) write.checked = false; });
     });

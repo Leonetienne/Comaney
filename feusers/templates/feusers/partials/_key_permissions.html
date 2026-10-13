@@ -1,0 +1,19 @@
+{# Restrict panel of a key. Params: key_ref (unique per page), action (form URL), rows (KeyAccess.rows), hint (optional). #}
+{# Opened by a .key-restrict-toggle button with aria-controls="key-permissions-<key_ref>". #}
+<form method="post" action="{{ action }}" id="key-permissions-{{ key_ref }}" class="key-permissions" hidden>
+    {% csrf_token %}
+    <table class="key-permission-table">
+        <thead><tr><th scope="col">Data</th><th scope="col">Read</th><th scope="col">Write</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+        <tr>
+            <th scope="row">{{ row.label }}</th>
+            <td><input type="checkbox" name="read_{{ row.concern }}" aria-label="Read {{ row.label }}" class="key-read"{% if row.read %} checked{% endif %}></td>
+            <td><input type="checkbox" name="write_{{ row.concern }}" aria-label="Write {{ row.label }}" class="key-write"{% if row.write %} checked{% endif %}></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p class="form-hint-sm">Write includes read.{% if hint %} {{ hint }}{% endif %}</p>
+    <button type="submit" class="btn btn-sm">Save permissions</button>
+</form>

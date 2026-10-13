@@ -109,6 +109,7 @@
 
 .settings-apikey-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -208,25 +209,15 @@
   @media (prefers-color-scheme: dark) { color: #6ecf8a; background: #1a3326; }
 }
 
-.agent-key-access {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-
-  &--restricted {
-    color: var(--text);
-    font-weight: 600;
-  }
-}
-
 .agent-key-new {
   margin-bottom: 12px;
 }
 
-.agent-key-permissions {
+.key-permissions {
   margin-top: 12px;
 }
 
-.agent-key-permission-table {
+.key-permission-table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 8px;

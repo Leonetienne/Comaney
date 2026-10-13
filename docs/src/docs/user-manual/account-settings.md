@@ -173,7 +173,6 @@ An API key lets other apps or scripts access your Comaney account without loggin
 
 - If you have no key yet, click **Generate API key** to create one.
 - Once generated, the key is shown in a text box. Click the copy icon to copy it to your clipboard.
-- **Regenerate** replaces the current key with a new one. Any app using the old key will stop working until you update it there.
 - **Revoke** deletes the key entirely and disables API access.
 
 ---

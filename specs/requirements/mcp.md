@@ -1,6 +1,6 @@
 # MCP Server
 
-Sources: `mcp_server/`, `api/registry.py`, `feusers/templates/feusers/profile.html` (Agent keys card),
+Sources: `mcp_server/`, `api/registry.py`, `api/permissions.py`, `feusers/templates/feusers/profile.html` (Agent keys card),
 docs `user-manual/ai-assistants.md`. Protocol: Model Context Protocol, Streamable HTTP transport.
 
 ## Transport
@@ -102,9 +102,9 @@ Covers:
 Tags: Security
 
 ### Key list
-`req~mcp.keys.list~1`
+`req~mcp.keys.list~2`
 
-The system shall list a feuser's agent keys with name, visible prefix, creation date, last use (to the minute, or "never used") and "Full access" or "Restricted", and show the MCP server address with a copy button.
+The system shall list a feuser's agent keys with name, visible prefix, creation date, last use (to the minute, or "never used"), and show the MCP server address with a copy button.
 
 Covers:
 - `feat~mcp~1`

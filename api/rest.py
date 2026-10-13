@@ -7,6 +7,7 @@ from django.middleware.csrf import CsrfViewMiddleware
 from django.urls import path
 from django.views.decorators.csrf import csrf_exempt
 
+from . import permissions
 from .auth import get_api_user
 from .operations import REGISTRY, Context, OpError, validate_args
 
@@ -32,8 +33,8 @@ def _read_args(request):
 @csrf_exempt
 def dispatch(request, routes, **path_args):
     """
-    Authenticate by Bearer API key or browser session (session callers need a CSRF
-    token for unsafe methods), then run the operation registered for this method.
+    Authenticate by Bearer API key (limited to the key's permissions) or browser session
+    (full access, CSRF token needed for unsafe methods), then run the operation registered for this method.
     """
     op = routes.get(request.method)
     if op is None:
@@ -43,9 +44,15 @@ def dispatch(request, routes, **path_args):
     feuser = get_api_user(request)
     if not feuser:
         return _error("Unauthorized: provide a valid Bearer token.", 401)
-    if not request.headers.get("Authorization", "").startswith("Bearer "):
-        if CsrfViewMiddleware(lambda r: None).process_view(request, dispatch, (), {}) is not None:
-            return _error("CSRF verification failed.", 403)
+    if request.headers.get("Authorization", "").startswith("Bearer "):
+        if not feuser.api_key_access.allows(op.concern, op.access):
+            return _error(
+                f"This API key may not use {request.method} {request.path}: it lacks "
+                f"{permissions.missing(op.concern, op.access)}. Change it in Settings, API key.",
+                403,
+            )
+    elif CsrfViewMiddleware(lambda r: None).process_view(request, dispatch, (), {}) is not None:
+        return _error("CSRF verification failed.", 403)
     try:
         raw = _read_args(request)
         raw.update(path_args)

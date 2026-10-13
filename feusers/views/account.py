@@ -6,13 +6,17 @@ import zipfile
 from smtplib import SMTPException
 
 from django.conf import settings
+from django.contrib import messages
 from django.core.mail import send_mail
 from django.http import HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.template.loader import render_to_string
 from django.utils import timezone
 
 from ai_providers import get_provider
+from api import permissions
+from api.registry import CONCERNS
 from mcp_server.views import profile_context as agent_keys_context
 
 from .. import ai_user_config
@@ -289,6 +293,8 @@ def account_export(request):
             if field.name == "ai_user_config":
                 # secret AI settings masked per ConfigField.secret
                 value = json.dumps(ai_user_config.export_value(value, get_provider()), sort_keys=True)
+            elif isinstance(value, dict):
+                value = json.dumps(value, sort_keys=True)
             elif hasattr(value, "isoformat"):
                 value = value.isoformat()
             w.writerow([field.name, _csv_safe(value)])
@@ -327,7 +333,7 @@ def account_export(request):
                 key.prefix,
                 key.created_at.isoformat(),
                 key.last_used_at.isoformat() if key.last_used_at else "",
-                json.dumps(key.effective_permissions()),
+                json.dumps(key.access.perms),
             ])
         zf.writestr("agent_keys.csv", p.getvalue())
 
@@ -593,6 +599,19 @@ def api_key_generate(request):
     user.last_mod = timezone.now()
     user.save(update_fields=["api_key", "last_mod"])
     return redirect("profile")
+
+
+def api_key_permissions(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    user = _get_session_feuser(request)
+    if not user:
+        return redirect("login")
+    user.api_key_permissions = permissions.from_form(request.POST, CONCERNS)
+    user.last_mod = timezone.now()
+    user.save(update_fields=["api_key_permissions", "last_mod"])
+    messages.success(request, "API key permissions saved.")
+    return redirect(reverse("profile") + "#section-apikey")
 
 
 def api_key_revoke(request):

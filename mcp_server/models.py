@@ -3,9 +3,7 @@ import secrets
 
 from django.db import models
 
-from api.registry import CONCERNS
-
-from . import permissions
+from api.permissions import KeyAccess, full_access
 
 KEY_PREFIX = "cmy_"
 LABEL_MAX_LENGTH = 64
@@ -40,15 +38,10 @@ class AgentKey(models.Model):
             label=label,
             prefix=raw[:12],
             key_hash=hash_key(raw),
-            permissions=permissions.full_permissions(CONCERNS),
+            permissions=full_access(),
         )
         return key, raw
 
-    def effective_permissions(self) -> dict:
-        return permissions.normalize(self.permissions, CONCERNS)
-
-    def allows(self, concern, access) -> bool:
-        return permissions.allows(self.effective_permissions(), concern, access)
-
-    def is_restricted(self) -> bool:
-        return self.effective_permissions() != permissions.full_permissions(CONCERNS)
+    @property
+    def access(self) -> KeyAccess:
+        return KeyAccess(self.permissions)

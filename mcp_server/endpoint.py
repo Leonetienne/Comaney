@@ -9,6 +9,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+from api import permissions
 from api.operations import CONCERNS, READ, REGISTRY, Context, OpError, validate_args
 
 from . import docs
@@ -125,7 +126,7 @@ def _docs_tool(name, args):
 
 
 def build_server(key: AgentKey) -> Server:
-    ops = {name: op for name, op in REGISTRY.items() if key.allows(op.concern, op.access)}
+    ops = {name: op for name, op in REGISTRY.items() if key.access.allows(op.concern, op.access)}
     ctx = Context(feuser=key.feuser, agent_key=key)
 
     def call_tool(name, args):
@@ -155,7 +156,7 @@ def build_server(key: AgentKey) -> Server:
         if op is None:
             return None
         return (
-            f"This agent key may not use {name}: it lacks {CONCERNS[op.concern]} {op.access} permission. "
+            f"This agent key may not use {name}: it lacks {permissions.missing(op.concern, op.access)}. "
             "The user can change that in Profile, Agent keys."
         )
 
