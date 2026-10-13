@@ -45,7 +45,11 @@ The **modular dashboard** lets you build your own overview from scratch: spend-b
 
 ### Let AI assistants do the work
 
-Comaney runs an MCP (Model Context Protocol) server, so AI assistants can read and write your account directly. Each assistant gets its own agent key, which you can restrict per area to read-only or read/write. See [User manual: AI Assistants (MCP)](https://comaney.app/docs/user-manual/ai-assistants/).
+Comaney runs an MCP (Model Context Protocol) server, so AI assistants can read and write your account directly. Each assistant gets its own agent key. See [User manual: AI Assistants (MCP)](https://comaney.app/docs/user-manual/ai-assistants/).
+
+### Connect your own tools
+
+A REST API lets scripts and other apps read and write your data, for example to import bank transactions. See [User manual: REST API Access](https://comaney.app/docs/user-manual/api-access/).
 
 ---
 
