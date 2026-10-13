@@ -4,11 +4,28 @@
 {# To announce new features: update this file and bump CURRENT_UPGRADE_INTRO_VERSION          #}
 {# in feusers/intros.py. That is the only change needed to re-trigger the modal.              #}
 {#                                                                                             #}
-{# Current version: 3                                                                          #}
+{# Current version: 4                                                                          #}
 <div id="upgrade-intro-modal" class="cdialog-backdrop" aria-hidden="true">
     <div class="cdialog" role="dialog" aria-modal="true" aria-labelledby="upgrade-intro-title">
         <p class="cdialog-title" id="upgrade-intro-title">What's new in Comaney {{ APP_VERSION }}</p>
         <ul class="intro-feature-list">
+            <li>
+                <strong>Connect your AI assistant</strong>
+                Let an AI assistant such as Claude work with your Comaney data: ask how much you spent at the supermarket this week, record an expense by just telling it, or have it set up a project. Create an agent key under Settings, "Agent keys (MCP)", and choose what the assistant may read or change.
+                <a href="/docs/user-manual/ai-assistants/" target="_blank" rel="noopener">How to connect</a>
+            </li>
+            <li>
+                <strong>AI preprompts for projects</strong>
+                Give AI Express standing instructions per project, e.g. "Put Robert and Mallory always at 0%, they're invited". Set them in the project's Settings tab, right below the description.
+            </li>
+            <li>
+                <strong>Buddies are now contacts</strong>
+                The people you split costs with directly are now called contacts. Nothing else changed: your balances and history are all still there.
+            </li>
+            <li>
+                <strong>A bigger API</strong>
+                The API (v2) now also covers contacts, projects, settlements, approvals, partnerships and dashboards. API v1 has been removed.
+            </li>
             <li>
                 <strong>Automatically accept entries from a contact</strong>
                 Tired of confirming everything a contact records for you? In Contacts, turn on "Automatically accept expenses, settlements and project invitations" for that contact. Anything they log with you as the payer, any settlement they record paying you back, and any project they invite you to is then accepted right away, in direct expenses and in every project. You still get an email about each one.
