@@ -17,7 +17,7 @@ Covers:
 ### Template assignment
 `req~scheduled.assignment~1`
 
-A template shall optionally carry a direct buddy or project assignment with upfront payer and participant shares, applied to every expense generated from it.
+A template shall optionally carry a contact or project assignment with upfront payer and participant shares, applied to every expense generated from it.
 
 Covers:
 - `feat~scheduled~1`
@@ -212,7 +212,7 @@ Covers:
 ### Assignment upkeep
 `req~scheduled.roster~1`
 
-When a referenced buddy or offline member is removed, merged or replaced, the system shall update or clear every template assignment referencing them so no template references a missing participant.
+When a referenced contact or offline member is removed, merged or replaced, the system shall update or clear every template assignment referencing them so no template references a missing participant.
 
 Covers:
 - `feat~scheduled~1`

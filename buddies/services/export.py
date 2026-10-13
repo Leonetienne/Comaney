@@ -21,12 +21,12 @@ def _in_date_range(exp, start_date, end_date) -> bool:
 def _identity_id(feuser_obj=None, dummy_obj=None, *, self_feuser=None) -> str:
     """A stable, unambiguous id for a feuser or dummy: "u-<pk>" or "d-<pk>".
     Feusers and dummies have separate id spaces, so the prefix is required to
-    tell them apart. Look up the display name via direct-buddies.csv /
+    tell them apart. Look up the display name via contacts.csv /
     members.csv, which map these ids to names.
 
     If feuser_obj is the feuser the export is being generated for, returns
     "self" instead: that feuser is never listed under their own "u-<pk>" id
-    in direct-buddies.csv (you aren't your own buddy), so that id would
+    in contacts.csv (you aren't your own buddy), so that id would
     otherwise be undefined anywhere else in the export."""
     if feuser_obj is not None:
         if self_feuser is not None and feuser_obj.pk == self_feuser.pk:
@@ -139,10 +139,10 @@ def _build_approval_matrix_csvs(expenses, self_feuser=None) -> tuple[str, str]:
 
 
 class BuddyExportService:
-    """Builds the direct-buddy data export: direct-buddies.csv (the combined
-    real-user + offline buddy roster), direct-buddy-expenses.csv (all
-    personal, non-project expenses shared with a direct buddy, in either
-    direction), and direct-buddy-expense-participation.csv (per-expense share
+    """Builds the contact data export: contacts.csv (the combined
+    real-user + offline contact roster), contact-expenses.csv (all
+    personal, non-project expenses shared with a contact, in either
+    direction), and contact-expense-participation.csv (per-expense share
     percent by participant). Project-related participation is excluded: it
     is covered by ProjectExportService for each project membership.
 
@@ -156,31 +156,31 @@ class BuddyExportService:
         return BuddyQueryService.shared_expenses(feuser).filter(project__isnull=True)
 
     @staticmethod
-    def write_buddy_csvs(zf, feuser, prefix: str = "", start_date=None, end_date=None) -> None:
-        """Write direct-buddies.csv, direct-buddy-expenses.csv,
-        direct-buddy-expense-participation.csv, and offline buddies' profile
+    def write_contact_csvs(zf, feuser, prefix: str = "", start_date=None, end_date=None) -> None:
+        """Write contacts.csv, contact-expenses.csv,
+        contact-expense-participation.csv, and offline contacts' profile
         pictures into the open ZipFile `zf`, with all filenames prefixed by
-        `prefix` (e.g. "direct_buddies/").
+        `prefix` (e.g. "contacts/").
 
-        direct-buddies.csv and pictures are never date-filtered. If
+        contacts.csv and pictures are never date-filtered. If
         start_date/end_date are omitted, the expense files include all-time
         data (used by the comprehensive account-wide export)."""
-        from ..models import BuddyLink, DummyUser
+        from ..models import ContactLink, DummyUser
 
         # --------------------------------------------------------------
-        # direct-buddies.csv: real-user and offline buddies, combined.
+        # contacts.csv: real-user and offline contacts, combined.
         # --------------------------------------------------------------
         personal_dummies = list(DummyUser.objects.filter(owning_feuser=feuser))
         p = io.StringIO()
         w = csv.writer(p)
         # i_auto_accept_theirs / they_auto_accept_mine: the buddy auto-accept
         # trust in each direction (buddies/services/trust.py); empty for
-        # offline buddies, where it cannot exist.
+        # offline contacts, where it cannot exist.
         w.writerow([
             "buddy_type", "id", "display_name", "email", "since",
             "i_auto_accept_theirs", "they_auto_accept_mine",
         ])
-        for link in BuddyLink.for_user(feuser).select_related("user_a", "user_b"):
+        for link in ContactLink.for_user(feuser).select_related("user_a", "user_b"):
             other = link.other(feuser)
             w.writerow([
                 "feuser",
@@ -196,10 +196,10 @@ class BuddyExportService:
                 "dummy", _identity_id(dummy_obj=dummy), _csv_safe(dummy.display_name), "",
                 dummy.created_at.isoformat(), "", "",
             ])
-        zf.writestr(f"{prefix}direct-buddies.csv", p.getvalue())
+        zf.writestr(f"{prefix}contacts.csv", p.getvalue())
 
         # --------------------------------------------------------------
-        # direct-buddy-expenses.csv / direct-buddy-expense-participation.csv
+        # contact-expenses.csv / contact-expense-participation.csv
         # --------------------------------------------------------------
         qs = BuddyExportService._direct_expenses_qs(feuser)
         if start_date and end_date:
@@ -211,25 +211,25 @@ class BuddyExportService:
             p, qs,
             skip={"category", "project"},
         )
-        zf.writestr(f"{prefix}direct-buddy-expenses.csv", p.getvalue())
+        zf.writestr(f"{prefix}contact-expenses.csv", p.getvalue())
 
         zf.writestr(
-            f"{prefix}direct-buddy-expense-participation.csv",
+            f"{prefix}contact-expense-participation.csv",
             _build_participation_matrix_csv(qs, self_feuser=feuser),
         )
 
         approval_csv, approval_ts_csv = _build_approval_matrix_csvs(qs, self_feuser=feuser)
-        zf.writestr(f"{prefix}direct-buddy-expense-approval-matrix.csv", approval_csv)
-        zf.writestr(f"{prefix}direct-buddy-expense-approval-timestamps.csv", approval_ts_csv)
+        zf.writestr(f"{prefix}contact-expense-approval-matrix.csv", approval_csv)
+        zf.writestr(f"{prefix}contact-expense-approval-timestamps.csv", approval_ts_csv)
 
         # --------------------------------------------------------------
-        # Pictures: personal offline buddies' photos.
+        # Pictures: personal offline contacts' photos.
         # --------------------------------------------------------------
         for dummy in personal_dummies:
             if dummy.profile_picture:
                 pic = settings.MEDIA_ROOT / "offline-buddy-ppic" / f"{dummy.pk}.jpg"
                 if pic.exists():
-                    zf.write(pic, f"{prefix}offline_buddies/{dummy.pk}.jpg")
+                    zf.write(pic, f"{prefix}offline_contacts/{dummy.pk}.jpg")
 
 
 class ProjectExportService:

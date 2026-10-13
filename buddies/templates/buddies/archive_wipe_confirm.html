@@ -31,13 +31,13 @@
         {% if user_impact_abs > 0.005 %}
         <p>
             {% if user_impact > 0 %}
-                Achim Archive owed you <strong>{{ currency }}{{ user_impact_abs|floatformat:2 }}</strong> in buddy tracking. That balance will be cleared{% if participant_count > 0 and payer_count == 0 %}, but your expense amounts are not affected{% endif %}.
+                Achim Archive owed you <strong>{{ currency }}{{ user_impact_abs|floatformat:2 }}</strong> in shared expenses. That balance will be cleared{% if participant_count > 0 and payer_count == 0 %}, but your expense amounts are not affected{% endif %}.
             {% else %}
-                You owed Achim Archive <strong>{{ currency }}{{ user_impact_abs|floatformat:2 }}</strong> in buddy tracking. That balance will be forgiven.
+                You owed Achim Archive <strong>{{ currency }}{{ user_impact_abs|floatformat:2 }}</strong> in shared expenses. That balance will be forgiven.
             {% endif %}
         </p>
         {% else %}
-        <p>Your buddy balance with Achim Archive is zero.</p>
+        <p>Your balance with Achim Archive is zero.</p>
         {% endif %}
     </div>
 

@@ -9,7 +9,7 @@
 <div class="form-wrap">
     <p>This {{ noun|default:"invitation" }} link is invalid or has expired. Ask them to send a new one.</p>
     <div class="form-actions">
-        <a href="{% url 'buddies:buddies_page' %}" class="btn btn-secondary">Go to Buddies</a>
+        <a href="{% url 'buddies:index' %}" class="btn btn-secondary">Go to contacts</a>
     </div>
 </div>
 {% endblock %}

@@ -55,13 +55,13 @@ def _create_dummy(email: str, name: str = "Test Dummy") -> int:
     ))
 
 
-def _create_buddy_link(email_a: str, email_b: str) -> None:
+def _create_contact_link(email_a: str, email_b: str) -> None:
     _shell(
-        f"from feusers.models import FeUser; from buddies.models import BuddyLink; "
+        f"from feusers.models import FeUser; from buddies.models import ContactLink; "
         f"a = FeUser.objects.get(email='{email_a}'); "
         f"b = FeUser.objects.get(email='{email_b}'); "
         f"lo, hi = sorted([a, b], key=lambda u: u.pk); "
-        f"BuddyLink.objects.get_or_create(user_a=lo, user_b=hi)"
+        f"ContactLink.objects.get_or_create(user_a=lo, user_b=hi)"
     )
 
 
@@ -196,7 +196,7 @@ class TestExpressBuddyConfirmDummyParticipant:
         assert any(e["title"] == "ExpressDummyPart" for e in resp.json()["expenses"]), \
             "Expense must appear in the expense API (me is upfront payer)"
 
-    def test_expense_on_buddy_summary_ui(self, driver, w, ctx):
+    def test_expense_on_contact_summary_ui(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
         assert "ExpressDummyPart" in driver.page_source, \
@@ -244,7 +244,7 @@ class TestExpressBuddyConfirmDummyPayer:
         assert not any(e["title"] == "ExpressDummyPayer" for e in resp.json()["expenses"]), \
             "Dummy-payer expense must not appear in the expense API (is_dummy=True)"
 
-    def test_expense_on_buddy_summary_ui(self, driver, w, ctx):
+    def test_expense_on_contact_summary_ui(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
         assert "ExpressDummyPayer" in driver.page_source, \
@@ -267,7 +267,7 @@ class TestExpressBuddyConfirmFeuserPayer:
         a = setup_user(driver, w, first_name="Asker", last_name="Express")
         b = setup_user(None, None, first_name="ApproverB", last_name="Express")
         _set_fake_api_key(a["email"])
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = _get_pk(b["email"])
         a["b"] = b
         a["b_pk"] = b_pk
@@ -305,7 +305,7 @@ class TestExpressBuddyConfirmFeuserPayer:
         assert "ExpressFeuserPayer" in body, \
             "Approval email must mention the expense title"
 
-    def test_expense_on_askers_buddy_summary(self, driver, w, ctx):
+    def test_expense_on_askers_contact_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
         assert "ExpressFeuserPayer" in driver.page_source, \
@@ -363,19 +363,19 @@ class TestExpressBuddyCardUI:
             ai_unavailable("AI not available")
         cards = driver.find_elements(By.CSS_SELECTOR, ".preview-card")
         assert cards, "No preview cards left over from the previous test"
-        tab = cards[0].find_element(By.CSS_SELECTOR, ".pcard-assign-buddy")
+        tab = cards[0].find_element(By.CSS_SELECTOR, ".pcard-assign-contact")
         tab.click()
         time.sleep(0.5)
         details = cards[0].find_element(By.CSS_SELECTOR, ".pcard-buddy-details")
-        assert details.is_displayed(), "Buddy details section must become visible after clicking the Direct Buddy tab"
+        assert details.is_displayed(), "Buddy details section must become visible after clicking the Contact tab"
 
     def test_payer_dropdown_populated(self, driver, w, ctx):
         if not ctx.get("ai_ok"):
             ai_unavailable("AI not available")
         cards = driver.find_elements(By.CSS_SELECTOR, ".preview-card")
         assert cards, "No preview cards left over from the previous test"
-        # Direct Buddy tab must already be active from previous test; ensure it is
-        tab = cards[0].find_element(By.CSS_SELECTOR, ".pcard-assign-buddy")
+        # Contact tab must already be active from previous test; ensure it is
+        tab = cards[0].find_element(By.CSS_SELECTOR, ".pcard-assign-contact")
         tab.click()
         time.sleep(0.5)
         sel = cards[0].find_element(By.CSS_SELECTOR, ".buddy-upfront-select")
@@ -436,8 +436,8 @@ class TestExpressBuddySliderAmounts:
         val_input = card.find_element(By.CSS_SELECTOR, ".edit-value")
         expense_val = float(val_input.get_attribute("value").replace(",", "."))
 
-        # Enable buddy payment via Direct Buddy tab.
-        tab = card.find_element(By.CSS_SELECTOR, ".pcard-assign-buddy")
+        # Enable buddy payment via Contact tab.
+        tab = card.find_element(By.CSS_SELECTOR, ".pcard-assign-contact")
         tab.click()
         time.sleep(0.5)
 

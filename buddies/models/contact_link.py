@@ -2,18 +2,18 @@ from django.db import models
 from django.utils import timezone
 
 
-class BuddyLink(models.Model):
-    """Confirmed mutual buddy relationship between two actual users.
+class ContactLink(models.Model):
+    """Confirmed mutual contact relationship between two actual users.
 
     Convention: user_a.pk < user_b.pk. Always query with the helper below.
     """
 
     uid = models.BigAutoField(primary_key=True)
     user_a = models.ForeignKey(
-        "feusers.FeUser", on_delete=models.CASCADE, related_name="buddy_links_a"
+        "feusers.FeUser", on_delete=models.CASCADE, related_name="contact_links_a"
     )
     user_b = models.ForeignKey(
-        "feusers.FeUser", on_delete=models.CASCADE, related_name="buddy_links_b"
+        "feusers.FeUser", on_delete=models.CASCADE, related_name="contact_links_b"
     )
     # Per-direction auto-accept trust: when set, that side no longer needs to
     # confirm expenses/settlements the other side records for them.
@@ -24,6 +24,7 @@ class BuddyLink(models.Model):
     last_mod = models.DateTimeField(default=timezone.now)
 
     class Meta:
+        db_table = "buddies_buddylink"
         unique_together = [("user_a", "user_b")]
         ordering = ["created_at"]
 
@@ -49,12 +50,12 @@ class BuddyLink(models.Model):
     @staticmethod
     def for_user(feuser):
         from django.db.models import Q
-        return BuddyLink.objects.filter(Q(user_a=feuser) | Q(user_b=feuser))
+        return ContactLink.objects.filter(Q(user_a=feuser) | Q(user_b=feuser))
 
     @staticmethod
     def between(feuser_a, feuser_b):
         try:
             lo, hi = sorted([feuser_a, feuser_b], key=lambda u: u.pk)
-            return BuddyLink.objects.get(user_a=lo, user_b=hi)
-        except BuddyLink.DoesNotExist:
+            return ContactLink.objects.get(user_a=lo, user_b=hi)
+        except ContactLink.DoesNotExist:
             return None

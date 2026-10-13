@@ -5,7 +5,7 @@
             {% if not exp.buddy_approved %}<span class="pill pill--warning">Needs approval</span>{% endif %}
             <span class="bexp-breakdown-meta">
                 <strong>{{ exp.owning_feuser.currency }}{{ exp.value }}</strong>
-                &middot; Paid by: <strong>{% if exp.is_dummy %}{{ exp.upfront_payee_dummy.display_name }} (offline buddy){% else %}{{ exp.owning_feuser.first_name }} {{ exp.owning_feuser.last_name }}{% endif %}</strong>
+                &middot; Paid by: <strong>{% if exp.is_dummy %}{{ exp.upfront_payee_dummy.display_name }} (offline contact){% else %}{{ exp.owning_feuser.first_name }} {{ exp.owning_feuser.last_name }}{% endif %}</strong>
                 {% if exp.date_due %}&middot; {{ exp.date_due|date:"N j, Y" }}{% endif %}
             </span>
         </div>

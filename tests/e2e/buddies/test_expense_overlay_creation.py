@@ -27,7 +27,7 @@ import pytest
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _get_pk,
+    _shell, _login_as, _create_contact_link, _get_pk,
     _create_group, _add_group_member,
 )
 
@@ -170,7 +170,7 @@ class TestCreationWithOtherPayer:
     def ctx(self, driver, w):
         creator = setup_user(driver, w, first_name="Crea", last_name="Tor")
         owner   = setup_user(None, None, first_name="Own", last_name="Er")
-        _create_buddy_link(creator["email"], owner["email"])
+        _create_contact_link(creator["email"], owner["email"])
 
         # Same title on both sides -> match
         _mk_category(creator["email"], "Food")
@@ -240,7 +240,7 @@ class TestNoOverlayWhenCreatorHasNone:
     def ctx(self, driver, w):
         creator = setup_user(driver, w, first_name="NoCat", last_name="Creator")
         owner   = setup_user(None, None, first_name="NoCat", last_name="Owner")
-        _create_buddy_link(creator["email"], owner["email"])
+        _create_contact_link(creator["email"], owner["email"])
         exp_pk = _create_expense_with_other_payer(
             creator["email"], owner["email"], title="C2 No Overlay Exp",
         )
@@ -365,7 +365,7 @@ class TestPayerChangeOldOwnerGetsOverlay:
     def ctx(self, driver, w):
         old_owner = setup_user(driver, w, first_name="OldOw", last_name="A")
         new_owner = setup_user(None, None, first_name="NewOw", last_name="B")
-        _create_buddy_link(old_owner["email"], new_owner["email"])
+        _create_contact_link(old_owner["email"], new_owner["email"])
 
         _mk_category(old_owner["email"], "Holiday")
         old_tag_pk = _mk_tag(old_owner["email"], "Summer")
@@ -445,7 +445,7 @@ class TestPayerChangeExistingOverlayApplied:
     def ctx(self, driver, w):
         old_owner = setup_user(driver, w, first_name="ApplOld", last_name="A")
         new_owner = setup_user(None, None, first_name="ApplNew", last_name="B")
-        _create_buddy_link(old_owner["email"], new_owner["email"])
+        _create_contact_link(old_owner["email"], new_owner["email"])
 
         # New owner has a specific category + tag for their overlay
         new_cat_pk  = _mk_category(new_owner["email"], "NewOwnerCat")
@@ -509,7 +509,7 @@ class TestNoSnapshotWhenExpenseHasNoCatTags:
     def ctx(self, driver, w):
         old_owner = setup_user(driver, w, first_name="NoSnap", last_name="Old")
         new_owner = setup_user(None, None, first_name="NoSnap", last_name="New")
-        _create_buddy_link(old_owner["email"], new_owner["email"])
+        _create_contact_link(old_owner["email"], new_owner["email"])
         new_owner_pk = int(_get_pk(new_owner["email"]))
 
         exp_pk = int(_shell(

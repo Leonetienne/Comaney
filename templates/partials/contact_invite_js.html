@@ -8,29 +8,29 @@
         const id   = btn.dataset.feuserId;
         try {
             await confirmDialog(
-                `Invite ${name} to be your spending buddy?`,
+                `Invite ${name} as a contact?`,
                 'Send invite'
             );
         } catch (_) { return; }
         btn.disabled = true;
         btn.textContent = 'Sending…';
         try {
-            const res = await fetch('{% url "buddies:buddy_invite" %}', {
+            const res = await fetch('{% url "buddies:contact_invite" %}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
                 body: JSON.stringify({ invitee_id: parseInt(id) }),
             });
             const data = await res.json();
             if (res.ok && data.ok) {
-                btn.outerHTML = '<span class="pill pill--faded pill--sm">Buddy invite pending</span>';
+                btn.outerHTML = '<span class="pill pill--faded pill--sm">Contact invite pending</span>';
             } else {
                 btn.disabled = false;
-                btn.textContent = 'Invite as direct buddy';
+                btn.textContent = 'Invite as contact';
                 alert(data.error || 'Could not send invite. Please try again.');
             }
         } catch (_) {
             btn.disabled = false;
-            btn.textContent = 'Invite as direct buddy';
+            btn.textContent = 'Invite as contact';
         }
     });
 })();

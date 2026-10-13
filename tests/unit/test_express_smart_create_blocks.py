@@ -21,14 +21,14 @@ PROJECT_PAYER = "PROJECT_PAYER"
 DIRECT_BUDDY = "DIRECT_BUDDY"
 
 
-def select_blocks(projects_data, single_buddies):
+def select_blocks(projects_data, contacts):
     blocks = [BASE]
     if projects_data:
         blocks.append(PROJECTS)
         if any(len(p["members"]) > 1 for p in projects_data):
             blocks.append(PROJECT_PARTICIPANTS)
             blocks.append(PROJECT_PAYER)
-    if single_buddies:
+    if contacts:
         blocks.append(DIRECT_BUDDY)
     return blocks
 
@@ -48,7 +48,7 @@ class TestSelectSmartCreateBlocks:
             BASE, PROJECTS, PROJECT_PARTICIPANTS, PROJECT_PAYER,
         ]
 
-    def test_buddies_only_unlocks_direct_buddy_block(self):
+    def test_buddies_only_unlocks_contact_block(self):
         assert select_blocks([], [{"name": "Volker"}]) == [BASE, DIRECT_BUDDY]
 
     def test_mix_of_solo_and_multi_member_projects_unlocks_via_any(self):
@@ -69,7 +69,7 @@ class TestSelectSmartCreateBlocks:
 
     def test_everything_present_keeps_declared_order(self):
         projects_data = [{"id": 1, "members": [{"name": "Me"}, {"name": "Robbie"}]}]
-        single_buddies = [{"name": "Volker"}]
-        assert select_blocks(projects_data, single_buddies) == [
+        contacts = [{"name": "Volker"}]
+        assert select_blocks(projects_data, contacts) == [
             BASE, PROJECTS, PROJECT_PARTICIPANTS, PROJECT_PAYER, DIRECT_BUDDY,
         ]

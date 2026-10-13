@@ -352,7 +352,7 @@ class TestDateRangeNavDashboard:
 # Buddy summary
 # ---------------------------------------------------------------------------
 
-class TestDateRangeNavBuddySummary:
+class TestDateRangeNavContactSummary:
     """Date range nav renders and works on the buddy summary page."""
 
     def test_nav_renders(self, driver, w, ctx):

@@ -41,7 +41,7 @@ from bhelpers import _shell, _get_pk
 def victim():
     v = create_confirmed_user(first_name="Vic", last_name="Tim")
     v["pk"] = _get_pk(v["email"])
-    # A private offline buddy owned by the victim (for the IDOR abuses).
+    # A private offline contact owned by the victim (for the IDOR abuses).
     v["dummy_pk"] = _shell(
         f"from feusers.models import FeUser; from buddies.models import DummyUser; "
         f"o = FeUser.objects.get(email='{v['email']}'); "

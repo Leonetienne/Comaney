@@ -1,10 +1,10 @@
 # Settling Up
 
-Use the **Pay someone back** form on the Buddy Expenses page or a project page to record any payment between you and a buddy. The amount is pre-filled with what you owe, but you can always enter a different value: partial payments and voluntary payments both work fine.
+Use the **Pay someone back** form on the Contact Expenses page or a project page to record any payment between you and a contact. The amount is pre-filled with what you owe, but you can always enter a different value: partial payments and voluntary payments both work fine.
 
 ## Settling a one-on-one debt
 
-1. Go to **Buddy Expenses**.
+1. Go to **Contact Expenses**.
 2. Find the **Pay someone back** section.
 3. Select who you want to pay from the **Pay to** dropdown.
 4. The amount is pre-filled with what you owe them, if anything. You can change it freely.
@@ -14,15 +14,15 @@ Use the **Pay someone back** form on the Buddy Expenses page or a project page t
 After you confirm:
 
 - A settlement expense is created in your regular expense list.
-- If the other person is a connected Comaney user, they see a **"Pending settlement receipts"** notice on the Buddy Expenses page. They must review and confirm.
-- If the other person is an offline buddy, the settlement is confirmed automatically.
-- If the other person has chosen to accept your entries automatically, the settlement is confirmed right away. See [Automatically accepting a buddy's entries](adding-buddies.md#automatically-accepting-a-buddys-entries).
+- If the other person is a connected Comaney user, they see a **"Pending settlement receipts"** notice on the Contact Expenses page. They must review and confirm.
+- If the other person is an offline contact, the settlement is confirmed automatically.
+- If the other person has chosen to accept your entries automatically, the settlement is confirmed right away. See [Automatically accepting a contact's entries](adding-contacts.md#automatically-accepting-a-contacts-entries).
 
-**The balance on My Buddies does not clear until the other person confirms receipt.**
+**The balance on Contacts does not clear until the other person confirms receipt.**
 
 ## What the other person sees
 
-When you record a settlement, the person you owe receives an email notification. They will also see a **"Pending settlement receipts"** section on the Buddy Expenses page.
+When you record a settlement, the person you owe receives an email notification. They will also see a **"Pending settlement receipts"** section on the Contact Expenses page.
 
 They click **Review** and land on a confirmation page with two choices:
 
@@ -42,7 +42,7 @@ You can settle individual debts or have the admin settle the whole project at on
 
 The creditor receives an email and sees a "Review" button on the project page. The confirmation flow is the same as for one-on-one settlements.
 
-If you are the project admin, you can also create settlements on behalf of offline members: select the offline member as the person paying from the **Who's paying** dropdown. The same dropdown is available on the **Buddy Expenses** page for your personal offline buddies.
+If you are the project admin, you can also create settlements on behalf of offline members: select the offline member as the person paying from the **Who's paying** dropdown. The same dropdown is available on the **Contact Expenses** page for your personal offline contacts.
 
 ### Settling the whole project at once (admin only)
 
@@ -59,7 +59,7 @@ Comaney creates a settlement for each debtor-creditor pair and sends emails to a
 
 When a project member pays an offline member, there is no one to click "confirm". The admin handles this instead.
 
-On the **Buddy Expenses** page, admins see two extra sections:
+On the **Contact Expenses** page, admins see two extra sections:
 
 - **"Confirm expenses for offline members"** — an expense was logged with an offline member as the one who paid. The admin approves or rejects on their behalf.
 - **"Confirm paybacks to offline members"** — someone recorded a payment to an offline member. The admin confirms whether it was received.

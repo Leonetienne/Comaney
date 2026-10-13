@@ -23,7 +23,7 @@ from helpers import (
     _url, setup_user, cleanup_user,
     fetch_email, mailpit_seen_ids, server_today,
 )
-from bhelpers import _shell, _create_buddy_link, _create_group, _add_group_member, _get_pk
+from bhelpers import _shell, _create_contact_link, _create_group, _add_group_member, _get_pk
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ class TestUpdateExpensesAddParticipantNotification:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Owen", last_name="Scheduler")
         b = setup_user(None, None, first_name="Pat", last_name="Added")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
 
         sched_id = _create_scheduled_plain(a["email"], "UEN Add Test")
@@ -191,7 +191,7 @@ class TestUpdateExpensesRemoveParticipantNotification:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Quinn", last_name="Remover")
         b = setup_user(None, None, first_name="Rachel", last_name="Removed")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
 
         sched_id = _create_scheduled_with_feuser_participant(
@@ -247,7 +247,7 @@ class TestUpdateExpensesValueChangeNotification:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Sam", last_name="Updater")
         b = setup_user(None, None, first_name="Tina", last_name="Notified")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
 
         sched_id = _create_scheduled_with_feuser_participant(
@@ -304,7 +304,7 @@ class TestUpdateExpensesProjectParticipantNotification:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Uma", last_name="ProjectOwner")
         b = setup_user(None, None, first_name="Victor", last_name="Member")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         a_pk = int(_get_pk(a["email"]))
 

@@ -1,6 +1,6 @@
 {% extends "budget_base.html" %}
 
-{% block title %}Comaney - Buddy Expenses{% endblock %}
+{% block title %}Comaney - Contact Expenses{% endblock %}
 
 {% block extra_head %}
 {% load static %}
@@ -19,9 +19,9 @@
 </div>
 
 <div class="page-header">
-    <h1>Buddy Expenses</h1>
+    <h1>Contact Expenses</h1>
 </div>
-<div class="desc-surface"><p class="page-subtitle" style="margin:0;">All expenses involving you and a buddy. This does not cover expenses in projects!</p></div>
+<div class="desc-surface"><p class="page-subtitle" style="margin:0;">All expenses between you and a contact. This does not cover expenses in projects!</p></div>
 
 {% load static %}
 <script src="{% static 'dist/project_detail.js' %}" defer></script>
@@ -297,12 +297,12 @@
     <h2>Pay someone back</h2>
     <div class="add-buddy-panel">
     <p class="page-subtitle" style="margin-bottom:0.75rem;">
-        Pay back a buddy. The amount is pre-filled based on what you owe them, but you can enter any amount. You still need to actually send the money yourself.
+        Pay back a contact. The amount is pre-filled based on what you owe them, but you can enter any amount. You still need to actually send the money yourself.
     </p>
     <form method="post" action="{% url 'buddies:settle_direct_freeform' %}" id="direct-settle-form">
         {% csrf_token %}
         <input type="hidden" id="direct-settle-debtor" name="debtor_key" value="{{ feuser_key }}">
-        {% comment %}who-pays row rendered by JS when offline buddies exist{% endcomment %}
+        {% comment %}who-pays row rendered by JS when offline contacts exist{% endcomment %}
         <div id="direct-settle-debtor-row" class="settle-form-row" style="display:none;">
             <label for="direct-settle-debtor-select" class="settle-form-label">Who's paying</label>
             <select id="direct-settle-debtor-select" class="input-inline settle-form-select"></select>
@@ -335,18 +335,18 @@
         var memberMap = {};
         MEMBERS.forEach(function (m) { memberMap[m.key] = m; });
 
-        var offlineBuddies = MEMBERS.filter(function (m) { return m.is_dummy; });
+        var offlineContacts = MEMBERS.filter(function (m) { return m.is_dummy; });
 
-        // Build "who pays" select if offline buddies exist
-        if (offlineBuddies.length > 0) {
+        // Build "who pays" select if offline contacts exist
+        if (offlineContacts.length > 0) {
             var youOpt = document.createElement('option');
             youOpt.value = FEUSER_KEY;
             youOpt.textContent = 'You';
             debtorSelect.appendChild(youOpt);
-            offlineBuddies.forEach(function (m) {
+            offlineContacts.forEach(function (m) {
                 var opt = document.createElement('option');
                 opt.value = m.key;
-                opt.textContent = m.name + ' (offline buddy)';
+                opt.textContent = m.name + ' (offline contact)';
                 debtorSelect.appendChild(opt);
             });
             debtorRow.style.display = '';
@@ -365,7 +365,7 @@
             var prev = creditorEl.value;
             creditorEl.innerHTML = '';
             if (dk !== FEUSER_KEY) {
-                // offline buddy is paying: creditor can only be "You"
+                // offline contact is paying: creditor can only be "You"
                 var opt = document.createElement('option');
                 opt.value = FEUSER_KEY;
                 opt.textContent = 'You';
@@ -375,7 +375,7 @@
                     if (m.key === FEUSER_KEY) return;
                     var opt = document.createElement('option');
                     opt.value = m.key;
-                    opt.textContent = m.is_dummy ? m.name + ' (offline buddy)' : m.name;
+                    opt.textContent = m.is_dummy ? m.name + ' (offline contact)' : m.name;
                     if (m.key === prev) opt.selected = true;
                     creditorEl.appendChild(opt);
                 });
@@ -459,7 +459,7 @@
         <a href="https://github.com/Leonetienne/Comaney#advanced-search-filters" target="_blank" rel="noopener" class="search-hint-link">Advanced search filters</a>
     </div>
     <div id="buddy-direct-exp-container"></div>
-    <a id="buddy-summary-export-link" href="{% url 'buddies:buddy_summary_export' %}" class="expenses-export-link">&#8595; Export ZIP</a>
+    <a id="buddy-summary-export-link" href="{% url 'buddies:contact_summary_export' %}" class="expenses-export-link">&#8595; Export ZIP</a>
 </section>
 
 <script>

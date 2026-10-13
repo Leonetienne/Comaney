@@ -14,7 +14,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _shell, _login_as, _create_group, _add_group_member, _create_buddy_link
+from bhelpers import _shell, _login_as, _create_group, _add_group_member, _create_contact_link
 
 
 # ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ class TestPersonalDummyMergeAccept:
         b = setup_user(None, None, first_name="Bob", last_name="Mergee")
         # A merge target must already be a buddy (request_merge_with_feuser's
         # "not_linked" precondition); link them before seeding the invite.
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         dummy_uid = _shell(
             f"from buddies.models import DummyUser; "
             f"from feusers.models import FeUser; "
@@ -160,16 +160,16 @@ class TestPersonalDummyMergeDecline:
         time.sleep(1)
         assert "/buddies/" in driver.current_url
 
-    def test_no_buddy_link_after_decline(self, driver, w, ctx):
+    def test_no_contact_link_after_decline(self, driver, w, ctx):
         count = _shell(
-            f"from buddies.models import BuddyLink; "
+            f"from buddies.models import ContactLink; "
             f"from feusers.models import FeUser; "
             f"from django.db.models import Q; "
             f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
             f"b = FeUser.objects.get(email='{ctx['b']['email']}'); "
-            f"print(BuddyLink.objects.filter(Q(user_a=a,user_b=b)|Q(user_a=b,user_b=a)).count())"
+            f"print(ContactLink.objects.filter(Q(user_a=a,user_b=b)|Q(user_a=b,user_b=a)).count())"
         )
-        assert count == "0", "No BuddyLink must exist after decline"
+        assert count == "0", "No ContactLink must exist after decline"
 
     def test_dummy_still_exists_for_a(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
@@ -243,7 +243,7 @@ class TestGroupDummyMergeAccept:
         driver.find_element(By.ID, "btn-accept-merge").click()
         time.sleep(1)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
-            "Accepting a group merge must land on the project, not My Buddies"
+            "Accepting a group merge must land on the project, not Contacts"
 
     def test_c_is_member_after_merge(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
@@ -264,13 +264,13 @@ class TestGroupDummyMergeAccept:
 class TestPersonalMergeAcceptAfterUnbuddy:
     """A request is sent while A and B are buddies; they un-buddy before B
     accepts. Accepting must fail cleanly rather than silently re-creating the
-    BuddyLink A and B deliberately removed."""
+    ContactLink A and B deliberately removed."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Uma", last_name="Unbuddied")
         b = setup_user(None, None, first_name="Bert", last_name="Unbuddied")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         dummy_uid = _shell(
             f"from buddies.models import DummyUser; "
             f"from feusers.models import FeUser; "
@@ -314,16 +314,16 @@ class TestPersonalMergeAcceptAfterUnbuddy:
         assert "invalid or has expired" in driver.page_source, \
             "Accepting after un-buddying must fail cleanly, not re-link them"
 
-    def test_no_buddy_link_recreated(self, driver, w, ctx):
+    def test_no_contact_link_recreated(self, driver, w, ctx):
         count = _shell(
-            f"from buddies.models import BuddyLink; "
+            f"from buddies.models import ContactLink; "
             f"from feusers.models import FeUser; "
             f"from django.db.models import Q; "
             f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
             f"b = FeUser.objects.get(email='{ctx['b']['email']}'); "
-            f"print(BuddyLink.objects.filter(Q(user_a=a,user_b=b)|Q(user_a=b,user_b=a)).count())"
+            f"print(ContactLink.objects.filter(Q(user_a=a,user_b=b)|Q(user_a=b,user_b=a)).count())"
         )
-        assert count == "0", "Accepting a stale request must not re-create the BuddyLink"
+        assert count == "0", "Accepting a stale request must not re-create the ContactLink"
 
     def test_dummy_still_present_for_a(self, driver, w, ctx):
         exists = _shell(

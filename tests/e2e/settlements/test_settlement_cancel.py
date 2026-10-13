@@ -4,10 +4,10 @@ Settlement edit/copy/delete restrictions.
 Scenarios covered:
 - Clone (copy) button is absent for settlement expenses in the expense list
 - Clone via POST is blocked server-side for settlements
-- In the personal buddy summary, edit button is absent for settlements
-- In the personal buddy summary, delete button IS present for unapproved settlements
+- In the contact summary, edit button is absent for settlements
+- In the contact summary, delete button IS present for unapproved settlements
   and for approved settlements where the creditor is an offline member
-- In the personal buddy summary, delete button is absent for approved real-user settlements
+- In the contact summary, delete button is absent for approved real-user settlements
 - Deleting an unapproved settlement sends a cancellation email to the creditor
 - Approved real-user settlements cannot be deleted even via direct POST
 - Bulk delete silently skips settlement expenses
@@ -22,7 +22,7 @@ import pytest
 
 from helpers import _url, setup_user, cleanup_user, fetch_email, mailpit_seen_ids, api_get
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _get_pk,
+    _shell, _login_as, _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy, _create_group, _add_group_member,
 )
 
@@ -119,7 +119,7 @@ class TestCloneButtonAbsentForSettlements:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Clone", last_name="Debtor")
         b = setup_user(None, None, first_name="Clone", last_name="Creditor")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_feuser_settlement(a["email"], b_pk))
         yield {"a": a, "b": b, "exp_pk": exp_pk}
@@ -157,14 +157,14 @@ class TestCloneButtonAbsentForSettlements:
 # 2. Personal buddy summary: edit button absent, delete button present/absent
 # ---------------------------------------------------------------------------
 
-class TestPersonalBuddySummaryButtons:
-    """Verify edit/delete button behaviour for settlements in the personal buddy summary."""
+class TestPersonalContactSummaryButtons:
+    """Verify edit/delete button behaviour for settlements in the contact summary."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Pers", last_name="Debtor")
         b = setup_user(None, None, first_name="Pers", last_name="Creditor")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         a_pk = int(_get_pk(a["email"]))
         dummy_pk = int(_create_personal_dummy(a["email"]))
@@ -221,7 +221,7 @@ class TestApprovedRealUserSettlementNotDeletable:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="App", last_name="Debtor")
         b = setup_user(None, None, first_name="App", last_name="Creditor")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_feuser_settlement(a["email"], b_pk, value="30.00", approved=True))
         yield {"a": a, "b": b, "exp_pk": exp_pk}
@@ -236,7 +236,7 @@ class TestApprovedRealUserSettlementNotDeletable:
         assert delete_action not in driver.page_source, \
             "Delete button must not appear for approved real-user settlement in expense list"
 
-    def test_delete_button_absent_in_buddy_summary(self, driver, w, ctx):
+    def test_delete_button_absent_in_contact_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(2)
         delete_action = f"/budget/expenses/{ctx['exp_pk']}/delete/"
@@ -274,7 +274,7 @@ class TestUnapprovedSettlementCancellationEmail:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Carl", last_name="Canceller")
         b = setup_user(None, None, first_name="Vera", last_name="Creditor")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         a_pk = int(_get_pk(a["email"]))
         _create_personal_expense_with_buddy(
@@ -340,7 +340,7 @@ class TestBulkDeleteSkipsSettlements:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Bob", last_name="Bulker")
         b = setup_user(None, None, first_name="Ben", last_name="BulkCreditor")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         settle_pk = int(_create_feuser_settlement(a["email"], b_pk, value="20.00"))
         normal_pk = int(_shell(
@@ -524,7 +524,7 @@ class TestApiCanDeleteField:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Fran", last_name="ApiChecker")
         b = setup_user(None, None, first_name="Gus", last_name="ApiCreditor")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         dummy_pk = int(_create_personal_dummy(a["email"]))
         unapproved_pk = int(_create_feuser_settlement(a["email"], b_pk, value="10.00"))

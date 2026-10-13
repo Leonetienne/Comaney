@@ -11,7 +11,7 @@
     <p>Please log in with the correct account to accept this {{ noun|default:"invitation" }}.</p>
     <div class="form-actions">
         <a href="{% url 'logout' %}" class="btn btn-secondary">Log out</a>
-        <a href="{% url 'buddies:buddies_page' %}" class="btn btn-secondary">Go to Buddies</a>
+        <a href="{% url 'buddies:index' %}" class="btn btn-secondary">Go to contacts</a>
     </div>
 </div>
 {% endblock %}

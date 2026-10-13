@@ -5,10 +5,10 @@ from . import views
 app_name = "buddies"
 
 urlpatterns = [
-    path("", views.buddies_page, name="buddies_page"),
-    path("my-buddies/", views.my_buddies_page, name="my_buddies"),
-    path("summary/", views.buddy_summary_page, name="buddy_summary"),
-    path("summary/export/", views.buddy_summary_export, name="buddy_summary_export"),
+    path("", views.index, name="index"),
+    path("contacts/", views.contacts_page, name="contacts"),
+    path("summary/", views.contact_summary_page, name="contact_summary"),
+    path("summary/export/", views.contact_summary_export, name="contact_summary_export"),
     path("direct-expenses/partial/", views.direct_expense_list_partial, name="direct_expense_list_partial"),
 
     # Personal dummy management
@@ -21,7 +21,7 @@ urlpatterns = [
 
     # Actual-user invitations
     path("invite-actual/", views.invite_actual, name="invite_actual"),
-    path("buddy/invite/", views.send_buddy_invite, name="buddy_invite"),
+    path("buddy/invite/", views.send_contact_invite, name="contact_invite"),
     path("invite/<str:token>/", views.view_invite, name="view_invite"),
     path("invite/<str:token>/accept/", views.accept_invite, name="accept_invite"),
     path("invite/<str:token>/decline/", views.decline_invite, name="decline_invite"),
@@ -62,5 +62,5 @@ urlpatterns = [
     # Direct settlements
     path("settle/", views.settle_direct, name="settle_direct"),
     path("settle/freeform/", views.settle_direct_freeform, name="settle_direct_freeform"),
-    path("settle/<str:buddy_key>/", views.settle_direct_individual, name="settle_direct_individual"),
+    path("settle/<str:contact_key>/", views.settle_direct_individual, name="settle_direct_individual"),
 ]

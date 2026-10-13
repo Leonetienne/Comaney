@@ -1,6 +1,6 @@
 {% load static %}
 {% load feuser_tags %}
-{% if buddy_actual or buddy_dummy or buddy_groups %}
+{% if real_contacts or offline_contacts or buddy_groups %}
 <script>
 window.BUDDY_EXPENSE_CONFIG = {
     mePk:              {{ request.feuser.pk }},
@@ -10,14 +10,14 @@ window.BUDDY_EXPENSE_CONFIG = {
     meInitials:        "{{ request.feuser.initials|escapejs }}",
     meAvatarColor:     "{{ request.feuser.initials|avatar_color|escapejs }}",
     groupsData:        {{ projects_data_json|safe }},
-    singleBuddies:     {{ single_buddies_json|safe }},
+    contacts:     {{ contacts_json|safe }},
     upfrontType:       "{{ existing_upfront_type|default:'me' }}",
     upfrontId:         {{ existing_upfront_id|default:request.feuser.pk }},
     existingSpendings: {{ existing_spendings_json|default:"[]"|safe }},
     existingMode:      "{{ existing_mode|default:'single' }}",
     existingGroupId:   {{ existing_group_id|default:"null" }},
     respectExistingParticipants: {% if respect_existing_participants %}true{% else %}false{% endif %},
-    urlBuddySummary:   "{% url 'buddies:buddy_summary' %}",
+    urlContactSummary:   "{% url 'buddies:contact_summary' %}",
     currencySymbol:    "{{ request.feuser.currency|escapejs }}",
 };
 </script>
@@ -28,8 +28,8 @@ window.BUDDY_EXPENSE_CONFIG = {
     <label class="form-label">Expense assignment</label>
     <div class="assign-tab-group" id="assign-tab-group">
         <button type="button" class="assign-tab" data-assign="none" id="assign-none">None</button>
-        {% if buddy_actual or buddy_dummy %}
-        <button type="button" class="assign-tab" data-assign="buddy" id="assign-buddy">Direct Buddy</button>
+        {% if real_contacts or offline_contacts %}
+        <button type="button" class="assign-tab" data-assign="contact" id="assign-contact">Contact</button>
         {% endif %}
         {% if buddy_groups %}
         <button type="button" class="assign-tab" data-assign="project" id="assign-project">Project</button>
@@ -92,7 +92,7 @@ window.BUDDY_EXPENSE_CONFIG = {
     <input type="hidden" name="buddy_spendings_json" id="buddy-spendings-json" value="[]">
     </div>
 </div>
-<p id="buddy-no-participants-error" class="error-msg" style="display:none">A buddy payment requires at least one participant.</p>
+<p id="buddy-no-participants-error" class="error-msg" style="display:none">A shared expense requires at least one participant.</p>
 
 <script>
 (function () {
@@ -143,7 +143,7 @@ window.BUDDY_EXPENSE_CONFIG = {
     var initAssign = 'none';
     {% if is_buddy_expense %}
       {% if existing_group_id %}initAssign = 'project';
-      {% else %}initAssign = 'buddy';
+      {% else %}initAssign = 'contact';
       {% endif %}
     {% endif %}
 
@@ -160,7 +160,7 @@ window.BUDDY_EXPENSE_CONFIG = {
         if (mode === 'none') {
             cb.checked = false;
             section.style.display = 'none';
-        } else if (mode === 'buddy') {
+        } else if (mode === 'contact') {
             cb.checked = true;
             section.style.display = 'block';
             section.classList.remove('buddy-section--project');
@@ -225,7 +225,7 @@ window.BUDDY_EXPENSE_CONFIG = {
 
     // Note: zero-participant project expenses (payer covers the cost alone) are
     // allowed by buddy_expense.js's own submit guard, which only requires a
-    // participant in single (direct buddy) mode.
+    // participant in single (contact) mode.
 
     if (groupSel) {
         groupSel.addEventListener('change', function () {
@@ -246,7 +246,7 @@ window.BUDDY_EXPENSE_CONFIG = {
     setTimeout(function () {
         if (initAssign === 'none') {
             section.style.display = 'none';
-        } else if (initAssign === 'buddy') {
+        } else if (initAssign === 'contact') {
             section.classList.remove('buddy-section--project');
             if (groupSelRow) groupSelRow.style.display = 'none';
         } else if (initAssign === 'project') {

@@ -1,11 +1,11 @@
 {% extends "budget_base.html" %}
 {% load action_badges %}
-{% block title %}Comaney - My Buddies{% endblock %}
+{% block title %}Comaney - Contacts{% endblock %}
 
 {% block content %}
 {% load feuser_tags %}
 <div class="page-header">
-    <h1>My Buddies</h1>
+    <h1>Contacts</h1>
 </div>
 <div class="desc-surface"><p class="page-subtitle" style="margin:0;">Track shared spending with friends. Whoever pays upfront logs the full expense; the others' shares are recorded automatically.</p></div>
 
@@ -13,7 +13,7 @@
 <div id="achim-modal" class="cdialog-backdrop cdialog-visible">
     <div class="cdialog">
         <p class="cdialog-title">Say hello to Achim Archive</p>
-        <p class="cdialog-body">The offline buddy you removed had shared expenses, so rather than deleting them, they've been passed on to <strong>Achim Archive</strong>, a special buddy that holds the history of removed offline buddies.</p>
+        <p class="cdialog-body">The offline contact you removed had shared expenses, so rather than deleting them, they've been passed on to <strong>Achim Archive</strong>, a special offline contact that holds the history of removed offline contacts.</p>
         <p class="cdialog-footer-note">Your balances stay accurate. You can delete Achim's expenses at any time, but that will permanently change your financial history, so there's a warning before you do so.</p>
         <div class="cdialog-actions">
             <button type="button" class="btn" onclick="document.getElementById('achim-modal').style.display='none';history.replaceState(null,'',location.pathname);">Got it</button>
@@ -75,11 +75,11 @@
             </div>
             <div class="bbl-actions">
                 {% if info.type == 'feuser' and info.link_uid %}
-                <form id="kick-form-{{ info.link_uid }}" method="post" action="{% url 'buddies:kick_actual' info.link_uid %}" class="confirm-form" data-confirm="Remove {{ info.display_name|escapejs }} as a spending buddy?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Your shared expenses will stay in your history." data-ok="Remove" style="display:none">{% csrf_token %}</form>
+                <form id="kick-form-{{ info.link_uid }}" method="post" action="{% url 'buddies:kick_actual' info.link_uid %}" class="confirm-form" data-confirm="Remove {{ info.display_name|escapejs }} as a contact?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Your shared expenses will stay in your history." data-ok="Remove" style="display:none">{% csrf_token %}</form>
                 <div class="ctx-menu-wrap">
                     <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
                     <div class="ctx-menu">
-                        <button type="submit" id="btn-kick-{{ info.link_uid }}" form="kick-form-{{ info.link_uid }}" class="ctx-menu-item ctx-menu-item--danger">Remove buddy</button>
+                        <button type="submit" id="btn-kick-{{ info.link_uid }}" form="kick-form-{{ info.link_uid }}" class="ctx-menu-item ctx-menu-item--danger">Remove contact</button>
                         {% if info.feuser and p_state == "invite" and not request.feuser.is_demo %}
                         <button class="ctx-menu-item partnership-invite-btn"
                                 data-feuser-id="{{ info.feuser.pk }}"
@@ -104,12 +104,12 @@
                     {% csrf_token %}
                     <select name="target_key" class="input-inline" required>
                         <option value="self" data-kind="self">Yourself</option>
-                        <optgroup label="Offline buddies">
+                        <optgroup label="Offline contacts">
                             {% for other in unified_debts %}{% if other.type == 'dummy' and other.dummy and not other.dummy.is_archive and other.dummy.uid != info.dummy.uid %}
                             <option value="d{{ other.dummy.uid }}" data-kind="dummy">{{ other.display_name }}</option>
                             {% endif %}{% endfor %}
                         </optgroup>
-                        <optgroup label="Buddies">
+                        <optgroup label="Contacts">
                             {% for other in unified_debts %}{% if other.type == 'feuser' and other.feuser %}
                             <option value="f{{ other.feuser.pk }}" data-kind="feuser">{{ other.display_name }}</option>
                             {% endif %}{% endfor %}
@@ -166,10 +166,10 @@
     {% endif %}
 
     {% if pending_invites_in %}
-    <h3>Buddy invitations</h3>
+    <h3>Contact invitations</h3>
     {% for invite in pending_invites_in %}
     <div class="invite-card">
-        <p><strong>{{ invite.inviter.first_name }} {{ invite.inviter.last_name }}</strong> ({{ invite.inviter.email }}) invited you to be spending buddies.</p>
+        <p><strong>{{ invite.inviter.first_name }} {{ invite.inviter.last_name }}</strong> ({{ invite.inviter.email }}) invited you to connect as contacts.</p>
         <div class="invite-actions">
             <form method="post" action="{% url 'buddies:accept_invite' invite.token %}">
                 {% csrf_token %}
@@ -188,7 +188,7 @@
     <h3>Offline record link requests</h3>
     {% for invite in merge_invites_in %}
     <div class="invite-card">
-        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> has you listed as an offline buddy under the name "<strong>{{ invite.dummy.display_name }}</strong>". You're already buddies - if you accept, all expense history under that entry will be linked to your real account.</p>
+        <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> has you listed as an offline contact under the name "<strong>{{ invite.dummy.display_name }}</strong>". You're already contacts. If you accept, all expense history under that entry will be linked to your real account.</p>
         <div class="invite-actions">
             <form method="post" action="{% url 'buddies:accept_merge' invite.token %}">
                 {% csrf_token %}
@@ -204,7 +204,7 @@
     {% endif %}
 
     {% if pending_invites_out or pending_onboarding_invites_out %}
-    <h3>Buddy invitations you sent</h3>
+    <h3>Contact invitations you sent</h3>
     {% for invite in pending_invites_out %}
     <div class="invite-card invite-card-outgoing">
         <p>Sent to <strong>{{ invite.invitee_email }}</strong>. Expires {{ invite.expires_at|date:"N j, Y" }}.</p>
@@ -246,7 +246,7 @@
     <div class="add-buddy-forms">
 
         <div class="add-buddy-panel">
-            <h3>Invite a buddy</h3>
+            <h3>Invite a contact</h3>
             <p class="text-muted">For one-on-one expense sharing with another Comaney user.</p>
             {% if request.feuser.is_demo %}
             <p class="text-muted" style="opacity:.5;">Not available on demo accounts.</p>
@@ -264,7 +264,7 @@
         </div>
 
         <div class="add-buddy-panel">
-            <h3>Add an offline buddy</h3>
+            <h3>Add an offline contact</h3>
             <p class="text-muted">For people who don't use Comaney. You can invite them later.</p>
             <form method="post" action="{% url 'buddies:add_dummy' %}" class="inline-form">
                 {% csrf_token %}
@@ -278,7 +278,7 @@
 
 {% if not unified_debts %}
 <div class="buddies-onboarding-hint">
-    <strong>How Buddies work:</strong> Create a group (for 3+ people) or add a direct buddy (for one-on-one splits). Then check "This is a buddy payment" on any expense. The balance updates automatically.
+    <strong>How contacts work:</strong> Add a contact for one-on-one splits, or create a project for groups. Then pick them under "Expense assignment" on any expense. The balance updates automatically.
 </div>
 {% endif %}
 
@@ -289,7 +289,7 @@
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
     // Auto-accept trust toggle (buddies/services/trust.py). Enabling needs an
-    // explicit OK because it also accepts that buddy's pending entries and
+    // explicit OK because it also accepts that contact's pending entries and
     // project invitations for good.
     document.querySelectorAll('.auto-accept-toggle').forEach(function (cb) {
         cb.addEventListener('change', async function () {

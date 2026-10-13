@@ -1,6 +1,6 @@
 """
 Project member list: non-admin members get a restricted "..." menu that lets
-them invite a fellow member as a Catalog Partner or as a direct buddy, with
+them invite a fellow member as a Catalog Partner or as a contact, with
 each option hidden once it no longer applies.
 Run with: pytest tests/e2e/projects/test_project_member_invite_menu.py -v -s
 """
@@ -13,7 +13,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user, fill, click, DOCKER_WEB, PASSWORD
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _create_group, _add_group_member,
+    _shell, _login_as, _create_contact_link, _create_group, _add_group_member,
     _get_pk, _ctx_click,
 )
 
@@ -62,7 +62,7 @@ class TestBothOptionsVisibleForNonAdmin:
         buddy_btn = driver.find_elements(
             By.CSS_SELECTOR, f"button.buddy-invite-btn[data-feuser-id='{ctx['admin_pk']}']")
         assert partner_btn, "Expected 'Invite as partner' for the admin row"
-        assert buddy_btn, "Expected 'Invite as direct buddy' for the admin row"
+        assert buddy_btn, "Expected 'Invite as contact' for the admin row"
 
     def test_admin_kebab_menu_unaffected(self, driver, w, ctx):
         """Regression guard: the admin's own kebab menu keeps its existing items only."""
@@ -77,7 +77,7 @@ class TestBothOptionsVisibleForNonAdmin:
 # Buddy option disappears once they are already buddies
 # ---------------------------------------------------------------------------
 
-class TestBuddyOptionHiddenWhenAlreadyBuddies:
+class TestBuddyOptionHiddenWhenAlreadyContacts:
     """Once linked as buddies, only 'Invite as partner' remains."""
 
     @pytest.fixture(scope="class")
@@ -86,7 +86,7 @@ class TestBuddyOptionHiddenWhenAlreadyBuddies:
         member = setup_user(driver, w, first_name="Quinn", last_name="Member")
         gid = _create_group(admin["email"], "Menu Buddy Project")
         _add_group_member(int(gid), member["email"])
-        _create_buddy_link(admin["email"], member["email"])
+        _create_contact_link(admin["email"], member["email"])
         admin_pk = _get_pk(admin["email"])
         yield {"admin": admin, "member": member, "gid": int(gid), "admin_pk": admin_pk}
         cleanup_user(admin["email"])
@@ -100,7 +100,7 @@ class TestBuddyOptionHiddenWhenAlreadyBuddies:
             By.CSS_SELECTOR, f"button.buddy-invite-btn[data-feuser-id='{ctx['admin_pk']}']")
         partner_btn = driver.find_elements(
             By.CSS_SELECTOR, f"button.partnership-invite-btn[data-feuser-id='{ctx['admin_pk']}']")
-        assert not buddy_btn, "Already buddies: 'Invite as direct buddy' must be hidden"
+        assert not buddy_btn, "Already buddies: 'Invite as contact' must be hidden"
         assert partner_btn, "'Invite as partner' should still be available"
 
 
@@ -117,7 +117,7 @@ class TestMenuHiddenWhenNothingApplies:
         member = setup_user(driver, w, first_name="Sara", last_name="Member")
         gid = _create_group(admin["email"], "Menu None Project")
         _add_group_member(int(gid), member["email"])
-        _create_buddy_link(admin["email"], member["email"])
+        _create_contact_link(admin["email"], member["email"])
         _create_full_partnership_via_shell(admin["email"], member["email"])
         yield {"admin": admin, "member": member, "gid": int(gid)}
         cleanup_user(admin["email"])
@@ -134,11 +134,11 @@ class TestMenuHiddenWhenNothingApplies:
 
 
 # ---------------------------------------------------------------------------
-# Sending the invite via the UI button creates a BuddyInvite
+# Sending the invite via the UI button creates a ContactInvite
 # ---------------------------------------------------------------------------
 
-class TestSendBuddyInviteViaMenu:
-    """Clicking 'Invite as direct buddy' and confirming creates an invite."""
+class TestSendContactInviteViaMenu:
+    """Clicking 'Invite as contact' and confirming creates an invite."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -151,7 +151,7 @@ class TestSendBuddyInviteViaMenu:
         cleanup_user(admin["email"])
         cleanup_user(member["email"])
 
-    def test_send_buddy_invite_and_pill_appears(self, driver, w, ctx):
+    def test_send_contact_invite_and_pill_appears(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["gid"]))
         time.sleep(1)
@@ -162,15 +162,15 @@ class TestSendBuddyInviteViaMenu:
         time.sleep(2)
 
         count = _shell(
-            "from buddies.models import BuddyInvite; "
-            f"print(BuddyInvite.objects.filter(inviter__email='{ctx['member']['email']}', "
+            "from buddies.models import ContactInvite; "
+            f"print(ContactInvite.objects.filter(inviter__email='{ctx['member']['email']}', "
             f"invitee_email='{ctx['admin']['email']}').count())"
         )
-        assert count == "1", f"Expected a BuddyInvite in DB, got count={count}"
+        assert count == "1", f"Expected a ContactInvite in DB, got count={count}"
 
         driver.get(_settings_url(ctx["gid"]))
         time.sleep(1)
-        assert "Buddy invite pending" in driver.page_source
+        assert "Contact invite pending" in driver.page_source
         buddy_btn = driver.find_elements(
             By.CSS_SELECTOR, f"button.buddy-invite-btn[data-feuser-id='{ctx['admin_pk']}']")
         assert not buddy_btn, "Button should be replaced by the pending pill"

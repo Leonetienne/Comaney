@@ -713,14 +713,14 @@ def project_settings(request, project_id):
     dummy_members = [m for m in project.members.all() if m.dummy_id]
     merge_invites_in_project = BuddyQueryService.pending_merge_invites_incoming_for_project(feuser, project)
     merge_invites_out_project = BuddyQueryService.pending_merge_invites_outgoing_for_project(feuser, project) if is_admin else []
-    # Direct buddies for the invite autocomplete and the "already a contact"
+    # Contacts for the invite autocomplete and the "already a contact"
     # hints (invite email + offline-member name check). Existing members stay
     # in the list for the hints but are never offered as suggestions.
     member_ids = {m.feuser_id for m in project.members.all() if m.feuser_id}
     direct_contacts = [
         {"feuser": b, "is_member": b.pk in member_ids}
         for b in sorted(
-            BuddyQueryService.get_actual_buddies(feuser),
+            BuddyQueryService.get_real_contacts(feuser),
             key=lambda u: (u.first_name.lower(), u.last_name.lower(), u.email.lower()),
         )
     ] if is_admin else []
@@ -969,7 +969,7 @@ def project_merge_dummy(request, project_id, dummy_id):
         return redirect("projects:project_settings", project_id=project_id)
 
     if feuser.is_demo:
-        django_messages.error(request, "Demo accounts cannot merge buddies.")
+        django_messages.error(request, "Demo accounts cannot merge offline members.")
         return redirect("projects:project_settings", project_id=project_id)
 
     target_key = request.POST.get("target_key", "").strip()

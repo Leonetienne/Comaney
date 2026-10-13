@@ -20,7 +20,7 @@ import pytest
 from helpers import _url, setup_user, cleanup_user, fetch_email, mailpit_seen_ids
 from bhelpers import (
     _shell, _login_as, _get_pk,
-    _create_buddy_link, _create_group, _add_group_member,
+    _create_contact_link, _create_group, _add_group_member,
     _create_group_expense, _create_personal_expense_with_buddy,
 )
 
@@ -47,7 +47,7 @@ class TestPersonalSettlementCreationNotifiesCreditor:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="CN1Debtor", last_name="A")
         b = setup_user(None, None, first_name="CN1Creditor", last_name="B")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         b_pk = int(_get_pk(b["email"]))
         _create_personal_expense_with_buddy(
@@ -207,7 +207,7 @@ class TestSettlementNotificationSuppressed:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="SuppDebtor", last_name="S")
         b = setup_user(None, None, first_name="SuppCreditor", last_name="S")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         b_pk = int(_get_pk(b["email"]))
         exp_pk = _create_personal_expense_with_buddy(

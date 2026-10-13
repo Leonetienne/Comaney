@@ -193,7 +193,7 @@ def _apply_expense_fields(obj, data, feuser, creating=False):
     if obj.pk and obj.type != TransactionType.EXPENSE and (
         obj.project_id or obj.is_dummy or obj.buddy_spendings.exists()
     ):
-        return 'Buddy and project expenses must be type "expense".'
+        return 'Contact and project expenses must be type "expense".'
 
     return None
 
@@ -275,7 +275,7 @@ def _apply_scheduled_fields(obj, data, feuser, creating=False):
             obj.category = None
 
     if obj.pk and obj.type != TransactionType.EXPENSE and obj.assign_buddy_mode:
-        return 'Buddy and project scheduled expenses must be type "expense".'
+        return 'Contact and project scheduled expenses must be type "expense".'
 
     return None
 

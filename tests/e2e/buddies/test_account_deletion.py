@@ -4,7 +4,7 @@ is called before the user is deleted. It converts all buddy relationships to
 dummy placeholders so the remaining user's history stays intact.
 
 Scenarios tested:
-  1. User with a personal buddy link deletes account:
+  1. User with a contact link deletes account:
      - The surviving buddy gets a ghost dummy with the deleted user's display name.
      - Expenses the deleted user owned (where the surviving buddy was a participant)
        are cloned for the surviving user with the ghost dummy as payer.
@@ -23,7 +23,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _shell, _login_as, _create_buddy_link, _create_group, _add_group_member
+from bhelpers import _shell, _login_as, _create_contact_link, _create_group, _add_group_member
 
 
 def _delete_account_via_ui(driver, ctx_user: dict) -> None:
@@ -46,14 +46,14 @@ def _dummy_count_for(feuser_email: str) -> int:
     ))
 
 
-def _buddy_link_exists(email_a: str, email_b: str) -> bool:
+def _contact_link_exists(email_a: str, email_b: str) -> bool:
     result = _shell(
-        f"from buddies.models import BuddyLink; "
+        f"from buddies.models import ContactLink; "
         f"from feusers.models import FeUser; "
         f"a = FeUser.objects.get(email='{email_a}'); "
         f"b = FeUser.objects.get(email='{email_b}'); "
         f"lo, hi = sorted([a, b], key=lambda u: u.pk); "
-        f"print(BuddyLink.objects.filter(user_a=lo, user_b=hi).count())"
+        f"print(ContactLink.objects.filter(user_a=lo, user_b=hi).count())"
     )
     return result == "1"
 
@@ -70,7 +70,7 @@ class TestAccountDeletionWithPersonalBuddy:
         # A will be deleted; B will survive. Browser starts logged in as B.
         a = setup_user(None, None, first_name="Dustin", last_name="Deletes")
         b = setup_user(driver, w, first_name="Bianca", last_name="Survives")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         # A paid an expense where B is a participant
         b_pk = int(_shell(
             f"from feusers.models import FeUser; "
@@ -92,8 +92,8 @@ class TestAccountDeletionWithPersonalBuddy:
         # A is already deleted by the test; only clean up B.
         cleanup_user(b["email"])
 
-    def test_buddy_link_exists_before_deletion(self, driver, w, ctx):
-        assert _buddy_link_exists(ctx["a"]["email"], ctx["b"]["email"]), \
+    def test_contact_link_exists_before_deletion(self, driver, w, ctx):
+        assert _contact_link_exists(ctx["a"]["email"], ctx["b"]["email"]), \
             "Buddy link must exist before A deletes their account"
 
     def test_a_deletes_account_redirects_to_home(self, driver, w, ctx):
@@ -109,16 +109,16 @@ class TestAccountDeletionWithPersonalBuddy:
         assert a_exists == "0", \
             "A's FeUser must no longer exist in the database after account deletion"
 
-    def test_buddy_link_gone_after_deletion(self, driver, w, ctx):
+    def test_contact_link_gone_after_deletion(self, driver, w, ctx):
         # A's FeUser no longer exists; the buddy link must be gone too.
         link_count = _shell(
-            f"from buddies.models import BuddyLink; "
+            f"from buddies.models import ContactLink; "
             f"from feusers.models import FeUser; "
             f"b = FeUser.objects.get(email='{ctx['b']['email']}'); "
-            f"print(BuddyLink.for_user(b).count())"
+            f"print(ContactLink.for_user(b).count())"
         )
         assert link_count == "0", \
-            "BuddyLink must be deleted when A's account is removed"
+            "ContactLink must be deleted when A's account is removed"
 
     def test_b_has_ghost_dummy_for_a(self, driver, w, ctx):
         count = _dummy_count_for(ctx["b"]["email"])
@@ -136,7 +136,7 @@ class TestAccountDeletionWithPersonalBuddy:
         assert "Dustin" in name, \
             f"Ghost dummy must carry A's display name, got: {name!r}"
 
-    def test_b_sees_ghost_dummy_on_buddies_page(self, driver, w, ctx):
+    def test_b_sees_ghost_dummy_on_contacts_page(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/"))
         time.sleep(1)
@@ -219,7 +219,7 @@ class TestAccountDeletionGroupAdmin:
         )
         assert result == "True", "B must become the group admin after A deletes their account"
 
-    def test_b_sees_group_on_buddies_page(self, driver, w, ctx):
+    def test_b_sees_group_on_contacts_page(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/projects/"))
         time.sleep(1)

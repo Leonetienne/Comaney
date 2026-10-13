@@ -7,7 +7,7 @@ from comaney.json_utils import safe_json
 from ..decorators import feuser_required
 from ..models import Dashboard
 from ._period import _date_range_presets_context
-from ._sharing import has_buddy_or_multiuser_project
+from ._sharing import has_contact_or_multiuser_project
 
 
 def _first_dashboard(feuser):
@@ -58,7 +58,7 @@ def dashboard_detail(request, uid: int):
 
     ctx = {
         'active_nav': 'dashboard',
-        'nav_show_sharing_toggle': has_buddy_or_multiuser_project(feuser),
+        'nav_show_sharing_toggle': has_contact_or_multiuser_project(feuser),
         'current_dashboard': dash,
         'is_first_dashboard': is_first,
         'dashboards_json': dashboards_json,

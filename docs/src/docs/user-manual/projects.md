@@ -8,7 +8,7 @@ A project is an expense container for tracking costs related to a specific goal 
 - Beach trip 2025 with friends
 - Tracking shared flat expenses with housemates
 
-Projects are separate from your personal buddy connections. You can use them on your own, or invite other Comaney users and offline members.
+Projects are separate from your contact connections. You can use them on your own, or invite other Comaney users and offline members.
 
 ## Creating a project
 
@@ -47,7 +47,7 @@ When creating or editing an expense, set **Expense assignment** to **Project** a
 
 For **solo projects**, the payer selection and split controls are hidden. The expense is automatically assigned entirely to you.
 
-For **multi-member projects**, you can set who paid upfront and how the cost is divided among participants. See [Shared Expenses](buddies/shared-expenses.md) for the full guide.
+For **multi-member projects**, you can set who paid upfront and how the cost is divided among participants. See [Shared Expenses](contacts/shared-expenses.md) for the full guide.
 
 ## Who is the admin
 
@@ -86,16 +86,16 @@ Admin only.
 1. On the project's **Settings** tab, find **Invite by email**.
 2. Enter their email address and click **Send invite**.
 
-Inviting one of your buddies? Just start typing part of their first name, last name, or email address. Matching buddies appear in a list below the field; click one to fill in their email. Below the field you can also see whether the address belongs to one of your buddies: a green check mark and **This buddy is in your contacts**, or a gray **This buddy is not in your contact list**.
+Inviting one of your contacts? Just start typing part of their first name, last name, or email address. Matching contacts appear in a list below the field; click one to fill in their email. Below the field you can also see whether the address belongs to one of your contacts: a green check mark and **This contact is in your contacts**, or a gray **This contact is not in your contact list**.
 
 They receive an email with a link. Once they accept, they appear in the member list.
 
 - If the email address is not yet registered, Comaney sends them a sign-up and project-join link.
 - Pending invitations are listed on the project page and can be revoked there.
 
-**Receiving a project invitation:** Go to **My Buddies**. The invitation appears under **Pending Invitations**. Click **View invite** to accept or decline.
+**Receiving a project invitation:** Go to **Contacts**. The invitation appears under **Pending Invitations**. Click **View invite** to accept or decline.
 
-If the person you invite has chosen to accept your entries automatically, they join the project right away instead. See [Automatically accepting a buddy's entries](buddies/adding-buddies.md#automatically-accepting-a-buddys-entries).
+If the person you invite has chosen to accept your entries automatically, they join the project right away instead. See [Automatically accepting a contact's entries](contacts/adding-contacts.md#automatically-accepting-a-contacts-entries).
 
 ## Adding an offline member
 
@@ -103,7 +103,7 @@ If someone in your project does not use Comaney, you can add them as an offline 
 
 1. On the project's **Settings** tab, find **Add offline member**, enter a name, and click **Add**.
 
-If the name you type matches one of your buddies (their first name, last name, or email address), a warning appears below the field. That person already has a Comaney account, so inviting them is usually the better choice. If you type an email address, you are reminded that an offline member is only a placeholder: nobody is invited or emailed. In both cases you can still add the offline member: click **Add** and confirm.
+If the name you type matches one of your contacts (their first name, last name, or email address), a warning appears below the field. That person already has a Comaney account, so inviting them is usually the better choice. If you type an email address, you are reminded that an offline member is only a placeholder: nobody is invited or emailed. In both cases you can still add the offline member: click **Add** and confirm.
 
 You can log expenses on their behalf and settle their share yourself. You can also invite them to join Comaney later and link their account to the offline entry.
 
@@ -128,17 +128,17 @@ If you pick **Yourself**, the merge also happens right away, with no approval ne
 
 Any member, not just the admin, can click the **···** menu next to another real member's name on the Settings tab to:
 
-- **Invite as direct buddy** - connects you one-on-one outside the project, so you can also share personal expenses together.
+- **Invite as contact** - connects you one-on-one outside the project, so you can also share personal expenses together.
 - **Invite as partner** - sets up a Catalog Partnership so your tags and categories stay in sync. See [Catalog Partnerships](catalog-partnerships.md).
 
-Each option only appears when it applies. For example, **Invite as direct buddy** disappears once you are already buddies, and **Invite as partner** disappears once they are already in a partnership.
+Each option only appears when it applies. For example, **Invite as contact** disappears once they are already one of your contacts, and **Invite as partner** disappears once they are already in a partnership.
 
 ## Removing a member
 
 Admin only. On the project page, click **Remove** next to the member's name.
 
 - When you remove a real user, they lose access to the project. A read-only offline entry with their name is kept so that past expenses still reference them correctly.
-- When you remove an offline member, their shared expense history moves to **Achim Archive** rather than being deleted. See [Achim Archive](buddies/achim-archive.md) for details.
+- When you remove an offline member, their shared expense history moves to **Achim Archive** rather than being deleted. See [Achim Archive](contacts/achim-archive.md) for details.
 
 !!! note
     You cannot remove yourself as admin. Transfer admin rights first.
@@ -186,7 +186,7 @@ On the project page, find the **Delete project** section. Type the project name 
 
 ## Settling debts in a project
 
-Use the **Pay someone back** form on the Expense list tab to record a payment to another member. See [Settling Up](buddies/settling-up.md) for the full guide, including how the project admin can settle all debts at once.
+Use the **Pay someone back** form on the Expense list tab to record a payment to another member. See [Settling Up](contacts/settling-up.md) for the full guide, including how the project admin can settle all debts at once.
 
 ## The debt diagrams
 

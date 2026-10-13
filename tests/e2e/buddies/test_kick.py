@@ -1,5 +1,5 @@
 """
-Actual buddy kick flows: without debt (immediate via confirm dialog),
+Actual contact kick flows: without debt (immediate via confirm dialog),
 with debt (confirm shows balance), and post-kick state for the kicked user.
 """
 import time
@@ -8,7 +8,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _shell, _login_as, _create_buddy_link, _get_pk, _confirm
+from bhelpers import _shell, _login_as, _create_contact_link, _get_pk, _confirm
 
 
 # ---------------------------------------------------------------------------
@@ -16,13 +16,13 @@ from bhelpers import _shell, _login_as, _create_buddy_link, _get_pk, _confirm
 # ---------------------------------------------------------------------------
 
 class TestKickActualBuddyNoDebt:
-    """Kick buddy with zero balance: confirm dialog, then buddy gone."""
+    """Kick contact with zero balance: confirm dialog, then contact gone."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Kira", last_name="Kicker")
         b = setup_user(None, None, first_name="Victor", last_name="Kicked")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         yield {"a": a, "b": b}
         cleanup_user(a["email"])
         cleanup_user(b["email"])
@@ -44,14 +44,14 @@ class TestKickActualBuddyNoDebt:
         assert "/buddies/" in driver.current_url
         assert ctx["b"]["email"] not in driver.page_source
 
-    def test_no_buddy_link_in_db(self, driver, w, ctx):
+    def test_no_contact_link_in_db(self, driver, w, ctx):
         count = _shell(
-            f"from buddies.models import BuddyLink; "
+            f"from buddies.models import ContactLink; "
             f"from feusers.models import FeUser; "
             f"from django.db.models import Q; "
             f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
             f"b = FeUser.objects.get(email='{ctx['b']['email']}'); "
-            f"print(BuddyLink.objects.filter(Q(user_a=a,user_b=b)|Q(user_a=b,user_b=a)).count())"
+            f"print(ContactLink.objects.filter(Q(user_a=a,user_b=b)|Q(user_a=b,user_b=a)).count())"
         )
         assert count == "0"
 
@@ -61,13 +61,13 @@ class TestKickActualBuddyNoDebt:
 # ---------------------------------------------------------------------------
 
 class TestKickActualBuddyWithDebt:
-    """Kick buddy with outstanding debt: balance shown in confirm, kick succeeds."""
+    """Kick contact with outstanding debt: balance shown in confirm, kick succeeds."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Kira", last_name="DebtKicker")
         b = setup_user(None, None, first_name="Victor", last_name="DebtKicked")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = _get_pk(b["email"])
         # A paid 200; B owes 50% = 100
         _shell(
@@ -84,7 +84,7 @@ class TestKickActualBuddyWithDebt:
         cleanup_user(a["email"])
         cleanup_user(b["email"])
 
-    def test_balance_visible_on_buddies_page(self, driver, w, ctx):
+    def test_balance_visible_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
         time.sleep(1)
         # Balance = 100.00 (50% of 200)

@@ -4,8 +4,8 @@ from .models import (
     BuddyGroup,
     BuddyGroupInvite,
     BuddyGroupMember,
-    BuddyInvite,
-    BuddyLink,
+    ContactInvite,
+    ContactLink,
     BuddyOnboardingInvite,
     BuddySpending,
     DummyMergeInvite,
@@ -36,13 +36,13 @@ class DummyUserAdmin(admin.ModelAdmin):
     search_fields = ["display_name", "owning_feuser__email"]
 
 
-@admin.register(BuddyLink)
-class BuddyLinkAdmin(admin.ModelAdmin):
+@admin.register(ContactLink)
+class ContactLinkAdmin(admin.ModelAdmin):
     list_display = ["user_a", "user_b", "created_at"]
 
 
-@admin.register(BuddyInvite)
-class BuddyInviteAdmin(admin.ModelAdmin):
+@admin.register(ContactInvite)
+class ContactInviteAdmin(admin.ModelAdmin):
     list_display = ["inviter", "invitee_email", "created_at", "expires_at"]
 
 

@@ -2,7 +2,7 @@
 Expense clone preserves buddy assignment and sends notifications.
 
 Tests:
-1. Cloning a direct-buddy expense copies BuddySpending rows to the clone.
+1. Cloning a contact expense copies BuddySpending rows to the clone.
 2. Participant receives a "included you in a shared expense" email after clone.
 3. Cloning a project expense copies the project FK and BuddySpending rows.
 4. Project participant receives notification after clone.
@@ -13,21 +13,21 @@ import pytest
 import requests
 
 from helpers import _url, setup_user, cleanup_user, fetch_email, mailpit_seen_ids, MAILPIT_API
-from bhelpers import _shell, _login_as, _create_buddy_link, _get_pk, _create_group, _add_group_member
+from bhelpers import _shell, _login_as, _create_contact_link, _get_pk, _create_group, _add_group_member
 
 
 # ---------------------------------------------------------------------------
-# Direct buddy expense: clone preserves spendings and notifies participant
+# Contact expense: clone preserves spendings and notifies participant
 # ---------------------------------------------------------------------------
 
-class TestCloneDirectBuddyExpense:
-    """Cloning a direct buddy expense copies BuddySpending rows and notifies B."""
+class TestCloneContactExpense:
+    """Cloning a contact expense copies BuddySpending rows and notifies B."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Ana", last_name="CloneOwner")
         b = setup_user(None, None, first_name="Ben", last_name="CloneParticipant")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
 
         # Create a buddy expense via shell (no notifications yet for setup)
@@ -139,7 +139,7 @@ class TestCloneProjectExpense:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Cara", last_name="ProjectCloner")
         b = setup_user(None, None, first_name="Dan", last_name="ProjectMember")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         group_pk = int(_create_group(a["email"], "Clone Test Project"))
         _add_group_member(group_pk, b["email"])

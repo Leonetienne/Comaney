@@ -17,16 +17,16 @@ Cases covered:
   1. Keep None tab -> expense saved without project
   2. Select Project tab -> expense saved with project "Schanzenfest 2026"
   3. Keep None tab (explicit, after AI suggested project) -> no project
-  4. Direct Buddy: me pays, Volker gets 35%
-  5. Direct Buddy: Volker pays, me gets 40%
+  4. Contact: me pays, Volker gets 35%
+  5. Contact: Volker pays, me gets 40%
   6. Project: Volker pays, Andreas deselected, me gets 55%
   7. Project: me pays, Andreas deselected, Volker gets 45%
   8. AI participation: description drops Andreas -> Andreas excluded from split
   9. AI participation: description pins Andreas to 0% -> Andreas kept at 0%
  10. View-expenses link: all-project batch -> links to /projects/<uid>/
- 11. View-expenses link: all-direct-buddy batch -> links to /buddies/summary/
+ 11. View-expenses link: all-contact batch -> links to /buddies/summary/
  12. AI upfront payer: description says Volker paid -> Volker is the payer
- 13. AI direct buddy: description shares one-on-one with Kevin -> direct buddy expense
+ 13. AI contact: description shares one-on-one with Kevin -> contact expense
 """
 import os
 import re
@@ -174,7 +174,7 @@ def _get_personal_dummy_pk(email: str, name: str) -> int:
 
 
 def _ui_add_personal_dummy(driver, name: str) -> None:
-    """Add a personal offline buddy via the /buddies/ page form."""
+    """Add a personal offline contact via the /buddies/ page form."""
     driver.get(_url("/buddies/"))
     time.sleep(1)
     inp = driver.find_element(By.CSS_SELECTOR, "form.inline-form input[name='display_name']")
@@ -182,7 +182,7 @@ def _ui_add_personal_dummy(driver, name: str) -> None:
     driver.execute_script("arguments[0].closest('form').submit();", inp)
     time.sleep(2)
     assert name in driver.page_source, \
-        f"'{name}' must appear on the buddies page after adding as personal offline buddy"
+        f"'{name}' must appear on the buddies page after adding as personal offline contact"
 
 
 def _ui_add_dummy(driver, project_uid: int, name: str) -> None:
@@ -262,7 +262,7 @@ def _set_payer(driver, card, option_text_fragment: str) -> None:
     time.sleep(0.5)
 
 
-def _select_single_buddy(driver, card, name_fragment: str) -> None:
+def _select_contact(driver, card, name_fragment: str) -> None:
     """Select a buddy in the single-mode participant dropdown."""
     sel = card.find_element(By.CSS_SELECTOR, ".buddy-participant-select")
     options = sel.find_elements(By.TAG_NAME, "option")
@@ -318,7 +318,7 @@ def _project_tab_active(card) -> bool:
 
 
 def _buddy_tab_active(card) -> bool:
-    els = card.find_elements(By.CSS_SELECTOR, ".pcard-assign-buddy")
+    els = card.find_elements(By.CSS_SELECTOR, ".pcard-assign-contact")
     return bool(els) and "assign-tab--active" in els[0].get_attribute("class")
 
 
@@ -348,10 +348,10 @@ def ctx(driver, w):
     _ui_upload_picture(driver, c["project_uid"])
     _ui_add_dummy(driver, c["project_uid"], "Volker Sauerbier")
     _ui_add_dummy(driver, c["project_uid"], "Andreas Krawall")
-    # Personal offline buddy required for the Direct Buddy tab to appear
+    # Personal offline contact required for the Contact tab to appear
     _ui_add_personal_dummy(driver, "Volker Sauerbier")
     # A personal-only buddy who is NOT in any project, so the AI can assign a
-    # direct buddy expense unambiguously (Volker also being a project member).
+    # contact expense unambiguously (Volker also being a project member).
     _ui_add_personal_dummy(driver, "Kevin Klobrille")
 
     # Shell: read-only, needed for assertion lookups
@@ -418,10 +418,10 @@ class TestExpressWithProject:
 
 
 # ---------------------------------------------------------------------------
-# 4 + 5: Direct buddy with custom shares
+# 4 + 5: Contact with custom shares
 # ---------------------------------------------------------------------------
 
-class TestExpressDirectBuddy:
+class TestExpressContact:
 
     def test_me_payer_volker_35pct(self, driver, w, ctx):
         """Case 4: me pays, Volker gets 35%."""
@@ -430,9 +430,9 @@ class TestExpressDirectBuddy:
         card = _first_card(driver)
         title = _card_title(card)
         _set_value(driver, card, "60.00")
-        _click_tab(driver, card, ".pcard-assign-buddy")
+        _click_tab(driver, card, ".pcard-assign-contact")
         _set_payer(driver, card, "Me (")
-        _select_single_buddy(driver, card, "Volker")
+        _select_contact(driver, card, "Volker")
         _set_participant_slider(driver, card, 0, 35.0)
         _confirm(driver)
 
@@ -451,7 +451,7 @@ class TestExpressDirectBuddy:
         card = _first_card(driver)
         title = _card_title(card)
         _set_value(driver, card, "60.00")
-        _click_tab(driver, card, ".pcard-assign-buddy")
+        _click_tab(driver, card, ".pcard-assign-contact")
         _set_payer(driver, card, "Volker")
         # Me is auto-added as participant; slider at data-sidx=0
         _set_participant_slider(driver, card, 0, 40.0)
@@ -599,11 +599,11 @@ class TestExpressAiParticipation:
 # 13: AI-assigned direct (one-on-one) buddy expense
 # ---------------------------------------------------------------------------
 
-class TestExpressAiDirectBuddy:
-    """The AI can route an expense to a one-on-one direct buddy from the text."""
+class TestExpressAiContact:
+    """The AI can route an expense to a one-on-one contact from the text."""
 
-    def test_ai_assigns_direct_buddy(self, driver, w, ctx):
-        """Case 13: 'mit Kevin geteilt' -> direct buddy expense with Kevin."""
+    def test_ai_assigns_contact(self, driver, w, ctx):
+        """Case 13: 'mit Kevin geteilt' -> contact expense with Kevin."""
         desc = ("Ich war mit Kevin Klobrille zu zweit Kaffee trinken, 8 Euro. "
                 "Ich habe bezahlt, wir teilen uns die Kosten 50/50. "
                 "Das hat nichts mit dem Schanzenfest zu tun.")
@@ -611,10 +611,10 @@ class TestExpressAiDirectBuddy:
             ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         title = _card_title(card)
-        assert _buddy_tab_active(card), "AI did not assign a direct buddy although the description names it"
+        assert _buddy_tab_active(card), "AI did not assign a contact although the description names it"
         _confirm(driver)
 
-        # A direct buddy expense is personal (no project) and I am the payer.
+        # A contact expense is personal (no project) and I am the payer.
         assert _expense_project_name(title, ctx["email"]) is None
         spendings = _expense_spendings(title, ctx["email"])
         kevin = next(
@@ -622,7 +622,7 @@ class TestExpressAiDirectBuddy:
             None,
         )
         assert kevin is not None, \
-            f"Kevin should be the shared direct buddy, got {spendings}"
+            f"Kevin should be the shared contact, got {spendings}"
         assert kevin["share"] > 0, f"Kevin should owe a share, got {spendings}"
 
 
@@ -646,15 +646,15 @@ class TestExpressViewExpensesLink:
         assert href.rstrip("/").endswith(f"/projects/{ctx['project_uid']}"), \
             f"Expected the project detail link, got {href!r}"
 
-    def test_all_direct_buddy_links_to_summary(self, driver, w, ctx):
-        """Case 11: a single direct-buddy expense -> link points to /buddies/summary/."""
+    def test_all_direct_contact_links_to_summary(self, driver, w, ctx):
+        """Case 11: a single contact expense -> link points to /buddies/summary/."""
         if not _ui_parse(driver, "Pizza 30 Euro"):
             ai_unavailable("AI unavailable or timed out")
         card = _first_card(driver)
         _keep_only_first_card(driver)
-        _click_tab(driver, card, ".pcard-assign-buddy")
+        _click_tab(driver, card, ".pcard-assign-contact")
         _set_payer(driver, card, "Me (")
-        _select_single_buddy(driver, card, "Volker")
+        _select_contact(driver, card, "Volker")
         _confirm(driver)
         href = _view_expenses_href(driver)
         assert href.rstrip("/").endswith("/buddies/summary"), \

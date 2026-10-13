@@ -47,7 +47,7 @@ def _parse_body(request) -> dict:
         return {}
 
 
-from ._sharing import build_shared_qs, has_buddy_or_multiuser_project
+from ._sharing import build_shared_qs, has_contact_or_multiuser_project
 
 
 def _period_qs(request, feuser):

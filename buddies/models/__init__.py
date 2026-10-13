@@ -12,11 +12,11 @@ from .invites import (  # noqa: F401
     INVITE_EXPIRY_DAYS,
     ProjectInvite,
     BuddyGroupInvite,
-    BuddyInvite,
+    ContactInvite,
     DummyMergeInvite,
     BuddyOnboardingInvite,
 )
-from .buddy_link import BuddyLink  # noqa: F401
+from .contact_link import ContactLink  # noqa: F401
 from .buddy_spending import BuddySpending  # noqa: F401
 from .catalog_partnership import (  # noqa: F401
     CatalogPartnership,

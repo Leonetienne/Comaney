@@ -1,5 +1,5 @@
 """
-Personal offline-buddy self-merge: a user merges their own offline buddy
+Personal offline-buddy self-merge: a user merges their own offline contact
 directly into themselves. Immediate, like dummy-into-dummy merge - there's
 no second party to ask. Folds participation shares back into the owner's
 implicit share (no longer a buddy expense) and transfers upfront-payer
@@ -12,7 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _shell, _confirm, _create_buddy_link, _get_pk
+from bhelpers import _shell, _confirm, _create_contact_link, _get_pk
 
 
 # ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ class TestPersonalSelfMergeParticipant:
         cleanup_user(a["email"])
 
     def test_yourself_option_present(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         select_el = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']} select[name='target_key']")
         values = [o.get_attribute("value") for o in select_el.find_elements(By.TAG_NAME, "option")]
@@ -63,7 +63,7 @@ class TestPersonalSelfMergeParticipant:
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value("self")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
         _confirm(driver)
-        assert "/buddies/my-buddies/" in driver.current_url
+        assert "/buddies/contacts/" in driver.current_url
 
     def test_dummy_gone_no_longer_a_buddy_expense(self, driver, w, ctx):
         gone = _shell(
@@ -125,7 +125,7 @@ class TestPersonalSelfMergeUpfrontPayer:
         cleanup_user(a["email"])
 
     def test_a_merges_dummy_into_self(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
         time.sleep(0.3)
@@ -187,7 +187,7 @@ class TestPersonalSelfMergeScheduledCleanup:
         cleanup_user(a["email"])
 
     def test_a_merges_dummy_into_self(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
         time.sleep(0.3)
@@ -219,7 +219,7 @@ class TestPersonalSelfMergeBlockedWhilePending:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Lior", last_name="Selfpending")
         b = setup_user(None, None, first_name="Mira", last_name="Linked")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         dummy_uid = _shell(
             f"from buddies.models import DummyUser; "
             f"from feusers.models import FeUser; "
@@ -240,7 +240,7 @@ class TestPersonalSelfMergeBlockedWhilePending:
         cleanup_user(b["email"])
 
     def test_self_merge_blocked_while_request_pending(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
         time.sleep(0.3)

@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
 from buddies.models import (
-    BuddyLink,
+    ContactLink,
     CatalogPartnership,
     CatalogPartnershipInvite,
     CatalogPartnershipMembership,
@@ -24,9 +24,9 @@ _log = logging.getLogger(__name__)
 
 
 def _has_mutual_connection(feuser_a, feuser_b) -> bool:
-    """True if the two users share a BuddyLink or at least one Project."""
+    """True if the two users share a ContactLink or at least one Project."""
     from django.db.models import Q
-    if BuddyLink.objects.filter(
+    if ContactLink.objects.filter(
         Q(user_a=feuser_a, user_b=feuser_b) | Q(user_a=feuser_b, user_b=feuser_a)
     ).exists():
         return True

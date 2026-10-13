@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.db import transaction
 
-from ..models import BuddyLink, DummyUser
+from ..models import ContactLink, DummyUser
 from ._helpers import _display_name
 from .email import BuddyEmailService
 from .query import BuddyQueryService
@@ -29,9 +29,9 @@ class BuddySettlementService:
                     buddy = FeUser.objects.get(pk=int(key[1:]))
                 except (ValueError, FeUser.DoesNotExist):
                     continue
-                if not BuddyLink.between(feuser, buddy):
+                if not ContactLink.between(feuser, buddy):
                     continue
-                net = BuddyQueryService.get_net_debt(feuser, buddy_feuser=buddy)
+                net = BuddyQueryService.get_net_debt(feuser, contact_feuser=buddy)
                 if net >= Decimal("-0.005"):
                     continue
                 amount = -net
@@ -55,7 +55,7 @@ class BuddySettlementService:
                     dummy = DummyUser.objects.get(pk=int(key[1:]), owning_feuser=feuser)
                 except (ValueError, DummyUser.DoesNotExist):
                     continue
-                net = BuddyQueryService.get_net_debt(feuser, buddy_dummy=dummy)
+                net = BuddyQueryService.get_net_debt(feuser, contact_dummy=dummy)
                 if net >= Decimal("-0.005"):
                     continue
                 amount = -net
@@ -78,11 +78,11 @@ class BuddySettlementService:
 
     @staticmethod
     @transaction.atomic
-    def create_direct_individual_settlement(feuser, buddy_key: str, amount: "Decimal") -> bool:
+    def create_direct_individual_settlement(feuser, contact_key: str, amount: "Decimal") -> bool:
         """
         Create a single settlement expense for a direct (non-group) buddy pair.
 
-        buddy_key: "f{pk}" for a real user, "d{pk}" for a feuser-owned dummy.
+        contact_key: "f{pk}" for a real user, "d{pk}" for a feuser-owned dummy.
         For real users the creditor must confirm receipt; for dummies it is auto-approved.
         Returns True on success.
         """
@@ -95,12 +95,12 @@ class BuddySettlementService:
         if amount < Decimal("0.01"):
             return False
 
-        if buddy_key.startswith("f"):
+        if contact_key.startswith("f"):
             try:
-                buddy = FeUser.objects.get(pk=int(buddy_key[1:]))
+                buddy = FeUser.objects.get(pk=int(contact_key[1:]))
             except (ValueError, FeUser.DoesNotExist):
                 return False
-            if not BuddyLink.between(feuser, buddy):
+            if not ContactLink.between(feuser, buddy):
                 return False
 
             title = f"Settlement to {_display_name(buddy)}"
@@ -123,9 +123,9 @@ class BuddySettlementService:
                 )
             return True
 
-        elif buddy_key.startswith("d"):
+        elif contact_key.startswith("d"):
             try:
-                dummy = DummyUser.objects.get(pk=int(buddy_key[1:]), owning_feuser=feuser)
+                dummy = DummyUser.objects.get(pk=int(contact_key[1:]), owning_feuser=feuser)
             except (ValueError, DummyUser.DoesNotExist):
                 return False
 
@@ -150,7 +150,7 @@ class BuddySettlementService:
     @transaction.atomic
     def create_direct_dummy_settlement(feuser, dummy_key: str, amount: "Decimal") -> bool:
         """
-        Record a settlement from a personal offline buddy (dummy) to the feuser.
+        Record a settlement from a personal offline contact (dummy) to the feuser.
         The dummy is the payer; feuser is the recipient. Auto-approved.
         Returns True on success.
         """

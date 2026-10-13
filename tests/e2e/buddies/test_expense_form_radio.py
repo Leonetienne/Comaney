@@ -7,17 +7,17 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _shell, _create_group, _create_buddy_link, _get_pk
+from bhelpers import _shell, _create_group, _create_contact_link, _get_pk
 
 
 class TestRadioGroupVisible:
-    """Expense form shows the three radio buttons: None, Direct Buddy, Project."""
+    """Expense form shows the three radio buttons: None, Contact, Project."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Radio", last_name="Tester")
         b = setup_user(None, None, first_name="Radio", last_name="Buddy")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         gid = _create_group(a["email"], "Radio Test Project")
         yield {"a": a, "b": b, "gid": int(gid)}
         cleanup_user(a["email"])
@@ -32,7 +32,7 @@ class TestRadioGroupVisible:
         assert driver.find_element(By.ID, "assign-none")
 
     def test_buddy_radio_present(self, driver, w, ctx):
-        assert driver.find_element(By.ID, "assign-buddy")
+        assert driver.find_element(By.ID, "assign-contact")
 
     def test_project_radio_present(self, driver, w, ctx):
         assert driver.find_element(By.ID, "assign-project")
@@ -47,21 +47,21 @@ class TestRadioGroupVisible:
 
 
 class TestRadioBuddyOption:
-    """Selecting 'Direct Buddy' shows the single-buddy section."""
+    """Selecting 'Contact' shows the single-buddy section."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="BuddyRadio", last_name="A")
         b = setup_user(None, None, first_name="BuddyRadio", last_name="B")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         yield {"a": a, "b": b}
         cleanup_user(a["email"])
         cleanup_user(b["email"])
 
-    def test_select_direct_buddy_shows_section(self, driver, w, ctx):
+    def test_select_contact_shows_section(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
         time.sleep(1)
-        driver.find_element(By.ID, "assign-buddy").click()
+        driver.find_element(By.ID, "assign-contact").click()
         time.sleep(0.5)
         section = driver.find_element(By.ID, "buddy-payment-section")
         assert section.is_displayed()
@@ -80,7 +80,7 @@ class TestRadioProjectOption:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="ProjRadio", last_name="A")
         b = setup_user(None, None, first_name="ProjRadio", last_name="B")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         gid = _create_group(a["email"], "ProjRadio Project")
         yield {"a": a, "b": b, "gid": int(gid)}
         cleanup_user(a["email"])
@@ -128,7 +128,7 @@ class TestRadioPreselectedOnEdit:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="EditRadio", last_name="A")
         b = setup_user(None, None, first_name="EditRadio", last_name="B")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         gid = _create_group(a["email"], "Edit Radio Project")
         _add_group_member = lambda gid, email: _shell(
             f"from buddies.models import ProjectMember, Project; "

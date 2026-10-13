@@ -6,7 +6,7 @@ A Catalog Partnership links your tags and categories with one or more other Coma
 
 ## Requirements
 
-- You must already be connected to the person you want to invite: either as a direct buddy or as a member of the same project.
+- You must already be connected to the person you want to invite: either as a contact or as a member of the same project.
 - Each person can belong to only one Catalog Partnership at a time.
 
 ---
@@ -15,10 +15,10 @@ A Catalog Partnership links your tags and categories with one or more other Coma
 
 You can send a partnership invite from two places:
 
-- **My Buddies**: find the person in your buddy list, click the **···** menu next to their name, and choose **Invite as partner**.
+- **Contacts**: find the person in your contacts, click the **···** menu next to their name, and choose **Invite as partner**.
 - **Project settings page**: go to the Settings tab of a project, find a member, click **···**, and choose **Invite as partner**.
 
-The option only appears if the person is a real Comaney user (not an offline buddy), is not already your partner, and is not in another partnership.
+The option only appears if the person is a real Comaney user (not an offline contact), is not already your partner, and is not in another partnership.
 
 A confirmation pop-up explains what the partnership will do. Click **Send invite** to proceed. The other person receives an email and a badge appears next to **Categories & Tags** in their navigation menu.
 
@@ -122,7 +122,7 @@ Click **Leave partnership** at the bottom of the Catalog Partners section. After
 
 ## Automatic removal
 
-If you and another partner lose all connection — meaning you no longer share a buddy link or a project — Comaney automatically removes you from the partnership. The remaining partners are notified. You keep your catalog as it was.
+If you and another partner lose all connection — meaning you no longer share a contact link or a project — Comaney automatically removes you from the partnership. The remaining partners are notified. You keep your catalog as it was.
 
 ---
 

@@ -14,7 +14,7 @@ overlay.note == text  ->  participant has their own note
 import pytest
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _shell, _login_as, _create_buddy_link, _get_pk
+from bhelpers import _shell, _login_as, _create_contact_link, _get_pk
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +74,7 @@ class TestOverlayNoteStored:
     def ctx(self, driver, w):
         owner = setup_user(driver, w, first_name="NoteOwn", last_name="A")
         part  = setup_user(None, None, first_name="NotePart", last_name="A")
-        _create_buddy_link(owner["email"], part["email"])
+        _create_contact_link(owner["email"], part["email"])
         part_pk = int(_get_pk(part["email"]))
         cat_pk  = _mk_category(part["email"], "NoteTestCat")
         exp_pk  = _create_buddy_expense(owner["email"], part_pk, "N1 Expense")
@@ -114,7 +114,7 @@ class TestEmptyNoteIsNull:
     def ctx(self, driver, w):
         owner = setup_user(driver, w, first_name="NullNote", last_name="Own")
         part  = setup_user(None, None, first_name="NullNote", last_name="Part")
-        _create_buddy_link(owner["email"], part["email"])
+        _create_contact_link(owner["email"], part["email"])
         part_pk = int(_get_pk(part["email"]))
         cat_pk  = _mk_category(part["email"], "NullNoteCat")
         exp_pk  = _create_buddy_expense(owner["email"], part_pk, "N2 Expense")
@@ -161,7 +161,7 @@ class TestClearNoteDeletesOverlayWhenAllEmpty:
     def ctx(self, driver, w):
         owner = setup_user(driver, w, first_name="DelOv", last_name="Own")
         part  = setup_user(None, None, first_name="DelOv", last_name="Part")
-        _create_buddy_link(owner["email"], part["email"])
+        _create_contact_link(owner["email"], part["email"])
         part_pk = int(_get_pk(part["email"]))
         exp_pk  = _create_buddy_expense(owner["email"], part_pk, "N3 Expense")
         # Overlay with only a note (no category, no tags)

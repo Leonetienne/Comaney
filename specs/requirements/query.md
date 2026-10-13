@@ -6,7 +6,7 @@ docs `user-manual/dashboard/query-language.md`.
 ### Shared language
 `req~query.shared~1`
 
-The system shall use one query language for the expense list search, the project and buddy expense lists, the REST API `q` parameter and dashboard card queries.
+The system shall use one query language for the expense list search, the project and contact expense lists, the REST API `q` parameter and dashboard card queries.
 
 Covers:
 - `feat~query~1`

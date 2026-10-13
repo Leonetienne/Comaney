@@ -64,7 +64,7 @@ Covers:
 ### Shared catalog for AI Express
 `req~constraints.express-catalog~1`
 
-The AI Express catalog, prompt block selection and payload validation shall reuse the exact project and buddy lists built for the request's assignment widget, never a second query.
+The AI Express catalog, prompt block selection and payload validation shall reuse the exact project and contact lists built for the request's assignment widget, never a second query.
 
 Rationale:
 Member order is not deterministic across queries; separate queries would desynchronise index references.

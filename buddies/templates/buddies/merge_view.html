@@ -10,7 +10,7 @@
     {% if group %}
     <p><strong>{{ inviting_name }}</strong> has been tracking an offline member of the project "<strong>{{ group.name }}</strong>" under the name "<strong>{{ invite.dummy.display_name }}</strong>", and believes that's you. You're already a member of "<strong>{{ group.name }}</strong>" - accepting links that offline record to your real account instead of leaving it separate.</p>
     {% else %}
-    <p><strong>{{ inviting_name }}</strong> has been tracking shared expenses with an offline buddy named "<strong>{{ invite.dummy.display_name }}</strong>", and believes that's you. You're already buddies with {{ inviting_name }} - accepting links that offline record to your real account instead of leaving it separate.</p>
+    <p><strong>{{ inviting_name }}</strong> has been tracking shared expenses with an offline contact named "<strong>{{ invite.dummy.display_name }}</strong>", and believes that's you. You're already contacts with {{ inviting_name }}, so accepting links that offline record to your real account instead of leaving it separate.</p>
     {% endif %}
 
     <div class="info-box box--spaced">

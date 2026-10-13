@@ -33,7 +33,7 @@ Covers:
 ### Invitations always sent
 `req~notifications.invites~1`
 
-The system shall send invitation emails (buddy, project, partnership, merge request) regardless of notification preferences.
+The system shall send invitation emails (contact, project, partnership, merge request) regardless of notification preferences.
 
 Covers:
 - `feat~notifications~1`

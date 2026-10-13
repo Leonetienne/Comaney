@@ -128,8 +128,8 @@ def remove_member(feuser, reason: str = "left") -> None:
 # ---------------------------------------------------------------------------
 
 def _has_connection_to_any_partner(feuser, partnership) -> bool:
-    """True if feuser shares a BuddyLink or Project with at least one partner."""
-    from buddies.models import BuddyLink, ProjectMember
+    """True if feuser shares a ContactLink or Project with at least one partner."""
+    from buddies.models import ContactLink, ProjectMember
     from django.db.models import Q
 
     partner_ids = list(
@@ -138,7 +138,7 @@ def _has_connection_to_any_partner(feuser, partnership) -> bool:
     if not partner_ids:
         return False
 
-    has_buddy = BuddyLink.objects.filter(
+    has_buddy = ContactLink.objects.filter(
         Q(user_a=feuser, user_b_id__in=partner_ids) |
         Q(user_b=feuser, user_a_id__in=partner_ids)
     ).exists()

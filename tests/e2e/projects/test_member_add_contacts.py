@@ -1,13 +1,13 @@
 """
-Project Settings "Add members": direct-buddy contact hints
+Project Settings "Add members": contact contact hints
 (build/js/project_member_add.js).
 
-- Invite by email: typing part of a direct buddy's first name, last name or
+- Invite by email: typing part of a contact's first name, last name or
   email (any case) suggests them; clicking a suggestion fills their email.
   Existing members are never suggested. A green check + "This buddy is in your
-  contacts" shows for a buddy's email, a gray "This buddy is not in your
+  contacts" shows for a contact's email, a gray "This buddy is not in your
   contact list" for any other email address.
-- Add offline member: an email-like value, or a name matching a direct buddy
+- Add offline member: an email-like value, or a name matching a contact
   (same matching rule), shows a warning; submitting anyway asks for
   confirmation first. Only one warning/dialog ever shows, email first.
 - Hint lines are reserved, so showing a hint never shifts the layout.
@@ -21,7 +21,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _create_group, _add_group_member,
+    _shell, _login_as, _create_contact_link, _create_group, _add_group_member,
 )
 
 
@@ -71,7 +71,7 @@ def ctx(driver, w):
     sabine = setup_user(None, None, first_name="Sabine", last_name="Leonhardt")
     member = setup_user(None, None, first_name="Mia", last_name="Member")
     for u in (leon, sabine, member):
-        _create_buddy_link(admin["email"], u["email"])
+        _create_contact_link(admin["email"], u["email"])
     group_id = int(_create_group(admin["email"], "Contacts Project"))
     _add_group_member(group_id, member["email"])
     _login_as(driver, admin)

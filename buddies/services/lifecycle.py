@@ -8,8 +8,8 @@ from django.db import transaction
 from ..models import (
     ProjectMember,
     BuddyGroupMember,  # alias for ProjectMember
-    BuddyInvite,
-    BuddyLink,
+    ContactInvite,
+    ContactLink,
     BuddyOnboardingInvite,
     BuddySpending,
     DummyMergeInvite,
@@ -23,7 +23,7 @@ from .query import BuddyQueryService
 
 
 class BuddyLifecycleService:
-    """Buddy relationship management: add, invite, kick, merge."""
+    """Contact management: add, invite, kick, merge."""
 
     @staticmethod
     def add_dummy(feuser, display_name: str) -> DummyUser:
@@ -36,9 +36,9 @@ class BuddyLifecycleService:
     @transaction.atomic
     def invite_actual(feuser, email: str):
         """
-        Invite an actual user by email as a personal buddy.
+        Invite an actual user by email as a contact.
         Returns ('link'|'invite'|'onboarding'|'onboarding_no_email'|
-                 'already_buddies'|'self'|'registration_disabled', obj).
+                 'already_contacts'|'self'|'registration_disabled', obj).
         """
         from feusers.models import FeUser
 
@@ -58,8 +58,8 @@ class BuddyLifecycleService:
         if invitee and invitee.is_demo:
             return ("invitee_is_demo", None)
 
-        if invitee and BuddyLink.between(feuser, invitee):
-            return ("already_buddies", None)
+        if invitee and ContactLink.between(feuser, invitee):
+            return ("already_contacts", None)
 
         if settings.DISABLE_EMAILING:
             if invitee:
@@ -72,9 +72,9 @@ class BuddyLifecycleService:
             return ("onboarding_no_email", ob)
 
         if invitee:
-            invite = BuddyInvite(inviter=feuser, invitee_email=email)
+            invite = ContactInvite(inviter=feuser, invitee_email=email)
             invite.save()
-            BuddyEmailService.send_buddy_invite(invite)
+            BuddyEmailService.send_contact_invite(invite)
             return ("invite", invite)
 
         if not settings.ENABLE_REGISTRATION:
@@ -86,10 +86,10 @@ class BuddyLifecycleService:
 
     @staticmethod
     @transaction.atomic
-    def accept_invite(token: str, accepting_feuser) -> BuddyLink | None:
+    def accept_invite(token: str, accepting_feuser) -> ContactLink | None:
         try:
-            invite = BuddyInvite.objects.get(token=token)
-        except BuddyInvite.DoesNotExist:
+            invite = ContactInvite.objects.get(token=token)
+        except ContactInvite.DoesNotExist:
             return None
 
         if not invite.is_valid():
@@ -106,8 +106,8 @@ class BuddyLifecycleService:
     @staticmethod
     def decline_invite(token: str, declining_feuser) -> bool:
         try:
-            invite = BuddyInvite.objects.get(token=token, invitee_email=declining_feuser.email)
-        except BuddyInvite.DoesNotExist:
+            invite = ContactInvite.objects.get(token=token, invitee_email=declining_feuser.email)
+        except ContactInvite.DoesNotExist:
             return False
         invite.delete()
         return True
@@ -115,8 +115,8 @@ class BuddyLifecycleService:
     @staticmethod
     def revoke_invite(token: str, revoking_feuser) -> bool:
         try:
-            invite = BuddyInvite.objects.get(token=token, inviter=revoking_feuser)
-        except BuddyInvite.DoesNotExist:
+            invite = ContactInvite.objects.get(token=token, inviter=revoking_feuser)
+        except ContactInvite.DoesNotExist:
             return False
         invite.delete()
         return True
@@ -143,7 +143,7 @@ class BuddyLifecycleService:
             dummy.delete()
             return {"kicked": True, "archive_created": False}
 
-        net = BuddyQueryService.get_net_debt(feuser, buddy_dummy=dummy)
+        net = BuddyQueryService.get_net_debt(feuser, contact_dummy=dummy)
         if abs(net) > Decimal("0.05") and not has_debt_warning_accepted:
             return {"debt_warning": net}
 
@@ -177,7 +177,7 @@ class BuddyLifecycleService:
     @transaction.atomic
     def merge_dummy_into_dummy_now(feuser, source: DummyUser, target: DummyUser):
         """
-        Immediately merge one personal offline buddy into another. Irreversible.
+        Immediately merge one personal offline contact into another. Irreversible.
         Returns 'invalid_dummy' if either dummy is not a personal, non-archive
         dummy, 'already_pending' if source has an outstanding merge request
         (revoke it first), otherwise 'ok'.
@@ -203,7 +203,7 @@ class BuddyLifecycleService:
     @transaction.atomic
     def merge_dummy_into_self(feuser, dummy: DummyUser) -> str:
         """
-        Merge a personal offline buddy directly into its own owner
+        Merge a personal offline contact directly into its own owner
         ("self-merge"). Immediate, like merge_dummy_into_dummy_now - there's
         no second party to ask. Returns 'already_pending' if dummy has an
         outstanding merge request (revoke it first), otherwise 'ok'.
@@ -236,11 +236,11 @@ class BuddyLifecycleService:
     def kick_actual(feuser, other_feuser, has_debt_warning_accepted: bool = False) -> dict:
         from budget.models import Expense
 
-        net = BuddyQueryService.get_net_debt(feuser, buddy_feuser=other_feuser)
+        net = BuddyQueryService.get_net_debt(feuser, contact_feuser=other_feuser)
         if abs(net) > Decimal("0.05") and not has_debt_warning_accepted:
             return {"debt_warning": net}
 
-        link = BuddyLink.between(feuser, other_feuser)
+        link = ContactLink.between(feuser, other_feuser)
         if not link:
             return {"kicked": True}
 
@@ -297,7 +297,7 @@ class BuddyLifecycleService:
         """
         from budget.models import Expense
 
-        for link in BuddyLink.for_user(feuser):
+        for link in ContactLink.for_user(feuser):
             other = link.other(feuser)
 
             ghost_dummy = DummyUser.objects.create(
@@ -324,7 +324,7 @@ class BuddyLifecycleService:
             from budget.scheduled_assignment import replace_feuser_with_dummy_in_scheduled
             replace_feuser_with_dummy_in_scheduled(other, feuser, ghost_dummy)
 
-        BuddyLink.for_user(feuser).delete()
+        ContactLink.for_user(feuser).delete()
 
         for membership in BuddyGroupMember.objects.filter(feuser=feuser).select_related("group"):
             group = membership.group
@@ -361,7 +361,7 @@ class BuddyLifecycleService:
     @transaction.atomic
     def request_merge_with_feuser(feuser, dummy: DummyUser, target_feuser):
         """
-        Ask an already-linked direct buddy to approve merging dummy's expense
+        Ask an already-linked contact to approve merging dummy's expense
         history into their account. Returns ('demo_restricted'|'self'|
         'target_is_demo'|'not_linked'|'already_pending'|'invalid_dummy'|
         'invite', invite_or_None).
@@ -380,7 +380,7 @@ class BuddyLifecycleService:
         if target_feuser.is_demo:
             return ("target_is_demo", None)
 
-        if not BuddyQueryService.are_buddies(feuser, target_feuser):
+        if not BuddyQueryService.are_contacts(feuser, target_feuser):
             return ("not_linked", None)
 
         if DummyMergeInvite.objects.filter(dummy=dummy, expires_at__gt=timezone.now()).exists():
@@ -431,7 +431,7 @@ class BuddyLifecycleService:
         # 7 days may have passed, during which the two could have un-buddied. If
         # so, _create_link below would silently re-establish a connection the
         # user deliberately severed.
-        if not BuddyQueryService.are_buddies(inviting_feuser, accepting_feuser):
+        if not BuddyQueryService.are_contacts(inviting_feuser, accepting_feuser):
             return False
 
         from .archive import BuddyArchiveService

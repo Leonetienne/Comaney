@@ -6,9 +6,9 @@ Scenarios:
   2. Generation: assignment (project, upfront payer, spendings with correct shares
      and participants) carries through to the generated Expense rows exactly.
   3. Project deleted → assignment resets to none.
-  4. Personal offline buddy kicked → assignment resets to none.
+  4. Personal offline contact kicked → assignment resets to none.
   5. User kicked from group (remove_member) → assignment resets to none.
-  6. Direct buddy removed via kick_actual → assignment resets to none.
+  6. Contact removed via kick_actual → assignment resets to none.
 
 Run: pytest tests/e2e/buddies/test_scheduled_assignment.py -sx
 """
@@ -20,7 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user, server_today
-from bhelpers import _shell, _login_as, _create_group, _add_group_member, _create_buddy_link
+from bhelpers import _shell, _login_as, _create_group, _add_group_member, _create_contact_link
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ def _create_scheduled_with_project(owner_email: str, project_id: int,
 def _create_scheduled_with_dummy_upfront(owner_email: str, dummy_uid: int,
                                           buddy_participant_uid: int,
                                           title: str = "Sched Dummy") -> str:
-    """Create a scheduled expense where an offline buddy pays upfront; return uid."""
+    """Create a scheduled expense where an offline contact pays upfront; return uid."""
     spendings = json.dumps([{"type": "dummy", "id": buddy_participant_uid, "share_percent": 50.0}])
     return _shell(
         f"import json; "
@@ -212,7 +212,7 @@ class TestScheduledAssignmentForm:
 
     def test_create_with_project_assignment(self, driver, w, ctx):
         ctx2 = setup_user(driver, w)
-        _create_buddy_link(ctx["email"], ctx2["email"])
+        _create_contact_link(ctx["email"], ctx2["email"])
         group_id = _create_group(ctx["email"], "UI Assign Group")
         _add_group_member(int(group_id), ctx2["email"])
 
@@ -254,7 +254,7 @@ class TestScheduledAssignmentGeneratesCorrectly:
 
     def test_project_assignment_propagates_to_generated_expense(self, driver, w, ctx):
         ctx2 = setup_user(driver, w)
-        _create_buddy_link(ctx["email"], ctx2["email"])
+        _create_contact_link(ctx["email"], ctx2["email"])
         group_id = _create_group(ctx["email"], "Generate Check Group")
         _add_group_member(int(group_id), ctx2["email"])
 
@@ -357,7 +357,7 @@ class TestScheduledAssignmentProjectDeletion:
 
 
 class TestScheduledAssignmentDummyDeletion:
-    """Kicking a personal offline buddy resets assignment to none."""
+    """Kicking a personal offline contact resets assignment to none."""
 
     def test_kick_dummy_resets_assignment(self, driver, w, ctx):
         dummy_uid = _create_personal_dummy(ctx["email"], "Offline Kick Me")
@@ -380,7 +380,7 @@ class TestScheduledAssignmentGroupMemberRemoved:
 
     def test_remove_group_member_resets_only_kicked_users_assignment(self, driver, w, ctx):
         ctx2 = setup_user(driver, w)
-        _create_buddy_link(ctx["email"], ctx2["email"])
+        _create_contact_link(ctx["email"], ctx2["email"])
         group_id = _create_group(ctx["email"], "Remove Member Group")
         _add_group_member(int(group_id), ctx2["email"])
 
@@ -420,8 +420,8 @@ class TestScheduledAssignmentGroupMemberRemoved:
         """
         ctx2 = setup_user(driver, w)
         ctx3 = setup_user(driver, w)
-        _create_buddy_link(ctx["email"], ctx2["email"])
-        _create_buddy_link(ctx["email"], ctx3["email"])
+        _create_contact_link(ctx["email"], ctx2["email"])
+        _create_contact_link(ctx["email"], ctx3["email"])
         group_id = _create_group(ctx["email"], "Three Member Group")
         _add_group_member(int(group_id), ctx2["email"])
         _add_group_member(int(group_id), ctx3["email"])
@@ -465,16 +465,16 @@ class TestScheduledAssignmentGroupMemberRemoved:
         cleanup_user(ctx3["email"])
 
 
-class TestScheduledAssignmentDirectBuddyRemoved:
-    """Removing a direct buddy (kick_actual) resets single-mode assignment to none."""
+class TestScheduledAssignmentContactRemoved:
+    """Removing a contact (kick_actual) resets single-mode assignment to none."""
 
-    def test_kick_actual_resets_direct_buddy_assignment(self, driver, w, ctx):
+    def test_kick_actual_resets_contact_assignment(self, driver, w, ctx):
         ctx2 = setup_user(driver, w)
-        _create_buddy_link(ctx["email"], ctx2["email"])
+        _create_contact_link(ctx["email"], ctx2["email"])
         buddy_pk = _feuser_pk(ctx2["email"])
 
         sched_uid = _create_scheduled_with_feuser_participant(
-            ctx["email"], buddy_pk, title="Direct Buddy Sched"
+            ctx["email"], buddy_pk, title="Contact Sched"
         )
 
         assert _scheduled_assign_mode(sched_uid) == "single"

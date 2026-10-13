@@ -6,11 +6,11 @@ Any expense can be turned into a shared expense. You decide who is involved, how
 
 1. Create a new expense as usual (**Expenses** > **New expense**).
 2. Under **Expense assignment**, choose how to share it:
-    - **Direct Buddy** — split with a single personal buddy.
+    - **Contact** — split with a single contact.
     - **Project** — split within a project you belong to.
 3. A sharing section appears. Fill in the three parts:
 
-**Who took part** — Select who is involved with this expense. You can select either a personal buddy or a project. You can exclude individual project members.
+**Who took part** — Select who is involved with this expense. You can select either a contact or a project. You can exclude individual project members.
 
 **How much each person owes** — use the sliders to modify percentages directly or click **Equal shares** to split the cost evenly among everyone selected.
 
@@ -21,21 +21,21 @@ Any expense can be turned into a shared expense. You decide who is involved, how
 !!! note "When someone else paid upfront"
     If you select another person as the one who paid, the expense will not appear in your expense list, because the money did not come out of your own pocket.
     
-    - If the other person is an offline buddy or offline project member, the expense will appear on the **Buddy Expenses** page instead.
-    - If the other person is a real user, the expense will be created for them, in their account. They will have to approve it, unless they have chosen to accept your entries automatically; the form tells you which applies before you save. The expense will also appear on the **Buddy Expenses** page. 
+    - If the other person is an offline contact or offline project member, the expense will appear on the **Contact Expenses** page instead.
+    - If the other person is a real user, the expense will be created for them, in their account. They will have to approve it, unless they have chosen to accept your entries automatically; the form tells you which applies before you save. The expense will also appear on the **Contact Expenses** page. 
 
 ## Where shared expenses appear
 
-- **Buddy Expenses** shows all shared expenses you are involved in, whether you created them or not. Use the **date range bar** at the top of the page to narrow the list to a specific period, and the search and sort controls to filter or sort within that range.
-- **Buddy Expenses** shows the current balance (who owes who) across all shared expenses.
+- **Contact Expenses** shows all shared expenses you are involved in, whether you created them or not. Use the **date range bar** at the top of the page to narrow the list to a specific period, and the search and sort controls to filter or sort within that range.
+- **Contact Expenses** shows the current balance (who owes who) across all shared expenses.
 - **Project pages** show the breakdown for that project specifically, covering its entire history, with search controls.
 
 ## Approving or rejecting an expense someone created for you
 
-If a connected buddy creates a shared expense and marks you as the one who paid upfront,
+If a connected contact creates a shared expense and marks you as the one who paid upfront,
 you need to confirm it before it counts toward the balance and your personal expense tracking.
 
-You will see it in the **"Did you pay for this?"** section on the **Buddy Expenses** page.
+You will see it in the **"Did you pay for this?"** section on the **Contact Expenses** page.
 
 - Click **Approve** if it is correct. The expense moves into your regular expense list and the balance updates.
 - Click **Reject** if it is wrong. The expense is permanently deleted, and the person who created it receives an email notification.
@@ -44,14 +44,14 @@ You will see it in the **"Did you pay for this?"** section on the **Buddy Expens
     You will also receive an email notification when someone creates a shared expense on your behalf, so you do not have to remember to check.
 
 !!! tip
-    If you trust a buddy completely, you can let their entries be accepted for you automatically. See [Automatically accepting a buddy's entries](adding-buddies.md#automatically-accepting-a-buddys-entries).
+    If you trust a contact completely, you can let their entries be accepted for you automatically. See [Automatically accepting a contact's entries](adding-contacts.md#automatically-accepting-a-contacts-entries).
 
 ## Editing a shared expense
 
-Open the expense from your expense list or from the **Buddy Expenses** page and click **Edit**.
+Open the expense from your expense list or from the **Contact Expenses** page and click **Edit**.
 The sharing section will be pre-filled with the current settings.
 You can adjust the participants, percentages, and who paid, then save.
-You can only edit your own expenses or the ones of your offline buddies.
+You can only edit your own expenses or the ones of your offline contacts.
 Within a project, only the *project admin* can edit offline member expenses.
 
 !!! note

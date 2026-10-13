@@ -83,11 +83,11 @@ Due-date reminder emails, in-app notifications and notification preferences.
 
 Needs: req
 
-### Buddies
-`feat~buddies~1`
+### Contacts
+`feat~contacts~1`
 
-Direct buddies (real and offline), invitations, auto-accept trust, merging offline
-buddies and the Achim Archive.
+Contacts (real and offline), invitations, auto-accept trust, merging offline
+contacts and the Achim Archive.
 
 Needs: req
 
@@ -138,7 +138,7 @@ Needs: req
 ### Data export
 `feat~export~1`
 
-CSV export of the expense list and full account export, project and buddy exports.
+CSV export of the expense list and full account export, project and contact exports.
 
 Needs: req
 

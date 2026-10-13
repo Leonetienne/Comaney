@@ -1,6 +1,6 @@
 # Achim Archive
 
-When you remove an offline member (someone without a Comaney account) from your buddy list or from a project, Comaney does not delete their shared expense history. Instead, it moves that history to a special placeholder called **Achim Archive**.
+When you remove an offline member (someone without a Comaney account) from your contacts or from a project, Comaney does not delete their shared expense history. Instead, it moves that history to a special placeholder called **Achim Archive**.
 
 ## Why Achim Archive exists
 
@@ -8,7 +8,7 @@ Shared expenses are part of your financial record. If you and an offline member 
 
 ## Where it appears
 
-**In your buddy list:** After the first offline member is removed, Achim Archive appears in your buddy list with an "Archive" label. It works like any other offline buddy: balances are tracked against it, and it shows up in the shared expense breakdown.
+**In your contacts:** After the first offline member is removed, Achim Archive appears in your contacts with an "Archive" label. It works like any other offline contact: balances are tracked against it, and it shows up in the shared expense breakdown.
 
 **In a project:** After the first offline member is removed from a project, Achim Archive appears in the member list. Project balances and the debt diagram stay accurate.
 
@@ -22,9 +22,9 @@ Achim Archive collects the shared expense records of every offline member you ha
 
 You can permanently delete the archived expenses at any time. This is a destructive action and cannot be undone.
 
-**For your personal buddy list:**
+**For your contact list:**
 
-1. Go to **My Buddies**.
+1. Go to **Contacts**.
 2. Find Achim Archive and click **Delete expenses**.
 
 **For a project** (admin only):
@@ -45,4 +45,4 @@ Confirm on that page to delete, or click **Cancel** to go back.
 
 ## Removing Achim Archive
 
-Achim Archive cannot itself be removed while it still holds expenses. Delete all archived expenses first (see above), and then it can be removed like any other offline buddy or project member.
+Achim Archive cannot itself be removed while it still holds expenses. Delete all archived expenses first (see above), and then it can be removed like any other offline contact or project member.

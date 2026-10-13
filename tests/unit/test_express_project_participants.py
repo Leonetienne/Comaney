@@ -213,12 +213,12 @@ class TestSanitizeProjectPayer:
         assert sanitize_payer(-1, 7, 3) is None
 
 
-# ── Mirror of _sanitize_direct_buddy (no Django needed) ────────────────────
+# ── Mirror of _sanitize_contact (no Django needed) ────────────────────
 
-def sanitize_buddy(raw_idx, raw_paid, raw_share, project_uid, buddy_count):
+def sanitize_buddy(raw_idx, raw_paid, raw_share, project_uid, contact_count):
     if project_uid is not None or not isinstance(raw_idx, int) or isinstance(raw_idx, bool):
         return None, False, None
-    if not (0 <= raw_idx < buddy_count):
+    if not (0 <= raw_idx < contact_count):
         return None, False, None
     paid = raw_paid is True
     share = None
@@ -230,10 +230,10 @@ def sanitize_buddy(raw_idx, raw_paid, raw_share, project_uid, buddy_count):
     return raw_idx, paid, share
 
 
-class TestSanitizeDirectBuddy:
+class TestSanitizeContact:
 
     def test_dropped_when_project_set(self):
-        # Direct buddy and project are mutually exclusive.
+        # Contact and project are mutually exclusive.
         assert sanitize_buddy(0, True, 50, 7, 3) == (None, False, None)
 
     def test_none_idx_is_personal(self):

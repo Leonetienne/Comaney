@@ -38,12 +38,12 @@ def _debts_to_json(unified_debts) -> str:
 
 
 @feuser_required
-def buddies_page(request):
-    return redirect("buddies:my_buddies")
+def index(request):
+    return redirect("buddies:contacts")
 
 
 @feuser_required
-def my_buddies_page(request):
+def contacts_page(request):
     feuser = request.feuser
     unified_debts = BuddyQueryService.get_all_debts_unified(feuser)
     pending_in = BuddyQueryService.pending_invites_incoming(feuser)
@@ -53,8 +53,8 @@ def my_buddies_page(request):
     merge_out = BuddyQueryService.pending_merge_invites_outgoing(feuser)
     group_invites_in = BuddyQueryService.pending_group_invites_incoming(feuser)
 
-    return render(request, "buddies/my_buddies.html", {
-        "active_nav": "my_buddies",
+    return render(request, "buddies/contacts.html", {
+        "active_nav": "contacts",
         "unified_debts": unified_debts,
         "pending_invites_in": pending_in,
         "pending_invites_out": pending_out,
@@ -96,7 +96,7 @@ def _compute_direct_expenses(feuser, start_date, end_date):
     direct_expense_data = []
     for exp in direct_expenses:
         if exp.is_dummy and exp.upfront_payee_dummy_id:
-            payer_name = exp.upfront_payee_dummy.display_name + " (offline buddy)"
+            payer_name = exp.upfront_payee_dummy.display_name + " (offline contact)"
             payer_is_me = False
         else:
             fu = exp.owning_feuser
@@ -110,7 +110,7 @@ def _compute_direct_expenses(feuser, start_date, end_date):
                 name = f"{pf.first_name} {pf.last_name}".strip() or pf.email
                 is_me = pf.pk == feuser.pk
             else:
-                name = bs.participant_dummy.display_name + " (offline buddy)"
+                name = bs.participant_dummy.display_name + " (offline contact)"
                 is_me = False
             amount = exp.value * bs.share_percent / 100
             total_pct += bs.share_percent
@@ -174,7 +174,7 @@ def direct_expense_list_partial(request):
 
 
 @feuser_required
-def buddy_summary_page(request):
+def contact_summary_page(request):
     from budget.models import Expense
     from ..models import Project
 
@@ -205,7 +205,7 @@ def buddy_summary_page(request):
 
     pending_approvals = []
 
-    # Expenses logged on feuser's behalf (personal buddy only, not project).
+    # Expenses logged on feuser's behalf (contact only, not project).
     # Settlement records and project expenses are excluded: the former must not be
     # self-approved; the latter are confirmed on the project detail page.
     for exp in (
@@ -275,7 +275,7 @@ def buddy_summary_page(request):
     })
 
     ctx = {
-        "active_nav": "buddy_summary",
+        "active_nav": "contact_summary",
         "currency": feuser.currency,
         "debts_json": _debts_to_json(unified_debts),
         "me_avatar_json": me_avatar_json,
@@ -287,23 +287,23 @@ def buddy_summary_page(request):
         "initial_date_to":   request.GET.get("date_to", ""),
     }
     ctx.update(_date_range_presets_context(feuser))
-    return render(request, "buddies/buddy_summary.html", ctx)
+    return render(request, "buddies/contact_summary.html", ctx)
 
 
 @feuser_required
-def buddy_summary_export(request):
-    """Download direct-buddies.csv (the combined real-user + offline buddy
-    roster, never date-filtered), direct-buddy-expenses.csv, and
-    direct-buddy-expense-participation.csv (both scoped to the currently
+def contact_summary_export(request):
+    """Download contacts.csv (the combined real-user + offline contact
+    roster, never date-filtered), contact-expenses.csv, and
+    contact-expense-participation.csv (both scoped to the currently
     selected date range) as a ZIP, mirroring the per-project export."""
     feuser = request.feuser
     start_date, end_date = resolve_date_range(request, feuser)
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        BuddyExportService.write_buddy_csvs(zf, feuser, start_date=start_date, end_date=end_date)
+        BuddyExportService.write_contact_csvs(zf, feuser, start_date=start_date, end_date=end_date)
 
-    filename = f"direct_buddies_export_{start_date.isoformat()}_to_{end_date.isoformat()}.zip"
+    filename = f"contacts_export_{start_date.isoformat()}_to_{end_date.isoformat()}.zip"
     response = HttpResponse(buf.getvalue(), content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response

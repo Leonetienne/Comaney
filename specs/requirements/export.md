@@ -14,7 +14,7 @@ Covers:
 ### Account export
 `req~export.account~1`
 
-When a feuser requests the account export, the system shall download a ZIP of CSV files covering profile, all expenses, expense overlays, recurring templates, categories, tags, dashboards and cards, second factors (without secrets), Catalog Partnership membership, pending invitations and approvals, direct buddies with their shared expenses, participation and approvals, and the Sankey graph if saved.
+When a feuser requests the account export, the system shall download a ZIP of CSV files covering profile, all expenses, expense overlays, recurring templates, categories, tags, dashboards and cards, second factors (without secrets), Catalog Partnership membership, pending invitations and approvals, contacts with their shared expenses, participation and approvals, and the Sankey graph if saved.
 
 Covers:
 - `feat~export~1`
@@ -39,10 +39,10 @@ The system shall let project members export a project's metadata (including AI p
 Covers:
 - `feat~export~1`
 
-### Buddy summary export
-`req~export.buddies~1`
+### Contact summary export
+`req~export.contacts~1`
 
-The system shall let a feuser export their buddy data, including per direct buddy whether each side auto-accepts the other's entries (empty for offline buddies).
+The system shall let a feuser export their contact data, including per contact whether each side auto-accepts the other's entries (empty for offline contacts).
 
 Covers:
 - `feat~export~1`
@@ -53,7 +53,7 @@ Covers:
 The system shall prefix every exported string cell that starts with a spreadsheet formula trigger with an apostrophe.
 
 Rationale:
-Exports contain text written by other users (buddies, partners).
+Exports contain text written by other users (contacts, partners).
 
 Covers:
 - `feat~export~1`
@@ -63,7 +63,7 @@ Tags: Security
 ### Undocumented exports
 `req~export.silent~1`
 
-The project, buddy and account CSV export details shall not be documented in the user manual beyond the account export and the expense list CSV.
+The project, contact and account CSV export details shall not be documented in the user manual beyond the account export and the expense list CSV.
 
 Comment:
 Owner decision.

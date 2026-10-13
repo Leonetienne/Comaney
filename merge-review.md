@@ -128,7 +128,7 @@ re-establishing the connection or mutating an archived project. The personal
 _create_link call should only run if they are still buddies (or be removed if
 the precondition is enforced). Add e2e regression tests:
 1. personal: A requests merge into B, A and B un-buddy, B accepts -> request is
-   rejected, no BuddyLink re-created.
+   rejected, no ContactLink re-created.
 2. project: admin requests merge of a dummy into member M, M leaves the project,
    M accepts -> rejected, M not re-added.
 3. project archived after the request is sent -> accept rejected, project

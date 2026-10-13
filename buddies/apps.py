@@ -7,9 +7,9 @@ class BuddiesConfig(AppConfig):
 
     def ready(self):
         from django.db.models.signals import post_delete
-        from buddies.models import BuddyLink, ProjectMember
+        from buddies.models import ContactLink, ProjectMember
 
-        def _on_buddylink_delete(sender, instance, **kwargs):
+        def _on_contactlink_delete(sender, instance, **kwargs):
             from buddies.services.partnership import check_auto_remove
             check_auto_remove(instance.user_a)
             check_auto_remove(instance.user_b)
@@ -24,5 +24,5 @@ class BuddiesConfig(AppConfig):
                 except FeUser.DoesNotExist:
                     pass
 
-        post_delete.connect(_on_buddylink_delete, sender=BuddyLink, weak=False)
+        post_delete.connect(_on_contactlink_delete, sender=ContactLink, weak=False)
         post_delete.connect(_on_projectmember_delete, sender=ProjectMember, weak=False)

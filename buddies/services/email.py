@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
-from ..models import BuddyInvite, BuddyGroupInvite, BuddyOnboardingInvite, DummyMergeInvite
+from ..models import ContactInvite, BuddyGroupInvite, BuddyOnboardingInvite, DummyMergeInvite
 from ._helpers import _display_name
 
 
@@ -54,7 +54,7 @@ class BuddyEmailService:
     """All buddy-related notifications. Routes through emit_notification for registered users."""
 
     @staticmethod
-    def send_buddy_invite(invite: BuddyInvite):
+    def send_contact_invite(invite: ContactInvite):
         from feusers.models import FeUser
         site_url = getattr(settings, "SITE_URL", "")
         invite_url = f"{site_url}/buddies/invite/{invite.token}/"
@@ -64,21 +64,21 @@ class BuddyEmailService:
         except FeUser.DoesNotExist:
             invitee_feuser = None
 
-        subject = f"{inviter_name} invited you to be spending buddies on Comaney"
+        subject = f"{inviter_name} invited you to connect as contacts on Comaney"
         if invitee_feuser:
             _emit(
                 invitee_feuser,
                 type="group_activity",
                 subject=subject,
-                message=f"{inviter_name} invited you to be spending buddies.",
-                template="emails/buddy_invite.html",
+                message=f"{inviter_name} invited you to connect as contacts.",
+                template="emails/contact_invite.html",
                 ctx={"invite": invite, "inviter_name": inviter_name, "invite_url": invite_url},
                 related_feuser=invite.inviter,
             )
         else:
             _send_raw(
                 subject=subject,
-                template="emails/buddy_invite.html",
+                template="emails/contact_invite.html",
                 ctx={"invite": invite, "inviter_name": inviter_name, "invite_url": invite_url,
                      "feuser_recipient": None},
                 recipient_email=invite.invitee_email,
@@ -109,7 +109,7 @@ class BuddyEmailService:
         register_url = f"{site_url}/register/"
         _send_raw(
             subject=f"{_display_name(invite.inviting_feuser)} invited you to join their project on Comaney",
-            template="emails/buddy_onboarding_invite.html",
+            template="emails/onboarding_invite.html",
             ctx={
                 "invite": invite,
                 "inviter_name": _display_name(invite.inviting_feuser),
@@ -152,7 +152,7 @@ class BuddyEmailService:
             ctx={
                 "expense": expense,
                 "initiating_name": initiating_name,
-                "buddies_url": f"{getattr(settings, 'SITE_URL', '')}/buddies/my-buddies/",
+                "contacts_url": f"{getattr(settings, 'SITE_URL', '')}/buddies/contacts/",
             },
             related_expense=expense,
             related_project=expense.project if expense.project_id else None,
@@ -173,7 +173,7 @@ class BuddyEmailService:
             ctx={
                 "expense": expense,
                 "initiating_name": initiating_name,
-                "buddies_url": f"{getattr(settings, 'SITE_URL', '')}/buddies/my-buddies/",
+                "contacts_url": f"{getattr(settings, 'SITE_URL', '')}/buddies/contacts/",
             },
             related_expense=expense,
             related_project=expense.project if expense.project_id else None,
@@ -196,7 +196,7 @@ class BuddyEmailService:
                 "project": project,
                 "initiating_name": inviter_name,
                 "project_url": f"{site_url}/projects/{project.uid}/",
-                "buddies_url": f"{site_url}/buddies/my-buddies/",
+                "contacts_url": f"{site_url}/buddies/contacts/",
             },
             related_project=project,
             related_feuser=inviting_feuser,
@@ -227,19 +227,19 @@ class BuddyEmailService:
         subject = (
             f"{inviting_name} wants to merge an offline member's history into your account on Comaney"
             if is_group_merge else
-            f"{inviting_name} wants to link your account with their buddy record on Comaney"
+            f"{inviting_name} wants to link your account with their offline contact entry on Comaney"
         )
         message = (
             f"{inviting_name} wants to merge an offline member's expense history into your account in the project \"{group.name}\"."
             if is_group_merge else
-            f"{inviting_name} wants to link your account with their buddy record."
+            f"{inviting_name} wants to link your account with their offline contact entry."
         )
         _emit(
             invite.invited_feuser,
             type="group_activity",
             subject=subject,
             message=message,
-            template="emails/buddy_merge_invite.html",
+            template="emails/dummy_merge_invite.html",
             ctx={
                 "invite": invite,
                 "inviting_name": inviting_name,
@@ -258,10 +258,10 @@ class BuddyEmailService:
         site_url = getattr(settings, "SITE_URL", "")
         register_url = f"{site_url}/register/"
         inviter_name = _display_name(invite.inviting_feuser)
-        subject = f"{inviter_name} invited you to be spending buddies on Comaney"
+        subject = f"{inviter_name} invited you to connect as contacts on Comaney"
         _send_raw(
             subject=subject,
-            template="emails/buddy_onboarding_invite.html",
+            template="emails/onboarding_invite.html",
             ctx={
                 "invite": invite,
                 "inviter_name": inviter_name,
@@ -562,9 +562,9 @@ class BuddyEmailService:
         _emit(
             kicked_feuser,
             type="group_activity",
-            subject=f"{kicking_display_name} removed you as a spending buddy on Comaney",
-            message=f"{kicking_display_name} removed you as a spending buddy.",
-            template="emails/buddy_kicked.html",
+            subject=f"{kicking_display_name} removed you as a contact on Comaney",
+            message=f"{kicking_display_name} removed you as a contact.",
+            template="emails/contact_removed.html",
             ctx={"kicking_name": kicking_display_name},
         )
 

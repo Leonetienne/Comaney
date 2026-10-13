@@ -1,5 +1,5 @@
 """
-Buddy summary page (/buddies/summary/): direct expense listing, D3 debt graph,
+Contact summary page (/buddies/summary/): direct expense listing, D3 debt graph,
 and group saldo cards.
 """
 import time
@@ -9,14 +9,14 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _get_pk,
+    _shell, _login_as, _create_contact_link, _get_pk,
     _create_group, _add_group_member, _create_personal_expense_with_buddy,
     _create_group_expense,
 )
 
 
 # ---------------------------------------------------------------------------
-# Direct buddy expenses listed on summary
+# Contact expenses listed on summary
 # ---------------------------------------------------------------------------
 
 class TestSummaryDirectExpenses:
@@ -26,7 +26,7 @@ class TestSummaryDirectExpenses:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Sum", last_name="Checker")
         b = setup_user(None, None, first_name="Sum", last_name="Partner")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         _create_personal_expense_with_buddy(
             owner_email=b["email"],
@@ -53,17 +53,17 @@ class TestSummaryDirectExpenses:
 
 
 # ---------------------------------------------------------------------------
-# D3 debt graph present for direct buddy expenses
+# D3 debt graph present for contact expenses
 # ---------------------------------------------------------------------------
 
 class TestSummaryD3Graph:
-    """D3 SVG element is rendered when direct buddy expenses exist."""
+    """D3 SVG element is rendered when contact expenses exist."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Dora", last_name="D3User")
         b = setup_user(None, None, first_name="Dan", last_name="D3Partner")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         _create_personal_expense_with_buddy(
             owner_email=b["email"],
@@ -85,11 +85,11 @@ class TestSummaryD3Graph:
 
 
 # ---------------------------------------------------------------------------
-# Verify groups/projects block is no longer on buddy summary
+# Verify groups/projects block is no longer on contact summary
 # ---------------------------------------------------------------------------
 
 class TestSummaryNoGroupBlock:
-    """The buddy summary page must NOT show a groups/projects block (moved to /projects/)."""
+    """The contact summary page must NOT show a groups/projects block (moved to /projects/)."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -114,13 +114,13 @@ class TestSummaryNoGroupBlock:
     def test_no_group_block_on_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
-        # The groups section was removed from buddy_summary; project is on /projects/
+        # The groups section was removed from contact_summary; project is on /projects/
         assert "bgs-cards" not in driver.page_source, \
-            "Groups/projects block must not appear on the buddy summary page"
+            "Groups/projects block must not appear on the contact summary page"
 
     def test_summary_still_shows_pending_approvals_heading(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
         # Pending approvals section should still be present (admin has a dummy_payer expense)
         # Just verify the page loads correctly
-        assert "Buddy Expenses" in driver.page_source
+        assert "Contact Expenses" in driver.page_source

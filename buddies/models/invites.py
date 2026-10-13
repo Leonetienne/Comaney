@@ -8,7 +8,7 @@ INVITE_EXPIRY_DAYS = 7
 
 
 class ProjectInvite(models.Model):
-    """Invitation to join a project. Also establishes a BuddyLink if not already buddies."""
+    """Invitation to join a project. Also establishes a ContactLink if not already contacts."""
     uid = models.BigAutoField(primary_key=True)
     group = models.ForeignKey("buddies.Project", on_delete=models.CASCADE, related_name="invites")
     inviting_feuser = models.ForeignKey(
@@ -37,10 +37,10 @@ class ProjectInvite(models.Model):
 BuddyGroupInvite = ProjectInvite
 
 
-class BuddyInvite(models.Model):
+class ContactInvite(models.Model):
     uid = models.BigAutoField(primary_key=True)
     inviter = models.ForeignKey(
-        "feusers.FeUser", on_delete=models.CASCADE, related_name="buddy_invites_sent"
+        "feusers.FeUser", on_delete=models.CASCADE, related_name="contact_invites_sent"
     )
     invitee_email = models.EmailField()
     token = models.CharField(max_length=64, unique=True, db_index=True)
@@ -60,6 +60,9 @@ class BuddyInvite(models.Model):
 
     def __str__(self):
         return f"Invite from {self.inviter} to {self.invitee_email}"
+
+    class Meta:
+        db_table = "buddies_buddyinvite"
 
 
 class DummyMergeInvite(models.Model):
@@ -95,8 +98,8 @@ class DummyMergeInvite(models.Model):
 class BuddyOnboardingInvite(models.Model):
     """Sent when inviting a non-existing user.
 
-    group set: project join invite (also creates BuddyLink on accept).
-    Neither set: plain buddy invite.
+    group set: project join invite (also creates ContactLink on accept).
+    Neither set: plain contact invite.
     """
 
     uid = models.BigAutoField(primary_key=True)
@@ -123,5 +126,5 @@ class BuddyOnboardingInvite(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        kind = "group" if self.group_id else "buddy"
+        kind = "group" if self.group_id else "contact"
         return f"Onboarding {kind} invite from {self.inviting_feuser} to {self.invitee_email}"

@@ -14,13 +14,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
 # ── Mirror of the redirect-suffix decision in express.py::confirm ──────────
-# created_targets entries: ("buddy", None) | ("project", uid) | ("personal", None)
+# created_targets entries: ("contact", None) | ("project", uid) | ("personal", None)
 
 def view_suffix(created_targets):
     suffix = ""
     kinds = {t[0] for t in created_targets}
-    if created_targets and kinds == {"buddy"}:
-        suffix = "&view=buddies"
+    if created_targets and kinds == {"contact"}:
+        suffix = "&view=contacts"
     elif created_targets and kinds == {"project"}:
         project_ids = {t[1] for t in created_targets}
         if len(project_ids) == 1:
@@ -30,9 +30,9 @@ def view_suffix(created_targets):
 
 class TestViewExpensesLink:
 
-    def test_all_direct_buddy_goes_to_summary(self):
-        targets = [("buddy", None), ("buddy", None)]
-        assert view_suffix(targets) == "&view=buddies"
+    def test_all_contact_goes_to_summary(self):
+        targets = [("contact", None), ("contact", None)]
+        assert view_suffix(targets) == "&view=contacts"
 
     def test_all_same_project_goes_to_project(self):
         targets = [("project", 5), ("project", 5)]
@@ -43,7 +43,7 @@ class TestViewExpensesLink:
         assert view_suffix(targets) == ""
 
     def test_buddy_and_project_mix_falls_back(self):
-        targets = [("buddy", None), ("project", 5)]
+        targets = [("contact", None), ("project", 5)]
         assert view_suffix(targets) == ""
 
     def test_personal_expense_falls_back(self):
@@ -56,7 +56,7 @@ class TestViewExpensesLink:
         assert view_suffix([]) == ""
 
     def test_single_buddy_goes_to_summary(self):
-        assert view_suffix([("buddy", None)]) == "&view=buddies"
+        assert view_suffix([("contact", None)]) == "&view=contacts"
 
     def test_single_project(self):
         assert view_suffix([("project", 12)]) == "&view=project&pid=12"

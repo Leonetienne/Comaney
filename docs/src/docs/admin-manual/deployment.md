@@ -152,7 +152,7 @@ What is stored there:
 | `/app/data/media/ppics/` | User avatars (JPEG, one per user) |
 | `/app/data/media/backdrops/` | Personal backgrounds (PNG, one per user, visible only to their owner) |
 | `/app/data/media/bgpics/` | Project pictures (WebP, one per project) |
-| `/app/data/media/offline-buddy-ppic/` | Avatars of offline buddies and offline members (JPEG) |
+| `/app/data/media/offline-buddy-ppic/` | Avatars of offline contacts and offline members (JPEG) |
 
 Always mount a host directory (or a named volume) to `/app/data`, and include it in your backups.
 

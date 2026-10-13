@@ -39,14 +39,14 @@
     var ME_INITIALS     = cfg.meInitials || '';
     var ME_AVATAR_COLOR = cfg.meAvatarColor || '';
     var groupsData      = cfg.groupsData;
-    var singleBuddies   = cfg.singleBuddies;
+    var contacts   = cfg.contacts;
 
     var existingUpfrontType = cfg.upfrontType;
     var existingUpfrontId   = cfg.upfrontId || ME_PK;
     var existingSpendings   = cfg.existingSpendings;
     var existingMode        = cfg.existingMode;
     var existingGroupId     = cfg.existingGroupId;
-    var buddySummaryUrl     = cfg.urlBuddySummary;
+    var contactSummaryUrl     = cfg.urlContactSummary;
     // When true, an existing (saved or just-submitted) participant selection must
     // be respected as-is, even when it is empty. This distinguishes editing an
     // expense deliberately saved with zero participants from a fresh form where
@@ -77,7 +77,7 @@
     function updateParticipantsLabel() {
         if (participantsLbl) {
             participantsLbl.textContent = currentMode === 'single'
-                ? 'Buddy (sharing the cost)'
+                ? 'Contact (sharing the cost)'
                 : 'Participants (sharing the cost)';
         }
     }
@@ -111,7 +111,7 @@
         var opts = [];
         if (currentMode === 'single') {
             opts.push({value: 'me:' + ME_PK, text: 'Me (' + ME_NAME + ')'});
-            singleBuddies.forEach(function (b) {
+            contacts.forEach(function (b) {
                 if (b.type === 'feuser') {
                     opts.push({value: 'feuser:' + b.id, text: b.name + (b.email ? ' (' + b.email + ')' : ''), autoAccepts: b.autoAccepts});
                 } else {
@@ -165,9 +165,9 @@
             sel.id = 'buddy-participant-select';
             var emptyOpt = document.createElement('option');
             emptyOpt.value = '';
-            emptyOpt.textContent = '-- Select buddy --';
+            emptyOpt.textContent = '-- Select contact --';
             sel.appendChild(emptyOpt);
-            singleBuddies.forEach(function (item) {
+            contacts.forEach(function (item) {
                 var opt = document.createElement('option');
                 opt.value = item.type + ':' + item.id;
                 opt.dataset.type        = item.type;
@@ -240,7 +240,7 @@
         if (payerType === 'dummy' && currentMode !== 'group') {
             var name = esc(payerSel.options[payerSel.selectedIndex].text);
             payerNotice.className = 'info-box';
-            payerNotice.innerHTML = '<p>Since <strong>' + name + '</strong> paid upfront, this expense won\'t appear in your regular expense list. You\'ll find it under <a href="' + buddySummaryUrl + '">Buddy Expenses</a> instead.</p>';
+            payerNotice.innerHTML = '<p>Since <strong>' + name + '</strong> paid upfront, this expense won\'t appear in your regular expense list. You\'ll find it under <a href="' + contactSummaryUrl + '">Contact Expenses</a> instead.</p>';
             payerNotice.style.display = 'block';
         } else if (payerType === 'feuser') {
             var name2 = esc(payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim());
@@ -257,7 +257,7 @@
     // Runs through the shared save checks (addSaveCheck in base.html), so the
     // payer warning queues up behind any other warning the page shows.
     window.addSaveCheck(theForm, function () {
-        // A direct buddy expense (single mode) always needs one participant.
+        // A contact expense (single mode) always needs one participant.
         // A project expense (group mode) may have zero: the payer then covers
         // the whole cost alone, which the backend accepts. Only block single mode.
         if (cb.checked && participants.length === 0 && currentMode !== 'group') {
@@ -574,7 +574,7 @@
         if (type === 'me' || (type === 'feuser' && id === ME_PK)) {
             return {ppicUrl: ME_PPIC_URL, initials: ME_INITIALS, avatarColor: ME_AVATAR_COLOR};
         }
-        var found = singleBuddies.find(function (b) { return b.type === type && b.id === id; });
+        var found = contacts.find(function (b) { return b.type === type && b.id === id; });
         if (found) return {ppicUrl: found.ppicUrl || '', initials: found.initials || '', avatarColor: found.avatarColor || ''};
         for (var _gi = 0; _gi < groupsData.length; _gi++) {
             var _mems = groupsData[_gi].members;
@@ -594,8 +594,8 @@
     // ── Initialise from existing edit data ────────────────────────────────
 
     function initFromExisting() {
-        // Set mode; fall back to group when no personal buddies exist
-        var effectiveMode = (existingMode === 'single' && singleBuddies.length === 0 && groupsData.length > 0)
+        // Set mode; fall back to group when no contacts exist
+        var effectiveMode = (existingMode === 'single' && contacts.length === 0 && groupsData.length > 0)
             ? 'group' : existingMode;
         if (effectiveMode === 'group' && modeRadioGroup) {
             modeRadioGroup.checked = true;

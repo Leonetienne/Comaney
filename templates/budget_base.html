@@ -31,12 +31,12 @@
                 <a href="{% url 'budget:sankey_studio' %}">Sankey Studio</a>
             </li>
             {% endif %}
-            <li><span class="sidebar-section-label">Buddy</span></li>
-            <li class="{% if active_nav == 'my_buddies' %}active{% endif %}">
-                <a href="{% url 'buddies:my_buddies' %}">Manage Buddies {% action_badge current_feuser "buddies" %}</a>
+            <li><span class="sidebar-section-label">Sharing</span></li>
+            <li class="{% if active_nav == 'contacts' %}active{% endif %}">
+                <a href="{% url 'buddies:contacts' %}">Contacts {% action_badge current_feuser "contacts" %}</a>
             </li>
-            <li class="{% if active_nav == 'buddy_summary' %}active{% endif %}">
-                <a href="{% url 'buddies:buddy_summary' %}">Buddy Expenses {% action_badge current_feuser "buddy_expenses" %}</a>
+            <li class="{% if active_nav == 'contact_summary' %}active{% endif %}">
+                <a href="{% url 'buddies:contact_summary' %}">Contact Expenses {% action_badge current_feuser "contact_expenses" %}</a>
             </li>
             <li class="{% if active_nav == 'projects' %}active{% endif %}">
                 <a href="{% url 'projects:projects_list' %}">Projects {% action_badge current_feuser "projects" %}</a>

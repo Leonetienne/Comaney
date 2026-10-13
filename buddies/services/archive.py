@@ -283,7 +283,7 @@ class BuddyArchiveService:
     def get_user_impact_in_personal_archive(feuser, archive: DummyUser) -> Decimal:
         """Net financial impact on feuser from personal archive. Uses same logic as get_net_debt."""
         from .query import BuddyQueryService
-        return BuddyQueryService.get_net_debt(feuser, buddy_dummy=archive)
+        return BuddyQueryService.get_net_debt(feuser, contact_dummy=archive)
 
     @staticmethod
     @transaction.atomic

@@ -26,7 +26,7 @@ from selenium.webdriver.common.by import By
 from helpers import _url, setup_user, cleanup_user, PASSWORD
 from bhelpers import (
     _shell, _login_as,
-    _create_buddy_link, _create_group, _add_group_member, _get_pk,
+    _create_contact_link, _create_group, _add_group_member, _get_pk,
 )
 
 
@@ -158,7 +158,7 @@ class TestExpenseAvatarStacks:
             f"  is_confirmed=True, is_active=True); "
             f"u.set_password('{PASSWORD}'); u.save(); print(u.pk)"
         )
-        _create_buddy_link(alice["email"], bob_email)
+        _create_contact_link(alice["email"], bob_email)
 
         # Group: Alice is admin, Bob is member
         group_id = _create_group(alice["email"], "Avatar Test Group")
@@ -215,7 +215,7 @@ class TestExpenseAvatarStacks:
             f"  share_percent=Decimal('50.0')); print(e.pk)"
         )
         # E2: Case 2 unapproved — group dummy payer (GDummy1), Bob + GDummy2 as spending participants.
-        #     3 avatars: GG + BB + GD.  Appears in group "Waiting for approval" and buddy_summary
+        #     3 avatars: GG + BB + GD.  Appears in group "Waiting for approval" and contact_summary
         #     "Waiting for approval" (dummy_payer kind).  NOT in the expense list (is_dummy=True).
         e2_pk = _shell(
             f"from budget.models import Expense; from buddies.models import Project, BuddySpending; "

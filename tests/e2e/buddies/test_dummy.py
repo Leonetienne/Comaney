@@ -96,7 +96,7 @@ class TestDummyKickWithDebt:
         yield c
         cleanup_user(c["email"])
 
-    def test_dummy_with_debt_shown_on_buddies_page(self, driver, w, ctx):
+    def test_dummy_with_debt_shown_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
         time.sleep(1)
         assert "Debt Dummy" in driver.page_source
@@ -150,7 +150,7 @@ class TestIsDummyExpenseVisibility:
                        for e in resp.json()["expenses"]), \
             "is_dummy expense must not appear in the expense API"
 
-    def test_visible_on_buddy_summary_page(self, driver, w, ctx):
+    def test_visible_on_contact_summary_page(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
         assert "Hidden Payer Expense" in driver.page_source, \

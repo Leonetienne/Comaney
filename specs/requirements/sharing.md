@@ -3,14 +3,14 @@
 Sources: `buddies/services/expense.py`, `buddies/services/lifecycle.py`,
 `buddies/services/settlement.py`, `buddies/services/query.py`, `buddies/debt_utils.py`,
 `buddies/models/buddy_spending.py`, `build/js/buddy_expense.js`,
-docs `user-manual/buddies/shared-expenses.md`, `settling-up.md`, AGENTS.md.
+docs `user-manual/contacts/shared-expenses.md`, `settling-up.md`, AGENTS.md.
 
 ## Assignment
 
 ### Assignment modes
 `req~sharing.assign.modes~1`
 
-The expense form shall offer the assignment modes None, Direct Buddy (exactly one direct buddy) and Project (one non-archived project the feuser belongs to).
+The expense form shall offer the assignment modes None, Contact (exactly one contact) and Project (one non-archived project the feuser belongs to).
 
 Covers:
 - `feat~sharing~1`
@@ -42,7 +42,7 @@ Covers:
 ### Upfront payer
 `req~sharing.assign.payer~1`
 
-The form shall let the feuser choose who paid upfront, defaulting to themselves: a real buddy or member, or an offline buddy or member.
+The form shall let the feuser choose who paid upfront, defaulting to themselves: a real contact or member, or an offline contact or member.
 
 Covers:
 - `feat~sharing~1`
@@ -58,7 +58,7 @@ Covers:
 ### Offline upfront payer
 `req~sharing.assign.payer-offline~1`
 
-When a feuser records a shared expense with an offline buddy or member as upfront payer, the system shall keep it out of the feuser's own expense list and show it on the Buddy Expenses page; inside a project it shall require the admin's confirmation on behalf of the offline member.
+When a feuser records a shared expense with an offline contact or member as upfront payer, the system shall keep it out of the feuser's own expense list and show it on the Contact Expenses page; inside a project it shall require the admin's confirmation on behalf of the offline member.
 
 Covers:
 - `feat~sharing~1`
@@ -134,15 +134,15 @@ Covers:
 ### Offline creditor
 `req~sharing.settle.offline-creditor~1`
 
-When a feuser settles with their own offline buddy, the system shall confirm the settlement automatically.
+When a feuser settles with their own offline contact, the system shall confirm the settlement automatically.
 
 Covers:
 - `feat~sharing~1`
 
-### Payments by offline buddies
+### Payments by offline contacts
 `req~sharing.settle.offline-debtor~1`
 
-The system shall let a feuser record a payment from their offline buddy to themselves, and a project admin record payments from offline members, via "Who's paying".
+The system shall let a feuser record a payment from their offline contact to themselves, and a project admin record payments from offline members, via "Who's paying".
 
 Covers:
 - `feat~sharing~1`

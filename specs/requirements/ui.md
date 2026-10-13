@@ -7,7 +7,7 @@ Sources: `templates/base.html`, `templates/budget_base.html`, `templates/partial
 ### Navigation
 `req~ui.nav~1`
 
-The logged-in layout shall provide a sidebar with Dashboard, Expenses, Add Expense, Recurring Expenses, Categories & Tags, Unclassified Expenses, Sankey Studio (with early access only), Manage Buddies, Buddy Expenses, Projects and Settings, plus a header with notifications bell and profile menu.
+The logged-in layout shall provide a sidebar with Dashboard, Expenses, Add Expense, Recurring Expenses, Categories & Tags, Unclassified Expenses, Sankey Studio (with early access only), Contacts, Contact Expenses, Projects and Settings, plus a header with notifications bell and profile menu.
 
 Covers:
 - `feat~ui~1`
@@ -111,7 +111,7 @@ Covers:
 ### Offline member naming
 `req~ui.offline-label~1`
 
-The UI shall call a dummy "offline member" in project context and "offline buddy" in personal context, and call projects "project", never "group".
+The UI shall call a dummy "offline member" in project context and "offline contact" in personal context, and call projects "project", never "group".
 
 Covers:
 - `feat~ui~1`

@@ -2,7 +2,7 @@
 Profile pictures in buddy contexts.
 
 Covers:
-- Personal offline buddy: upload via modal, display in balance list, remove.
+- Personal offline contact: upload via modal, display in balance list, remove.
 - Group offline member: upload via modal, display in member card, remove.
 - FeUser ppic in group member cards ("You" card and other-member card).
 """
@@ -56,10 +56,10 @@ def _ppic_url_in_page(driver, pk, subdir="ppics"):
     return f"/media/{subdir}/{pk}.jpg" in driver.page_source
 
 
-# ── personal offline buddy picture ────────────────────────────────────────────
+# ── personal offline contact picture ────────────────────────────────────────────
 
 class TestPersonalDummyPicture:
-    """Upload, display, and remove a profile picture for a personal offline buddy."""
+    """Upload, display, and remove a profile picture for a personal offline contact."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):

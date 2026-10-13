@@ -16,28 +16,28 @@ def settle_direct(request):
         count = BuddySettlementService.create_direct_settlements(request.feuser, selected)
         if count:
             django_messages.success(request, f"{count} settlement record{'s' if count != 1 else ''} created.")
-    return redirect("buddies:buddy_summary")
+    return redirect("buddies:contact_summary")
 
 
 @feuser_required
 @require_POST
-def settle_direct_individual(request, buddy_key):
+def settle_direct_individual(request, contact_key):
     try:
         amount = Decimal(request.POST.get("amount", "0").replace(",", "."))
     except Exception:
         django_messages.error(request, "Invalid amount.")
-        return redirect("buddies:buddy_summary")
+        return redirect("buddies:contact_summary")
 
     if amount < Decimal("0.01"):
         django_messages.error(request, "Amount must be at least 0.01.")
-        return redirect("buddies:buddy_summary")
+        return redirect("buddies:contact_summary")
 
-    ok = BuddySettlementService.create_direct_individual_settlement(request.feuser, buddy_key, amount)
+    ok = BuddySettlementService.create_direct_individual_settlement(request.feuser, contact_key, amount)
     if ok:
         django_messages.success(request, "Settlement recorded. You still need to send the money yourself.")
     else:
         django_messages.error(request, "Settlement could not be created.")
-    return redirect("buddies:buddy_summary")
+    return redirect("buddies:contact_summary")
 
 
 @feuser_required
@@ -52,11 +52,11 @@ def settle_direct_freeform(request):
         amount = Decimal(request.POST.get("amount", "0").replace(",", "."))
     except Exception:
         django_messages.error(request, "Invalid amount.")
-        return redirect("buddies:buddy_summary")
+        return redirect("buddies:contact_summary")
 
     if amount < Decimal("0.01"):
         django_messages.error(request, "Amount must be at least 0.01.")
-        return redirect("buddies:buddy_summary")
+        return redirect("buddies:contact_summary")
 
     if debtor_key == feuser_key:
         ok = BuddySettlementService.create_direct_individual_settlement(feuser, creditor_key, amount)
@@ -70,7 +70,7 @@ def settle_direct_freeform(request):
             django_messages.success(request, "Settlement recorded.")
         else:
             django_messages.error(request, "Settlement could not be created.")
-    return redirect("buddies:buddy_summary")
+    return redirect("buddies:contact_summary")
 
 
 @feuser_required

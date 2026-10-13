@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..models import BuddyLink
+from ..models import ContactLink
 
 
 def _display_name(feuser) -> str:
@@ -8,9 +8,9 @@ def _display_name(feuser) -> str:
     return name or feuser.email
 
 
-def _create_link(feuser_a, feuser_b) -> BuddyLink:
+def _create_link(feuser_a, feuser_b) -> ContactLink:
     lo, hi = sorted([feuser_a, feuser_b], key=lambda u: u.pk)
-    link, _ = BuddyLink.objects.get_or_create(user_a=lo, user_b=hi)
+    link, _ = ContactLink.objects.get_or_create(user_a=lo, user_b=hi)
     return link
 
 

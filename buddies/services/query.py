@@ -11,8 +11,8 @@ from ..models import (
     Project,
     ProjectInvite,
     BuddyGroupInvite,  # alias for ProjectInvite
-    BuddyInvite,
-    BuddyLink,
+    ContactInvite,
+    ContactLink,
     BuddySpending,
     DummyMergeInvite,
     DummyUser,
@@ -27,13 +27,13 @@ class BuddyQueryService:
     """Read-only queries about a user's buddy network."""
 
     @staticmethod
-    def get_actual_buddies(feuser) -> list:
-        """Return list of FeUser objects that are actual buddies of feuser."""
-        links = BuddyLink.for_user(feuser).select_related("user_a", "user_b")
+    def get_real_contacts(feuser) -> list:
+        """Return list of FeUser objects that are real contacts of feuser."""
+        links = ContactLink.for_user(feuser).select_related("user_a", "user_b")
         return [link.other(feuser) for link in links]
 
     @staticmethod
-    def get_dummy_buddies(feuser) -> list:
+    def get_offline_contacts(feuser) -> list:
         """Return list of personal DummyUser objects owned by feuser (not group dummies)."""
         return list(DummyUser.objects.filter(owning_feuser=feuser))
 
@@ -208,22 +208,22 @@ class BuddyQueryService:
         return result
 
     @staticmethod
-    def are_buddies(feuser_a, feuser_b) -> bool:
-        return BuddyLink.between(feuser_a, feuser_b) is not None
+    def are_contacts(feuser_a, feuser_b) -> bool:
+        return ContactLink.between(feuser_a, feuser_b) is not None
 
     @staticmethod
     def has_pending_invite_to(feuser, target_feuser) -> bool:
         from django.utils import timezone
-        return BuddyInvite.objects.filter(
+        return ContactInvite.objects.filter(
             inviter=feuser,
             invitee_email__iexact=target_feuser.email,
             expires_at__gt=timezone.now(),
         ).exists()
 
     @staticmethod
-    def get_net_debt(feuser, buddy_feuser=None, buddy_dummy=None) -> Decimal:
+    def get_net_debt(feuser, contact_feuser=None, contact_dummy=None) -> Decimal:
         """
-        Net debt from feuser's perspective for a single direct-buddy relationship.
+        Net debt from feuser's perspective for a single contact relationship.
         Positive = buddy owes feuser. Negative = feuser owes buddy.
         Only covers personal (non-group) expenses.
         """
@@ -232,11 +232,11 @@ class BuddyQueryService:
         owed_to_me = Decimal("0")
         i_owe = Decimal("0")
 
-        if buddy_feuser is not None:
+        if contact_feuser is not None:
             owed_to_me = sum(
                 (bs.expense.value * bs.share_percent / 100)
                 for bs in BuddySpending.objects.filter(
-                    participant_feuser=buddy_feuser,
+                    participant_feuser=contact_feuser,
                     expense__owning_feuser=feuser,
                     expense__is_dummy=False,
                     expense__project__isnull=True,
@@ -247,18 +247,18 @@ class BuddyQueryService:
                 (bs.expense.value * bs.share_percent / 100)
                 for bs in BuddySpending.objects.filter(
                     participant_feuser=feuser,
-                    expense__owning_feuser=buddy_feuser,
+                    expense__owning_feuser=contact_feuser,
                     expense__is_dummy=False,
                     expense__project__isnull=True,
                     expense__buddy_approved=True,
                 ).select_related("expense")
             )
 
-        elif buddy_dummy is not None:
+        elif contact_dummy is not None:
             owed_to_me = sum(
                 (bs.expense.value * bs.share_percent / 100)
                 for bs in BuddySpending.objects.filter(
-                    participant_dummy=buddy_dummy,
+                    participant_dummy=contact_dummy,
                     expense__owning_feuser=feuser,
                     expense__is_dummy=False,
                     expense__project__isnull=True,
@@ -267,7 +267,7 @@ class BuddyQueryService:
             )
             dummy_expenses = Expense.objects.filter(
                 owning_feuser=feuser,
-                upfront_payee_dummy=buddy_dummy,
+                upfront_payee_dummy=contact_dummy,
                 is_dummy=True,
                 project__isnull=True,
                 buddy_approved=True,
@@ -475,7 +475,7 @@ class BuddyQueryService:
     @staticmethod
     def get_all_debts_unified(feuser) -> list:
         """
-        Unified debt list across direct buddies and groups.
+        Unified debt list across contacts and groups.
         Returns [
           {
             'type': 'feuser' | 'dummy',
@@ -486,8 +486,8 @@ class BuddyQueryService:
             'net': Decimal,
             'net_abs': Decimal,
             'link_uid': int | None,
-            'i_auto_accept': bool,     # feuser auto-accepts this buddy's entries
-            'they_auto_accept': bool,  # this buddy auto-accepts feuser's entries
+            'i_auto_accept': bool,     # feuser auto-accepts this contact's entries
+            'they_auto_accept': bool,  # this contact auto-accepts feuser's entries
           }, ...
         ] sorted by abs(net) descending.
         """
@@ -512,16 +512,16 @@ class BuddyQueryService:
             if link_uid is not None:
                 person_map[key]["link_uid"] = link_uid
 
-        for link in BuddyLink.for_user(feuser).select_related("user_a", "user_b"):
+        for link in ContactLink.for_user(feuser).select_related("user_a", "user_b"):
             buddy = link.other(feuser)
-            net = BuddyQueryService.get_net_debt(feuser, buddy_feuser=buddy)
-            _upsert(("feuser", buddy.pk), "feuser", buddy, "Direct", net, link_uid=link.uid)
+            net = BuddyQueryService.get_net_debt(feuser, contact_feuser=buddy)
+            _upsert(("feuser", buddy.pk), "feuser", buddy, "Contact", net, link_uid=link.uid)
             person_map[("feuser", buddy.pk)]["i_auto_accept"] = link.auto_accepts(feuser)
             person_map[("feuser", buddy.pk)]["they_auto_accept"] = link.auto_accepts(buddy)
 
         for dummy in DummyUser.objects.filter(owning_feuser=feuser):
-            net = BuddyQueryService.get_net_debt(feuser, buddy_dummy=dummy)
-            _upsert(("dummy", dummy.pk), "dummy", dummy, "Direct", net)
+            net = BuddyQueryService.get_net_debt(feuser, contact_dummy=dummy)
+            _upsert(("dummy", dummy.pk), "dummy", dummy, "Contact", net)
 
         groups = (
             BuddyGroup.objects
@@ -552,17 +552,17 @@ class BuddyQueryService:
     def get_all_debts(feuser) -> dict:
         """Legacy method kept for existing code. Returns {'actual': {...}, 'dummy': {...}}."""
         result = {"actual": {}, "dummy": {}}
-        for link in BuddyLink.for_user(feuser).select_related("user_a", "user_b"):
+        for link in ContactLink.for_user(feuser).select_related("user_a", "user_b"):
             buddy = link.other(feuser)
-            net = BuddyQueryService.get_net_debt(feuser, buddy_feuser=buddy)
+            net = BuddyQueryService.get_net_debt(feuser, contact_feuser=buddy)
             result["actual"][buddy.pk] = {
                 "feuser": buddy,
                 "link": link,
                 "net": net,
                 "net_abs": abs(net),
             }
-        for dummy in BuddyQueryService.get_dummy_buddies(feuser):
-            net = BuddyQueryService.get_net_debt(feuser, buddy_dummy=dummy)
+        for dummy in BuddyQueryService.get_offline_contacts(feuser):
+            net = BuddyQueryService.get_net_debt(feuser, contact_dummy=dummy)
             result["dummy"][dummy.pk] = {
                 "dummy": dummy,
                 "net": net,
@@ -575,7 +575,7 @@ class BuddyQueryService:
         """Queryset of all buddy-related expenses visible to feuser."""
         from budget.models import Expense
 
-        buddy_feuserids = [b.pk for b in BuddyQueryService.get_actual_buddies(feuser)]
+        contact_feuserids = [b.pk for b in BuddyQueryService.get_real_contacts(feuser)]
         group_ids = [g.uid for g in BuddyQueryService.get_groups_for_feuser(feuser)]
 
         return (
@@ -583,7 +583,7 @@ class BuddyQueryService:
             .filter(
                 Q(owning_feuser=feuser, buddy_spendings__isnull=False) |
                 Q(owning_feuser=feuser, is_dummy=True) |
-                Q(owning_feuser_id__in=buddy_feuserids, buddy_spendings__participant_feuser=feuser) |
+                Q(owning_feuser_id__in=contact_feuserids, buddy_spendings__participant_feuser=feuser) |
                 Q(project_id__in=group_ids, buddy_spendings__participant_feuser=feuser) |
                 Q(project_id__in=group_ids, owning_feuser=feuser)
             )
@@ -600,7 +600,7 @@ class BuddyQueryService:
     @staticmethod
     def pending_invites_incoming(feuser):
         from django.utils import timezone
-        return BuddyInvite.objects.filter(
+        return ContactInvite.objects.filter(
             invitee_email=feuser.email,
             expires_at__gt=timezone.now(),
         ).select_related("inviter")
@@ -608,7 +608,7 @@ class BuddyQueryService:
     @staticmethod
     def pending_invites_outgoing(feuser):
         from django.utils import timezone
-        return BuddyInvite.objects.filter(
+        return ContactInvite.objects.filter(
             inviter=feuser,
             expires_at__gt=timezone.now(),
         )
@@ -694,7 +694,7 @@ class BuddyQueryService:
         and dummy-paid expenses (confirmed by the project admin instead).
 
         `project=None` (the default) scopes to personal, non-project
-        expenses only, matching how direct-buddy-expenses.csv excludes
+        expenses only, matching how contact-expenses.csv excludes
         project expenses; pass a Project to scope to that project's
         expenses instead (`project=None` filters `project__isnull=True`,
         same as any other Django FK filter)."""

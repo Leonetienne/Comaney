@@ -66,12 +66,12 @@ nav:
         - List Cards: user-manual/dashboard/cards/list.md
         - Gauge Cards: user-manual/dashboard/cards/gauge.md
         - Spacer Cards: user-manual/dashboard/cards/spacer.md
-    - Buddies:
-      - Overview: user-manual/buddies/index.md
-      - Adding Buddies: user-manual/buddies/adding-buddies.md
-      - Shared Expenses: user-manual/buddies/shared-expenses.md
-      - Settling Up: user-manual/buddies/settling-up.md
-      - Achim Archive: user-manual/buddies/achim-archive.md
+    - Contacts:
+      - Overview: user-manual/contacts/index.md
+      - Adding Contacts: user-manual/contacts/adding-contacts.md
+      - Shared Expenses: user-manual/contacts/shared-expenses.md
+      - Settling Up: user-manual/contacts/settling-up.md
+      - Achim Archive: user-manual/contacts/achim-archive.md
     - Projects: user-manual/projects.md
     - AI Express Creation: user-manual/ai-express-creation.md
     - Notifications: user-manual/notifications.md

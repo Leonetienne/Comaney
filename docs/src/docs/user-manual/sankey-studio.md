@@ -72,7 +72,7 @@ You don't need to place every Category, Tag, and Project before generating - any
 Just like the Dashboard and Expenses page, you can switch between:
 
 - **Personal**: only your own expenses, counted in full.
-- **Shared**: your own expenses counted at your share, plus your share of anything you split with buddies or in a project.
+- **Shared**: your own expenses counted at your share, plus your share of anything you split with contacts or in a project.
 
 Use the same date range control at the top to choose which period the diagram covers.
 

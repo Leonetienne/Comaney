@@ -333,7 +333,7 @@ Covers:
 ### Catalog by index
 `req~ai.express.catalog~1`
 
-The system shall send the AI only the feuser's categories, tags, non-archived projects (name, description, preprompt, member names) and direct buddy names, referencing people by position index, and never existing transactions.
+The system shall send the AI only the feuser's categories, tags, non-archived projects (name, description, preprompt, member names) and contact names, referencing people by position index, and never existing transactions.
 
 Covers:
 - `feat~ai~1`
@@ -343,7 +343,7 @@ Tags: Privacy
 ### Assignment suggestions
 `req~ai.express.assignment~1`
 
-The system shall let the AI assign an item to a project (with included participants, pinned shares and upfront payer) or to one direct buddy (with payer and share), mutually exclusive, defaulting to the feuser as payer and equal shares.
+The system shall let the AI assign an item to a project (with included participants, pinned shares and upfront payer) or to one contact (with payer and share), mutually exclusive, defaulting to the feuser as payer and equal shares.
 
 Covers:
 - `feat~ai~1`
@@ -367,7 +367,7 @@ Covers:
 ### Prompt blocks
 `req~ai.express.blocks~1`
 
-The system shall omit the direct-buddy prompt block when the feuser has no direct buddies, all project blocks when they have no non-archived project, and the participant and payer blocks when no project has more than one member.
+The system shall omit the contact prompt block when the feuser has no contacts, all project blocks when they have no non-archived project, and the participant and payer blocks when no project has more than one member.
 
 Rationale:
 Saves tokens.
@@ -378,7 +378,7 @@ Covers:
 ### Success link
 `req~ai.express.success~1`
 
-After saving, the success message's "View expenses" link shall lead to the Buddy Expenses page if all items are direct buddy expenses, the project page if all belong to one project, and the expense list otherwise.
+After saving, the success message's "View expenses" link shall lead to the Contact Expenses page if all items are contact expenses, the project page if all belong to one project, and the expense list otherwise.
 
 Covers:
 - `feat~ai~1`

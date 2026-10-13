@@ -15,7 +15,7 @@ from helpers import (
     fetch_email, mailpit_seen_ids,
 )
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _get_pk,
+    _shell, _login_as, _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy,
 )
 
@@ -31,7 +31,7 @@ class TestExpenseApproval:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Anna", last_name="Approver")
         b = setup_user(None, None, first_name="Boris", last_name="Approver")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         # Expense owned by B (unapproved), A is a participant
         exp_pk = _create_personal_expense_with_buddy(
@@ -86,7 +86,7 @@ class TestExpenseOwnerRejection:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Rosa", last_name="Rejecter")
         b = setup_user(None, None, first_name="Blake", last_name="Rejecter")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         exp_pk = _create_personal_expense_with_buddy(
             owner_email=b["email"],
@@ -159,7 +159,7 @@ class TestParticipantSeesNeedsApproval:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Petra", last_name="Participant")
         b = setup_user(None, None, first_name="Owen", last_name="Owner")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         _create_personal_expense_with_buddy(
             owner_email=b["email"],
@@ -196,7 +196,7 @@ class TestExpenseAssignmentNotificationSuppressed:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Assign", last_name="Initiator")
         b = setup_user(None, None, first_name="Assign", last_name="Payer")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         exp_pk = _create_personal_expense_with_buddy(
             owner_email=b["email"],
@@ -253,7 +253,7 @@ class TestParticipantDecisionNotificationSuppressed:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Payer", last_name="NoDecision")
         b = setup_user(None, None, first_name="Part", last_name="Decider")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = _create_personal_expense_with_buddy(
             owner_email=a["email"],

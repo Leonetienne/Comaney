@@ -9,7 +9,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _shell, _login_as, _create_buddy_link, _get_pk
+from bhelpers import _shell, _login_as, _create_contact_link, _get_pk
 
 
 def _create_invite_via_shell(inviter_email: str, invitee_email: str) -> str:
@@ -45,13 +45,13 @@ def _create_full_partnership_via_shell(email_a: str, email_b: str) -> None:
 # ---------------------------------------------------------------------------
 
 class TestInviteButtonVisible:
-    """A buddy list shows 'Invite as partner' when users share a BuddyLink."""
+    """A buddy list shows 'Invite as partner' when users share a ContactLink."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Alice", last_name="Btn")
         b = setup_user(None, None, first_name="Bob", last_name="Btn")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = _get_pk(b["email"])
         yield {"a": a, "b": b, "b_pk": b_pk}
         cleanup_user(a["email"])
@@ -79,7 +79,7 @@ class TestInviteSendViaButton:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Carl", last_name="Send")
         b = setup_user(None, None, first_name="Dana", last_name="Send")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = _get_pk(b["email"])
         yield {"a": a, "b": b, "b_pk": b_pk}
         cleanup_user(a["email"])
@@ -125,7 +125,7 @@ class TestBadgeVisibleForInvitee:
     def ctx(self, driver, w):
         a = setup_user(None, None, first_name="Eve", last_name="Badge")
         b = setup_user(driver, w, first_name="Frank", last_name="Badge")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         token = _create_invite_via_shell(a["email"], b["email"])
         yield {"a": a, "b": b, "token": token}
         cleanup_user(a["email"])
@@ -157,7 +157,7 @@ class TestInvitePendingPill:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Grace", last_name="Pending")
         b = setup_user(None, None, first_name="Hank", last_name="Pending")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _create_invite_via_shell(a["email"], b["email"])
         b_pk = _get_pk(b["email"])
         yield {"a": a, "b": b, "b_pk": b_pk}
@@ -187,7 +187,7 @@ class TestPartnerPill:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Iris", last_name="Partner")
         b = setup_user(None, None, first_name="Jack", last_name="Partner")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _create_full_partnership_via_shell(a["email"], b["email"])
         b_pk = _get_pk(b["email"])
         yield {"a": a, "b": b, "b_pk": b_pk}

@@ -23,7 +23,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user, fetch_email
 from bhelpers import (
-    _shell, _login_as, _confirm, _create_buddy_link, _get_pk,
+    _shell, _login_as, _confirm, _create_contact_link, _get_pk,
     _create_group, _add_group_member, _create_group_expense,
     _create_personal_expense_with_buddy,
 )
@@ -34,13 +34,13 @@ from bhelpers import (
 # ---------------------------------------------------------------------------
 
 class TestDirectSettlement:
-    """A owes B via a direct buddy expense; settle-up form appears and works."""
+    """A owes B via a contact expense; settle-up form appears and works."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Seth", last_name="Debtor")
         b = setup_user(None, None, first_name="Beth", last_name="Creditor")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         # B paid 100, A owes 50% = 50.00
         _create_personal_expense_with_buddy(
@@ -233,7 +233,7 @@ class TestDirectSettlementNoDebt:
         # a paid, b owes a (a has positive net, b is debtor but b is not logged in)
         a = setup_user(driver, w, first_name="Nina", last_name="NoDebt")
         b = setup_user(None, None, first_name="Olaf", last_name="Owes")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         # A paid 80, B owes 50% = 40 → A has positive net
         _create_personal_expense_with_buddy(
@@ -249,12 +249,12 @@ class TestDirectSettlementNoDebt:
         cleanup_user(b["email"])
 
     def test_settle_section_visible_for_creditor(self, driver, w, ctx):
-        # A is the creditor but still has a direct buddy; the form must appear
+        # A is the creditor but still has a contact; the form must appear
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
         assert "Pay someone back" in driver.page_source, \
-            "Pay someone back section must appear whenever the user has a direct buddy"
+            "Pay someone back section must appear whenever the user has a contact"
 
     def test_amount_not_prefilled_when_no_debt(self, driver, w, ctx):
         # A owes nobody so the amount input must be empty (no pre-fill)
@@ -275,7 +275,7 @@ class TestDirectSettlementRejection:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Ray", last_name="Debtor")
         b = setup_user(None, None, first_name="Kay", last_name="Creditor")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         # B paid 60, A owes 50% = 30.00
         _create_personal_expense_with_buddy(

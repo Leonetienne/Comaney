@@ -22,7 +22,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import (
-    _shell, _login_as, _get_pk, _create_buddy_link,
+    _shell, _login_as, _get_pk, _create_contact_link,
     _create_group, _add_group_member,
     _create_group_expense, _create_personal_expense_with_buddy,
 )
@@ -154,7 +154,7 @@ def ctx(driver, w):
     bob = setup_user(None, None, first_name="Bob", last_name="NavTest")
     alice_pk = int(_get_pk(alice["email"]))
     bob_pk = int(_get_pk(bob["email"]))
-    _create_buddy_link(alice["email"], bob["email"])
+    _create_contact_link(alice["email"], bob["email"])
     project_id = int(_create_group(alice["email"], "NavTestProject"))
     _add_group_member(project_id, bob["email"])
     yield {
@@ -202,7 +202,7 @@ class TestExpenseParticipationProject:
 
 
 # ---------------------------------------------------------------------------
-# 2. expense_participation – direct buddy expense
+# 2. expense_participation – contact expense
 # ---------------------------------------------------------------------------
 
 class TestExpenseParticipationDirect:
@@ -265,7 +265,7 @@ class TestExpenseAssignmentsProject:
 
 
 # ---------------------------------------------------------------------------
-# 4. expense_assignments – direct buddy expense
+# 4. expense_assignments – contact expense
 # ---------------------------------------------------------------------------
 
 class TestExpenseAssignmentsDirect:
@@ -328,7 +328,7 @@ class TestParticipantDecisionsProject:
 
 
 # ---------------------------------------------------------------------------
-# 6. participant_decisions – direct buddy expense
+# 6. participant_decisions – contact expense
 # ---------------------------------------------------------------------------
 
 class TestParticipantDecisionsDirect:
@@ -452,17 +452,17 @@ class TestGroupActivityProjectInvite:
 
 
 # ---------------------------------------------------------------------------
-# 10. group_activity – direct buddy invite
+# 10. group_activity – contact invite
 # ---------------------------------------------------------------------------
 
-class TestGroupActivityBuddyInvite:
-    """Navigates to /buddies/my-buddies/#section-invites; anchor exists."""
+class TestGroupActivityContactInvite:
+    """Navigates to /buddies/contacts/#section-invites; anchor exists."""
 
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, ctx):
         _inject_notif(
             ctx["bob"]["email"], "group_activity",
-            "NavBuddyInvite: Alice invited you to be spending buddies.",
+            "NavContactInvite: Alice invited you to connect as contacts.",
             feuser_id=ctx["alice_pk"],
         )
 
@@ -472,12 +472,12 @@ class TestGroupActivityBuddyInvite:
         time.sleep(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
-        item = _find_unread(driver, "NavBuddyInvite")
+        item = _find_unread(driver, "NavContactInvite")
         assert item is not None, "group_activity (buddy invite) not in dropdown"
         _click_notif(driver, item)
-        assert "/buddies/my-buddies/" in driver.current_url, driver.current_url
+        assert "/buddies/contacts/" in driver.current_url, driver.current_url
         assert _anchor_exists(driver, "section-invites"), \
-            "#section-invites missing on my-buddies page"
+            "#section-invites missing on contacts page"
         assert _badge_count(driver) < before or _badge_count(driver) == 0
 
 
@@ -516,21 +516,21 @@ class TestGroupActivityProjectKick:
 
 
 # ---------------------------------------------------------------------------
-# 11b. group_activity – buddy kick  →  /buddies/my-buddies/
+# 11b. group_activity – buddy kick  →  /buddies/contacts/
 # ---------------------------------------------------------------------------
 
 class TestGroupActivityBuddyKick:
-    """Kicked-as-buddy notification navigates to /buddies/my-buddies/ (no anchor)."""
+    """Kicked-as-buddy notification navigates to /buddies/contacts/ (no anchor)."""
 
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, ctx):
         # Mimics send_kicked_notification: no pid, no rfid.
         _inject_notif(
             ctx["bob"]["email"], "group_activity",
-            "NavBuddyKick: Alice removed you as a spending buddy.",
+            "NavBuddyKick: Alice removed you as a contact.",
         )
 
-    def test_navigates_to_my_buddies(self, driver, w, ctx):
+    def test_navigates_to_contacts(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
         time.sleep(1)
@@ -540,7 +540,7 @@ class TestGroupActivityBuddyKick:
         item = _find_unread(driver, "NavBuddyKick")
         assert item is not None, "buddy-kick notification not in dropdown"
         _click_notif(driver, item)
-        assert "/buddies/my-buddies/" in driver.current_url, driver.current_url
+        assert "/buddies/contacts/" in driver.current_url, driver.current_url
         assert _badge_count(driver) < before or _badge_count(driver) == 0
 
 

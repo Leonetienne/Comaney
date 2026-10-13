@@ -15,7 +15,7 @@ from helpers import (
 )
 from bhelpers import (
     _shell, _login_as, _confirm,
-    _create_buddy_link, _get_pk,
+    _create_contact_link, _get_pk,
     _create_group, _add_group_member, _create_group_expense,
 )
 
@@ -55,7 +55,7 @@ class TestGroupCreate:
         time.sleep(1)
         assert "Invite by email" in driver.page_source
 
-    def test_group_appears_on_my_buddies(self, driver, w, ctx):
+    def test_group_appears_on_contacts(self, driver, w, ctx):
         driver.get(_url("/projects/"))
         time.sleep(1)
         assert "Test Group Alpha" in driver.page_source
@@ -98,7 +98,7 @@ class TestGroupInviteAccept:
         ctx["group_invite_link"] = extract_link(body)
         assert "/projects/project-invite/" in ctx["group_invite_link"]
 
-    def test_c_sees_group_invite_on_buddies_page(self, driver, w, ctx):
+    def test_c_sees_group_invite_on_contacts_page(self, driver, w, ctx):
         _login_as(driver, ctx["c"])
         driver.get(_url("/projects/"))
         time.sleep(1)
@@ -129,16 +129,16 @@ class TestGroupInviteAccept:
         time.sleep(1)
         assert ctx["c"]["email"] in driver.page_source
 
-    def test_buddy_link_created_between_a_and_c(self, driver, w, ctx):
+    def test_contact_link_created_between_a_and_c(self, driver, w, ctx):
         count = _shell(
-            f"from buddies.models import BuddyLink; "
+            f"from buddies.models import ContactLink; "
             f"from feusers.models import FeUser; "
             f"from django.db.models import Q; "
             f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
             f"c = FeUser.objects.get(email='{ctx['c']['email']}'); "
-            f"print(BuddyLink.objects.filter(Q(user_a=a,user_b=c)|Q(user_a=c,user_b=a)).count())"
+            f"print(ContactLink.objects.filter(Q(user_a=a,user_b=c)|Q(user_a=c,user_b=a)).count())"
         )
-        assert count == "1", "Accepting group invite must create a BuddyLink"
+        assert count == "1", "Accepting group invite must create a ContactLink"
 
 
 # ---------------------------------------------------------------------------
@@ -362,7 +362,7 @@ class TestGroupTransferAdmin:
         c = setup_user(None, None, first_name="Ned", last_name="NewAdmin")
         group_id = _create_group(a["email"], "Transfer Admin Group")
         _add_group_member(int(group_id), c["email"])
-        _create_buddy_link(a["email"], c["email"])
+        _create_contact_link(a["email"], c["email"])
         c_pk = int(_get_pk(c["email"]))
         yield {"a": a, "c": c, "group_id": int(group_id), "c_pk": c_pk}
         cleanup_user(a["email"])
@@ -402,7 +402,7 @@ class TestGroupLeave:
         c = setup_user(None, None, first_name="Lea", last_name="Leaver")
         group_id = _create_group(a["email"], "Leave Test Group")
         _add_group_member(int(group_id), c["email"])
-        _create_buddy_link(a["email"], c["email"])
+        _create_contact_link(a["email"], c["email"])
         yield {"a": a, "c": c, "group_id": int(group_id)}
         cleanup_user(a["email"])
         cleanup_user(c["email"])
@@ -461,7 +461,7 @@ class TestGroupDissolve:
     def test_flash_message_after_dissolve(self, driver, w, ctx):
         assert "deleted" in driver.page_source.lower()
 
-    def test_group_gone_from_my_buddies(self, driver, w, ctx):
+    def test_group_gone_from_contacts(self, driver, w, ctx):
         driver.get(_url("/projects/"))
         time.sleep(1)
         assert "Dissolve Test Group" not in driver.page_source
@@ -480,7 +480,7 @@ class TestGroupBreakdown:
         b = setup_user(None, None, first_name="Neil", last_name="Debtor")
         group_id = _create_group(a["email"], "Breakdown Group")
         _add_group_member(int(group_id), b["email"])
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         # A pays 100; B owes 50%
         _create_group_expense(
             admin_email=a["email"],
@@ -534,7 +534,7 @@ class TestGroupExpenseCreateUI:
         b = setup_user(None, None, first_name="Gino", last_name="GroupMember")
         group_id = _create_group(a["email"], "UI Expense Group")
         _add_group_member(int(group_id), b["email"])
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         ctx = {"a": a, "b": b, "group_id": int(group_id)}
         yield ctx
         cleanup_user(a["email"])

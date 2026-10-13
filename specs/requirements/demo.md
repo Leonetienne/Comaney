@@ -9,7 +9,7 @@ Demo restrictions of individual features are listed in their own files with the 
 ### No contact with real users
 `req~demo.isolation~1`
 
-The system shall never let a demo user send email, invitations, partnership requests, merge requests or other out-of-band contact to a real account, and never let a real user add a demo account as buddy, project member, partner or merge target.
+The system shall never let a demo user send email, invitations, partnership requests, merge requests or other out-of-band contact to a real account, and never let a real user add a demo account as contact, project member, partner or merge target.
 
 Covers:
 - `feat~demo~1`
@@ -29,7 +29,7 @@ Tags: Demo, Security
 ### Allowed actions
 `req~demo.allowed~1`
 
-The system shall let a demo user change currency, financial month settings and the unspent allowance action, create and manage expenses, dashboards and offline buddies, and use AI features within their individual AI budget.
+The system shall let a demo user change currency, financial month settings and the unspent allowance action, create and manage expenses, dashboards and offline contacts, and use AI features within their individual AI budget.
 
 Covers:
 - `feat~demo~1`

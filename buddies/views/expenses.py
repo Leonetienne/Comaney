@@ -13,7 +13,7 @@ def _build_expense_preview(expense, viewer):
     """Payer + participant share rows for the expense review/preview screen."""
     from decimal import Decimal
 
-    offline_label = "(offline member)" if expense.project_id else "(offline buddy)"
+    offline_label = "(offline member)" if expense.project_id else "(offline contact)"
     fu = expense.owning_feuser
     payer_name = f"{fu.first_name} {fu.last_name}".strip() or fu.email
 
@@ -121,7 +121,7 @@ def approve_settlement_as_creditor(request, expense_id):
         django_messages.success(request, "Settlement confirmed. Thank you!")
         if expense.project_id:
             return redirect("projects:project_detail", project_id=expense.project_id)
-        return redirect("buddies:buddy_summary")
+        return redirect("buddies:contact_summary")
     return render(request, "buddies/confirm_settlement.html", {
         "active_nav": "buddies",
         "expense": expense,
@@ -153,7 +153,7 @@ def reject_settlement_as_creditor(request, expense_id):
     django_messages.warning(request, "Settlement rejected. The debtor has been notified.")
     if group_id:
         return redirect("projects:project_detail", project_id=group_id)
-    return redirect("buddies:buddy_summary")
+    return redirect("buddies:contact_summary")
 
 
 @feuser_required
@@ -264,7 +264,7 @@ def _participant_set_approval(request, expense_id, new_state):
     if not bs:
         if is_ajax:
             return JsonResponse({"error": "not_participant"}, status=404)
-        return redirect("buddies:buddy_summary")
+        return redirect("buddies:contact_summary")
 
     if not bs.can_change_consent:
         if is_ajax:
@@ -293,7 +293,7 @@ def _participant_set_approval(request, expense_id, new_state):
         return redirect(back)
     if expense.project_id:
         return redirect("projects:project_detail", project_id=expense.project_id)
-    return redirect("buddies:buddy_summary")
+    return redirect("buddies:contact_summary")
 
 
 @feuser_required

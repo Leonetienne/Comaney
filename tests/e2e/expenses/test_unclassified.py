@@ -159,11 +159,11 @@ class TestUnclassifiedExpensesList:
         settlement expense, so it never surfaces here despite having no
         category/tags of its own."""
         from selenium.webdriver.common.by import By as _By
-        from bhelpers import _login_as, _confirm, _create_buddy_link, _get_pk, _create_personal_expense_with_buddy
+        from bhelpers import _login_as, _confirm, _create_contact_link, _get_pk, _create_personal_expense_with_buddy
 
         debtor = setup_user(None, None)
         try:
-            _create_buddy_link(debtor["email"], ctx["email"])
+            _create_contact_link(debtor["email"], ctx["email"])
             debtor_pk = int(_get_pk(debtor["email"]))
             # ctx user paid 100; debtor owes 50% = 50.00
             _create_personal_expense_with_buddy(

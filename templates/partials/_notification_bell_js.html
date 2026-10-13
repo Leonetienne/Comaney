@@ -48,8 +48,8 @@
             var rfid = n.related_feuser_id;
             if (pid && rfid) return '/projects/' + pid + '/';   // project invite (has inviter)
             if (pid)         return null;                        // project kick (no inviter set)
-            if (rfid)        return '/buddies/my-buddies/#section-invites'; // buddy invite
-            return '/buddies/my-buddies/';                       // buddy kick
+            if (rfid)        return '/buddies/contacts/#section-invites'; // buddy invite
+            return '/buddies/contacts/';                       // buddy kick
         }
         return null;
     }

@@ -45,7 +45,7 @@ Tags: Security
 ### Picker placement
 `req~periods.picker.pages~1`
 
-The date range picker shall appear on the expense list, dashboards, the Buddy Expenses list and Sankey Studio; project pages always cover the project's entire history.
+The date range picker shall appear on the expense list, dashboards, the Contact Expenses list and Sankey Studio; project pages always cover the project's entire history.
 
 Covers:
 - `feat~periods~1`

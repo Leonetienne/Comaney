@@ -1,6 +1,6 @@
 """
 Personal offline-buddy-into-real-buddy merge requests: requires the target's approval.
-Only an already-linked direct buddy can be selected as a target.
+Only an already-linked contact can be selected as a target.
 """
 import time
 
@@ -9,22 +9,22 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user, fetch_email, extract_link, mailpit_seen_ids
-from bhelpers import _shell, _login_as, _confirm, _create_buddy_link, _get_pk
+from bhelpers import _shell, _login_as, _confirm, _create_contact_link, _get_pk
 
 
 # ---------------------------------------------------------------------------
-# Only already-linked buddies appear as merge targets
+# Only already-linked contacts appear as merge targets
 # ---------------------------------------------------------------------------
 
 class TestPersonalMergeRequestOnlyListsLinkedBuddies:
-    """A dummy's target dropdown lists B (already a buddy) but not C (not yet a buddy)."""
+    """A dummy's target dropdown lists B (already a contact) but not C (not yet a contact)."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Lena", last_name="Requester")
         b = setup_user(None, None, first_name="Beth", last_name="Linked")
         c = setup_user(None, None, first_name="Cara", last_name="Unlinked")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         dummy_uid = _shell(
             f"from buddies.models import DummyUser; "
             f"from feusers.models import FeUser; "
@@ -39,11 +39,11 @@ class TestPersonalMergeRequestOnlyListsLinkedBuddies:
         cleanup_user(c["email"])
 
     def test_only_linked_buddy_is_a_candidate(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         select_el = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']} select[name='target_key']")
         values = [o.get_attribute("value") for o in select_el.find_elements(By.TAG_NAME, "option")]
-        assert f"f{ctx['b_pk']}" in values, "Already-linked buddy B must be a candidate"
+        assert f"f{ctx['b_pk']}" in values, "Already-linked contact B must be a candidate"
         assert f"f{ctx['c_pk']}" not in values, "Unlinked user C must not be a candidate"
 
 
@@ -58,7 +58,7 @@ class TestPersonalMergeRequestRevoke:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Wade", last_name="Requester")
         b = setup_user(None, None, first_name="Xander", last_name="Pending")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         dummy_uid = _shell(
             f"from buddies.models import DummyUser; "
             f"from feusers.models import FeUser; "
@@ -72,7 +72,7 @@ class TestPersonalMergeRequestRevoke:
         cleanup_user(b["email"])
 
     def test_a_sends_request(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
         time.sleep(0.3)
@@ -82,7 +82,7 @@ class TestPersonalMergeRequestRevoke:
         _confirm(driver)
 
     def test_a_sees_sent_request_and_revokes(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         assert "Merge requests you sent" in driver.page_source
         assert "Revoke Dummy" in driver.page_source
@@ -114,15 +114,15 @@ class TestPersonalMergeRequestRevoke:
 
 class TestPersonalMergeRequestBlocksDuplicate:
     """A sends a merge request to B; sending another for the same dummy to C
-    (also already a buddy) must be blocked until the first is resolved."""
+    (also already a contact) must be blocked until the first is resolved."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Yara", last_name="Requester")
         b = setup_user(None, None, first_name="Zeke", last_name="FirstTarget")
         c = setup_user(None, None, first_name="Amir", last_name="SecondTarget")
-        _create_buddy_link(a["email"], b["email"])
-        _create_buddy_link(a["email"], c["email"])
+        _create_contact_link(a["email"], b["email"])
+        _create_contact_link(a["email"], c["email"])
         dummy_uid = _shell(
             f"from buddies.models import DummyUser; "
             f"from feusers.models import FeUser; "
@@ -140,7 +140,7 @@ class TestPersonalMergeRequestBlocksDuplicate:
         cleanup_user(c["email"])
 
     def test_first_request_succeeds(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
         time.sleep(0.3)
@@ -151,7 +151,7 @@ class TestPersonalMergeRequestBlocksDuplicate:
         assert "Merge request sent" in driver.page_source
 
     def test_second_request_is_blocked(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
         time.sleep(0.3)
@@ -179,7 +179,7 @@ class TestPersonalMergeRequestAcceptFlow:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Fay", last_name="Requester")
         b = setup_user(None, None, first_name="Glen", last_name="Approver")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         dummy_uid = _shell(
             f"from buddies.models import DummyUser; "
             f"from feusers.models import FeUser; "
@@ -206,7 +206,7 @@ class TestPersonalMergeRequestAcceptFlow:
     def test_a_sends_merge_request_to_b(self, driver, w, ctx):
         seen_before = mailpit_seen_ids()
         ctx["seen_before"] = seen_before
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
         time.sleep(0.3)
@@ -222,7 +222,7 @@ class TestPersonalMergeRequestAcceptFlow:
     def test_merge_request_email_arrives(self, driver, w, ctx):
         body = fetch_email(
             ctx["b"]["email"],
-            "link your account with their buddy record",
+            "link your account with their offline contact entry",
             ignore_ids=ctx.get("seen_before"),
         )
         ctx["merge_link"] = extract_link(body)
@@ -230,7 +230,7 @@ class TestPersonalMergeRequestAcceptFlow:
 
     def test_b_sees_navbar_bell_and_pending_card(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         bell = driver.find_elements(By.ID, "notif-badge")
         assert bell and int(bell[0].text.strip()) >= 1, "B's navbar bell must show at least one notification"
@@ -251,34 +251,34 @@ class TestPersonalMergeRequestAcceptFlow:
         )
         assert gone == "0"
         link_count = _shell(
-            f"from buddies.models import BuddyLink; from feusers.models import FeUser; "
+            f"from buddies.models import ContactLink; from feusers.models import FeUser; "
             f"from django.db.models import Q; "
             f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
             f"b = FeUser.objects.get(email='{ctx['b']['email']}'); "
-            f"print(BuddyLink.objects.filter(Q(user_a=a,user_b=b)|Q(user_a=b,user_b=a)).count())"
+            f"print(ContactLink.objects.filter(Q(user_a=a,user_b=b)|Q(user_a=b,user_b=a)).count())"
         )
-        assert link_count == "1", "Accepting must not create a duplicate BuddyLink for an already-linked buddy"
+        assert link_count == "1", "Accepting must not create a duplicate ContactLink for an already-linked buddy"
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
         assert "Request Merge Expense" in driver.page_source
 
 
 # ---------------------------------------------------------------------------
-# Merging a dummy into an already-linked buddy who is ALSO already an explicit
+# Merging a dummy into an already-linked contact who is ALSO already an explicit
 # co-participant on the same expense: shares must sum into one row, not
 # duplicate. anna 10%, frank 20%, mario 35%, tom 35% -> anna 10, frank 20, tom 70.
 # ---------------------------------------------------------------------------
 
 class TestMergeRequestSumsConflictingCoParticipantShares:
     """A owns an expense split between her dummies anna/frank/mario and her
-    already-linked real buddy tom. Requesting a merge of mario into tom, and
+    already-linked real contact tom. Requesting a merge of mario into tom, and
     tom accepting, must combine mario's and tom's shares into a single row."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Sven", last_name="Owner")
         tom = setup_user(None, None, first_name="Tomas", last_name="Approver")
-        _create_buddy_link(a["email"], tom["email"])
+        _create_contact_link(a["email"], tom["email"])
         ids = _shell(
             f"from buddies.models import DummyUser; "
             f"from feusers.models import FeUser; "
@@ -330,7 +330,7 @@ class TestMergeRequestSumsConflictingCoParticipantShares:
         cleanup_user(tom["email"])
 
     def test_a_requests_merge_and_tom_accepts(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['mario_uid']}").click()
         time.sleep(0.3)
@@ -393,15 +393,15 @@ class TestMergeRequestSumsConflictingCoParticipantShares:
 
 
 # ---------------------------------------------------------------------------
-# Merging an offline buddy who was the UPFRONT PAYER of an expense into an
-# already-linked real buddy who already has an explicit (now stale) row on
+# Merging an offline contact who was the UPFRONT PAYER of an expense into an
+# already-linked real contact who already has an explicit (now stale) row on
 # that same expense: the stale row must be removed; ownership and the
 # implicit owner share must transfer correctly.
 # ---------------------------------------------------------------------------
 
 class TestMergeRequestUpfrontPayerBecomesRealOwner:
     """mario (dummy) fronted the cash for an expense. anna (dummy, 30%) and tom
-    (real, already a buddy, 30%) are explicit participants; mario's implicit
+    (real, already a contact, 30%) are explicit participants; mario's implicit
     share is 40%. Merging mario into tom must: transfer ownership to tom,
     flip is_dummy off, clear upfront_payee_dummy, remove tom's now-stale 30%
     row, and leave only anna's 30% row (tom's new implicit share is 70%)."""
@@ -410,7 +410,7 @@ class TestMergeRequestUpfrontPayerBecomesRealOwner:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Uschi", last_name="Owner")
         tom = setup_user(None, None, first_name="Theo", last_name="Approver")
-        _create_buddy_link(a["email"], tom["email"])
+        _create_contact_link(a["email"], tom["email"])
         ids = _shell(
             f"from buddies.models import DummyUser; "
             f"from feusers.models import FeUser; "
@@ -444,7 +444,7 @@ class TestMergeRequestUpfrontPayerBecomesRealOwner:
         cleanup_user(tom["email"])
 
     def test_a_requests_merge_and_tom_accepts(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['mario_uid']}").click()
         time.sleep(0.3)
@@ -512,7 +512,7 @@ class TestPersonalMergeRequestDeclineFlow:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Hana", last_name="Requester")
         b = setup_user(None, None, first_name="Ivo", last_name="Decliner")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         dummy_uid = _shell(
             f"from buddies.models import DummyUser; "
             f"from feusers.models import FeUser; "
@@ -526,7 +526,7 @@ class TestPersonalMergeRequestDeclineFlow:
         cleanup_user(b["email"])
 
     def test_a_sends_merge_request(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
         time.sleep(0.3)
@@ -542,7 +542,7 @@ class TestPersonalMergeRequestDeclineFlow:
             f"print(DummyMergeInvite.objects.get(dummy=d).token)"
         ).strip()
         _login_as(driver, ctx["b"])
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"btn-decline-merge-{token}").click()
         time.sleep(1)
@@ -550,6 +550,6 @@ class TestPersonalMergeRequestDeclineFlow:
 
     def test_dummy_still_exists_for_a(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         assert "Decline Request Dummy" in driver.page_source

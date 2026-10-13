@@ -11,7 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _shell, _login_as, _create_buddy_link, _get_pk, _create_personal_expense_with_buddy
+from bhelpers import _shell, _login_as, _create_contact_link, _get_pk, _create_personal_expense_with_buddy
 
 
 def _create_invite_via_shell(inviter_email: str, invitee_email: str) -> str:
@@ -93,7 +93,7 @@ class TestOnboardingRemapsRecurringAndOverlays:
     def ctx(self, driver, w):
         a = setup_user(None, None, first_name="Gina", last_name="Remap")
         b = setup_user(driver, w, first_name="Hank", last_name="Remap")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _add_catalog(a["email"], ["drinks_pm", "coffee_pm"], ["food_pm"])
         _add_catalog(b["email"], ["booze_pm", "coffee_pm", "junk_pm"], ["snacks_pm"])
 

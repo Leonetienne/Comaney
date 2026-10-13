@@ -1,22 +1,22 @@
 """
-Buddy summary export (/buddies/summary/export/), a ZIP mirroring the
+Contact summary export (/buddies/summary/export/), a ZIP mirroring the
 per-project export:
 - Returns application/zip
-- Contains direct-buddies.csv, direct-buddy-expenses.csv,
-  direct-buddy-expense-participation.csv
-- direct-buddies.csv combines real-user and offline buddies into one roster,
-  identified by "u-<pk>"/"d-<pk>", plus the buddy auto-accept trust in both
+- Contains contacts.csv, contact-expenses.csv,
+  contact-expense-participation.csv
+- contacts.csv combines real-user and offline contacts into one roster,
+  identified by "u-<pk>"/"d-<pk>", plus the contact auto-accept trust in both
   directions (i_auto_accept_theirs / they_auto_accept_mine, empty for offline)
-- direct-buddy-expenses.csv covers both directions of a direct-buddy
-  relationship: expenses a buddy owns where the feuser participates, the
-  feuser's own expenses shared with a buddy, and the feuser's own expenses
-  where a personal offline buddy paid upfront. Same column scheme as
+- contact-expenses.csv covers both directions of a contact
+  relationship: expenses a contact owns where the feuser participates, the
+  feuser's own expenses shared with a contact, and the feuser's own expenses
+  where a personal offline contact paid upfront. Same column scheme as
   expenses.csv: raw owning_feuser_id/upfront_payee_dummy_id, no extra column
-- direct-buddy-expense-participation.csv has one row per expense with each
+- contact-expense-participation.csv has one row per expense with each
   participant's share in percent (payer's implicit share included); the
   exporting feuser's own column is "self" rather than "u-<their pk>", since
-  they are never listed under that id in direct-buddies.csv
-- direct-buddy-expense-approval-matrix.csv / direct-buddy-expense-approval-timestamps.csv:
+  they are never listed under that id in contacts.csv
+- contact-expense-approval-matrix.csv / contact-expense-approval-timestamps.csv:
   per-participant approval state (neutral/approved/rejected) and when it was
   last set, for non-settlement expenses only; the payer never gets a column
 - Project expense participation is excluded (covered by the project export)
@@ -34,7 +34,7 @@ import requests
 
 from helpers import _url, setup_user, cleanup_user, session_cookies, run_cmd, ai_test_api_key_args
 from bhelpers import (
-    _shell, _create_buddy_link, _get_pk,
+    _shell, _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy,
     _create_group, _add_group_member, _create_group_expense,
 )
@@ -52,7 +52,7 @@ def _read_csv(zf, name):
     return zf.read(name).decode()
 
 
-class TestBuddySummaryExport:
+class TestContactSummaryExport:
 
     def test_export_returns_zip_with_expected_csvs(self, driver, w):
         a = setup_user(driver, w, first_name="Exp", last_name="Orter")
@@ -65,36 +65,36 @@ class TestBuddySummaryExport:
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 names = zf.namelist()
             for expected in (
-                "direct-buddies.csv",
-                "direct-buddy-expenses.csv",
-                "direct-buddy-expense-participation.csv",
-                "direct-buddy-expense-approval-matrix.csv",
-                "direct-buddy-expense-approval-timestamps.csv",
+                "contacts.csv",
+                "contact-expenses.csv",
+                "contact-expense-participation.csv",
+                "contact-expense-approval-matrix.csv",
+                "contact-expense-approval-timestamps.csv",
             ):
-                assert expected in names, f"{expected} missing from buddy summary export ZIP"
+                assert expected in names, f"{expected} missing from contact summary export ZIP"
         finally:
             cleanup_user(a["email"])
 
-    def test_direct_buddies_csv_combines_real_and_offline(self, driver, w):
-        """direct-buddies.csv must list both a real-user buddy and a personal
-        offline buddy in the same file, like members.csv does for projects."""
+    def test_contacts_csv_combines_real_and_offline(self, driver, w):
+        """contacts.csv must list both a real-user contact and a personal
+        offline contact in the same file, like members.csv does for projects."""
         a = setup_user(driver, w, first_name="Roster", last_name="Owner")
         b = setup_user(None, None, first_name="Roster", last_name="RealBuddy")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         try:
             dummy_pk = int(_shell(
                 f"from feusers.models import FeUser; "
                 f"from buddies.models import DummyUser; "
                 f"owner = FeUser.objects.get(email='{a['email']}'); "
-                f"d, _ = DummyUser.objects.get_or_create(owning_feuser=owner, display_name='RosterOfflineBuddy'); "
+                f"d, _ = DummyUser.objects.get_or_create(owning_feuser=owner, display_name='RosterOfflineContact'); "
                 f"print(d.pk)"
             ))
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                roster_csv = _read_csv(zf, "direct-buddies.csv")
+                roster_csv = _read_csv(zf, "contacts.csv")
 
-            assert b["email"] in roster_csv, "Real-user buddy missing from direct-buddies.csv"
-            assert "RosterOfflineBuddy" in roster_csv, "Offline buddy missing from direct-buddies.csv"
+            assert b["email"] in roster_csv, "Real-user contact missing from contacts.csv"
+            assert "RosterOfflineContact" in roster_csv, "Offline contact missing from contacts.csv"
             assert "feuser" in roster_csv and "dummy" in roster_csv, (
                 "Both buddy_type values must appear in the combined roster"
             )
@@ -103,32 +103,32 @@ class TestBuddySummaryExport:
             cleanup_user(a["email"])
             cleanup_user(b["email"])
 
-    def test_direct_buddies_csv_has_auto_accept_trust(self, driver, w):
-        """direct-buddies.csv must show the auto-accept trust in both
-        directions, seen from the exporting feuser; empty for offline buddies."""
+    def test_contacts_csv_has_auto_accept_trust(self, driver, w):
+        """contacts.csv must show the auto-accept trust in both
+        directions, seen from the exporting feuser; empty for offline contacts."""
         a = setup_user(driver, w, first_name="Trust", last_name="Exporter")
         b = setup_user(None, None, first_name="Trust", last_name="TrustsMe")
         c = setup_user(None, None, first_name="Trust", last_name="ITrust")
-        _create_buddy_link(a["email"], b["email"])
-        _create_buddy_link(a["email"], c["email"])
+        _create_contact_link(a["email"], b["email"])
+        _create_contact_link(a["email"], c["email"])
         dummy_pk = None
         try:
             dummy_pk = int(_shell(
                 f"from feusers.models import FeUser; "
-                f"from buddies.models import BuddyLink, DummyUser; "
+                f"from buddies.models import ContactLink, DummyUser; "
                 f"a = FeUser.objects.get(email='{a['email']}'); "
                 f"b = FeUser.objects.get(email='{b['email']}'); "
                 f"c = FeUser.objects.get(email='{c['email']}'); "
-                f"BuddyLink.between(a, b).set_auto_accepts(b, True); "
-                f"BuddyLink.between(a, c).set_auto_accepts(a, True); "
-                f"d, _ = DummyUser.objects.get_or_create(owning_feuser=a, display_name='TrustOfflineBuddy'); "
+                f"ContactLink.between(a, b).set_auto_accepts(b, True); "
+                f"ContactLink.between(a, c).set_auto_accepts(a, True); "
+                f"d, _ = DummyUser.objects.get_or_create(owning_feuser=a, display_name='TrustOfflineContact'); "
                 f"print(d.pk)"
             ))
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                rows = list(csv.DictReader(io.StringIO(_read_csv(zf, "direct-buddies.csv"))))
+                rows = list(csv.DictReader(io.StringIO(_read_csv(zf, "contacts.csv"))))
             by_email = {r["email"]: r for r in rows if r["buddy_type"] == "feuser"}
-            offline = next(r for r in rows if r["display_name"] == "TrustOfflineBuddy")
+            offline = next(r for r in rows if r["display_name"] == "TrustOfflineContact")
 
             assert by_email[b["email"]]["i_auto_accept_theirs"] == "False"
             assert by_email[b["email"]]["they_auto_accept_mine"] == "True"
@@ -145,7 +145,7 @@ class TestBuddySummaryExport:
     def test_buddy_owned_expense_in_export(self, driver, w):
         a = setup_user(driver, w, first_name="Bud", last_name="OwnerTest")
         b = setup_user(None, None, first_name="Bud", last_name="Partner")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         b_pk = int(_get_pk(b["email"]))
         try:
@@ -160,22 +160,22 @@ class TestBuddySummaryExport:
             time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                expenses_csv = _read_csv(zf, "direct-buddy-expenses.csv")
+                expenses_csv = _read_csv(zf, "contact-expenses.csv")
             assert "SummaryExportBuddyExpense" in expenses_csv, (
-                "Buddy-owned expense title missing from direct-buddy-expenses.csv"
+                "Buddy-owned expense title missing from contact-expenses.csv"
             )
-            assert str(b_pk) in expenses_csv, "Buddy owner's owning_feuser_id missing from direct-buddy-expenses.csv"
+            assert str(b_pk) in expenses_csv, "Buddy owner's owning_feuser_id missing from contact-expenses.csv"
         finally:
             cleanup_user(a["email"])
             cleanup_user(b["email"])
 
     def test_own_expense_shared_with_buddy_in_export(self, driver, w):
-        """The feuser's OWN expense, shared with a real-user buddy who owes a
+        """The feuser's OWN expense, shared with a real-user contact who owes a
         share, must also appear (both directions of the relationship are
-        covered, like the Buddy Expenses page itself)."""
+        covered, like the Contact Expenses page itself)."""
         a = setup_user(driver, w, first_name="OwnShare", last_name="Owner")
         b = setup_user(None, None, first_name="OwnShare", last_name="Buddy")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         b_pk = int(_get_pk(b["email"]))
         expense_pk = None
@@ -192,16 +192,16 @@ class TestBuddySummaryExport:
             ))
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                expenses_csv = _read_csv(zf, "direct-buddy-expenses.csv")
-            assert "OwnShareExpense" in expenses_csv, "Own expense shared with a buddy missing from export"
-            assert str(a_pk) in expenses_csv, "ctx user's own owning_feuser_id missing from direct-buddy-expenses.csv"
+                expenses_csv = _read_csv(zf, "contact-expenses.csv")
+            assert "OwnShareExpense" in expenses_csv, "Own expense shared with a contact missing from export"
+            assert str(a_pk) in expenses_csv, "ctx user's own owning_feuser_id missing from contact-expenses.csv"
         finally:
             if expense_pk:
                 _shell(f"from budget.models import Expense; Expense.objects.filter(pk={expense_pk}).delete()")
             cleanup_user(a["email"])
             cleanup_user(b["email"])
 
-    def test_offline_buddy_paid_expense_in_export(self, driver, w):
+    def test_offline_contact_paid_expense_in_export(self, driver, w):
         a = setup_user(driver, w, first_name="Off", last_name="BuddyOwner")
         try:
             dummy_pk = int(_shell(
@@ -224,24 +224,24 @@ class TestBuddySummaryExport:
             time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                expenses_csv = _read_csv(zf, "direct-buddy-expenses.csv")
-                roster_csv = _read_csv(zf, "direct-buddies.csv")
+                expenses_csv = _read_csv(zf, "contact-expenses.csv")
+                roster_csv = _read_csv(zf, "contacts.csv")
             assert "SummaryExportOfflinePaidExpense" in expenses_csv
-            assert str(dummy_pk) in expenses_csv, "Dummy's upfront_payee_dummy_id missing from direct-buddy-expenses.csv"
+            assert str(dummy_pk) in expenses_csv, "Dummy's upfront_payee_dummy_id missing from contact-expenses.csv"
             assert "SummaryExportOfflinePayer" in roster_csv, (
-                "Dummy display name must be looked up via direct-buddies.csv, not duplicated in the expense CSV"
+                "Dummy display name must be looked up via contacts.csv, not duplicated in the expense CSV"
             )
         finally:
             cleanup_user(a["email"])
 
     def test_participation_matrix_in_export(self, driver, w):
-        """direct-buddy-expense-participation.csv must show the participant's
+        """contact-expense-participation.csv must show the participant's
         recorded share and the payer's implicit remaining share. The
         exporting feuser (a, the participant here) shows up as "self"; the
-        buddy who owns the expense (b, the payer) keeps their u-<pk> id."""
+        contact who owns the expense (b, the payer) keeps their u-<pk> id."""
         a = setup_user(driver, w, first_name="Matrix", last_name="Owner")
         b = setup_user(None, None, first_name="Matrix", last_name="Buddy")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         b_pk = int(_get_pk(b["email"]))
         b_id = f"u-{b_pk}"
@@ -259,7 +259,7 @@ class TestBuddySummaryExport:
             ))
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                matrix_csv = _read_csv(zf, "direct-buddy-expense-participation.csv")
+                matrix_csv = _read_csv(zf, "contact-expense-participation.csv")
 
             lines = matrix_csv.splitlines()
             header = lines[0]
@@ -278,13 +278,13 @@ class TestBuddySummaryExport:
             cleanup_user(b["email"])
 
     def test_approval_matrix_in_export(self, driver, w):
-        """direct-buddy-expense-approval-matrix.csv must show the exporting
+        """contact-expense-approval-matrix.csv must show the exporting
         feuser's (self) approval state for a non-settlement expense they
-        participate in; direct-buddy-expense-approval-timestamps.csv must
+        participate in; contact-expense-approval-timestamps.csv must
         carry the matching consent_set_at."""
         a = setup_user(driver, w, first_name="ApprovalMatrix", last_name="Owner")
         b = setup_user(None, None, first_name="ApprovalMatrix", last_name="Buddy")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         expense_pk = None
         try:
@@ -302,8 +302,8 @@ class TestBuddySummaryExport:
             ))
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                state_csv = _read_csv(zf, "direct-buddy-expense-approval-matrix.csv")
-                ts_csv = _read_csv(zf, "direct-buddy-expense-approval-timestamps.csv")
+                state_csv = _read_csv(zf, "contact-expense-approval-matrix.csv")
+                ts_csv = _read_csv(zf, "contact-expense-approval-timestamps.csv")
 
             state_lines = state_csv.splitlines()
             state_header = state_lines[0]
@@ -339,22 +339,22 @@ class TestBuddySummaryExport:
             time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                expenses_csv = _read_csv(zf, "direct-buddy-expenses.csv")
+                expenses_csv = _read_csv(zf, "contact-expenses.csv")
             assert "SummaryExportProjectExpense" not in expenses_csv, \
-                "Project expense must not appear in the buddy summary export"
+                "Project expense must not appear in the contact summary export"
         finally:
             if proj_pk:
                 _shell(f"from buddies.models import Project; Project.objects.filter(pk={proj_pk}).delete()")
             cleanup_user(admin_email)
             cleanup_user(a["email"])
 
-    def test_date_range_filters_buddy_expenses(self, driver, w):
-        """An explicit date_from/date_to must exclude a buddy expense whose
+    def test_date_range_filters_contact_expenses(self, driver, w):
+        """An explicit date_from/date_to must exclude a contact expense whose
         date_due falls outside the range, and include it again for a wide range.
-        direct-buddies.csv must not be affected by date filtering."""
+        contacts.csv must not be affected by date filtering."""
         a = setup_user(driver, w, first_name="Range", last_name="Tester")
         b = setup_user(None, None, first_name="Range", last_name="Buddy")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         old_exp_id = None
         try:
@@ -370,15 +370,15 @@ class TestBuddySummaryExport:
             ))
             resp = _get_export(driver, date_from="2099-01-01", date_to="2099-12-31")
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                expenses_csv = _read_csv(zf, "direct-buddy-expenses.csv")
-                roster_csv = _read_csv(zf, "direct-buddies.csv")
-            assert "OldRangeBuddyExpense" not in expenses_csv, "Out-of-range buddy expense leaked into export"
-            assert b["email"] in roster_csv, "direct-buddies.csv must not be affected by date filtering"
+                expenses_csv = _read_csv(zf, "contact-expenses.csv")
+                roster_csv = _read_csv(zf, "contacts.csv")
+            assert "OldRangeBuddyExpense" not in expenses_csv, "Out-of-range contact expense leaked into export"
+            assert b["email"] in roster_csv, "contacts.csv must not be affected by date filtering"
 
             wide_resp = _get_export(driver, date_from="1999-01-01", date_to="2099-12-31")
             with zipfile.ZipFile(io.BytesIO(wide_resp.content)) as zf:
-                wide_expenses_csv = _read_csv(zf, "direct-buddy-expenses.csv")
-            assert "OldRangeBuddyExpense" in wide_expenses_csv, "Wide range must include the old buddy expense"
+                wide_expenses_csv = _read_csv(zf, "contact-expenses.csv")
+            assert "OldRangeBuddyExpense" in wide_expenses_csv, "Wide range must include the old contact expense"
         finally:
             if old_exp_id:
                 _shell(f"from budget.models import Expense; Expense.objects.filter(pk={old_exp_id}).delete()")
@@ -391,7 +391,7 @@ class TestBuddySummaryExport:
         date-range nav's own default. An old expense must still be excluded."""
         a = setup_user(driver, w, first_name="Default", last_name="RangeUser")
         b = setup_user(None, None, first_name="Default", last_name="RangeBuddy")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         old_exp_id = None
         try:
@@ -407,7 +407,7 @@ class TestBuddySummaryExport:
             ))
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-                expenses_csv = _read_csv(zf, "direct-buddy-expenses.csv")
+                expenses_csv = _read_csv(zf, "contact-expenses.csv")
             assert "NoParamsOldBuddyExpense" not in expenses_csv, (
                 "No date params must default to the current month, not all-time"
             )

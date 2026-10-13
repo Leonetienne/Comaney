@@ -138,7 +138,7 @@ If you regularly split expenses with the same person - a partner, a flatmate - i
 
 Once you are in a partnership, any tag or category either of you creates, renames, or deletes is instantly reflected in both accounts.
 
-To start, you must already be connected (either as buddies or as project members). Then go to **Manage Buddies** or into a projects management page, find the person, open the **···** menu, and choose **Invite as partner**. If the option does not appear, the person is either an offline member or already part of a different partnership.
+To start, you must already be connected (either as contacts or as project members). Then go to **Contacts** or into a projects management page, find the person, open the **···** menu, and choose **Invite as partner**. If the option does not appear, the person is either an offline member or already part of a different partnership.
 
 The person you invited goes through a short setup wizard to align your existing labels. After that, everything stays in sync automatically.
 
@@ -156,4 +156,4 @@ You now know the core of Comaney. From here, explore at your own pace:
 | Get email reminders before bills are due | [Notifications](notifications.md) |
 | Search and filter my expense list | [Search & Filters](dashboard/query-language.md) |
 | Customise my dashboard cards | [Dashboard](dashboard/index.md) |
-| Split costs with a single friend (no project needed) | [Buddies](buddies/index.md) |
+| Split costs with a single friend (no project needed) | [Contacts](contacts/index.md) |

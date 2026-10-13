@@ -153,10 +153,10 @@ If the invitee is the admin, already a member, a demo account, or the project is
 Covers:
 - `feat~projects~1`
 
-### Buddy suggestions
+### Contact suggestions
 `req~projects.invite.suggestions~1`
 
-The invite field shall suggest the admin's direct buddies who are not members, matching typed text against first name, last name or email, and show whether the typed address belongs to a buddy.
+The invite field shall suggest the admin's contacts who are not members, matching typed text against first name, last name or email, and show whether the typed address belongs to a contact.
 
 Covers:
 - `feat~projects~1`
@@ -166,7 +166,7 @@ Tags: UI
 ### Offline member warnings
 `req~projects.offline.warning~1`
 
-When the admin types an offline member name that looks like an email address or matches a direct buddy, the form shall show one warning (email first) and ask for confirmation on submit, without shifting the layout.
+When the admin types an offline member name that looks like an email address or matches a contact, the form shall show one warning (email first) and ask for confirmation on submit, without shifting the layout.
 
 Covers:
 - `feat~projects~1`

@@ -9,7 +9,7 @@
 <div class="form-wrap">
 {% if expense and expense.is_dummy %}
 <div class="info-box mb-md">
-    <p>This expense is managed on your account, but <strong>{{ expense.upfront_payee_dummy.display_name }} (offline member)</strong> paid upfront. It won't appear in your regular expense list; you can always find it under <a href="{% url 'buddies:buddy_summary' %}">Buddy Expenses</a>.</p>
+    <p>This expense is managed on your account, but <strong>{{ expense.upfront_payee_dummy.display_name }} (offline member)</strong> paid upfront. It won't appear in your regular expense list; you can always find it under <a href="{% url 'buddies:contact_summary' %}">Contact Expenses</a>.</p>
 </div>
 {% endif %}
 <div class="add-buddy-panel">

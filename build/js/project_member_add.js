@@ -1,10 +1,10 @@
 // Project Settings tab, "Add members" (buddies/templates/buddies/project_settings.html).
 //
-// Invite by email: a combobox suggesting the admin's direct buddies (matched
+// Invite by email: a combobox suggesting the admin's contacts (matched
 // case-insensitively on first name, last name or email) plus a hint below the
-// input saying whether the typed email belongs to a direct buddy.
+// input saying whether the typed email belongs to a contact.
 // Add offline member: warns when the typed name looks like an email address
-// or matches a direct buddy (one warning at most), and asks for confirmation
+// or matches a contact (one warning at most), and asks for confirmation
 // before creating the offline record anyway.
 //
 // The contact list is rendered server-side as hidden <li> elements (so the
@@ -27,7 +27,7 @@ function contactFromItem(li) {
     };
 }
 
-// The one place deciding whether a typed text refers to a direct buddy:
+// The one place deciding whether a typed text refers to a contact:
 // case-insensitive substring of their first name, last name or email. Used by
 // both the invite suggestions and the offline-member name warning.
 function matchingContacts(contacts, query, {excludeMembers = false} = {}) {
@@ -86,11 +86,11 @@ function setupInviteCombobox(contacts) {
         const isContact = email && contacts.some((c) => c.email.toLowerCase() === email);
         check.classList.toggle('is-visible', Boolean(isContact));
         if (isContact) {
-            setHint(hint, 'This buddy is in your contacts', 'success');
+            setHint(hint, 'Already in your contacts', 'success');
         } else if (email.includes('@')) {
             // Only judge something that is shaped like an email address, not a
             // half-typed name the suggestions above are still matching.
-            setHint(hint, 'This buddy is not in your contact list', null);
+            setHint(hint, 'Not in your contacts', null);
         } else {
             setHint(hint, '', null);
         }
@@ -143,7 +143,7 @@ function setupOfflineNameCheck(contacts) {
     // only the first that applies is reported, so the hint and the submit
     // dialog can never show two warnings at once. An email address comes
     // first: it means the user expects an invitation, which this form never
-    // sends (it also covers a buddy's own email, which would match below).
+    // sends (it also covers a contact's own email, which would match below).
     function currentWarning() {
         const name = input.value.trim();
         if (EMAIL_LIKE.test(name)) {

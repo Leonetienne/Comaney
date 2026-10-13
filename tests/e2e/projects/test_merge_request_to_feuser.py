@@ -1,7 +1,7 @@
 """
 Project offline-member-into-real-member merge requests: requires the target's approval.
 Only an existing project member can be selected as a target. The pending request is
-surfaced on the project's settings page, not on My Buddies.
+surfaced on the project's settings page, not on Contacts.
 """
 import time
 
@@ -75,17 +75,17 @@ class TestProjectMergeRequestAcceptFlow:
         ctx["merge_link"] = extract_link(body)
         assert "/buddies/merge/" in ctx["merge_link"]
 
-    def test_member_sees_pending_card_on_project_settings_not_my_buddies(self, driver, w, ctx):
+    def test_member_sees_pending_card_on_project_settings_not_contacts(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["group_id"]))
         time.sleep(1)
         assert "Merge requests for you" in driver.page_source
         assert "Project Request Dummy" in driver.page_source
 
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         assert "Project Request Dummy" not in driver.page_source, \
-            "Project-scoped merge requests must not appear on My Buddies"
+            "Project-scoped merge requests must not appear on Contacts"
 
     def test_member_accepts_merge_request(self, driver, w, ctx):
         driver.get(ctx["merge_link"])
@@ -93,7 +93,7 @@ class TestProjectMergeRequestAcceptFlow:
         driver.find_element(By.ID, "btn-accept-merge").click()
         time.sleep(1)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
-            "Accepting a project merge request must land on the project, not My Buddies"
+            "Accepting a project merge request must land on the project, not Contacts"
         assert "is now linked to your account" in driver.page_source
 
     def test_dummy_gone_no_duplicate_member_history_transferred(self, driver, w, ctx):
@@ -349,7 +349,7 @@ class TestProjectMergeRequestBlocksDuplicate:
 
 # ---------------------------------------------------------------------------
 # Declining a project merge request from the project settings page must land
-# back on the project, not on My Buddies (same pitfall as accepting).
+# back on the project, not on Contacts (same pitfall as accepting).
 # ---------------------------------------------------------------------------
 
 class TestProjectMergeRequestDeclineFlow:
@@ -399,7 +399,7 @@ class TestProjectMergeRequestDeclineFlow:
         driver.find_element(By.ID, f"btn-decline-merge-{token}").click()
         time.sleep(1)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
-            "Declining a project merge request must land on the project, not My Buddies"
+            "Declining a project merge request must land on the project, not Contacts"
 
     def test_dummy_and_membership_untouched(self, driver, w, ctx):
         exists = _shell(

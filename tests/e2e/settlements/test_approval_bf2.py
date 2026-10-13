@@ -11,7 +11,7 @@ import pytest
 import requests as req
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _shell, _login_as, _create_buddy_link, _get_pk, _create_personal_expense_with_buddy
+from bhelpers import _shell, _login_as, _create_contact_link, _get_pk, _create_personal_expense_with_buddy
 
 
 class TestApproveOwnSettlementBlocked:
@@ -21,7 +21,7 @@ class TestApproveOwnSettlementBlocked:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Abel", last_name="Debtor")
         b = setup_user(None, None, first_name="Bea", last_name="Creditor")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         # B paid 80; A owes 50% = 40
         _create_personal_expense_with_buddy(

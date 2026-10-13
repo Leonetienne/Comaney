@@ -9,13 +9,13 @@ In groups, only the admin can manage offline-member expenses.
 Bugs covered:
   [G1] Group: no edit button for unapproved real-user settlement
   [G2] Group: no cancellation email on unapproved settlement deletion
-  [D1] Direct: settlement to offline buddy - no edit button
+  [D1] Direct: settlement to offline contact - no edit button
   [D2] Direct: deletion redirects to /budget/expenses/ instead of /buddies/
-  [D3] Direct: settlement FROM offline buddy (is_dummy=True) - neither editable nor deletable
+  [D3] Direct: settlement FROM offline contact (is_dummy=True) - neither editable nor deletable
   [D4] Direct: settlement to real user (unapproved) - no edit button
   [D5] Direct: real-user settlement delete redirects to /budget/expenses/ instead of /buddies/
-  [U1] UI: creditor dropdown on /buddies/ - offline buddies not labelled "(offline buddy)"
-  [U2] UI: debtor dropdown on /buddies/ - offline members labelled "(offline member)" not "(offline buddy)"
+  [U1] UI: creditor dropdown on /buddies/ - offline contacts not labelled "(offline contact)"
+  [U2] UI: debtor dropdown on /buddies/ - offline members labelled "(offline member)" not "(offline contact)"
   [G3] Group: admin cannot edit unapproved settlement FROM offline member TO actual user
   [G4] Cancellation/update emails name the admin instead of the offline member as debtor
   [E1] Endpoint: forged edit POST accepted for approved direct real-user settlement
@@ -32,7 +32,7 @@ import pytest
 
 from helpers import _url, setup_user, cleanup_user, fetch_email, mailpit_seen_ids, api_get
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _get_pk,
+    _shell, _login_as, _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy, _create_group, _add_group_member,
 )
 
@@ -88,7 +88,7 @@ def _mk_dummy_creditor_settlement(debtor_email: str, dummy_pk: int, value: str =
 
 
 def _mk_dummy_debtor_settlement(owner_email: str, dummy_pk: int, value: str = "25.00") -> int:
-    """Settlement FROM an offline buddy TO the real user (is_dummy=True, no spendings)."""
+    """Settlement FROM an offline contact TO the real user (is_dummy=True, no spendings)."""
     return int(_shell(
         f"from budget.expense_factory import create_expense; "
         f"from feusers.models import FeUser; from budget.models import TransactionType; "
@@ -216,11 +216,11 @@ class TestGroupUnapprovedSettlementDeletionEmail:
 
 
 # ============================================================================
-# D1: Direct - settlement to offline buddy must be editable
+# D1: Direct - settlement to offline contact must be editable
 # ============================================================================
 
 class TestDirectDummyCreditorSettlementEditable:
-    """[D1] A settlement where the creditor is an offline buddy must be editable."""
+    """[D1] A settlement where the creditor is an offline contact must be editable."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -231,7 +231,7 @@ class TestDirectDummyCreditorSettlementEditable:
         yield {"a": a, "dummy_pk": dummy_pk, "exp_pk": exp_pk}
         cleanup_user(a["email"])
 
-    def test_edit_button_present_in_buddy_summary(self, driver, w, ctx):
+    def test_edit_button_present_in_contact_summary(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(2)
@@ -256,19 +256,19 @@ class TestDirectSettlementDeleteRedirect:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="D2Debtor", last_name="A")
         b = setup_user(None, None, first_name="D2Creditor", last_name="B")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         dummy_pk = _mk_personal_dummy(a["email"], "D2Offline")
         # Unapproved settlement to real user (D5 case)
         real_exp_pk = _mk_feuser_settlement(a["email"], b_pk, value="15.00", approved=False)
-        # Approved settlement to offline buddy (D2 case)
+        # Approved settlement to offline contact (D2 case)
         dummy_exp_pk = _mk_dummy_creditor_settlement(a["email"], dummy_pk, value="15.00",
                                                       approved=True)
         yield {"a": a, "b": b, "real_exp_pk": real_exp_pk, "dummy_exp_pk": dummy_exp_pk}
         cleanup_user(a["email"])
         cleanup_user(b["email"])
 
-    def test_delete_dummy_settlement_stays_on_buddies_page(self, driver, w, ctx):
+    def test_delete_dummy_settlement_stays_on_contacts_page(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(2)
@@ -284,7 +284,7 @@ class TestDirectSettlementDeleteRedirect:
         assert "/buddies/summary/" in driver.current_url, \
             "[D2] After deleting from buddy summary, must stay on /buddies/ not /budget/expenses/"
 
-    def test_delete_real_user_settlement_stays_on_buddies_page(self, driver, w, ctx):
+    def test_delete_real_user_settlement_stays_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(2)
         delete_action = f"/budget/expenses/{ctx['real_exp_pk']}/delete/"
@@ -300,11 +300,11 @@ class TestDirectSettlementDeleteRedirect:
 
 
 # ============================================================================
-# D3: Direct - settlement FROM offline buddy TO real user must be editable + deletable
+# D3: Direct - settlement FROM offline contact TO real user must be editable + deletable
 # ============================================================================
 
 class TestDirectDummyDebtorSettlementModifiable:
-    """[D3] A settlement where the offline buddy is the payer (is_dummy=True) must be
+    """[D3] A settlement where the offline contact is the payer (is_dummy=True) must be
     both editable and deletable by the real-user owner."""
 
     @pytest.fixture(scope="class")
@@ -315,14 +315,14 @@ class TestDirectDummyDebtorSettlementModifiable:
         yield {"a": a, "dummy_pk": dummy_pk, "exp_pk": exp_pk}
         cleanup_user(a["email"])
 
-    def test_edit_button_present_in_buddy_summary(self, driver, w, ctx):
+    def test_edit_button_present_in_contact_summary(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(2)
         assert f"/budget/expenses/{ctx['exp_pk']}/edit/" in driver.page_source, \
             "[D3] Edit button must appear for dummy-debtor settlement in buddy summary"
 
-    def test_delete_button_present_in_buddy_summary(self, driver, w, ctx):
+    def test_delete_button_present_in_contact_summary(self, driver, w, ctx):
         assert f"/budget/expenses/{ctx['exp_pk']}/delete/" in driver.page_source, \
             "[D3] Delete button must appear for dummy-debtor settlement in buddy summary"
 
@@ -360,7 +360,7 @@ class TestDirectUnapprovedRealUserSettlementEditable:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="D4Debtor", last_name="A")
         b = setup_user(None, None, first_name="D4Creditor", last_name="B")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         # Give A a debt to B so the settlement makes sense
         a_pk = int(_get_pk(a["email"]))
@@ -373,7 +373,7 @@ class TestDirectUnapprovedRealUserSettlementEditable:
         cleanup_user(a["email"])
         cleanup_user(b["email"])
 
-    def test_edit_button_present_in_buddy_summary(self, driver, w, ctx):
+    def test_edit_button_present_in_contact_summary(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(2)
@@ -403,18 +403,18 @@ class TestDirectUnapprovedRealUserSettlementEditable:
 
 
 # ============================================================================
-# U1 + U2: Buddy summary settle form - offline buddy labels
+# U1 + U2: Buddy summary settle form - offline contact labels
 # ============================================================================
 
-class TestBuddySummaryDropdownLabels:
-    """[U1][U2] The settle form dropdowns on /buddies/ must label offline buddies
-    as '(offline buddy)', not '(offline member)' or unlabelled."""
+class TestContactSummaryDropdownLabels:
+    """[U1][U2] The settle form dropdowns on /buddies/ must label offline contacts
+    as '(offline contact)', not '(offline member)' or unlabelled."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="ULabel", last_name="A")
         b = setup_user(None, None, first_name="ULabel", last_name="B")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         dummy_pk = _mk_personal_dummy(a["email"], "OfflinePal")
         # Give A a debt to both B and dummy so the settle form appears with both
         a_pk = int(_get_pk(a["email"]))
@@ -455,16 +455,16 @@ class TestBuddySummaryDropdownLabels:
             "return Array.from(sel.options).map(function(o){return o.textContent;});"
         )
 
-    def test_creditor_dropdown_labels_offline_buddy(self, driver, w, ctx):
-        """[U1] The 'Pay to' dropdown must say '(offline buddy)' for offline buddies."""
+    def test_creditor_dropdown_labels_offline_contact(self, driver, w, ctx):
+        """[U1] The 'Pay to' dropdown must say '(offline contact)' for offline contacts."""
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(2)
         opts = self._get_creditor_option_texts(driver)
         offline_opts = [o for o in opts if "OfflinePal" in o]
         assert offline_opts, "[U1] OfflinePal must appear in creditor dropdown"
-        assert all("offline buddy" in o.lower() for o in offline_opts), \
-            f"[U1] Offline buddy in creditor dropdown must say '(offline buddy)', got: {offline_opts}"
+        assert all("offline contact" in o.lower() for o in offline_opts), \
+            f"[U1] Offline buddy in creditor dropdown must say '(offline contact)', got: {offline_opts}"
 
     def test_creditor_dropdown_does_not_say_offline_member(self, driver, w, ctx):
         """[U1] Creditor dropdown must not use '(offline member)'."""
@@ -472,13 +472,13 @@ class TestBuddySummaryDropdownLabels:
         bad = [o for o in opts if "offline member" in o.lower()]
         assert not bad, f"[U1] Creditor dropdown must not say '(offline member)', got: {bad}"
 
-    def test_debtor_dropdown_labels_offline_buddy(self, driver, w, ctx):
-        """[U2] The 'Who's paying' dropdown must say '(offline buddy)' for offline buddies."""
+    def test_debtor_dropdown_labels_offline_contact(self, driver, w, ctx):
+        """[U2] The 'Who's paying' dropdown must say '(offline contact)' for offline contacts."""
         opts = self._get_debtor_option_texts(driver)
         offline_opts = [o for o in opts if "OfflinePal" in o]
         assert offline_opts, "[U2] OfflinePal must appear in debtor (who pays) dropdown"
-        assert all("offline buddy" in o.lower() for o in offline_opts), \
-            f"[U2] Offline buddy in debtor dropdown must say '(offline buddy)', got: {offline_opts}"
+        assert all("offline contact" in o.lower() for o in offline_opts), \
+            f"[U2] Offline buddy in debtor dropdown must say '(offline contact)', got: {offline_opts}"
 
     def test_debtor_dropdown_does_not_say_offline_member(self, driver, w, ctx):
         """[U2] Debtor dropdown must not use '(offline member)'."""
@@ -698,14 +698,14 @@ class TestApprovedDirectRealUserSettlementEditBlocked:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="ApprEdit", last_name="A")
         b = setup_user(None, None, first_name="ApprEdit", last_name="B")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = _mk_feuser_settlement(a["email"], b_pk, value="33.00", approved=True)
         yield {"a": a, "b": b, "exp_pk": exp_pk}
         cleanup_user(a["email"])
         cleanup_user(b["email"])
 
-    def test_edit_button_absent_in_buddy_summary(self, driver, w, ctx):
+    def test_edit_button_absent_in_contact_summary(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
         time.sleep(2)
@@ -744,7 +744,7 @@ class TestApprovedDirectRealUserSettlementEditBlocked:
         assert title != "HACKED", \
             "[E1] Forged edit POST must not modify an approved direct real-user settlement"
 
-    def test_delete_button_absent_in_buddy_summary(self, driver, w, ctx):
+    def test_delete_button_absent_in_contact_summary(self, driver, w, ctx):
         """[E2] Delete button must not appear for an approved real-user settlement."""
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))

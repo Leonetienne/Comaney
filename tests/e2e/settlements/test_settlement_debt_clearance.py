@@ -23,7 +23,7 @@ from selenium.webdriver.common.by import By
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import (
     _shell, _login_as, _confirm,
-    _create_buddy_link, _get_pk,
+    _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy,
     _create_group, _add_group_member, _create_group_expense,
 )
@@ -40,7 +40,7 @@ class TestDirectFullSettlementZeroBalance:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Fern", last_name="Debtor")
         b = setup_user(None, None, first_name="Gil", last_name="Creditor")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         # B paid 100; A owes 50% = 50.00
         _create_personal_expense_with_buddy(
@@ -79,7 +79,7 @@ class TestDirectFullSettlementZeroBalance:
         ).click()
         time.sleep(1)
 
-    def test_balance_zero_on_buddies_page(self, driver, w, ctx):
+    def test_balance_zero_on_contacts_page(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/"))
         time.sleep(1)
@@ -104,7 +104,7 @@ class TestDirectFullSettlementZeroBalance:
             f"from feusers.models import FeUser; "
             f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
             f"b = FeUser.objects.get(email='{ctx['b']['email']}'); "
-            f"print(BuddyQueryService.get_net_debt(a, buddy_feuser=b))"
+            f"print(BuddyQueryService.get_net_debt(a, contact_feuser=b))"
         )
         assert float(net) == 0.0, \
             f"Net debt must be exactly 0 after full settlement confirmed, got {net}"
@@ -121,7 +121,7 @@ class TestDirectPartialThenFullSettlement:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Hugo", last_name="Partial")
         b = setup_user(None, None, first_name="Ida", last_name="PartialCred")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         # B paid 200; A owes 50% = 100.00
         _create_personal_expense_with_buddy(
@@ -170,7 +170,7 @@ class TestDirectPartialThenFullSettlement:
         assert inp.get_attribute("value") == "40.00", \
             "Remaining debt must be 40.00 after the 60.00 partial settlement"
 
-    def test_balance_shows_negative_40_on_buddies_page(self, driver, w, ctx):
+    def test_balance_shows_negative_40_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
         time.sleep(1)
         # Template renders: <span title="You owe them">-€40.00</span>
@@ -205,7 +205,7 @@ class TestDirectPartialThenFullSettlement:
         assert inp.get_attribute("value") in ("", None), \
             "Amount input must be empty once both partial settlements are confirmed"
 
-    def test_balance_settled_on_buddies_page(self, driver, w, ctx):
+    def test_balance_settled_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
         time.sleep(1)
         assert "Settled" in driver.page_source, \

@@ -12,10 +12,10 @@ from django.db.models import (
 from ..models import Expense
 
 
-def has_buddy_or_multiuser_project(feuser) -> bool:
-    """True if feuser has at least one buddy or is in a non-solo project."""
-    from buddies.models import BuddyLink, ProjectMember
-    if BuddyLink.for_user(feuser).exists():
+def has_contact_or_multiuser_project(feuser) -> bool:
+    """True if feuser has at least one contact or is in a non-solo project."""
+    from buddies.models import ContactLink, ProjectMember
+    if ContactLink.for_user(feuser).exists():
         return True
     memberships = ProjectMember.objects.filter(feuser=feuser).values_list('group_id', flat=True)
     if not memberships.exists():

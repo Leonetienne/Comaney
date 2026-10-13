@@ -16,7 +16,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user, fetch_email, mailpit_seen_ids, server_today
-from bhelpers import _shell, _login_as, _create_buddy_link, _get_pk
+from bhelpers import _shell, _login_as, _create_contact_link, _get_pk
 
 
 # ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ class TestCreateNotifiesParticipant:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Alice", last_name="Creator")
         b = setup_user(None, None, first_name="Bob", last_name="Participant")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         ctx = {"a": a, "b": b}
         yield ctx
         cleanup_user(a["email"])
@@ -121,7 +121,7 @@ class TestEditNotifiesParticipant:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Carol", last_name="Editor")
         b = setup_user(None, None, first_name="Dave", last_name="Notified")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
 
         # Create expense via shell (setup)
@@ -204,8 +204,8 @@ class TestEditAddParticipantNotification:
         a = setup_user(driver, w, first_name="Eve", last_name="Adder")
         b = setup_user(None, None, first_name="Frank", last_name="Existing")
         c = setup_user(None, None, first_name="Grace", last_name="Added")
-        _create_buddy_link(a["email"], b["email"])
-        _create_buddy_link(a["email"], c["email"])
+        _create_contact_link(a["email"], b["email"])
+        _create_contact_link(a["email"], c["email"])
         b_pk = int(_get_pk(b["email"]))
         c_pk = int(_get_pk(c["email"]))
 
@@ -300,8 +300,8 @@ class TestEditRemoveParticipantNotification:
         a = setup_user(driver, w, first_name="Hank", last_name="Remover")
         b = setup_user(None, None, first_name="Iris", last_name="Removed")
         c = setup_user(None, None, first_name="Jack", last_name="Stays")
-        _create_buddy_link(a["email"], b["email"])
-        _create_buddy_link(a["email"], c["email"])
+        _create_contact_link(a["email"], b["email"])
+        _create_contact_link(a["email"], c["email"])
         b_pk = int(_get_pk(b["email"]))
         c_pk = int(_get_pk(c["email"]))
 
@@ -392,7 +392,7 @@ class TestSettlementNoNotification:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Karl", last_name="Settler")
         b = setup_user(None, None, first_name="Lena", last_name="Creditor")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         ctx = {"a": a, "b": b}
         yield ctx
         cleanup_user(a["email"])
@@ -442,7 +442,7 @@ class TestParticipationNotificationSuppressed:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Mia", last_name="Payer")
         b = setup_user(None, None, first_name="Nick", last_name="Participant")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         yield {"a": a, "b": b, "b_pk": b_pk}
         cleanup_user(a["email"])

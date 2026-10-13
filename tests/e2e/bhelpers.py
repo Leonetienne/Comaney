@@ -56,14 +56,14 @@ def _ctx_click(driver, selector: str) -> None:
     el.click()
 
 
-def _create_buddy_link(email_a: str, email_b: str) -> str:
-    """Create a BuddyLink between two users; return link pk as string."""
+def _create_contact_link(email_a: str, email_b: str) -> str:
+    """Create a ContactLink between two users; return link pk as string."""
     return _shell(
-        f"from feusers.models import FeUser; from buddies.models import BuddyLink; "
+        f"from feusers.models import FeUser; from buddies.models import ContactLink; "
         f"a = FeUser.objects.get(email='{email_a}'); "
         f"b = FeUser.objects.get(email='{email_b}'); "
         f"lo, hi = sorted([a, b], key=lambda u: u.pk); "
-        f"lnk, _ = BuddyLink.objects.get_or_create(user_a=lo, user_b=hi); "
+        f"lnk, _ = ContactLink.objects.get_or_create(user_a=lo, user_b=hi); "
         f"print(lnk.pk)"
     )
 
@@ -123,7 +123,7 @@ def _create_personal_expense_with_buddy(
     title: str = "Buddy Expense", value: str = "100.00",
     share: str = "50.0", approved: bool = True,
 ) -> str:
-    """Create a personal buddy expense (no project); return pk as string."""
+    """Create a contact expense (no project); return pk as string."""
     approved_val = "True" if approved else "False"
     if participant_type == "feuser":
         participant_arg = f"participant_feuser_id={participant_pk}"

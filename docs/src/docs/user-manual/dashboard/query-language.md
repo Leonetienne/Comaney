@@ -76,11 +76,11 @@ payer=Alice
 payer=me
 ```
 
-Matches the person who paid the expense — the owning user, an offline buddy who paid upfront, or any offline buddy participant.
+Matches the person who paid the expense — the owning user, an offline contact who paid upfront, or any offline contact participant.
 
 - `payer=me` shows only expenses you paid.
 - `!payer=me` shows only expenses someone else paid (useful in Shared mode to see what others paid that you are a participant of).
-- A name or phrase does a partial, case-insensitive match against first name, last name, email address, and offline buddy display name.
+- A name or phrase does a partial, case-insensitive match against first name, last name, email address, and offline contact display name.
 
 ## Filter by project
 

@@ -381,15 +381,15 @@ def account_export(request):
             pass
 
         # ------------------------------------------------------------------
-        # direct-buddies.csv, direct-buddy-expenses.csv, and
-        # direct-buddy-expense-participation.csv: the combined real-user +
-        # offline buddy roster, all-time personal (non-project) expenses
-        # shared with a direct buddy in either direction, and the per-expense
+        # contacts.csv, contact-expenses.csv, and
+        # contact-expense-participation.csv: the combined real-user +
+        # offline contact roster, all-time personal (non-project) expenses
+        # shared with a contact in either direction, and the per-expense
         # participation breakdown. Project-related participation is already
         # covered by the nested projects/<uid>/ export above, so it is
         # excluded here. Shared with /buddies/summary/export/.
         # ------------------------------------------------------------------
-        BuddyExportService.write_buddy_csvs(zf, feuser)
+        BuddyExportService.write_contact_csvs(zf, feuser)
 
         # ------------------------------------------------------------------
         # expense_overlays.csv: feuser's personal category/tags/note on
@@ -471,9 +471,9 @@ def account_export(request):
         zf.writestr("pending_project_invites.csv", p.getvalue())
 
         # ------------------------------------------------------------------
-        # pending_buddy_invites.csv: direct-buddy invites, sent by or
+        # pending_contact_invites.csv: contact invites, sent by or
         # addressed to feuser, that haven't expired yet. Covers invites to
-        # existing users (BuddyInvite) and to not-yet-registered email
+        # existing users (ContactInvite) and to not-yet-registered email
         # addresses (BuddyOnboardingInvite with no group).
         # ------------------------------------------------------------------
         p = io.StringIO()
@@ -485,7 +485,7 @@ def account_export(request):
             w.writerow(["sent", inv.pk, _csv_safe(inv.invitee_email), inv.created_at.isoformat(), inv.expires_at.isoformat()])
         for inv in BuddyQueryService.pending_invites_incoming(feuser):
             w.writerow(["received", inv.pk, _csv_safe(inv.inviter.email), inv.created_at.isoformat(), inv.expires_at.isoformat()])
-        zf.writestr("pending_buddy_invites.csv", p.getvalue())
+        zf.writestr("pending_contact_invites.csv", p.getvalue())
 
         # ------------------------------------------------------------------
         # pending_partnership_invites.csv: catalog partnership invites, sent
@@ -508,7 +508,7 @@ def account_export(request):
         # this?"). Settlements and dummy-paid expenses use separate
         # confirmation flows and are excluded (see
         # BuddyQueryService.pending_expense_owner_confirmations). Project
-        # expenses are excluded here too, like direct-buddy-expenses.csv:
+        # expenses are excluded here too, like contact-expenses.csv:
         # they are covered by the nested projects/<uid>/ export instead.
         # ------------------------------------------------------------------
         p = io.StringIO()

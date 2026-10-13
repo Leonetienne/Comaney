@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
-from ..models import BuddyInvite, BuddyLink, BuddySpending, DummyMergeInvite, DummyUser
+from ..models import ContactInvite, ContactLink, BuddySpending, DummyMergeInvite, DummyUser
 from ..services import BuddyArchiveService, BuddyLifecycleService, BuddyQueryService, _display_name
 
 
@@ -39,9 +39,9 @@ def rename_dummy(request, dummy_id):
 def add_dummy(request):
     name = request.POST.get("display_name", "").strip()
     if not name:
-        return redirect("buddies:buddies_page")
+        return redirect("buddies:index")
     BuddyLifecycleService.add_dummy(request.feuser, name)
-    return redirect("buddies:buddies_page")
+    return redirect("buddies:index")
 
 
 @feuser_required
@@ -58,7 +58,7 @@ def kick_dummy(request, dummy_id):
             )
         elif request.method == "POST" and request.POST.get("confirmed") == "yes":
             dummy.delete()
-        return redirect("buddies:my_buddies")
+        return redirect("buddies:contacts")
 
     if request.method == "POST":
         debt_warning_accepted = request.POST.get("debt_warning_accepted") == "yes"
@@ -66,16 +66,16 @@ def kick_dummy(request, dummy_id):
             feuser, dummy, has_debt_warning_accepted=debt_warning_accepted
         )
         if result.get("kicked"):
-            url = reverse("buddies:my_buddies")
+            url = reverse("buddies:contacts")
             if result.get("archive_created") and not feuser.has_seen_achim_intro:
                 url += "?achim=new"
                 feuser.has_seen_achim_intro = True
                 feuser.save(update_fields=["has_seen_achim_intro"])
             return redirect(url)
-        return redirect("buddies:my_buddies")
+        return redirect("buddies:contacts")
 
     # GET: build confirmation page data
-    net = BuddyQueryService.get_net_debt(feuser, buddy_dummy=dummy)
+    net = BuddyQueryService.get_net_debt(feuser, contact_dummy=dummy)
     from budget.models import Expense
     expense_count = (
         BuddySpending.objects.filter(participant_dummy=dummy)
@@ -89,7 +89,7 @@ def kick_dummy(request, dummy_id):
     archive_exists = DummyUser.objects.filter(owning_feuser=feuser, is_archive=True).exists()
 
     return render(request, "buddies/kick_dummy_confirm.html", {
-        "active_nav": "my_buddies",
+        "active_nav": "contacts",
         "dummy": dummy,
         "net": net,
         "net_abs": abs(net),
@@ -109,17 +109,17 @@ def personal_archive_wipe(request, dummy_id):
     if request.method == "POST" and request.POST.get("confirmed") == "yes":
         BuddyArchiveService.wipe_archive(dummy)
         django_messages.success(request, "Achim Archive has been cleared.")
-        return redirect("buddies:my_buddies")
+        return redirect("buddies:contacts")
 
     user_impact = BuddyArchiveService.get_user_impact_in_personal_archive(feuser, dummy)
     participant_count, payer_count = BuddyArchiveService.get_archive_expense_counts_split(dummy)
     expense_count = participant_count + payer_count
 
     return render(request, "buddies/archive_wipe_confirm.html", {
-        "active_nav": "my_buddies",
+        "active_nav": "contacts",
         "dummy": dummy,
         "group": None,
-        "cancel_url": reverse("buddies:my_buddies"),
+        "cancel_url": reverse("buddies:contacts"),
         "user_impact": user_impact,
         "user_impact_abs": abs(user_impact),
         "expense_count": expense_count,
@@ -135,11 +135,11 @@ def invite_actual(request):
     from django.conf import settings as django_settings
     email = request.POST.get("email", "").strip()
     if not email:
-        return redirect("buddies:my_buddies")
+        return redirect("buddies:contacts")
 
     outcome, obj = BuddyLifecycleService.invite_actual(request.feuser, email)
     if outcome == "demo_restricted":
-        django_messages.error(request, "Demo accounts cannot invite buddies.")
+        django_messages.error(request, "Demo accounts cannot invite contacts.")
     elif outcome == "invitee_is_demo":
         django_messages.error(request, "That email address is not available.")
     elif outcome == "registration_disabled":
@@ -149,22 +149,22 @@ def invite_actual(request):
         django_messages.info(request, f"Emailing is deactivated for this instance. Give this link to your friend: {site_url}/register/")
     elif outcome in ("invite", "onboarding"):
         django_messages.success(request, f"An invitation has been sent to {email}.")
-    return redirect("buddies:my_buddies")
+    return redirect("buddies:contacts")
 
 
 @feuser_required
 @require_POST
-def send_buddy_invite(request):
+def send_contact_invite(request):
     """
     POST body: {"invitee_id": <feuser pk>}
-    Invites a specific user as a direct buddy without typing their email.
+    Invites a specific user as a contact without typing their email.
     Called from buddy lists and project member lists.
     """
     from feusers.models import FeUser
     feuser = request.feuser
 
     if feuser.is_demo:
-        return JsonResponse({"error": "Demo accounts cannot invite buddies."}, status=403)
+        return JsonResponse({"error": "Demo accounts cannot invite contacts."}, status=403)
 
     try:
         data = json.loads(request.body)
@@ -181,10 +181,10 @@ def send_buddy_invite(request):
         return JsonResponse({"error": "Cannot invite yourself."}, status=400)
 
     if invitee.is_demo:
-        return JsonResponse({"error": "Cannot invite a demo account as a buddy."}, status=403)
+        return JsonResponse({"error": "Cannot invite a demo account as a contact."}, status=403)
 
-    if BuddyQueryService.are_buddies(feuser, invitee):
-        return JsonResponse({"error": "You are already buddies with this user."}, status=409)
+    if BuddyQueryService.are_contacts(feuser, invitee):
+        return JsonResponse({"error": "This user is already one of your contacts."}, status=409)
 
     if BuddyQueryService.has_pending_invite_to(feuser, invitee):
         return JsonResponse({"error": "An invite is already pending for this user."}, status=409)
@@ -198,8 +198,8 @@ def send_buddy_invite(request):
 @feuser_required
 def view_invite(request, token):
     try:
-        invite = BuddyInvite.objects.select_related("inviter").get(token=token)
-    except BuddyInvite.DoesNotExist:
+        invite = ContactInvite.objects.select_related("inviter").get(token=token)
+    except ContactInvite.DoesNotExist:
         return render(request, "buddies/invite_invalid.html", {"active_nav": "buddies"})
 
     if not invite.is_valid():
@@ -225,21 +225,21 @@ def accept_invite(request, token):
     link = BuddyLifecycleService.accept_invite(token, request.feuser)
     if link is None:
         return render(request, "buddies/invite_invalid.html", {"active_nav": "buddies"})
-    return redirect("buddies:buddies_page")
+    return redirect("buddies:index")
 
 
 @feuser_required
 @require_POST
 def decline_invite(request, token):
     BuddyLifecycleService.decline_invite(token, request.feuser)
-    return redirect("buddies:buddies_page")
+    return redirect("buddies:index")
 
 
 @feuser_required
 @require_POST
 def revoke_invite(request, token):
     BuddyLifecycleService.revoke_invite(token, request.feuser)
-    return redirect("buddies:buddies_page")
+    return redirect("buddies:index")
 
 
 @feuser_required
@@ -255,19 +255,19 @@ def revoke_onboarding_invite(request, token):
         invite.delete()
     except BuddyOnboardingInvite.DoesNotExist:
         pass
-    return redirect("buddies:my_buddies")
+    return redirect("buddies:contacts")
 
 
 @feuser_required
 @require_POST
 def kick_actual(request, link_id):
-    link = get_object_or_404(BuddyLink, uid=link_id)
+    link = get_object_or_404(ContactLink, uid=link_id)
     if link.user_a_id != request.feuser.pk and link.user_b_id != request.feuser.pk:
-        return redirect("buddies:buddies_page")
+        return redirect("buddies:index")
 
     other = link.other(request.feuser)
     BuddyLifecycleService.kick_actual(request.feuser, other, has_debt_warning_accepted=True)
-    return redirect("buddies:buddies_page")
+    return redirect("buddies:index")
 
 
 @feuser_required
@@ -281,7 +281,7 @@ def set_auto_accept(request, link_id):
     """
     from ..services import BuddyTrustService
 
-    link = get_object_or_404(BuddyLink, uid=link_id)
+    link = get_object_or_404(ContactLink, uid=link_id)
     if request.feuser.pk not in (link.user_a_id, link.user_b_id):
         raise Http404
     enabled = request.POST.get("enabled") == "1"
@@ -306,22 +306,22 @@ def set_auto_accept(request, link_id):
             "message": msg,
         })
     django_messages.success(request, msg)
-    return redirect("buddies:my_buddies")
+    return redirect("buddies:contacts")
 
 
 @feuser_required
 @require_POST
 def merge_dummy(request, dummy_id):
-    """Merge an offline buddy into another offline buddy (immediate) or
-    request a merge into an already-linked direct buddy (needs their approval)."""
+    """Merge an offline contact into another offline contact (immediate) or
+    request a merge into an already-linked contact (needs their approval)."""
     from feusers.models import FeUser
 
     feuser = request.feuser
     dummy = get_object_or_404(DummyUser, uid=dummy_id, owning_feuser=feuser, is_archive=False)
 
     if feuser.is_demo:
-        django_messages.error(request, "Demo accounts cannot merge buddies.")
-        return redirect("buddies:my_buddies")
+        django_messages.error(request, "Demo accounts cannot merge contacts.")
+        return redirect("buddies:contacts")
 
     target_key = request.POST.get("target_key", "").strip()
     if target_key == "self":
@@ -330,16 +330,16 @@ def merge_dummy(request, dummy_id):
             django_messages.error(request, f"\"{dummy.display_name}\" has a pending merge request. Revoke it first if you want to merge into yourself.")
         else:
             django_messages.success(request, f"Merged \"{dummy.display_name}\" into yourself.")
-        return redirect("buddies:my_buddies")
+        return redirect("buddies:contacts")
 
     if len(target_key) < 2 or not target_key[1:].isdigit():
-        return redirect("buddies:my_buddies")
+        return redirect("buddies:contacts")
     kind, target_id = target_key[0], int(target_key[1:])
 
     if kind == "d":
         target = get_object_or_404(DummyUser, uid=target_id, owning_feuser=feuser, is_archive=False)
         if target.pk == dummy.pk:
-            return redirect("buddies:my_buddies")
+            return redirect("buddies:contacts")
         outcome = BuddyLifecycleService.merge_dummy_into_dummy_now(feuser, dummy, target)
         if outcome == "already_pending":
             django_messages.error(request, f"\"{dummy.display_name}\" has a pending merge request. Revoke it first if you want to merge into someone else.")
@@ -349,7 +349,7 @@ def merge_dummy(request, dummy_id):
         target_feuser = get_object_or_404(FeUser, pk=target_id, is_active=True)
         outcome, obj = BuddyLifecycleService.request_merge_with_feuser(feuser, dummy, target_feuser)
         if outcome == "not_linked":
-            django_messages.error(request, "You can only request a merge with someone who is already your buddy.")
+            django_messages.error(request, "You can only request a merge with someone who is already one of your contacts.")
         elif outcome == "self":
             django_messages.error(request, "You cannot merge into yourself.")
         elif outcome == "already_pending":
@@ -360,7 +360,7 @@ def merge_dummy(request, dummy_id):
             django_messages.error(request, "Demo accounts cannot be merge targets.")
         elif outcome == "invite":
             django_messages.success(request, f"Merge request sent to {_display_name(target_feuser)}.")
-    return redirect("buddies:my_buddies")
+    return redirect("buddies:contacts")
 
 
 @feuser_required
@@ -410,7 +410,7 @@ def accept_merge(request, token):
     if project:
         django_messages.success(request, f'"{dummy_name}"\'s history in "{project.name}" is now linked to your account.')
         return redirect("projects:project_detail", project_id=project.uid)
-    return redirect("buddies:buddies_page")
+    return redirect("buddies:index")
 
 
 @feuser_required
@@ -428,7 +428,7 @@ def decline_merge(request, token):
         pass
     if project:
         return redirect("projects:project_detail", project_id=project.uid)
-    return redirect("buddies:buddies_page")
+    return redirect("buddies:index")
 
 
 @feuser_required
@@ -441,12 +441,12 @@ def revoke_merge_invite(request, token):
             token=token, inviting_feuser=request.feuser,
         )
     except DummyMergeInvite.DoesNotExist:
-        return redirect("buddies:my_buddies")
+        return redirect("buddies:contacts")
     project = invite.dummy.owning_group
     BuddyLifecycleService.revoke_merge_invite(token, request.feuser)
     if project:
         return redirect("projects:project_settings", project_id=project.pk)
-    return redirect("buddies:my_buddies")
+    return redirect("buddies:contacts")
 
 
 @feuser_required

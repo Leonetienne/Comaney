@@ -10,7 +10,7 @@ HELP_PATH_MAP = [
     ("/budget/dash/",                "/docs/user-manual/dashboard/"),
     ("/budget/",                     "/docs/user-manual/dashboard/"),
     ("/projects/",                   "/docs/user-manual/projects/"),
-    ("/buddies/",                    "/docs/user-manual/buddies/"),
+    ("/buddies/",                    "/docs/user-manual/contacts/"),
     ("/notifications/",              "/docs/user-manual/notifications/"),
     ("/totp/",                       "/docs/user-manual/two-factor-auth/"),
     ("/webauthn/",                   "/docs/user-manual/two-factor-auth/"),

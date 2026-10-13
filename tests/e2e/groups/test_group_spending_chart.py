@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _get_pk,
+    _shell, _login_as, _create_contact_link, _get_pk,
     _create_group, _add_group_member, _create_group_expense,
 )
 
@@ -28,7 +28,7 @@ class TestGroupSpendingChart:
     def ctx(self, driver, w):
         admin = setup_user(driver, w, first_name="Chart", last_name="Admin")
         member = setup_user(None, None, first_name="Chart", last_name="Member")
-        _create_buddy_link(admin["email"], member["email"])
+        _create_contact_link(admin["email"], member["email"])
         gid = int(_create_group(admin["email"], "Chart Test Group"))
         _add_group_member(gid, member["email"])
         # Create two approved non-settlement expenses so both members have spending
@@ -99,7 +99,7 @@ class TestGroupSpendingChartHidden:
     def ctx(self, driver, w):
         admin = setup_user(driver, w, first_name="NoChart", last_name="Admin")
         member = setup_user(None, None, first_name="NoChart", last_name="Member")
-        _create_buddy_link(admin["email"], member["email"])
+        _create_contact_link(admin["email"], member["email"])
         gid = int(_create_group(admin["email"], "No Chart Group"))
         _add_group_member(gid, member["email"])
         # Only create a settlement expense
@@ -141,7 +141,7 @@ class TestBgsCardTotalSpending:
     def ctx(self, driver, w):
         admin = setup_user(driver, w, first_name="BgsTotal", last_name="Admin")
         member = setup_user(None, None, first_name="BgsTotal", last_name="Member")
-        _create_buddy_link(admin["email"], member["email"])
+        _create_contact_link(admin["email"], member["email"])
         gid = int(_create_group(admin["email"], "BgsTotal Group"))
         _add_group_member(gid, member["email"])
         _create_group_expense(
@@ -191,7 +191,7 @@ class TestPieChartClickThrough:
     def ctx(self, driver, w):
         admin = setup_user(driver, w, first_name="Piechart", last_name="Payer")
         member = setup_user(None, None, first_name="Piechart", last_name="Member")
-        _create_buddy_link(admin["email"], member["email"])
+        _create_contact_link(admin["email"], member["email"])
         gid = int(_create_group(admin["email"], "Pie Click Group"))
         _add_group_member(gid, member["email"])
         _create_group_expense(

@@ -1,12 +1,12 @@
 """
-Buddy auto-accept trust (buddies/services/trust.py).
+Contact auto-accept trust (buddies/services/trust.py).
 
 B can switch on "Automatically accept expenses, settlements and project
-invitations from A" for a direct buddy A on My Buddies. From then on, anything
+invitations from A" for a contact A on Contacts. From then on, anything
 A records that would otherwise wait on B is accepted right away and B only
 gets an info email:
   - expenses A logs with B as the upfront payer (direct and in any project,
-    as long as A and B are direct buddies),
+    as long as A and B are contacts),
   - settlements A records paying B back (B = creditor),
   - B's participant approval indicator on expenses A records,
   - invitations from A (as admin) into A's projects.
@@ -26,7 +26,7 @@ from helpers import (
     server_today, run_cmd,
 )
 from bhelpers import (
-    _shell, _login_as, _confirm, _create_buddy_link, _get_pk,
+    _shell, _login_as, _confirm, _create_contact_link, _get_pk,
     _create_group, _add_group_member, _create_group_expense,
     _create_personal_expense_with_buddy,
 )
@@ -39,20 +39,20 @@ from bhelpers import (
 def _set_trust(truster_email: str, other_email: str, enabled: bool = True) -> None:
     """Set truster's auto-accept of other's entries directly (no retroactive pass)."""
     _shell(
-        f"from feusers.models import FeUser; from buddies.models import BuddyLink; "
+        f"from feusers.models import FeUser; from buddies.models import ContactLink; "
         f"t = FeUser.objects.get(email='{truster_email}'); "
         f"o = FeUser.objects.get(email='{other_email}'); "
-        f"BuddyLink.between(t, o).set_auto_accepts(t, {enabled})"
+        f"ContactLink.between(t, o).set_auto_accepts(t, {enabled})"
     )
 
 
 def _trust_flag(truster_email: str, other_email: str) -> str:
     """'True'/'False' for the truster's flag, or 'nolink' if they are not buddies."""
     return _shell(
-        f"from feusers.models import FeUser; from buddies.models import BuddyLink; "
+        f"from feusers.models import FeUser; from buddies.models import ContactLink; "
         f"t = FeUser.objects.get(email='{truster_email}'); "
         f"o = FeUser.objects.get(email='{other_email}'); "
-        f"l = BuddyLink.between(t, o); "
+        f"l = ContactLink.between(t, o); "
         f"print('nolink' if l is None else l.auto_accepts(t))"
     )
 
@@ -128,7 +128,7 @@ def _no_email(to_email: str, subject_fragment: str, ignore_ids) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Toggle UI on My Buddies
+# Toggle UI on Contacts
 # ---------------------------------------------------------------------------
 
 class TestAutoAcceptToggle:
@@ -138,7 +138,7 @@ class TestAutoAcceptToggle:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Toggle", last_name="Actor")
         b = setup_user(None, None, first_name="Toggle", last_name="Truster")
-        link_pk = _create_buddy_link(a["email"], b["email"])
+        link_pk = _create_contact_link(a["email"], b["email"])
         yield {"a": a, "b": b, "link_pk": link_pk}
         cleanup_user(a["email"])
         cleanup_user(b["email"])
@@ -148,7 +148,7 @@ class TestAutoAcceptToggle:
 
     def test_toggle_visible_and_off_by_default(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         assert "Automatically accept expenses, settlements and project invitations from Toggle Actor" in driver.page_source
         assert not self._toggle(driver, ctx).is_selected()
@@ -175,7 +175,7 @@ class TestAutoAcceptToggle:
         assert _trust_flag(ctx["b"]["email"], ctx["a"]["email"]) == "True"
 
     def test_stays_on_after_reload(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         assert self._toggle(driver, ctx).is_selected()
 
@@ -185,13 +185,13 @@ class TestAutoAcceptToggle:
 
     def test_a_sees_label(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         assert "Accepts your entries automatically" in driver.page_source
 
     def test_b_does_not_see_label(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         assert "Accepts your entries automatically" not in driver.page_source
 
@@ -203,13 +203,13 @@ class TestAutoAcceptToggle:
 
     def test_a_label_gone_after_disabling(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         assert "Accepts your entries automatically" not in driver.page_source
 
 
 # ---------------------------------------------------------------------------
-# Direct buddy expense with B as payer (real UI flow)
+# Contact expense with B as payer (real UI flow)
 # ---------------------------------------------------------------------------
 
 class TestDirectExpenseAutoAccepted:
@@ -219,7 +219,7 @@ class TestDirectExpenseAutoAccepted:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Direct", last_name="Actor")
         b = setup_user(None, None, first_name="Direct", last_name="Truster")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _set_trust(b["email"], a["email"])
         yield {"a": a, "b": b, "b_pk": _get_pk(b["email"])}
         cleanup_user(a["email"])
@@ -235,7 +235,7 @@ class TestDirectExpenseAutoAccepted:
         driver.find_element(By.ID, "id_value").clear()
         driver.find_element(By.ID, "id_value").send_keys("80.00")
         driver.execute_script(f"document.getElementById('id_date_due').value = '{server_today()}';")
-        driver.find_element(By.ID, "assign-buddy").click()
+        driver.find_element(By.ID, "assign-contact").click()
         time.sleep(0.5)
         driver.execute_script(
             f"var sel = document.getElementById('buddy-upfront-select');"
@@ -261,7 +261,7 @@ class TestDirectExpenseAutoAccepted:
         body = fetch_email(ctx["b"]["email"], "accepted automatically",
                            ignore_ids=ctx["seen_before"])
         assert "Trusted Direct Expense" in body
-        assert "/buddies/my-buddies/" in body, "Email must link to the buddy list to turn it off"
+        assert "/buddies/contacts/" in body, "Email must link to the contact list to turn it off"
 
     def test_b_gets_no_approval_request(self, driver, w, ctx):
         assert _no_email(ctx["b"]["email"], "needs your approval", ctx["seen_before"])
@@ -316,8 +316,8 @@ class TestPayerApprovalWording:
         a = setup_user(driver, w, first_name="Wording", last_name="Actor")
         b = setup_user(None, None, first_name="Wording", last_name="Truster")
         c = setup_user(None, None, first_name="Wording", last_name="Skeptic")
-        _create_buddy_link(a["email"], b["email"])
-        _create_buddy_link(a["email"], c["email"])
+        _create_contact_link(a["email"], b["email"])
+        _create_contact_link(a["email"], c["email"])
         _set_trust(b["email"], a["email"])
         group_id = int(_create_group(a["email"], "Wording Project"))
         _add_group_member(group_id, b["email"])
@@ -338,7 +338,7 @@ class TestPayerApprovalWording:
         time.sleep(0.5)
 
     def test_direct_trusting_payer(self, driver, w, ctx):
-        self._open_form(driver, ctx, "assign-buddy")
+        self._open_form(driver, ctx, "assign-contact")
         _pick_payer(driver, ctx["b_pk"])
         notice = _payer_notice(driver)
         assert self.TRUSTED in notice
@@ -348,7 +348,7 @@ class TestPayerApprovalWording:
         assert self.UNTRUSTED not in msg
 
     def test_direct_untrusting_payer(self, driver, w, ctx):
-        self._open_form(driver, ctx, "assign-buddy")
+        self._open_form(driver, ctx, "assign-contact")
         _pick_payer(driver, ctx["c_pk"])
         notice = _payer_notice(driver)
         assert self.UNTRUSTED in notice
@@ -381,7 +381,7 @@ class TestTrustIsDirectional:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Wrong", last_name="Way")
         b = setup_user(None, None, first_name="Still", last_name="Asked")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _set_trust(a["email"], b["email"])
         yield {"a": a, "b": b, "a_pk": _get_pk(a["email"]), "b_pk": _get_pk(b["email"])}
         cleanup_user(a["email"])
@@ -406,7 +406,7 @@ class TestTrustIsDirectional:
 # ---------------------------------------------------------------------------
 
 class TestProjectExpenseAutoAccepted:
-    """C is admin; A and B are members and direct buddies; B trusts A."""
+    """C is admin; A and B are members and contacts; B trusts A."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -416,7 +416,7 @@ class TestProjectExpenseAutoAccepted:
         group_id = int(_create_group(c["email"], "Trust Project"))
         _add_group_member(group_id, a["email"])
         _add_group_member(group_id, b["email"])
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _set_trust(b["email"], a["email"])
         yield {"a": a, "b": b, "c": c, "group_id": group_id,
                "a_pk": _get_pk(a["email"]), "b_pk": _get_pk(b["email"]),
@@ -460,7 +460,7 @@ class TestProjectExpenseAutoAccepted:
 
 
 class TestProjectWithoutDirectLinkNotTrusted:
-    """A and B share a project but are not direct buddies: no trust is possible."""
+    """A and B share a project but are not contacts: no trust is possible."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -501,7 +501,7 @@ class TestParticipantIndicatorAutoApproved:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Indicator", last_name="Actor")
         b = setup_user(None, None, first_name="Indicator", last_name="Truster")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _set_trust(b["email"], a["email"])
         yield {"a": a, "b": b, "a_pk": _get_pk(a["email"]), "b_pk": _get_pk(b["email"])}
         cleanup_user(a["email"])
@@ -539,7 +539,7 @@ class TestPayerChangeOnEditAutoAccepted:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Edit", last_name="Actor")
         b = setup_user(None, None, first_name="Edit", last_name="Truster")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk,
@@ -580,7 +580,7 @@ class TestScheduledExpenseAutoAccepted:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Sched", last_name="Actor")
         b = setup_user(None, None, first_name="Sched", last_name="Truster")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _set_trust(b["email"], a["email"])
         a_pk = int(_get_pk(a["email"]))
         spendings = json.dumps([{"type": "feuser", "id": a_pk, "share_percent": 50}])
@@ -629,7 +629,7 @@ class TestDirectSettlementAutoConfirmed:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Payback", last_name="Actor")
         b = setup_user(None, None, first_name="Payback", last_name="Truster")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _create_personal_expense_with_buddy(
             owner_email=b["email"], participant_pk=int(_get_pk(a["email"])),
             title="Payback Source", value="100.00", share="50.0", approved=True,
@@ -673,18 +673,18 @@ class TestDirectSettlementAutoConfirmed:
         assert _no_email(ctx["b"]["email"], "recorded a settlement with you", ctx["seen_before"])
 
     def test_debt_cleared_for_a(self, driver, w, ctx):
-        # "Pay someone back" stays visible for any direct buddy (freeform
+        # "Pay someone back" stays visible for any contact (freeform
         # payments), so check the balance itself instead.
         net = _shell(
             f"from feusers.models import FeUser; from buddies.services import BuddyQueryService; "
             f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
             f"b = FeUser.objects.get(email='{ctx['b']['email']}'); "
-            f"print(BuddyQueryService.get_net_debt(a, buddy_feuser=b))"
+            f"print(BuddyQueryService.get_net_debt(a, contact_feuser=b))"
         )
         assert abs(float(net)) < 0.005, f"Debt must be cleared right away, got {net}"
 
-    def test_a_sees_settled_on_my_buddies(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+    def test_a_sees_settled_on_contacts(self, driver, w, ctx):
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         row = driver.find_element(By.XPATH,
             "//div[contains(@class,'buddy-balance-row')][.//span[contains(@class,'buddy-name') and contains(., 'Payback Truster')]]")
@@ -692,7 +692,7 @@ class TestDirectSettlementAutoConfirmed:
 
 
 class TestProjectSettlementAutoConfirmed:
-    """B (admin) and A share a project and are direct buddies; A pays B back there."""
+    """B (admin) and A share a project and are contacts; A pays B back there."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -704,7 +704,7 @@ class TestProjectSettlementAutoConfirmed:
             admin_email=b["email"], participant_email=a["email"], group_id=group_id,
             title="Group Payback Source", value="100.00", share="50.0",
         )
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _set_trust(b["email"], a["email"])
         yield {"a": a, "b": b, "group_id": group_id}
         cleanup_user(a["email"])
@@ -749,7 +749,7 @@ class TestRetroactiveAcceptOnEnable:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Retro", last_name="Actor")
         b = setup_user(None, None, first_name="Retro", last_name="Truster")
-        link_pk = _create_buddy_link(a["email"], b["email"])
+        link_pk = _create_contact_link(a["email"], b["email"])
         group_id = int(_create_group(a["email"], "Retro Archived Project"))
         _add_group_member(group_id, b["email"])
         a_pk, b_pk = _get_pk(a["email"]), _get_pk(b["email"])
@@ -785,7 +785,7 @@ class TestRetroactiveAcceptOnEnable:
     def test_b_enables_trust(self, driver, w, ctx):
         ctx["seen_before"] = mailpit_seen_ids()
         _login_as(driver, ctx["b"])
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         cb = driver.find_element(By.ID, f"auto-accept-{ctx['link_pk']}")
         driver.execute_script("arguments[0].click();", cb)
@@ -807,17 +807,17 @@ class TestRetroactiveAcceptOnEnable:
 
 
 # ---------------------------------------------------------------------------
-# Removing the buddy removes the trust
+# Removing the contact removes the trust
 # ---------------------------------------------------------------------------
 
-class TestTrustRemovedWithBuddyLink:
-    """B trusts A; A removes B as buddy; after reconnecting the trust is off."""
+class TestTrustRemovedWithContactLink:
+    """B trusts A; A removes B as contact; after reconnecting the trust is off."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Kick", last_name="Actor")
         b = setup_user(None, None, first_name="Kick", last_name="Truster")
-        link_pk = _create_buddy_link(a["email"], b["email"])
+        link_pk = _create_contact_link(a["email"], b["email"])
         _set_trust(b["email"], a["email"])
         yield {"a": a, "b": b, "link_pk": link_pk}
         cleanup_user(a["email"])
@@ -825,7 +825,7 @@ class TestTrustRemovedWithBuddyLink:
 
     def test_a_removes_b(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.execute_script(
             f"document.getElementById('kick-form-{ctx['link_pk']}').submit();"
@@ -834,7 +834,7 @@ class TestTrustRemovedWithBuddyLink:
         assert _trust_flag(ctx["b"]["email"], ctx["a"]["email"]) == "nolink"
 
     def test_reconnected_link_starts_untrusted(self, driver, w, ctx):
-        _create_buddy_link(ctx["a"]["email"], ctx["b"]["email"])
+        _create_contact_link(ctx["a"]["email"], ctx["b"]["email"])
         assert _trust_flag(ctx["b"]["email"], ctx["a"]["email"]) == "False"
 
 
@@ -874,7 +874,7 @@ class TestProjectInviteAutoAccepted:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Invite", last_name="Actor")
         b = setup_user(None, None, first_name="Invite", last_name="Truster")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _set_trust(b["email"], a["email"])
         group_id = int(_create_group(a["email"], "Trusted Invite Project"))
         yield {"a": a, "b": b, "group_id": group_id}
@@ -902,7 +902,7 @@ class TestProjectInviteAutoAccepted:
         body = fetch_email(ctx["b"]["email"], "added you to the project",
                            ignore_ids=ctx["seen_before"])
         assert "Trusted Invite Project" in body
-        assert "/buddies/my-buddies/" in body
+        assert "/buddies/contacts/" in body
 
     def test_b_gets_no_invitation_email(self, driver, w, ctx):
         assert _no_email(ctx["b"]["email"], "invited you to join", ctx["seen_before"])
@@ -924,7 +924,7 @@ class TestProjectInviteNotTrusted:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Plain", last_name="Inviter")
         b = setup_user(None, None, first_name="Plain", last_name="Invitee")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _set_trust(a["email"], b["email"])
         group_id = int(_create_group(a["email"], "Plain Invite Project"))
         yield {"a": a, "b": b, "group_id": group_id}
@@ -951,7 +951,7 @@ class TestRetroactiveInviteAcceptOnEnable:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Retroinv", last_name="Actor")
         b = setup_user(None, None, first_name="Retroinv", last_name="Truster")
-        link_pk = _create_buddy_link(a["email"], b["email"])
+        link_pk = _create_contact_link(a["email"], b["email"])
         live_id = int(_create_group(a["email"], "Retro Live Project"))
         archived_id = int(_create_group(a["email"], "Retro Gone Project"))
         yield {"a": a, "b": b, "link_pk": link_pk,
@@ -971,7 +971,7 @@ class TestRetroactiveInviteAcceptOnEnable:
     def test_b_enables_trust(self, driver, w, ctx):
         ctx["seen_before"] = mailpit_seen_ids()
         _login_as(driver, ctx["b"])
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         cb = driver.find_element(By.ID, f"auto-accept-{ctx['link_pk']}")
         driver.execute_script("arguments[0].click();", cb)

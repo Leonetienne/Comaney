@@ -19,7 +19,7 @@ from helpers import (
     _url, setup_user, cleanup_user, api_get, server_today,
     fetch_email, mailpit_seen_ids,
 )
-from bhelpers import _shell, _create_buddy_link, _get_pk, _create_group, _login_as
+from bhelpers import _shell, _create_contact_link, _get_pk, _create_group, _login_as
 
 
 def _select_first_participant(driver):
@@ -28,7 +28,7 @@ def _select_first_participant(driver):
     sel_els = driver.find_elements(By.ID, "buddy-participant-select")
     if sel_els:
         sel = Select(sel_els[0])
-        sel.select_by_index(1)  # index 0 is the empty '-- Select buddy --' option
+        sel.select_by_index(1)  # index 0 is the empty '-- Select contact --' option
         time.sleep(0.3)
         return
     cbs = driver.find_elements(By.CSS_SELECTOR,
@@ -65,7 +65,7 @@ class TestBuddyPaymentSectionUI:
         assert "Form Buddy" in driver.page_source
 
     def test_enable_buddy_payment_shows_section(self, driver, w, ctx):
-        driver.find_element(By.ID, "assign-buddy").click()
+        driver.find_element(By.ID, "assign-contact").click()
         time.sleep(0.5)
         section = driver.find_element(By.ID, "buddy-payment-section")
         assert section.is_displayed()
@@ -125,7 +125,7 @@ class TestExpenseWithDummyParticipant:
             f"document.getElementById('id_date_due').value = '{today}';"
             "document.getElementById('id_settled').checked = true;"
         )
-        driver.find_element(By.ID, "assign-buddy").click()
+        driver.find_element(By.ID, "assign-contact").click()
         time.sleep(0.5)
         _select_first_participant(driver)
         driver.find_element(By.ID, "buddy-equal-btn").click()
@@ -140,7 +140,7 @@ class TestExpenseWithDummyParticipant:
         assert any(e["title"] == "Buddy Participant Expense" for e in resp.json()["expenses"]), \
             "Expense with dummy participant (I pay) must appear in the expense API"
 
-    def test_expense_visible_on_buddy_summary(self, driver, w, ctx):
+    def test_expense_visible_on_contact_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
         assert "Buddy Participant Expense" in driver.page_source
@@ -180,7 +180,7 @@ class TestExpenseWithDummyAsPayer:
             f"document.getElementById('id_date_due').value = '{today}';"
             "document.getElementById('id_settled').checked = true;"
         )
-        driver.find_element(By.ID, "assign-buddy").click()
+        driver.find_element(By.ID, "assign-contact").click()
         time.sleep(0.5)
         # Select dummy as upfront payer via JS
         driver.execute_script(
@@ -199,7 +199,7 @@ class TestExpenseWithDummyAsPayer:
         driver.find_element(By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)").click()
         time.sleep(2)
 
-    def test_redirected_to_buddy_summary(self, driver, w, ctx):
+    def test_redirected_to_contact_summary(self, driver, w, ctx):
         assert "/buddies/summary/" in driver.current_url, \
             f"Expected redirect to /buddies/summary/, got: {driver.current_url}"
 
@@ -254,9 +254,9 @@ class TestBuddyExpenseReEdit:
         ctx["exp_id"] = exp_id
         driver.get(_url(f"/budget/expenses/{exp_id}/edit/"))
         time.sleep(1)
-        btn = driver.find_element(By.ID, "assign-buddy")
+        btn = driver.find_element(By.ID, "assign-contact")
         assert "assign-tab--active" in btn.get_attribute("class"), \
-            "assign-buddy must be active when re-editing a buddy expense"
+            "assign-contact must be active when re-editing a contact expense"
 
     def test_slider_rows_present(self, driver, w, ctx):
         pct_els = driver.find_elements(By.CSS_SELECTOR, "#buddy-sliders .buddy-slider-pct")
@@ -291,7 +291,7 @@ class TestRealBuddyAsUptrontPayer:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Upfront", last_name="Asker")
         b = setup_user(None, None, first_name="Upfront", last_name="Payer")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = _get_pk(b["email"])
         ctx = {"a": a, "b": b, "b_pk": b_pk}
         yield ctx
@@ -311,7 +311,7 @@ class TestRealBuddyAsUptrontPayer:
         driver.execute_script(
             f"document.getElementById('id_date_due').value = '{today}';"
         )
-        driver.find_element(By.ID, "assign-buddy").click()
+        driver.find_element(By.ID, "assign-contact").click()
         time.sleep(0.5)
         # Set B (real buddy) as upfront payer
         driver.execute_script(
@@ -505,7 +505,7 @@ class TestBuddySliderCurrencyAmounts:
         )
 
     def test_enable_buddy_and_select_participant(self, driver, w, ctx):
-        driver.find_element(By.ID, "assign-buddy").click()
+        driver.find_element(By.ID, "assign-contact").click()
         time.sleep(0.5)
         _select_first_participant(driver)
         time.sleep(0.3)
@@ -551,11 +551,11 @@ class TestBuddySliderCurrencyAmounts:
 
 
 # ---------------------------------------------------------------------------
-# Default upfront payer is "me" in both direct-buddy and project modes
+# Default upfront payer is "me" in both contact and project modes
 # ---------------------------------------------------------------------------
 
 class TestDefaultPayerIsMe:
-    """Opening the buddy section for the first time (direct buddy or project)
+    """Opening the buddy section for the first time (contact or project)
     must pre-select the current user as the upfront payer in both modes."""
 
     @pytest.fixture(scope="class")
@@ -579,10 +579,10 @@ class TestDefaultPayerIsMe:
         yield {**user, "group_id": int(group_id)}
         cleanup_user(email)
 
-    def test_direct_buddy_default_payer_is_me(self, driver, w, ctx):
+    def test_contact_default_payer_is_me(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
         time.sleep(1)
-        driver.find_element(By.ID, "assign-buddy").click()
+        driver.find_element(By.ID, "assign-contact").click()
         time.sleep(0.5)
         val = driver.execute_script(
             "return document.getElementById('buddy-upfront-select').value;"

@@ -22,7 +22,7 @@ from ..forms import ExpenseForm, ExpenseOverlayForm
 from ..models import Category, Expense, ExpenseDataOverlay, Tag
 from ..notifications import send_settled_notification, set_initial_notification_class
 from ._period import _get_month, _get_period_mode, _get_year, _date_range_presets_context
-from ._sharing import has_buddy_or_multiuser_project
+from ._sharing import has_contact_or_multiuser_project
 
 
 # ---------------------------------------------------------------------------
@@ -49,17 +49,17 @@ def _buddy_context(feuser) -> dict:
     """
     Build the buddy/project widget config for the expense form.
 
-    projects_data / single_buddies are also returned raw (not just JSON-encoded)
+    projects_data / contacts are also returned raw (not just JSON-encoded)
     so express_service._build_catalog()/​_validate_items() can enumerate the exact
     same list this request is about to render into the widget's JS config.
     Querying it twice would risk two different row orderings breaking the
     idx-based correspondence between the AI's catalog and the widget's arrays.
     """
     from buddies.services import BuddyQueryService, BuddyTrustService
-    actual = list(BuddyQueryService.get_actual_buddies(feuser))
+    actual = list(BuddyQueryService.get_real_contacts(feuser))
     trusters = BuddyTrustService.trusters_of(feuser)
-    dummy = list(BuddyQueryService.get_dummy_buddies(feuser))
-    single_buddies = [
+    dummy = list(BuddyQueryService.get_offline_contacts(feuser))
+    contacts = [
         *[{"type": "feuser", "id": b.pk, "name": f"{b.first_name} {b.last_name}".strip() or b.email, "email": b.email,
            "autoAccepts": b.pk in trusters,
            "ppicUrl": b.ppic_url if b.profile_picture else "", "initials": b.initials, "avatarColor": _avatar_color(b.initials)} for b in actual],
@@ -70,13 +70,13 @@ def _buddy_context(feuser) -> dict:
     projects = BuddyQueryService.get_active_projects_for_feuser(feuser)
     projects_data = BuddyQueryService.projects_data_for_expense_form(feuser)
     return {
-        "buddy_actual": actual,
-        "buddy_dummy": dummy,
+        "real_contacts": actual,
+        "offline_contacts": dummy,
         "buddy_groups": projects,
         "projects_data": projects_data,
-        "single_buddies_data": single_buddies,
+        "contacts_data": contacts,
         "projects_data_json": safe_json(projects_data),
-        "single_buddies_json": safe_json(single_buddies),
+        "contacts_json": safe_json(contacts),
     }
 
 
@@ -151,7 +151,7 @@ def _parse_buddy_post(post, feuser):
     if not result["spendings"] and not is_solo_project and not is_project_expense:
         result["valid"] = False
 
-    # Single-buddy mode: enforce max 1 participant
+    # Contact mode: enforce max 1 participant
     if mode == "single" and len(result["spendings"]) > 1:
         result["valid"] = False
 
@@ -173,7 +173,7 @@ def _parse_buddy_post(post, feuser):
 
 
 BUDDY_TYPE_CONFLICT_MSG = (
-    'Buddy and project expenses must be type "Expense". '
+    'Contact and project expenses must be type "Expense". '
     "Change the type back to Expense, or remove the assignment, then save again."
 )
 
@@ -245,7 +245,7 @@ def expenses_list(request):
     )
     ctx = {
         "active_nav": "expenses",
-        "nav_show_sharing_toggle": has_buddy_or_multiuser_project(feuser),
+        "nav_show_sharing_toggle": has_contact_or_multiuser_project(feuser),
         "categories_json": safe_json(categories),
         "tags_json": safe_json(tags),
         "initial_date_from": request.GET.get("date_from", ""),
@@ -389,16 +389,16 @@ def expense_create(request):
                 if not back:
                     from django.urls import reverse
                     dummy_name = buddy["upfront_dummy"].display_name + " (offline member)"
-                    summary_url = reverse("buddies:buddy_summary")
+                    summary_url = reverse("buddies:contact_summary")
                     messages.info(
                         request,
                         mark_safe(
                             f'"{html_escape(expense.title)}" was saved. Since <strong>{html_escape(dummy_name)}</strong> paid upfront, '
                             f'this expense won\'t appear in your regular expense list'
-                            f' — you\'ll find it under <a href="{summary_url}">Buddy Expenses</a>.'
+                            f' — you\'ll find it under <a href="{summary_url}">Contact Expenses</a>.'
                         ),
                     )
-                return HttpResponseRedirect(back) if back else redirect("buddies:buddy_summary")
+                return HttpResponseRedirect(back) if back else redirect("buddies:contact_summary")
             back = _safe_back_url(request.POST.get("back", ""))
             return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
         elif buddy and buddy.get("type_conflict"):
@@ -904,7 +904,7 @@ def expense_edit_overlay(request, uid):
             from ..services import upsert_overlay
             upsert_overlay(expense, feuser, category, tags, note=note)
             back = _safe_back_url(request.POST.get("back", ""))
-            return HttpResponseRedirect(back) if back else redirect("buddies:buddy_summary")
+            return HttpResponseRedirect(back) if back else redirect("buddies:contact_summary")
     else:
         initial = {}
         if overlay:
@@ -915,7 +915,7 @@ def expense_edit_overlay(request, uid):
 
     currency = expense.owning_feuser.currency
     if expense.is_dummy and expense.upfront_payee_dummy:
-        upfront_payer = f"{expense.upfront_payee_dummy.display_name} (offline buddy)"
+        upfront_payer = f"{expense.upfront_payee_dummy.display_name} (offline contact)"
     else:
         owner = expense.owning_feuser
         upfront_payer = f"{owner.first_name} {owner.last_name}".strip() or owner.email

@@ -6,7 +6,7 @@
 {% block extra_head %}
 {% include "partials/_date_range_warning_js.html" %}
 {% unclassified_save_warning_js current_feuser %}
-{% if buddy_actual or buddy_dummy or buddy_groups %}
+{% if real_contacts or offline_contacts or buddy_groups %}
 <script>
 window.BUDDY_EXPENSE_CONFIG = {
     mePk:            {{ current_feuser.pk }},
@@ -16,8 +16,8 @@ window.BUDDY_EXPENSE_CONFIG = {
     meInitials:      "{{ current_feuser.initials|escapejs }}",
     meAvatarColor:   "{{ current_feuser.initials|avatar_color|escapejs }}",
     groupsData:      {{ projects_data_json|safe }},
-    singleBuddies:   {{ single_buddies_json|safe }},
-    urlBuddySummary: "{% url 'buddies:buddy_summary' %}",
+    contacts:   {{ contacts_json|safe }},
+    urlContactSummary: "{% url 'buddies:contact_summary' %}",
     currencySymbol:  "{{ current_feuser.currency|escapejs }}",
 };
 </script>
@@ -221,14 +221,14 @@ window.BUDDY_EXPENSE_CONFIG = {
                             <textarea class="edit-textarea edit-note" placeholder="—">{{ item.note }}</textarea>
                         </div>
 
-                        {% if buddy_actual or buddy_dummy or buddy_groups %}
+                        {% if real_contacts or offline_contacts or buddy_groups %}
                         <!-- Expense assignment -->
                         <div class="pcard-field pcard-assign">
                             <span class="pcard-label">Expense assignment</span>
                             <div class="assign-tab-group pcard-assign-tabs">
                                 <button type="button" class="assign-tab pcard-assign-none" data-assign="none">None</button>
-                                {% if buddy_actual or buddy_dummy %}
-                                <button type="button" class="assign-tab pcard-assign-buddy" data-assign="buddy">Direct Buddy</button>
+                                {% if real_contacts or offline_contacts %}
+                                <button type="button" class="assign-tab pcard-assign-contact" data-assign="contact">Contact</button>
                                 {% endif %}
                                 {% if buddy_groups %}
                                 <button type="button" class="assign-tab pcard-assign-project" data-assign="project">Project</button>
@@ -265,7 +265,7 @@ window.BUDDY_EXPENSE_CONFIG = {
 
                                         <div class="buddy-sliders-wrap buddy-sliders" style="display:none;"></div>
                                         <button type="button" class="btn btn-secondary btn-sm buddy-equal-btn">Equal shares</button>
-                                        <p class="buddy-no-participants-error error-msg" style="display:none;">A buddy payment requires at least one participant.</p>
+                                        <p class="buddy-no-participants-error error-msg" style="display:none;">A shared expense requires at least one participant.</p>
                                     </div>
                                 </div>
                             </div>
@@ -382,14 +382,14 @@ try { sessionStorage.removeItem(SESSION_KEY); } catch (_) {}
 {% endif %}
 
 // ── Per-card expense assignment (tab-based) ───────────────────────────────────
-{% if buddy_actual or buddy_dummy or buddy_groups %}
+{% if real_contacts or offline_contacts or buddy_groups %}
 function initCardBuddy(cardEl) {
     var cfg = window.BUDDY_EXPENSE_CONFIG;
     if (!cfg) return null;
     function q(s) { return cardEl.querySelector(s); }
 
     var tabNone    = q('.pcard-assign-none');
-    var tabBuddy   = q('.pcard-assign-buddy');
+    var tabContact   = q('.pcard-assign-contact');
     var tabProject = q('.pcard-assign-project');
     var detailsEl  = q('.pcard-buddy-details');
     if (!detailsEl) return null;
@@ -414,8 +414,8 @@ function initCardBuddy(cardEl) {
     var ME_INITIALS     = cfg.meInitials || '';
     var ME_AVATAR_COLOR = cfg.meAvatarColor || '';
     var groups      = cfg.groupsData    || [];
-    var singles     = cfg.singleBuddies || [];
-    var summaryUrl  = cfg.urlBuddySummary || '';
+    var singles     = cfg.contacts || [];
+    var summaryUrl  = cfg.urlContactSummary || '';
     var mode = 'single', groupId = null, parts = [], isSolo = false, currentTab = 'none';
     var valueInput = cardEl.querySelector('.edit-value');
 
@@ -473,7 +473,7 @@ function initCardBuddy(cardEl) {
         }
     }
     function setTabActive(tab) {
-        [tabNone, tabBuddy, tabProject].forEach(function(t) {
+        [tabNone, tabContact, tabProject].forEach(function(t) {
             if (t) t.classList.toggle('assign-tab--active', t.dataset.assign === tab);
         });
     }
@@ -483,12 +483,12 @@ function initCardBuddy(cardEl) {
         if (tab === 'none') {
             detailsEl.style.display = 'none';
             if (sectionEl) sectionEl.classList.remove('buddy-section--project');
-        } else if (tab === 'buddy') {
+        } else if (tab === 'contact') {
             detailsEl.style.display = 'block';
             if (sectionEl) sectionEl.classList.remove('buddy-section--project');
             if (grpSelRow) grpSelRow.style.display = 'none';
             mode = 'single'; groupId = null; isSolo = false;
-            if (partLbl) partLbl.textContent = 'Buddy (sharing the cost)';
+            if (partLbl) partLbl.textContent = 'Contact (sharing the cost)';
             showBuddyControls(true);
             buildPayer(); buildParts(false); refreshParts(); rebuildSliders();
         } else if (tab === 'project') {
@@ -505,7 +505,7 @@ function initCardBuddy(cardEl) {
     }
 
     if (tabNone)    tabNone.addEventListener('click',    function() { activateTab('none'); });
-    if (tabBuddy)   tabBuddy.addEventListener('click',   function() { activateTab('buddy'); });
+    if (tabContact)   tabContact.addEventListener('click',   function() { activateTab('contact'); });
     if (tabProject) tabProject.addEventListener('click', function() { activateTab('project'); });
 
     if (grpSel) grpSel.addEventListener('change', function() {
@@ -556,7 +556,7 @@ function initCardBuddy(cardEl) {
         if (pt === 'dummy') {
             var n = esc(payerSel.options[payerSel.selectedIndex].text);
             payerNotice.className = 'info-box box--spaced';
-            payerNotice.innerHTML = '<p>Since <strong>'+n+'</strong> paid upfront, this expense won\'t appear in your regular expense list. You\'ll find it under <a href="'+summaryUrl+'">Buddy Expenses</a> instead.</p>';
+            payerNotice.innerHTML = '<p>Since <strong>'+n+'</strong> paid upfront, this expense won\'t appear in your regular expense list. You\'ll find it under <a href="'+summaryUrl+'">Contact Expenses</a> instead.</p>';
             payerNotice.style.display = 'block';
         } else if (pt === 'feuser') {
             var n2 = esc(payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim());
@@ -577,7 +577,7 @@ function initCardBuddy(cardEl) {
             var aw = document.createElement('span'); aw.className = 'buddy-single-avatar-wrap'; aw.style.display = 'none';
             wrap.appendChild(aw);
             var sel = document.createElement('select'); sel.className = 'buddy-participant-select';
-            var emp = document.createElement('option'); emp.value = ''; emp.textContent = '-- Select buddy --';
+            var emp = document.createElement('option'); emp.value = ''; emp.textContent = '-- Select contact --';
             sel.appendChild(emp);
             singles.forEach(function(b) {
                 var o = document.createElement('option');
@@ -797,42 +797,42 @@ function initCardBuddy(cardEl) {
         rebuildSliders();
     }
 
-    // ── Apply an AI-suggested one-on-one direct buddy assignment ─────────────
-    // buddy_share_percent is always the buddy's portion of the total, whoever
-    // paid. buddy_idx is a position in the singles list (never a name). Returns
-    // true when a matching buddy was found and applied.
-    function applyAiBuddy() {
+    // ── Apply an AI-suggested one-on-one contact assignment ─────────────
+    // contact_share_percent is always the contact's portion of the total, whoever
+    // paid. contact_idx is a position in the singles list (never a name). Returns
+    // true when a matching contact was found and applied.
+    function applyAiContact() {
         var item = {};
         try { item = _previewPayload[parseInt(cardEl.dataset.idx, 10)] || {}; } catch (_) {}
-        if (typeof item.buddy_idx !== 'number' || !singles.length) return false;
-        var b = singles[item.buddy_idx];
+        if (typeof item.contact_idx !== 'number' || !singles.length) return false;
+        var b = singles[item.contact_idx];
         if (!b) return false;
 
-        activateTab('buddy');  // mode single, payer defaults to me, empty participant
-        var buddyVal = b.type + ':' + b.id;
-        var buddyPaid = item.buddy_paid === true;
-        var buddyShare = (typeof item.buddy_share_percent === 'number') ? item.buddy_share_percent : null;
+        activateTab('contact');  // mode single, payer defaults to me, empty participant
+        var contactVal = b.type + ':' + b.id;
+        var contactPaid = item.contact_paid === true;
+        var contactShare = (typeof item.contact_share_percent === 'number') ? item.contact_share_percent : null;
 
-        if (buddyPaid) {
-            // Buddy fronted the money -> buddy is the payer, I become the participant.
-            if (payerSel && Array.prototype.some.call(payerSel.options, function(o) { return o.value === buddyVal; })) {
-                payerSel.value = buddyVal;
+        if (contactPaid) {
+            // Contact fronted the money -> contact is the payer, I become the participant.
+            if (payerSel && Array.prototype.some.call(payerSel.options, function(o) { return o.value === contactVal; })) {
+                payerSel.value = contactVal;
                 payerSel.dispatchEvent(new Event('change'));
             }
-            // parts is now [me]; my share is whatever the buddy does not take.
-            if (buddyShare !== null && parts.length === 1) {
-                parts[0].share = Math.max(0, Math.min(100, 100 - buddyShare));
+            // parts is now [me]; my share is whatever the contact does not take.
+            if (contactShare !== null && parts.length === 1) {
+                parts[0].share = Math.max(0, Math.min(100, 100 - contactShare));
                 refreshSliders();
             }
         } else {
-            // I paid -> select the buddy as the participant who owes their share.
+            // I paid -> select the contact as the participant who owes their share.
             var sel = partEl ? partEl.querySelector('.buddy-participant-select') : null;
-            if (sel && Array.prototype.some.call(sel.options, function(o) { return o.value === buddyVal; })) {
-                sel.value = buddyVal;
+            if (sel && Array.prototype.some.call(sel.options, function(o) { return o.value === contactVal; })) {
+                sel.value = contactVal;
                 sel.dispatchEvent(new Event('change'));
             }
-            if (buddyShare !== null && parts.length === 1) {
-                parts[0].share = Math.max(0, Math.min(100, buddyShare));
+            if (contactShare !== null && parts.length === 1) {
+                parts[0].share = Math.max(0, Math.min(100, contactShare));
                 refreshSliders();
             }
         }
@@ -847,8 +847,8 @@ function initCardBuddy(cardEl) {
         activateTab('project');
         applyAiPayer();
         applyAiParticipants();
-    } else if (applyAiBuddy()) {
-        // Direct buddy assignment handled above.
+    } else if (applyAiContact()) {
+        // Contact assignment handled above.
     } else {
         activateTab('none');
     }
@@ -888,7 +888,7 @@ var _cardBuddy = {};
 // Parsed once so each card can read its AI-suggested participation overrides.
 var _previewPayload = [];
 try { _previewPayload = JSON.parse(document.getElementById('preview_json_input').value); } catch (_) {}
-{% if buddy_actual or buddy_dummy or buddy_groups %}
+{% if real_contacts or offline_contacts or buddy_groups %}
 document.querySelectorAll('.preview-card[data-idx]').forEach(function(card) {
     var inst = initCardBuddy(card);
     if (inst) _cardBuddy[card.dataset.idx] = inst;

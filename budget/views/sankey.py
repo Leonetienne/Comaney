@@ -13,7 +13,7 @@ from ..sankey_generation import (
     save_graph,
 )
 from ._period import _date_range_presets_context
-from ._sharing import has_buddy_or_multiuser_project
+from ._sharing import has_contact_or_multiuser_project
 
 
 @feuser_required
@@ -24,7 +24,7 @@ def sankey_studio(request):
     state = load_editor_state(feuser)
     ctx = {
         "active_nav": "sankey_studio",
-        "nav_show_sharing_toggle": has_buddy_or_multiuser_project(feuser),
+        "nav_show_sharing_toggle": has_contact_or_multiuser_project(feuser),
         "initial_date_from": request.GET.get("date_from", ""),
         "initial_date_to": request.GET.get("date_to", ""),
         "catalog_json": json.dumps(state["catalog"]),

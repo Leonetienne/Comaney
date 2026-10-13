@@ -10,7 +10,7 @@ from ..models import (
     BuddyGroup,  # alias for Project
     BuddyGroupInvite,  # alias for ProjectInvite
     BuddyGroupMember,  # alias for ProjectMember
-    BuddyLink,
+    ContactLink,
     BuddyOnboardingInvite,
     BuddySpending,
     DummyMergeInvite,
@@ -36,7 +36,7 @@ class ProjectService:
     def invite_member(group, admin_feuser, email: str):
         """
         Invite a user by email to join a group.
-        Creates a BuddyLink simultaneously if they are not yet buddies.
+        Creates a ContactLink simultaneously if they are not yet buddies.
         Returns one of:
           ('self', None)
           ('already_member', BuddyGroupMember)
@@ -72,7 +72,7 @@ class ProjectService:
 
         if settings.DISABLE_EMAILING:
             if invitee:
-                if not BuddyLink.between(admin_feuser, invitee):
+                if not ContactLink.between(admin_feuser, invitee):
                     _create_link(admin_feuser, invitee)
                 member, created = BuddyGroupMember.objects.get_or_create(group=group, feuser=invitee)
                 if created:
@@ -141,7 +141,7 @@ class ProjectService:
         group = invite.group
         inviting_feuser = invite.inviting_feuser
 
-        if not BuddyLink.between(inviting_feuser, accepting_feuser):
+        if not ContactLink.between(inviting_feuser, accepting_feuser):
             _create_link(inviting_feuser, accepting_feuser)
 
         BuddyGroupMember.objects.get_or_create(group=group, feuser=accepting_feuser)
@@ -318,7 +318,7 @@ class ProjectService:
         the merge ("self-merge"). Immediate, like
         merge_group_dummy_into_dummy_now - there's no second party to ask.
         Otherwise reuses the exact same transfer primitives as accepting a
-        normal merge-into-member request: per specs/requirements/buddies.md, project
+        normal merge-into-member request: per specs/requirements/contacts.md, project
         self-merge behaves like any other merge. Returns 'already_pending'
         if dummy has an outstanding merge request, otherwise 'ok'.
         """
@@ -388,8 +388,8 @@ class ProjectService:
         Accept a DummyMergeInvite for a group dummy.
         Transfers the dummy's expense history. accepting_feuser is already a
         project member by construction (merge targets must already be a
-        member), so this never touches BuddyLink - merging an offline record
-        within a shared project must not create an unrelated personal buddy
+        member), so this never touches ContactLink - merging an offline record
+        within a shared project must not create an unrelated contact
         connection between the admin and the member.
 
         Re-checks that precondition (still a member, project not archived) at

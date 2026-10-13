@@ -1,5 +1,5 @@
 """
-Rename offline buddy: personal context and group context.
+Rename offline contact: personal context and group context.
 Clicking the buddy name turns it into an inline text input (Enter to save, Escape to cancel).
 """
 import time
@@ -31,7 +31,7 @@ def _json_post(s, path, payload):
 
 
 class TestRenamePersonalDummy:
-    """Owner can rename their personal offline buddy by clicking the name."""
+    """Owner can rename their personal offline contact by clicking the name."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -46,7 +46,7 @@ class TestRenamePersonalDummy:
         yield c
         cleanup_user(c["email"])
 
-    def test_name_shown_on_buddies_page(self, driver, w, ctx):
+    def test_name_shown_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
         time.sleep(1)
         assert "Old Name" in driver.page_source
@@ -161,7 +161,7 @@ class TestRenameGroupDummy:
 
 
 class TestRenamePersonalDummyUnauthorized:
-    """A user cannot rename another user's offline buddy."""
+    """A user cannot rename another user's offline contact."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):

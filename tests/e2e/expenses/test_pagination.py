@@ -6,7 +6,7 @@ Client-side pagination on all three expense-list pages:
 
 PAGE_SIZE must match the hardcoded constant in each source file:
   build/js/expenses.js           pageSize: 10
-  buddy_summary.html             _attachPaginator(…, 10)
+  contact_summary.html             _attachPaginator(…, 10)
   project_detail.html            _attachPaginator(…, 10)
 
 If the production page size changes, update PAGE_SIZE here and the three
@@ -24,7 +24,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from helpers import _url, setup_user, cleanup_user, api_post
 from bhelpers import (
     _login_as,
-    _create_buddy_link, _get_pk,
+    _create_contact_link, _get_pk,
     _create_group, _add_group_member,
     _create_group_expense, _create_personal_expense_with_buddy,
 )
@@ -219,7 +219,7 @@ class TestExpenseListPagination:
 
 # ── /buddies/summary/ ─────────────────────────────────────────────────────────
 
-class TestBuddySummaryPagination:
+class TestContactSummaryPagination:
     """window._attachPaginator on the direct-expense container at /buddies/summary/."""
 
     PREFIX = "PgBud"
@@ -228,7 +228,7 @@ class TestBuddySummaryPagination:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="PgA", last_name="Sum")
         b = setup_user(None, None, first_name="PgB", last_name="Sum")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         for i in range(N_ITEMS):
             _create_personal_expense_with_buddy(
@@ -385,7 +385,7 @@ class TestExpenseListScrollTo:
         assert card.is_displayed(), "Target card must be visible after scroll_to jump"
 
 
-class TestBuddySummaryScrollTo:
+class TestContactSummaryScrollTo:
     """_attachPaginator scroll_to jump on /buddies/summary/."""
 
     PREFIX = "PgBudA"
@@ -394,7 +394,7 @@ class TestBuddySummaryScrollTo:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="PgHA", last_name="Sum")
         b = setup_user(None, None, first_name="PgHB", last_name="Sum")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         a_pk = int(_get_pk(a["email"]))
         for i in range(N_ITEMS):
             _create_personal_expense_with_buddy(

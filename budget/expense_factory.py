@@ -33,7 +33,7 @@ def create_expense(
 ) -> Expense:
     is_buddy_expense = bool(project or buddy_group or buddy_spendings or is_dummy)
     if is_buddy_expense and type != TransactionType.EXPENSE:
-        raise ValueError("Buddy and project expenses must be type=EXPENSE.")
+        raise ValueError("Contact and project expenses must be type=EXPENSE.")
     expense = Expense.objects.create(
         owning_feuser=owning_feuser,
         title=title,

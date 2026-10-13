@@ -11,15 +11,15 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user, fill, click, DOCKER_WEB, PASSWORD
-from bhelpers import _shell, _confirm, _create_buddy_link, _create_group
+from bhelpers import _shell, _confirm, _create_contact_link, _create_group
 
 
 # ---------------------------------------------------------------------------
-# A merges one offline buddy into another
+# A merges one offline contact into another
 # ---------------------------------------------------------------------------
 
 class TestPersonalDummyIntoDummyMerge:
-    """A has two offline buddies; merges the source into the target from the '...' menu."""
+    """A has two offline contacts; merges the source into the target from the '...' menu."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -49,12 +49,12 @@ class TestPersonalDummyIntoDummyMerge:
         cleanup_user(a["email"])
 
     def test_merge_into_option_visible_not_invite_as_user(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         assert len(driver.find_elements(By.XPATH, "//*[contains(text(),'Invite as user')]")) == 0, \
             "The old 'Invite as user' option must be gone"
         assert driver.find_elements(By.ID, f"merge-btn-{ctx['d1_uid']}"), \
-            "'Merge into...' option must be visible for an offline buddy"
+            "'Merge into...' option must be visible for an offline contact"
 
     def test_merge_form_has_select_not_email_input(self, driver, w, ctx):
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['d1_uid']}")
@@ -68,10 +68,10 @@ class TestPersonalDummyIntoDummyMerge:
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['d2_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
         _confirm(driver)
-        assert "/buddies/my-buddies/" in driver.current_url
+        assert "/buddies/contacts/" in driver.current_url
 
     def test_source_dummy_gone_target_remains(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         assert "Source Dummy" not in driver.page_source
         assert "Target Dummy" in driver.page_source
@@ -104,7 +104,7 @@ class TestPersonalDummyIntoDummyMerge:
 # ---------------------------------------------------------------------------
 
 class TestDummyIntoDummyMergeAnnotatesUpfrontPayerNote:
-    """A has two offline buddies; the source dummy fronted cash for an expense.
+    """A has two offline contacts; the source dummy fronted cash for an expense.
     After merging source into target, the expense's note must record who
     originally paid, without implying anything was archived."""
 
@@ -136,7 +136,7 @@ class TestDummyIntoDummyMergeAnnotatesUpfrontPayerNote:
         cleanup_user(a["email"])
 
     def test_a_merges_fronting_dummy_into_receiving_dummy(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['d1_uid']}").click()
         time.sleep(0.3)
@@ -144,7 +144,7 @@ class TestDummyIntoDummyMergeAnnotatesUpfrontPayerNote:
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['d2_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
         _confirm(driver)
-        assert "/buddies/my-buddies/" in driver.current_url
+        assert "/buddies/contacts/" in driver.current_url
 
     def test_note_is_merge_neutral_not_archive_wording(self, driver, w, ctx):
         note = _shell(
@@ -228,7 +228,7 @@ class TestDummyIntoDummyMergeSumsConflictingShares:
         cleanup_user(a["email"])
 
     def test_merge_mario_into_tom(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['mario_uid']}").click()
         time.sleep(0.3)
@@ -236,7 +236,7 @@ class TestDummyIntoDummyMergeSumsConflictingShares:
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['tom_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
         _confirm(driver)
-        assert "/buddies/my-buddies/" in driver.current_url
+        assert "/buddies/contacts/" in driver.current_url
 
     def test_expense_not_lost_shares_summed_others_untouched(self, driver, w, ctx):
         rows = _shell(
@@ -286,14 +286,14 @@ class TestDummyIntoDummyMergeSumsConflictingShares:
 
 class TestPersonalDummyIntoDummyMergeBlockedWhilePending:
     """A sent a merge request for her dummy to an already-linked buddy B;
-    immediately merging that same dummy into another offline buddy before B
+    immediately merging that same dummy into another offline contact before B
     responds must be rejected."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Nadia", last_name="Pendingmerger")
         b = setup_user(None, None, first_name="Omar", last_name="Linked")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         ids = _shell(
             f"from buddies.models import DummyUser; "
             f"from feusers.models import FeUser; "
@@ -316,7 +316,7 @@ class TestPersonalDummyIntoDummyMergeBlockedWhilePending:
         cleanup_user(b["email"])
 
     def test_dummy_into_dummy_merge_blocked_while_request_pending(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['source_uid']}").click()
         time.sleep(0.3)
@@ -384,7 +384,7 @@ class TestDummyIntoDummyMergeUpfrontPayerConflict:
         cleanup_user(a["email"])
 
     def test_a_merges_source_into_target(self, driver, w, ctx):
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['source_uid']}").click()
         time.sleep(0.3)
@@ -392,7 +392,7 @@ class TestDummyIntoDummyMergeUpfrontPayerConflict:
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['target_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
         _confirm(driver)
-        assert "/buddies/my-buddies/" in driver.current_url
+        assert "/buddies/contacts/" in driver.current_url
 
     def test_payer_reassigned_stale_row_removed_anna_untouched(self, driver, w, ctx):
         state = _shell(
@@ -493,7 +493,7 @@ class TestPersonalDummyMergeRejectsProjectScopedTarget:
 
 
 # ---------------------------------------------------------------------------
-# Demo users never see "Merge into..." for their own offline buddies
+# Demo users never see "Merge into..." for their own offline contacts
 # ---------------------------------------------------------------------------
 
 def _demo_users_enabled() -> bool:
@@ -525,7 +525,7 @@ def _demo_login_and_accept(driver, w, demo_ctx):
 
 
 class TestDemoUserCannotMergePersonalDummy:
-    """A demo user's offline buddies never show the Merge into... option."""
+    """A demo user's offline contacts never show the Merge into... option."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -545,7 +545,7 @@ class TestDemoUserCannotMergePersonalDummy:
 
     def test_no_merge_option_for_demo_user(self, driver, w, ctx):
         _demo_login_and_accept(driver, w, ctx["demo"])
-        driver.get(_url("/buddies/my-buddies/"))
+        driver.get(_url("/buddies/contacts/"))
         time.sleep(1)
         assert not driver.find_elements(By.ID, f"merge-btn-{ctx['dummy_uid']}"), \
-            "Demo users must never see 'Merge into...' for their offline buddies"
+            "Demo users must never see 'Merge into...' for their offline contacts"

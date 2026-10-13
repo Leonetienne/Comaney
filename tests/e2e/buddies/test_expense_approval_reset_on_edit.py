@@ -18,7 +18,7 @@ from helpers import (
     _url, setup_user, cleanup_user, fetch_email, mailpit_seen_ids, server_today,
 )
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _get_pk,
+    _shell, _login_as, _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy,
 )
 
@@ -85,7 +85,7 @@ class TestValueChangeResetsApproval:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Anna", last_name="Owner")
         b = setup_user(None, None, first_name="Ben", last_name="Approver")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk,
@@ -143,7 +143,7 @@ class TestTitleChangeResetsApproval:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Cora", last_name="Owner")
         b = setup_user(None, None, first_name="Dirk", last_name="Approver")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk,
@@ -183,7 +183,7 @@ class TestShareChangeResetsApproval:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Elsa", last_name="Owner")
         b = setup_user(None, None, first_name="Finn", last_name="Approver")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk,
@@ -224,7 +224,7 @@ class TestNoPriorApprovalNoResetNote:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Ida", last_name="Owner")
         b = setup_user(None, None, first_name="Jon", last_name="Neutral")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk,
@@ -272,7 +272,7 @@ class TestUnrelatedChangePreservesApproval:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Gwen", last_name="Owner")
         b = setup_user(None, None, first_name="Hugo", last_name="Approver")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk,

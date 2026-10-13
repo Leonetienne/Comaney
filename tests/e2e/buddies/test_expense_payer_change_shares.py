@@ -11,7 +11,7 @@ the upfront payer is changed via BuddyExpenseService.change_upfront_payer().
 import pytest
 
 from helpers import setup_user, cleanup_user
-from bhelpers import _shell, _create_buddy_link, _get_pk
+from bhelpers import _shell, _create_contact_link, _get_pk
 
 
 def _spending_share(expense_pk: int, email: str) -> float | None:
@@ -49,8 +49,8 @@ class TestFeuserPayerChangeSharesPreserved:
         old_owner    = setup_user(driver, w, first_name="PayOld", last_name="A")
         new_payer    = setup_user(None, None, first_name="PayNew", last_name="B")
         bystander    = setup_user(None, None, first_name="PayBy",  last_name="C")
-        _create_buddy_link(old_owner["email"], new_payer["email"])
-        _create_buddy_link(old_owner["email"], bystander["email"])
+        _create_contact_link(old_owner["email"], new_payer["email"])
+        _create_contact_link(old_owner["email"], bystander["email"])
 
         new_payer_pk  = int(_get_pk(new_payer["email"]))
         bystander_pk  = int(_get_pk(bystander["email"]))
@@ -111,7 +111,7 @@ class TestDummyPayerChangeSharesPreserved:
         # old_owner implicit share: 100 - 60 = 40 %
         old_owner  = setup_user(driver, w, first_name="DPayOld", last_name="A")
         participant = setup_user(None, None, first_name="DPayPar", last_name="B")
-        _create_buddy_link(old_owner["email"], participant["email"])
+        _create_contact_link(old_owner["email"], participant["email"])
 
         participant_pk = int(_get_pk(participant["email"]))
 

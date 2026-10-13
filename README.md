@@ -110,38 +110,38 @@ Every project has one admin. Only the admin can invite and remove members, trigg
 
 ---
 
-## Buddies: one-on-one sharing without a project
+## Contacts: one-on-one sharing without a project
 
-If you want to split costs with a single person, you do not need a project. The Buddies feature gives you the same split-pay mechanics directly between two people.
+If you want to split costs with a single person, you do not need a project. The Contacts feature gives you the same split-pay mechanics directly between two people.
 
-### Adding a buddy
+### Adding a contact
 
-Go to **Buddies** in the navigation, then **My Buddies**.
+Click **Contacts** in the navigation.
 
-- **Offline buddy**: someone without a Comaney account. Enter a name; only you track the balance and log expenses for them.
+- **Offline contact**: someone without a Comaney account. Enter a name; only you track the balance and log expenses for them.
 - **Connected user**: send an email invitation. Once they accept, both of you can see the shared balance and log expenses against each other.
 
-You can link an offline buddy to their real Comaney account later so the full history carries over.
+You can link an offline contact to their real Comaney account later so the full history carries over.
 
 ### Sharing an expense
 
-Create a new expense and set the assignment to **Direct Buddy**. Choose the buddy, set who paid and the split, then save.
+Create a new expense and set the assignment to **Contact**. Choose the contact, set who paid and the split, then save.
 
 ### Settling up
 
-From the **Buddy Expenses** page, use the **Pay someone back** form. For a connected user, they must confirm receipt before the balance clears. For an offline buddy, it is confirmed automatically.
+From the **Contact Expenses** page, use the **Pay someone back** form. For a connected user, they must confirm receipt before the balance clears. For an offline contact, it is confirmed automatically.
 
 ### Approving expenses created for you
 
-If a connected buddy logs an expense with you as the one who paid upfront, it appears in the **"Did you pay for this?"** section on Buddy Expenses. Approve it to move it into your regular expense list; reject it to delete it entirely.
+If a connected contact logs an expense with you as the one who paid upfront, it appears in the **"Did you pay for this?"** section on Contact Expenses. Approve it to move it into your regular expense list; reject it to delete it entirely.
 
-![image](https://raw.githubusercontent.com/Leonetienne/Comaney/refs/heads/master/github-assets/teasers/direct-buddies.png)
+![image](https://raw.githubusercontent.com/Leonetienne/Comaney/refs/heads/master/github-assets/teasers/contacts.png)
 
 ---
 
 ## Achim Archive
 
-When you remove an offline member from a project or your buddy list, Comaney does not delete their shared expense history. It moves that history to a placeholder called **Achim Archive** so all balances stay correct.
+When you remove an offline member from a project or your contacts, Comaney does not delete their shared expense history. It moves that history to a placeholder called **Achim Archive** so all balances stay correct.
 
 Multiple removed offline members all fold into the same archive. You can permanently delete the archived expenses at any time; Comaney shows you exactly what will change before asking you to confirm. This cannot be undone.
 

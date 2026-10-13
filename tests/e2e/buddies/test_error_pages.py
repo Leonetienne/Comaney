@@ -10,14 +10,14 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _shell, _login_as, _create_buddy_link, _get_pk, _create_group
+from bhelpers import _shell, _login_as, _create_contact_link, _get_pk, _create_group
 
 
 # ---------------------------------------------------------------------------
 # Invalid token: buddy invite
 # ---------------------------------------------------------------------------
 
-class TestInvalidBuddyInviteToken:
+class TestInvalidContactInviteToken:
     """Opening an invite link with a random token shows invite_invalid page."""
 
     @pytest.fixture(scope="class")
@@ -38,8 +38,8 @@ class TestInvalidBuddyInviteToken:
 # Expired invite: buddy invite
 # ---------------------------------------------------------------------------
 
-class TestExpiredBuddyInvite:
-    """Visiting a BuddyInvite link that has already expired shows invite_invalid."""
+class TestExpiredContactInvite:
+    """Visiting a ContactInvite link that has already expired shows invite_invalid."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -47,12 +47,12 @@ class TestExpiredBuddyInvite:
         b = setup_user(None, None, first_name="Brian", last_name="Expired")
         # Create an already-expired invite
         token = _shell(
-            f"from buddies.models import BuddyInvite; "
+            f"from buddies.models import ContactInvite; "
             f"from feusers.models import FeUser; "
             f"from django.utils import timezone; "
             f"import datetime; "
             f"a = FeUser.objects.get(email='{a['email']}'); "
-            f"inv = BuddyInvite.objects.create("
+            f"inv = ContactInvite.objects.create("
             f"  inviter=a, invitee_email='{b['email']}', "
             f"  expires_at=timezone.now() - datetime.timedelta(hours=1)); "
             f"print(inv.token)"
@@ -76,7 +76,7 @@ class TestExpiredBuddyInvite:
 # Wrong account: buddy invite
 # ---------------------------------------------------------------------------
 
-class TestWrongAccountBuddyInvite:
+class TestWrongAccountContactInvite:
     """A is logged in but opens an invite sent to B → invite_wrong_account page."""
 
     @pytest.fixture(scope="class")
@@ -86,12 +86,12 @@ class TestWrongAccountBuddyInvite:
         # Sender C is just a helper; create invite for B's email from any user
         c = setup_user(None, None, first_name="Carl", last_name="Sender")
         token = _shell(
-            f"from buddies.models import BuddyInvite; "
+            f"from buddies.models import ContactInvite; "
             f"from feusers.models import FeUser; "
             f"from django.utils import timezone; "
             f"import datetime; "
             f"c = FeUser.objects.get(email='{c['email']}'); "
-            f"inv = BuddyInvite.objects.create("
+            f"inv = ContactInvite.objects.create("
             f"  inviter=c, invitee_email='{b['email']}', "
             f"  expires_at=timezone.now() + datetime.timedelta(days=7)); "
             f"print(inv.token)"

@@ -96,10 +96,10 @@ def express_creation(request):
                 if image_file:
                     image_b64, image_type = _prepare_image(image_file)
                 # Reuse this same request's buddy-widget data (context["projects_data"]/
-                # ["single_buddies_data"]) for the catalog, so the AI's idx values always
+                # ["contacts_data"]) for the catalog, so the AI's idx values always
                 # line up with the widget's own member/buddy arrays -- see _build_catalog.
-                catalog = _build_catalog(feuser, context["projects_data"], context["single_buddies_data"])
-                blocks = _select_smart_create_blocks(context["projects_data"], context["single_buddies_data"])
+                catalog = _build_catalog(feuser, context["projects_data"], context["contacts_data"])
+                blocks = _select_smart_create_blocks(context["projects_data"], context["contacts_data"])
                 system_prompt = build_express_system_prompt(catalog, blocks, feuser.ai_custom_instructions)
                 today_str = timezone.localdate().isoformat()
                 description_with_date = f"[Today's date: {today_str}]\n\n{description}" if description else f"[Today's date: {today_str}]"
@@ -112,7 +112,7 @@ def express_creation(request):
                         image_b64=image_b64, image_type=image_type,
                     )
                     items, errors = _validate_items(
-                        raw_items, feuser, context["projects_data"], context["single_buddies_data"]
+                        raw_items, feuser, context["projects_data"], context["contacts_data"]
                     )
                     if errors:
                         context["ai_error"] = " | ".join(errors)
@@ -173,7 +173,7 @@ def express_creation(request):
                 count = 0
                 # Track where each saved expense landed so the success banner's
                 # "View expenses" link can jump to the most relevant place:
-                # ("buddy", None) = direct buddy; ("project", uid); ("personal", None).
+                # ("contact", None) = contact; ("project", uid); ("personal", None).
                 created_targets: list[tuple[str, int | None]] = []
                 for idx, item in enumerate(all_items):
                     if idx not in selected_indices:
@@ -271,7 +271,7 @@ def express_creation(request):
 
                     if buddy:
                         grp = buddy["group"]
-                        created_targets.append(("project", grp.uid) if grp else ("buddy", None))
+                        created_targets.append(("project", grp.uid) if grp else ("contact", None))
                     elif project:
                         created_targets.append(("project", project.uid))
                     else:
@@ -280,8 +280,8 @@ def express_creation(request):
                 if not context.get("ai_error"):
                     redirect_url = f"{request.path}?created={count}"
                     kinds = {t[0] for t in created_targets}
-                    if created_targets and kinds == {"buddy"}:
-                        redirect_url += "&view=buddies"
+                    if created_targets and kinds == {"contact"}:
+                        redirect_url += "&view=contacts"
                     elif created_targets and kinds == {"project"}:
                         project_ids = {t[1] for t in created_targets}
                         if len(project_ids) == 1:
@@ -295,8 +295,8 @@ def express_creation(request):
         context["created_count"] = int(request.GET["created"])
 
     view = request.GET.get("view")
-    if view == "buddies":
-        context["view_expenses_url"] = reverse("buddies:buddy_summary")
+    if view == "contacts":
+        context["view_expenses_url"] = reverse("buddies:contact_summary")
     elif view == "project" and request.GET.get("pid", "").isdigit():
         context["view_expenses_url"] = reverse(
             "projects:project_detail", args=[int(request.GET["pid"])]

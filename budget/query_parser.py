@@ -17,7 +17,7 @@ Filters:
     recurring=yes|no|true|false|1|0  (yes/true/1 = only recurring instances; no/false/0 = only non-recurring)
     shared=yes|no|true|false|1|0  (yes/true/1 = only buddy/shared expenses; no/false/0 = only non-shared)
     participant=me|<substring>  (me = feuser is owner or participant; substring matches owner or any participant)
-    payer=me|<substring>  (me requires feuser context; substring matches owning user or offline buddy participant)
+    payer=me|<substring>  (me requires feuser context; substring matches owning user or offline contact participant)
     value<N, value<=N, value>N, value>=N, value=N, value==N
     date<dd.mm.yyyy   date>=mm/dd/yyyy  date==yyyy-mm-dd  date>today
         dot delimiter → dd.mm.yyyy  |  slash delimiter → mm/dd/yyyy  |  hyphen → yyyy-mm-dd

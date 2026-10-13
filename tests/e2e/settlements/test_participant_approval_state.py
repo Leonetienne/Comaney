@@ -1,7 +1,7 @@
 """
 Participant approval state for buddy expenses.
 
-Covers approve and reject for both direct buddy expenses and project expenses,
+Covers approve and reject for both contact expenses and project expenses,
 plus the 24-hour lock mechanism.
 """
 import time
@@ -14,7 +14,7 @@ from helpers import (
     fetch_email, mailpit_seen_ids,
 )
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _get_pk,
+    _shell, _login_as, _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy,
     _create_group, _add_group_member, _create_group_expense,
 )
@@ -95,7 +95,7 @@ class TestParticipationEmailHasApproveRejectLinks:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Alice", last_name="Payer")
         b = setup_user(None, None, first_name="Bob", last_name="Participant")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         seen_before = mailpit_seen_ids()
         exp_pk = int(_create_personal_expense_with_buddy(
@@ -121,7 +121,7 @@ class TestParticipationEmailHasApproveRejectLinks:
 
 
 # ---------------------------------------------------------------------------
-# Direct buddy expense: approve flow
+# Contact expense: approve flow
 # ---------------------------------------------------------------------------
 
 class TestDirectExpenseParticipantApprove:
@@ -131,7 +131,7 @@ class TestDirectExpenseParticipantApprove:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Clara", last_name="Payer")
         b = setup_user(None, None, first_name="Dan", last_name="Approver")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk,
@@ -176,7 +176,7 @@ class TestDirectExpenseParticipantApprove:
 
 
 # ---------------------------------------------------------------------------
-# Direct buddy expense: reject flow
+# Contact expense: reject flow
 # ---------------------------------------------------------------------------
 
 class TestDirectExpenseParticipantReject:
@@ -186,7 +186,7 @@ class TestDirectExpenseParticipantReject:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Eva", last_name="Payer")
         b = setup_user(None, None, first_name="Frank", last_name="Rejecter")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk,
@@ -235,7 +235,7 @@ class TestProjectExpenseParticipantApprove:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Grace", last_name="Admin")
         b = setup_user(None, None, first_name="Hank", last_name="Member")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         group_pk = int(_create_group(a["email"], "Approval Project"))
         _add_group_member(group_pk, b["email"])
@@ -293,7 +293,7 @@ class TestProjectExpenseParticipantReject:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Iris", last_name="Admin")
         b = setup_user(None, None, first_name="Jack", last_name="Member")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         group_pk = int(_create_group(a["email"], "Reject Project"))
         _add_group_member(group_pk, b["email"])
@@ -345,7 +345,7 @@ class TestAvatarApprovalBadges:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Karl", last_name="Payer")
         b = setup_user(None, None, first_name="Laura", last_name="BadgeUser")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk, title="Badge Test Expense",
@@ -385,7 +385,7 @@ class TestOwnerCannotAccessParticipantEndpoints:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Mia", last_name="Owner")
         b = setup_user(None, None, first_name="Nick", last_name="Participant")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk, title="Access Control Expense",
@@ -414,7 +414,7 @@ class TestConsentSetAtRecorded:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Olivia", last_name="Payer")
         b = setup_user(None, None, first_name="Paul", last_name="Timer")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk, title="Timestamp Expense",
@@ -483,7 +483,7 @@ class TestConsentLockAfter24h:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Quinn", last_name="Payer")
         b = setup_user(None, None, first_name="Rita", last_name="Locked")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk, title="Lock Test Expense",
@@ -531,13 +531,13 @@ class TestConsentLockAfter24h:
 
 
 class TestRejectedStateBypassesLock:
-    """A rejected direct-buddy decision is always changeable, even after 25 h."""
+    """A rejected contact decision is always changeable, even after 25 h."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Vera", last_name="Payer")
         b = setup_user(None, None, first_name="Walt", last_name="Rejector")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk, title="Rejected Bypass Expense",
@@ -573,7 +573,7 @@ class TestProjectRejectedStateBypassesLock:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Xena", last_name="Admin")
         b = setup_user(None, None, first_name="Yuri", last_name="Rejector")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         group_pk = int(_create_group(a["email"], "Rejected Bypass Project"))
         _add_group_member(group_pk, b["email"])
@@ -613,7 +613,7 @@ class TestConsentButtonsUseAjaxNoReload:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Uma", last_name="Payer")
         b = setup_user(None, None, first_name="Vic", last_name="AjaxClicker")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk,
@@ -664,7 +664,7 @@ class TestProjectConsentButtonsUseAjaxNoReload:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Zack", last_name="Admin")
         b = setup_user(None, None, first_name="Amy", last_name="AjaxMember")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         group_pk = int(_create_group(a["email"], "Ajax Click Project"))
         _add_group_member(group_pk, b["email"])
@@ -718,7 +718,7 @@ class TestConsentStillUnlockedWithin24h:
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Sam", last_name="Payer")
         b = setup_user(None, None, first_name="Tina", last_name="Unlocked")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         b_pk = int(_get_pk(b["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner_email=a["email"], participant_pk=b_pk, title="Still Unlocked Expense",

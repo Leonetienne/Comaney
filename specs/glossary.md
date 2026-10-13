@@ -20,8 +20,8 @@
 | Financial year | Twelve financial months labelled by calendar year. |
 | Recurring (scheduled) expense | A template from which expense records are generated on a repeat pattern. |
 | Occurrence date | The immutable date a generated expense was materialised for. |
-| Direct buddy | Another feuser or offline buddy you split expenses with outside any project. |
-| Offline buddy / offline member / dummy | A participant without an account (`DummyUser`). "Offline buddy" in personal context, "offline member" in project context. |
+| Contact | Another feuser or offline contact you split expenses with outside any project. |
+| Offline contact / offline member / dummy | A participant without an account (`DummyUser`). "Offline contact" in personal context, "offline member" in project context. |
 | Achim Archive | A special dummy (`is_archive`) that absorbs the history of removed offline members. |
 | Project | A shared container of members and expenses (formerly "Buddy Group"). |
 | Project admin | The one member of a project allowed to manage it. |
@@ -29,7 +29,7 @@
 | Settlement | An expense flagged as a debt payoff between two participants, not real spending. |
 | Debtor / creditor | The paying / receiving side of a settlement. |
 | Approval (participant) | A participant's check-or-cross consent to their share of an expense. |
-| Auto-accept trust | A feuser's per-buddy opt-in to accept that buddy's entries without confirmation. |
+| Auto-accept trust | A feuser's per-contact opt-in to accept that contact's entries without confirmation. |
 | Merge | Folding an offline member's history into another offline member, a real user, or oneself. |
 | Catalog Partnership | A group of feusers whose tags and categories stay synchronised. |
 | Partner | Another feuser in the same Catalog Partnership. |

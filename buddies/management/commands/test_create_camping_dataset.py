@@ -20,7 +20,7 @@ from django.db import transaction
 from budget.expense_factory import create_expense
 from budget.fixtures import create_defaults
 from budget.models import Category, TransactionType
-from buddies.models import BuddyGroup, BuddyGroupMember, BuddyLink, DummyUser
+from buddies.models import BuddyGroup, BuddyGroupMember, ContactLink, DummyUser
 from feusers.models import FeUser
 
 TEST_EMAILS = ["anna@test.local", "ben@test.local", "clara@test.local"]
@@ -35,7 +35,7 @@ def _cat(feuser, name):
 
 def _link(a, b):
     lo, hi = sorted([a, b], key=lambda u: u.pk)
-    BuddyLink.objects.get_or_create(user_a=lo, user_b=hi)
+    ContactLink.objects.get_or_create(user_a=lo, user_b=hi)
 
 
 def _fu(feuser):

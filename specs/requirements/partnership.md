@@ -17,7 +17,7 @@ Covers:
 ### Connection required
 `req~partnership.connection~1`
 
-If the invitee shares neither a direct buddy link nor a project with the inviter, then the system shall refuse the invitation with "No mutual connection with this user."
+If the invitee shares neither a contact link nor a project with the inviter, then the system shall refuse the invitation with "No mutual connection with this user."
 
 Covers:
 - `feat~partnership~1`
@@ -27,7 +27,7 @@ Tags: Security
 ### Invite eligibility
 `req~partnership.invite.eligibility~1`
 
-The "Invite as partner" option in My Buddies and in a project's member menu shall appear only for real users who are not already the feuser's partner and not in another partnership; the system shall refuse invitations to users already in a partnership.
+The "Invite as partner" option in Contacts and in a project's member menu shall appear only for real users who are not already the feuser's partner and not in another partnership; the system shall refuse invitations to users already in a partnership.
 
 Covers:
 - `feat~partnership~1`
@@ -209,7 +209,7 @@ Covers:
 ### Auto-removal
 `req~partnership.auto-remove~1`
 
-When a buddy link or project membership is removed and a partner no longer shares any buddy link or project with any other partner, the system shall remove that partner from the partnership and notify the remaining partners.
+When a contact link or project membership is removed and a partner no longer shares any contact link or project with any other partner, the system shall remove that partner from the partnership and notify the remaining partners.
 
 Covers:
 - `feat~partnership~1`

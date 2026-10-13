@@ -359,7 +359,7 @@ class TestDemoUserServerEnforcement:
     def test_cannot_invite_buddy(self, demo_ctx):
         s = _http_session(demo_ctx["email"], demo_ctx["password"])
         target_email = f"victim.{uuid.uuid4().hex[:6]}@example.com"
-        csrf = _get_csrf(s, "/buddies/my-buddies/")
+        csrf = _get_csrf(s, "/buddies/contacts/")
         r = s.post(_url("/buddies/invite-actual/"), data={
             "csrfmiddlewaretoken": csrf,
             "email": target_email,
@@ -367,7 +367,7 @@ class TestDemoUserServerEnforcement:
         assert "Demo accounts cannot invite buddies" in r.text or r.status_code in (403, 400)
 
     def test_cannot_send_personal_merge_invite(self, demo_ctx):
-        """Demo user cannot use 'merge into...' on their personal offline buddy."""
+        """Demo user cannot use 'merge into...' on their personal offline contact."""
         dummy_id = _shell(
             f"from feusers.models import FeUser; from buddies.models import DummyUser; "
             f"u = FeUser.objects.get(email='{demo_ctx['email']}'); "
@@ -375,12 +375,12 @@ class TestDemoUserServerEnforcement:
         )
         try:
             s = _http_session(demo_ctx["email"], demo_ctx["password"])
-            csrf = _get_csrf(s, "/buddies/my-buddies/")
+            csrf = _get_csrf(s, "/buddies/contacts/")
             r = s.post(_url(f"/buddies/dummy/{dummy_id}/merge/"), data={
                 "csrfmiddlewaretoken": csrf,
                 "target_key": f"f{uuid.uuid4().int % 100000}",
             }, allow_redirects=True, timeout=10)
-            assert "Demo accounts cannot merge buddies" in r.text or r.status_code in (403, 400)
+            assert "Demo accounts cannot merge contacts" in r.text or r.status_code in (403, 400)
         finally:
             _shell(f"from buddies.models import DummyUser; DummyUser.objects.filter(uid={dummy_id}).delete()")
 
@@ -420,7 +420,7 @@ class TestDemoUserServerEnforcement:
                 "csrfmiddlewaretoken": csrf,
                 "target_key": f"f{uuid.uuid4().int % 100000}",
             }, allow_redirects=True, timeout=10)
-            assert "Demo accounts cannot merge buddies" in r.text or r.status_code in (403, 400)
+            assert "Demo accounts cannot merge offline members" in r.text or r.status_code in (403, 400)
         finally:
             _shell(f"from buddies.models import Project; Project.objects.filter(uid={project_id}).delete()")
 
@@ -436,20 +436,20 @@ class TestDemoUserServerEnforcement:
 
     def test_real_user_cannot_invite_demo_as_buddy(self, demo_ctx, real_ctx):
         s = _http_session(real_ctx["email"], real_ctx["password"])
-        csrf = _get_csrf(s, "/buddies/my-buddies/")
+        csrf = _get_csrf(s, "/buddies/contacts/")
         r = s.post(_url("/buddies/invite-actual/"), data={
             "csrfmiddlewaretoken": csrf,
             "email": demo_ctx["email"],
         }, allow_redirects=True, timeout=10)
         assert "not available" in r.text.lower() or r.status_code in (403, 400)
         link_exists = _shell(
-            f"from feusers.models import FeUser; from buddies.models import BuddyLink; "
+            f"from feusers.models import FeUser; from buddies.models import ContactLink; "
             f"from django.db.models import Q; "
             f"u1 = FeUser.objects.get(email='{real_ctx['email']}'); "
             f"u2 = FeUser.objects.get(email='{demo_ctx['email']}'); "
-            f"print(BuddyLink.objects.filter(Q(user_a=u1,user_b=u2)|Q(user_a=u2,user_b=u1)).exists())"
+            f"print(ContactLink.objects.filter(Q(user_a=u1,user_b=u2)|Q(user_a=u2,user_b=u1)).exists())"
         )
-        assert link_exists == "False", "BuddyLink was created with a demo user"
+        assert link_exists == "False", "ContactLink was created with a demo user"
 
     def test_real_user_cannot_invite_demo_to_project(self, demo_ctx, real_ctx):
         project_id = _shell(
@@ -476,7 +476,7 @@ class TestDemoUserServerEnforcement:
             _shell(f"from buddies.models import Project; Project.objects.filter(uid={project_id}).delete()")
 
     def test_real_user_cannot_send_merge_request_to_demo(self, demo_ctx, real_ctx):
-        """A real user cannot target a demo account via 'merge into...' on a personal offline buddy."""
+        """A real user cannot target a demo account via 'merge into...' on a personal offline contact."""
         dummy_id = _shell(
             f"from feusers.models import FeUser; from buddies.models import DummyUser; "
             f"u = FeUser.objects.get(email='{real_ctx['email']}'); "
@@ -488,7 +488,7 @@ class TestDemoUserServerEnforcement:
                 f"print(FeUser.objects.get(email='{demo_ctx['email']}').pk)"
             )
             s = _http_session(real_ctx["email"], real_ctx["password"])
-            csrf = _get_csrf(s, "/buddies/my-buddies/")
+            csrf = _get_csrf(s, "/buddies/contacts/")
             r = s.post(_url(f"/buddies/dummy/{dummy_id}/merge/"), data={
                 "csrfmiddlewaretoken": csrf,
                 "target_key": f"f{demo_pk}",

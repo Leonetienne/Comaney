@@ -7,7 +7,7 @@ Rules under test
 - upfront_payer != creating feuser AND expense is in a project
   → buddy_approved=False (admin must confirm)
 - Exception 1: creating feuser IS the project admin → buddy_approved=True
-- Exception 2: direct buddy expense (no project) → buddy_approved=True
+- Exception 2: contact expense (no project) → buddy_approved=True
 
 Also covers:
 - Admin confirm page shows correct wording (not settlement language) for the

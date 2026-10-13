@@ -8,7 +8,7 @@ from django.utils import timezone
 class DummyUser(models.Model):
     uid = models.BigAutoField(primary_key=True)
     owning_feuser = models.ForeignKey(
-        "feusers.FeUser", null=True, blank=True, on_delete=models.CASCADE, related_name="dummy_buddies"
+        "feusers.FeUser", null=True, blank=True, on_delete=models.CASCADE, related_name="offline_contacts"
     )
     owning_group = models.ForeignKey(
         "buddies.Project", null=True, blank=True, on_delete=models.CASCADE, related_name="dummy_members"

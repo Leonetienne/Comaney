@@ -12,7 +12,7 @@ Comaney answers two questions for its users: where their money goes, and how muc
 they have left to spend in the current financial month. Users record expenses,
 income and savings movements, organise them with categories and tags, and look at
 the result on configurable dashboards. On top of personal budgeting, Comaney lets
-users split costs with buddies and in projects, keep their label catalogs in sync
+users split costs with contacts and in projects, keep their label catalogs in sync
 with partners, and use an AI service for data entry and classification.
 
 Comaney runs as a Django application in Docker behind a TLS-terminating reverse

@@ -20,12 +20,12 @@ class BuddyExpenseService:
 
         - FeUsers: current buddies, plus (in group mode) the project's real-user
           members, plus the acting user themselves (they may be a participant).
-        - DummyUsers: offline buddies owned by feuser, plus (in group mode) the
+        - DummyUsers: offline contacts owned by feuser, plus (in group mode) the
           project's offline members.
         """
         from .query import BuddyQueryService
 
-        allowed_feusers = {b.pk for b in BuddyQueryService.get_actual_buddies(feuser)}
+        allowed_feusers = {b.pk for b in BuddyQueryService.get_real_contacts(feuser)}
         allowed_feusers.add(feuser.pk)
         allowed_dummies = set(
             DummyUser.objects.filter(owning_feuser=feuser).values_list("pk", flat=True)

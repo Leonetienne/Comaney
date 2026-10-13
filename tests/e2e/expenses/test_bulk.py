@@ -386,11 +386,11 @@ class TestBulkPentest:
 
         # Buddy link so shared mode shows B's expense to A
         _shell(
-            f"from feusers.models import FeUser; from buddies.models import BuddyLink; "
+            f"from feusers.models import FeUser; from buddies.models import ContactLink; "
             f"a = FeUser.objects.get(email='{ctx_a['email']}'); "
             f"b = FeUser.objects.get(email='{ctx_b['email']}'); "
             f"lo, hi = sorted([a, b], key=lambda u: u.pk); "
-            f"BuddyLink.objects.get_or_create(user_a=lo, user_b=hi)"
+            f"ContactLink.objects.get_or_create(user_a=lo, user_b=hi)"
         )
 
         # B creates the foreign expense

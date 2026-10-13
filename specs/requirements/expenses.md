@@ -2,7 +2,7 @@
 
 Sources: `budget/models/expense.py`, `budget/expense_factory.py`, `budget/views/expenses.py`,
 `budget/services.py`, `templates/base.html`, docs `user-manual/expenses.md`,
-`user-manual/buddies/shared-expenses.md`.
+`user-manual/contacts/shared-expenses.md`.
 
 ## Data
 
@@ -43,7 +43,7 @@ Tags: Security
 ### Shared expenses are spending
 `req~expenses.shared-type~1`
 
-If an expense assigned to a buddy or project has a type other than Expense, then the system shall reject it with 'Buddy and project expenses must be type "expense".'
+If an expense assigned to a contact or project has a type other than Expense, then the system shall reject it with 'Contact and project expenses must be type "expense".'
 
 Covers:
 - `feat~expenses~1`
@@ -53,7 +53,7 @@ Covers:
 ### Create expense
 `req~expenses.create~1`
 
-When a feuser saves the manual expense form, the system shall create the expense for them, optionally with a direct buddy or project assignment (see [sharing.md](sharing.md)).
+When a feuser saves the manual expense form, the system shall create the expense for them, optionally with a contact or project assignment (see [sharing.md](sharing.md)).
 
 Covers:
 - `feat~expenses~1`
@@ -61,7 +61,7 @@ Covers:
 ### Edit expense
 `req~expenses.edit~1`
 
-The system shall let a feuser edit their own expenses and, outside projects, expenses whose upfront payer is one of their offline buddies; inside a project only the admin may edit offline members' expenses.
+The system shall let a feuser edit their own expenses and, outside projects, expenses whose upfront payer is one of their offline contacts; inside a project only the admin may edit offline members' expenses.
 
 Covers:
 - `feat~expenses~1`

@@ -4,7 +4,7 @@ Achim Archive: personal (non-group) scenarios.
 5.11a: Removing a dummy with expenses creates a personal Achim Archive
        and shows the "Achim appeared" modal.
 5.11c: Bulk-deleting Achim Archive's expenses via the wipe confirmation page
-       removes the archive and restores the clean buddy list.
+       removes the archive and restores the clean contact list.
 5.11e: Popup does not appear again when Achim is re-created after the user
        has already seen it (has_seen_achim_intro flag).
 """
@@ -70,7 +70,7 @@ class TestAchimPersonalCreated:
     def test_confirm_page_mentions_achim(self, driver, w, ctx):
         assert "Achim Archive" in driver.page_source
 
-    def test_submit_redirects_to_buddies_page(self, driver, w, ctx):
+    def test_submit_redirects_to_contacts_page(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-confirm-kick").click()
         time.sleep(1.5)
         assert "/buddies/" in driver.current_url
@@ -84,7 +84,7 @@ class TestAchimPersonalCreated:
 
     def test_achim_archive_in_balance_list(self, driver, w, ctx):
         assert "Achim Archive" in driver.page_source, \
-            "Achim Archive must appear in the buddy balance list"
+            "Achim Archive must appear in the contact balance list"
 
     def test_achim_archive_pill_shown(self, driver, w, ctx):
         assert "Archive" in driver.page_source
@@ -142,7 +142,7 @@ class TestAchimPersonalWipe:
         yield c
         cleanup_user(c["email"])
 
-    def test_achim_visible_on_buddies_page(self, driver, w, ctx):
+    def test_achim_visible_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
         time.sleep(1)
         assert "Achim Archive" in driver.page_source
@@ -235,7 +235,7 @@ class TestAchimPersonalNoRepeatPopup:
         time.sleep(1)
         assert "kick" in driver.current_url
 
-    def test_submit_redirects_to_buddies_page(self, driver, w, ctx):
+    def test_submit_redirects_to_contacts_page(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-confirm-kick").click()
         time.sleep(1.5)
         assert "/buddies/" in driver.current_url
@@ -246,4 +246,4 @@ class TestAchimPersonalNoRepeatPopup:
 
     def test_achim_archive_still_created(self, driver, w, ctx):
         assert "Achim Archive" in driver.page_source, \
-            "Achim Archive must still appear in the buddy list even without the popup"
+            "Achim Archive must still appear in the contact list even without the popup"

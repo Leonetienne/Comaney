@@ -9,7 +9,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
-from bhelpers import _shell, _login_as, _create_buddy_link
+from bhelpers import _shell, _login_as, _create_contact_link
 
 
 def _create_invite_via_shell(inviter_email: str, invitee_email: str) -> str:
@@ -63,7 +63,7 @@ class TestStoererBannerVisible:
     def ctx(self, driver, w):
         a = setup_user(None, None, first_name="Amy", last_name="Stoer")
         b = setup_user(driver, w, first_name="Bill", last_name="Stoer")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         token = _create_invite_via_shell(a["email"], b["email"])
         yield {"a": a, "b": b, "token": token}
         cleanup_user(a["email"])
@@ -92,7 +92,7 @@ class TestDeclinePartnership:
     def ctx(self, driver, w):
         a = setup_user(None, None, first_name="Ann", last_name="Decl")
         b = setup_user(driver, w, first_name="Bob", last_name="Decl")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         token = _create_invite_via_shell(a["email"], b["email"])
         yield {"a": a, "b": b, "token": token}
         cleanup_user(a["email"])
@@ -141,7 +141,7 @@ class TestOnboardingHappyPathNoConflicts:
     def ctx(self, driver, w):
         a = setup_user(None, None, first_name="Cara", last_name="Happy")
         b = setup_user(driver, w, first_name="Dan", last_name="Happy")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         # Give A a catalog; B has nothing → nothing to map
         _add_tag(a["email"], "groceries")
         _add_category(a["email"], "Food")
@@ -197,7 +197,7 @@ class TestOnboardingWithUnmatchedTags:
     def ctx(self, driver, w):
         a = setup_user(None, None, first_name="Ella", last_name="Map")
         b = setup_user(driver, w, first_name="Fred", last_name="Map")
-        _create_buddy_link(a["email"], b["email"])
+        _create_contact_link(a["email"], b["email"])
         _add_tag(a["email"], "transport")
         # B has a tag NOT in A's catalog
         _add_tag(b["email"], "uniquetag_xyz")

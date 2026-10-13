@@ -1,11 +1,11 @@
-from .main import buddies_page, my_buddies_page, buddy_summary_page, buddy_summary_export, direct_expense_list_partial
+from .main import index, contacts_page, contact_summary_page, contact_summary_export, direct_expense_list_partial
 from .settlement import (
     settle_direct, settle_direct_individual, settle_direct_freeform,
     group_settle_individual, group_settle_all,
 )
 from .buddies import (
     add_dummy, kick_dummy, rename_dummy, personal_archive_wipe,
-    invite_actual, send_buddy_invite, view_invite, accept_invite, decline_invite, revoke_invite, revoke_onboarding_invite,
+    invite_actual, send_contact_invite, view_invite, accept_invite, decline_invite, revoke_invite, revoke_onboarding_invite,
     kick_actual,
     set_auto_accept,
     merge_dummy, view_merge_invite, accept_merge, decline_merge, revoke_merge_invite,

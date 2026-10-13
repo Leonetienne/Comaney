@@ -38,19 +38,19 @@ Combine grocery items into one expense unless they belong to different categorie
 
 The AI will follow these instructions every time.
 
-## Project and buddy assignment
+## Project and contact assignment
 
-If you have projects or buddies set up, the AI will suggest how each expense should be shared, based on your description and the project or buddy names. You can review and change the assignment in each card using the **Expense assignment** tabs:
+If you have projects or contacts set up, the AI will suggest how each expense should be shared, based on your description and the project or contact names. You can review and change the assignment in each card using the **Expense assignment** tabs:
 
 - **None**: personal expense, not shared with anyone.
-- **Direct Buddy**: a one-on-one split with a single buddy.
+- **Contact**: a one-on-one split with a single contact.
 - **Project**: assign to a shared project. For projects with multiple members, you can also set the upfront payer and split shares.
 
 The AI will never share an expense without a strong reason.
 
-### Sharing one-on-one with a buddy
+### Sharing one-on-one with a contact
 
-If you mention splitting something with one person, the AI can set up a direct buddy expense for you. For example, "Split the taxi with Kevin, 20 in total" shares it evenly with Kevin. You can also tell the AI who paid and how to split it:
+If you mention splitting something with one person, the AI can set up a contact expense for you. For example, "Split the taxi with Kevin, 20 in total" shares it evenly with Kevin. You can also tell the AI who paid and how to split it:
 
 - **Say who paid.** "Kevin paid for our lunch, 30, I owe him half" records Kevin as the one who paid upfront. If you don't say, the app assumes you paid.
 - **Set the split.** "Dinner was 40, but only 10 of it was Kevin's" gives Kevin a smaller share. Without a hint, it's split evenly.
@@ -69,7 +69,7 @@ You can always adjust who paid, who shares, and by how much before saving.
 
 Photos and descriptions you submit are sent to the AI service your administrator has set up, for processing. Do not upload documents containing sensitive personal data such as identity card numbers or passport scans.
 
-The data sent to it includes only your list of tags, categories, projects (names, descriptions, [AI preprompts](projects.md#ai-preprompt), and the names of their members), the names of your buddies, your custom instruction, your expense description and/or receipt picture.
+The data sent to it includes only your list of tags, categories, projects (names, descriptions, [AI preprompts](projects.md#ai-preprompt), and the names of their members), the names of your contacts, your custom instruction, your expense description and/or receipt picture.
 Comaney will never transmit your existing transactions.
 
 ## AI access

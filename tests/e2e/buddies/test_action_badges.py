@@ -1,5 +1,5 @@
 """
-Action badges in the sidebar (Manage Buddies, Buddy Expenses, Projects)
+Action badges in the sidebar (Contacts, Contact Expenses, Projects)
 and per-project approval bubble on the projects list page.
 
 Each test class:
@@ -16,7 +16,7 @@ from selenium.webdriver.common.by import By
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import (
     _shell, _login_as, _get_pk,
-    _create_buddy_link, _create_group, _add_group_member,
+    _create_contact_link, _create_group, _add_group_member,
     _create_group_expense, _create_personal_expense_with_buddy,
 )
 
@@ -50,14 +50,14 @@ def _project_card_badge(driver, project_name: str) -> int:
     return 0
 
 
-def _create_buddy_invite(inviter_email: str, invitee_email: str) -> None:
-    """Create a BuddyInvite from inviter to invitee (bypassing expiry)."""
+def _create_contact_invite(inviter_email: str, invitee_email: str) -> None:
+    """Create a ContactInvite from inviter to invitee (bypassing expiry)."""
     _shell(
-        f"from buddies.models import BuddyInvite; "
+        f"from buddies.models import ContactInvite; "
         f"from feusers.models import FeUser; "
         f"from django.utils import timezone; from datetime import timedelta; "
         f"inviter = FeUser.objects.get(email='{inviter_email}'); "
-        f"BuddyInvite.objects.create(inviter=inviter, invitee_email='{invitee_email}', "
+        f"ContactInvite.objects.create(inviter=inviter, invitee_email='{invitee_email}', "
         f"  expires_at=timezone.now() + timedelta(days=7))"
     )
 
@@ -74,7 +74,7 @@ def _create_project_invite(admin_email: str, invitee_email: str, project_id: int
 
 
 def _create_unapproved_expense(owner_email: str, participant_pk: int) -> str:
-    """Create a personal buddy expense that owner has not yet approved (buddy_approved=False)."""
+    """Create a contact expense that owner has not yet approved (buddy_approved=False)."""
     return _shell(
         f"from budget.models import Expense; "
         f"from buddies.models import BuddySpending; "
@@ -118,7 +118,7 @@ def ctx(driver, w):
     bob = setup_user(None, None, first_name="Bob", last_name="BadgeTest")
     alice_pk = int(_get_pk(alice["email"]))
     bob_pk = int(_get_pk(bob["email"]))
-    _create_buddy_link(alice["email"], bob["email"])
+    _create_contact_link(alice["email"], bob["email"])
     project_id = int(_create_group(alice["email"], "BadgeProject"))
     _add_group_member(project_id, bob["email"])
     extra_users: list = []
@@ -137,61 +137,61 @@ def ctx(driver, w):
 
 
 # ---------------------------------------------------------------------------
-# 1. "Manage Buddies" badge: incoming buddy invite
+# 1. "Contacts" badge: incoming buddy invite
 # ---------------------------------------------------------------------------
 
-class TestManageBuddiesBadge:
+class TestContactsBadge:
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, ctx):
         carol = setup_user(None, None, first_name="Carol", last_name="BadgeTest")
         ctx["extra_users"].append(carol)
-        _create_buddy_invite(carol["email"], ctx["alice"]["email"])
+        _create_contact_invite(carol["email"], ctx["alice"]["email"])
         ctx["carol"] = carol
 
-    def test_manage_buddies_badge_visible(self, driver, w, ctx):
+    def test_contacts_badge_visible(self, driver, w, ctx):
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
         time.sleep(1)
-        count = _sidebar_badge(driver, "Manage Buddies")
-        assert count >= 1, f"Expected Manage Buddies badge >= 1, got {count}"
+        count = _sidebar_badge(driver, "Contacts")
+        assert count >= 1, f"Expected Contacts badge >= 1, got {count}"
 
-    def test_no_manage_buddies_badge_for_inviter(self, driver, w, ctx):
+    def test_no_contacts_badge_for_inviter(self, driver, w, ctx):
         _login_as(driver, ctx["carol"])
         driver.get(_url("/budget/"))
         time.sleep(1)
-        count = _sidebar_badge(driver, "Manage Buddies")
+        count = _sidebar_badge(driver, "Contacts")
         assert count == 0, f"Inviter should not see a badge, got {count}"
 
 
 # ---------------------------------------------------------------------------
-# 2. "Buddy Expenses" badge: expense awaiting owner approval
+# 2. "Contact Expenses" badge: expense awaiting owner approval
 # ---------------------------------------------------------------------------
 
-class TestBuddyExpensesBadge:
+class TestContactExpensesBadge:
     @pytest.fixture(scope="class", autouse=True)
     def setup(self, ctx):
         # Bob logs an expense with Alice as upfront payer (buddy_approved=False)
         eid = _create_unapproved_expense(ctx["alice"]["email"], ctx["bob_pk"])
         ctx["unapproved_eid"] = int(eid)
 
-    def test_buddy_expenses_badge_visible(self, driver, w, ctx):
+    def test_contact_expenses_badge_visible(self, driver, w, ctx):
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
         time.sleep(1)
-        count = _sidebar_badge(driver, "Buddy Expenses")
-        assert count >= 1, f"Expected Buddy Expenses badge >= 1, got {count}"
+        count = _sidebar_badge(driver, "Contact Expenses")
+        assert count >= 1, f"Expected Contact Expenses badge >= 1, got {count}"
 
-    def test_no_buddy_expenses_badge_for_participant(self, driver, w, ctx):
+    def test_no_contact_expenses_badge_for_participant(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
         time.sleep(1)
         # Bob is participant, not the one who needs to approve
-        count = _sidebar_badge(driver, "Buddy Expenses")
+        count = _sidebar_badge(driver, "Contact Expenses")
         assert count == 0, f"Participant should not see a badge, got {count}"
 
 
 # ---------------------------------------------------------------------------
-# 3. "Buddy Expenses" badge: settlement awaiting creditor approval
+# 3. "Contact Expenses" badge: settlement awaiting creditor approval
 # ---------------------------------------------------------------------------
 
 class TestBuddyExpensesSettlementBadge:
@@ -201,12 +201,12 @@ class TestBuddyExpensesSettlementBadge:
         eid = _create_settlement_pending(ctx["alice"]["email"], ctx["bob_pk"])
         ctx["settlement_eid"] = int(eid)
 
-    def test_buddy_expenses_settlement_badge(self, driver, w, ctx):
+    def test_contact_expenses_settlement_badge(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
         time.sleep(1)
-        count = _sidebar_badge(driver, "Buddy Expenses")
-        assert count >= 1, f"Expected Buddy Expenses badge for creditor >= 1, got {count}"
+        count = _sidebar_badge(driver, "Contact Expenses")
+        assert count >= 1, f"Expected Contact Expenses badge for creditor >= 1, got {count}"
 
 
 # ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@ Participants in a buddy expense can set their own category/tags via the
 lite editor (edit-overlay). Owners use the full editor; the overlay editor
 is only for non-owner participants.
 
-[O1] Direct buddy: participant sees Edit (lite) button, owner does not.
+[O1] Contact: participant sees Edit (lite) button, owner does not.
 [O2] Group expense: participant sees Edit (lite) button, owner does not.
 [O3] Lite editor loads and saves category/tag selection.
 [O4] Clearing the overlay (empty submit) deletes it from DB.
@@ -19,7 +19,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _get_pk,
+    _shell, _login_as, _create_contact_link, _get_pk,
     _create_group, _add_group_member, _create_group_expense,
     _create_personal_expense_with_buddy,
 )
@@ -53,17 +53,17 @@ def _overlay_exists(expense_pk: int, email: str) -> bool:
 
 
 # ===========================================================================
-# O1: Direct buddy -- participant sees Edit lite, owner does not
+# O1: Contact -- participant sees Edit lite, owner does not
 # ===========================================================================
 
-class TestDirectBuddyOverlayButton:
+class TestContactOverlayButton:
     """[O1] Participant sees data-edit='lite' button; owner sees data-edit='full' only."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         owner = setup_user(driver, w, first_name="Olive", last_name="Owner")
         part = setup_user(None, None, first_name="Pete", last_name="Part")
-        _create_buddy_link(owner["email"], part["email"])
+        _create_contact_link(owner["email"], part["email"])
         part_pk = int(_get_pk(part["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner["email"], part_pk, title="Olive Direct Exp",
@@ -144,7 +144,7 @@ class TestOverlayEditorSave:
     def ctx(self, driver, w):
         owner = setup_user(driver, w, first_name="Sara", last_name="OvOwner")
         part = setup_user(None, None, first_name="Bob", last_name="OvPart")
-        _create_buddy_link(owner["email"], part["email"])
+        _create_contact_link(owner["email"], part["email"])
         part_pk = int(_get_pk(part["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner["email"], part_pk, title="Overlay Save Exp",
@@ -204,7 +204,7 @@ class TestOverlayClear:
     def ctx(self, driver, w):
         owner = setup_user(driver, w, first_name="Clara", last_name="ClrOwner")
         part = setup_user(None, None, first_name="Dan", last_name="ClrPart")
-        _create_buddy_link(owner["email"], part["email"])
+        _create_contact_link(owner["email"], part["email"])
         part_pk = int(_get_pk(part["email"]))
         exp_pk = int(_create_personal_expense_with_buddy(
             owner["email"], part_pk, title="Clear Overlay Exp",
@@ -253,7 +253,7 @@ class TestNoOverlayOnSettlements:
     def ctx(self, driver, w):
         debtor = setup_user(driver, w, first_name="Seth", last_name="Debtor")
         creditor = setup_user(None, None, first_name="Seth", last_name="Creditor")
-        _create_buddy_link(debtor["email"], creditor["email"])
+        _create_contact_link(debtor["email"], creditor["email"])
         creditor_pk = int(_get_pk(creditor["email"]))
         # Create a settlement expense (debtor owes creditor)
         exp_pk = _shell(
@@ -291,7 +291,7 @@ class TestOverlayShowsOriginalValues:
     def ctx(self, driver, w):
         owner = setup_user(driver, w, first_name="Orig", last_name="Owner")
         part  = setup_user(None, None, first_name="Orig", last_name="Part")
-        _create_buddy_link(owner["email"], part["email"])
+        _create_contact_link(owner["email"], part["email"])
         part_pk = int(_get_pk(part["email"]))
         cat_pk = int(_create_category(owner["email"], "OrigCatElectronics"))
         tag_pk = int(_create_tag(owner["email"], "OrigTagWork"))

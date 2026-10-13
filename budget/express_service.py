@@ -94,11 +94,11 @@ _SMART_CREATE_PROJECT_PARTICIPANTS = """Adjusting who shares a project expense:
 _SMART_CREATE_PROJECT_PAYER = """Recording who paid a project expense upfront:
     "project_payer" : OPTIONAL, only meaningful when project_uid is set. The idx (from that project's "members" list) of whoever paid the bill upfront. Omit it or use null when the current user paid, which is the default. Set it when the user says someone else covered the cost (e.g. "Volker paid for the campsite" -> {"project_payer": 1} if Volker is idx 1). The upfront payer is not one of the shared participants; the remaining members split the cost. Only use an idx that appears in that project's "members" list; never invent one."""
 
-_SMART_CREATE_DIRECT_BUDDY = """Sharing an expense one-on-one with a direct buddy (NOT a project):
-    "buddy_idx" : OPTIONAL. The idx (from the Direct buddies list below) of the one person this expense is shared with one-on-one, or null for a personal expense. Use this only for a two-person split with a single buddy; use project_uid instead when the cost belongs to a shared project. An item is EITHER a project expense (project_uid) OR a direct buddy expense (buddy_idx), NEVER both.
-    "buddy_paid" : OPTIONAL, only meaningful when buddy_idx is set. true if the buddy paid the bill upfront, false or omitted when the current user paid (the default) (e.g. "Volker paid, I owe him half" -> "buddy_paid": true).
-    "buddy_share_percent" : OPTIONAL, only meaningful when buddy_idx is set. The buddy's share of the total cost as a number 0-100 (regardless of who paid). Omit it for an equal 50/50 split. Example: "dinner was 40, but 30 of it was mine" -> the buddy's share is 25.
-If buddy_idx is set, the item's type MUST be "expense". Only use an idx that appears in the Direct buddies list below; never invent one."""
+_SMART_CREATE_CONTACT = """Sharing an expense one-on-one with a contact (NOT a project):
+    "contact_idx" : OPTIONAL. The idx (from the Contacts list below) of the one person this expense is shared with one-on-one, or null for a personal expense. Use this only for a two-person split with a single contact; use project_uid instead when the cost belongs to a shared project. An item is EITHER a project expense (project_uid) OR a contact expense (contact_idx), NEVER both.
+    "contact_paid" : OPTIONAL, only meaningful when contact_idx is set. true if the contact paid the bill upfront, false or omitted when the current user paid (the default) (e.g. "Volker paid, I owe him half" -> "contact_paid": true).
+    "contact_share_percent" : OPTIONAL, only meaningful when contact_idx is set. The contact's share of the total cost as a number 0-100 (regardless of who paid). Omit it for an equal 50/50 split. Example: "dinner was 40, but 30 of it was mine" -> the contact's share is 25.
+If contact_idx is set, the item's type MUST be "expense". Only use an idx that appears in the Contacts list below; never invent one."""
 
 # Ordered feature blocks. The base is mandatory; the rest can be dropped later
 # to switch a capability off. build_express_system_prompt() joins them in order.
@@ -107,7 +107,7 @@ _SMART_CREATE_BLOCKS = [
     _SMART_CREATE_PROJECTS,
     _SMART_CREATE_PROJECT_PARTICIPANTS,
     _SMART_CREATE_PROJECT_PAYER,
-    _SMART_CREATE_DIRECT_BUDDY,
+    _SMART_CREATE_CONTACT,
 ]
 
 
@@ -122,11 +122,11 @@ def _build_smart_create_system(catalog: str, blocks: list[str] | None = None) ->
     return "\n\n".join(blocks) + "\n\n" + catalog
 
 
-def _select_smart_create_blocks(projects_data: list, single_buddies: list) -> list[str]:
+def _select_smart_create_blocks(projects_data: list, contacts: list) -> list[str]:
     """Pick which feature blocks apply, based on what this feuser actually has.
 
-    Must be called with the same projects_data/single_buddies lists used to build
-    the catalog, so "has a project"/"has a buddy" matches what the AI can reference.
+    Must be called with the same projects_data/contacts lists used to build
+    the catalog, so "has a project"/"has a contact" matches what the AI can reference.
     """
     blocks = [_SMART_CREATE_BASE]
     if projects_data:
@@ -134,8 +134,8 @@ def _select_smart_create_blocks(projects_data: list, single_buddies: list) -> li
         if any(len(p["members"]) > 1 for p in projects_data):
             blocks.append(_SMART_CREATE_PROJECT_PARTICIPANTS)
             blocks.append(_SMART_CREATE_PROJECT_PAYER)
-    if single_buddies:
-        blocks.append(_SMART_CREATE_DIRECT_BUDDY)
+    if contacts:
+        blocks.append(_SMART_CREATE_CONTACT)
     return blocks
 
 
@@ -175,11 +175,11 @@ def _prepare_image(image_file) -> tuple[str, str]:
     return _base64.b64encode(buf.getvalue()).decode("utf-8"), "image/jpeg"
 
 
-def _build_catalog(feuser, projects_data: list, single_buddies: list) -> str:
+def _build_catalog(feuser, projects_data: list, contacts: list) -> str:
     """
-    projects_data / single_buddies must be the exact same lists passed to the
+    projects_data / contacts must be the exact same lists passed to the
     express-creation template (budget/views/expenses.py::_buddy_context), so the
-    "idx" the AI is given always lines up with the widget's own member/buddy
+    "idx" the AI is given always lines up with the widget's own member/contact
     arrays -- re-querying independently here could return a different row
     order and silently point the AI's idx at the wrong person.
     """
@@ -210,9 +210,9 @@ def _build_catalog(feuser, projects_data: list, single_buddies: list) -> str:
         }
         for p in projects_qs
     ]
-    # Direct (one-on-one) buddies, indexed the same way as project members, in
+    # Contacts (one-on-one), indexed the same way as project members, in
     # the same order the express-creation UI lists them.
-    direct_buddies = [{"idx": i, "name": b["name"]} for i, b in enumerate(single_buddies)]
+    contacts = [{"idx": i, "name": b["name"]} for i, b in enumerate(contacts)]
     parts = [
         f"Categories:\n{json.dumps(categories, ensure_ascii=False)}",
         f"Tags:\n{json.dumps(tags, ensure_ascii=False)}",
@@ -223,11 +223,11 @@ def _build_catalog(feuser, projects_data: list, single_buddies: list) -> str:
             f"\"members\" lists everyone who shares that project's costs; use each member's \"idx\" (never their name) in project_participants/project_payer:\n"
             f"{json.dumps(projects, ensure_ascii=False)}"
         )
-    if direct_buddies:
+    if contacts:
         parts.append(
-            f"Direct buddies (people you split one-on-one expenses with, NOT projects). "
-            f"Use a buddy's \"idx\" (never their name) as buddy_idx to share an expense with one of these:\n"
-            f"{json.dumps(direct_buddies, ensure_ascii=False)}"
+            f"Contacts (people you split one-on-one expenses with, NOT projects). "
+            f"Use a contact's \"idx\" (never their name) as contact_idx to share an expense with one of these:\n"
+            f"{json.dumps(contacts, ensure_ascii=False)}"
         )
     return "\n\n".join(parts)
 
@@ -351,21 +351,21 @@ def _sanitize_project_payer(raw_payer, project_uid, member_count: int) -> int | 
     return raw_payer
 
 
-def _sanitize_direct_buddy(raw_idx, raw_paid, raw_share, project_uid, buddy_count: int) -> tuple[int | None, bool, float | None]:
+def _sanitize_contact(raw_idx, raw_paid, raw_share, project_uid, contact_count: int) -> tuple[int | None, bool, float | None]:
     """
-    Sanitize the AI's one-on-one direct-buddy assignment. Returns
-    (buddy_idx, buddy_paid, buddy_share_percent). Direct buddy and project
+    Sanitize the AI's one-on-one contact assignment. Returns
+    (contact_idx, contact_paid, contact_share_percent). Contact and project
     assignment are mutually exclusive, so everything is dropped when a project
-    is set. buddy_idx is None for a personal expense (or an out-of-range idx);
-    buddy_paid is True only when the AI explicitly says the buddy paid (default
-    False, current user paid); buddy_share_percent is the buddy's share
-    (0..100) or None for an equal split. The express-creation UI looks buddy_idx
-    up in the user's direct-buddy list to preset the Direct Buddy section.
+    is set. contact_idx is None for a personal expense (or an out-of-range idx);
+    contact_paid is True only when the AI explicitly says the contact paid (default
+    False, current user paid); contact_share_percent is the contact's share
+    (0..100) or None for an equal split. The express-creation UI looks contact_idx
+    up in the user's contact list to preset the Contact section.
     """
     if project_uid is not None or not isinstance(raw_idx, int) or isinstance(raw_idx, bool):
         return None, False, None
-    if not (0 <= raw_idx < buddy_count):
-        _handle_invalid_ai_reference("buddy_idx", "direct_buddy", raw_idx)
+    if not (0 <= raw_idx < contact_count):
+        _handle_invalid_ai_reference("contact_idx", "contact", raw_idx)
         return None, False, None
     paid = raw_paid is True
     share = None
@@ -377,11 +377,11 @@ def _sanitize_direct_buddy(raw_idx, raw_paid, raw_share, project_uid, buddy_coun
     return raw_idx, paid, share
 
 
-def _validate_items(raw_items: list, feuser, projects_data: list, single_buddies: list) -> tuple[list[dict], list[str]]:
+def _validate_items(raw_items: list, feuser, projects_data: list, contacts: list) -> tuple[list[dict], list[str]]:
     """
     Validate and sanitise parsed items against the user's actual categories/tags/projects.
 
-    projects_data / single_buddies must be the exact same lists passed to
+    projects_data / contacts must be the exact same lists passed to
     _build_catalog() for this request, so idx range-checks agree with the idx
     the AI was actually given (see _build_catalog's docstring).
     """
@@ -398,7 +398,7 @@ def _validate_items(raw_items: list, feuser, projects_data: list, single_buddies
         .values_list("uid", flat=True)
     )
     member_counts_by_project = {p["id"]: len(p["members"]) for p in projects_data}
-    buddy_count = len(single_buddies)
+    contact_count = len(contacts)
     category_map = {
         c["uid"]: c["title"]
         for c in Category.objects.filter(owning_feuser=feuser).values("uid", "title")
@@ -434,14 +434,14 @@ def _validate_items(raw_items: list, feuser, projects_data: list, single_buddies
             project_uid = None
         member_count = member_counts_by_project.get(project_uid, 0) if project_uid is not None else 0
 
-        buddy_idx, buddy_paid, buddy_share = _sanitize_direct_buddy(
-            raw.get("buddy_idx"), raw.get("buddy_paid"),
-            raw.get("buddy_share_percent"), project_uid, buddy_count,
+        contact_idx, contact_paid, contact_share = _sanitize_contact(
+            raw.get("contact_idx"), raw.get("contact_paid"),
+            raw.get("contact_share_percent"), project_uid, contact_count,
         )
 
-        # Project and direct-buddy expenses only make sense as type=expense (see
+        # Project and contact expenses only make sense as type=expense (see
         # budget/expense_factory.py); the AI is told this, but force it rather than trust it.
-        if (project_uid is not None or buddy_idx is not None) and tx_type != "expense":
+        if (project_uid is not None or contact_idx is not None) and tx_type != "expense":
             tx_type = "expense"
 
         date_due = None
@@ -470,9 +470,9 @@ def _validate_items(raw_items: list, feuser, projects_data: list, single_buddies
             "project_payer": _sanitize_project_payer(
                 raw.get("project_payer"), project_uid, member_count
             ),
-            "buddy_idx":           buddy_idx,
-            "buddy_paid":          buddy_paid,
-            "buddy_share_percent": buddy_share,
+            "contact_idx":           contact_idx,
+            "contact_paid":          contact_paid,
+            "contact_share_percent": contact_share,
         })
 
     return items, errors

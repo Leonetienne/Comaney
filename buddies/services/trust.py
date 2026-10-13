@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from ..models import BuddyLink, BuddySpending, ProjectInvite
+from ..models import ContactLink, BuddySpending, ProjectInvite
 from .email import BuddyEmailService
 from .group import ProjectService
 from .lifecycle import BuddyLifecycleService
@@ -20,10 +20,10 @@ class AutoAcceptResult(NamedTuple):
 
 class BuddyTrustService:
     """
-    Buddy auto-accept trust: a feuser (the "truster") can opt to automatically
-    accept everything a specific direct buddy (the "actor") records for them,
-    instead of confirming it by hand. Stored per direction on BuddyLink, so it
-    only exists between direct buddies and vanishes with the link.
+    Contact auto-accept trust: a feuser (the "truster") can opt to automatically
+    accept everything a specific contact (the "actor") records for them,
+    instead of confirming it by hand. Stored per direction on ContactLink, so it
+    only exists between contacts and vanishes with the link.
 
     What gets accepted, for an expense whose `initiated_by_feuser` is the actor:
     - "Did you pay for this?": a pending non-settlement expense owned by the truster.
@@ -40,14 +40,14 @@ class BuddyTrustService:
         """True when `truster` auto-accepts entries recorded by `actor`."""
         if truster is None or actor is None or truster.pk == actor.pk:
             return False
-        link = BuddyLink.between(truster, actor)
+        link = ContactLink.between(truster, actor)
         return bool(link and link.auto_accepts(truster))
 
     @staticmethod
     def trusters_of(actor) -> set[int]:
-        """Pks of every direct buddy who auto-accepts entries recorded by `actor`."""
-        as_a = BuddyLink.objects.filter(user_a=actor, user_b_auto_accepts_from_a=True)
-        as_b = BuddyLink.objects.filter(user_b=actor, user_a_auto_accepts_from_b=True)
+        """Pks of every contact who auto-accepts entries recorded by `actor`."""
+        as_a = ContactLink.objects.filter(user_a=actor, user_b_auto_accepts_from_a=True)
+        as_b = ContactLink.objects.filter(user_b=actor, user_a_auto_accepts_from_b=True)
         return (
             set(as_a.values_list("user_b_id", flat=True))
             | set(as_b.values_list("user_a_id", flat=True))
@@ -183,11 +183,11 @@ class BuddyTrustService:
         (see pending_from) and joins every open project invitation from them
         (see pending_invites_from), silently: the truster just chose this
         themselves. Returns what was accepted retroactively.
-        Raises BuddyLink.DoesNotExist if the two are not direct buddies.
+        Raises ContactLink.DoesNotExist if the two are not contacts.
         """
-        link = BuddyLink.between(truster, other)
+        link = ContactLink.between(truster, other)
         if link is None:
-            raise BuddyLink.DoesNotExist
+            raise ContactLink.DoesNotExist
         link.set_auto_accepts(truster, enabled)
         if not enabled:
             return AutoAcceptResult(0, 0)

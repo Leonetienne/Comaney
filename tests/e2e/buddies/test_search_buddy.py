@@ -144,7 +144,7 @@ def setup_data(ctx):
 
 class TestBuddyBooleanFilter:
 
-    def test_buddy_true_returns_buddy_expenses(self, driver, w, ctx):
+    def test_buddy_true_returns_contact_expenses(self, driver, w, ctx):
         titles = _api_titles(ctx, "BuddySrch shared=true")
         assert "BuddySrch WithDummy" in titles
         assert "BuddySrch WithGroup" not in titles  # group expense has no BuddySpending row
@@ -155,7 +155,7 @@ class TestBuddyBooleanFilter:
         assert "BuddySrch WithDummy" in titles
         assert "BuddySrch Plain" not in titles
 
-    def test_buddy_false_returns_non_buddy_expenses(self, driver, w, ctx):
+    def test_buddy_false_returns_non_contact_expenses(self, driver, w, ctx):
         titles = _api_titles(ctx, "BuddySrch shared=false")
         assert "BuddySrch Plain" in titles
         assert "BuddySrch WithGroup" in titles  # no BuddySpending row

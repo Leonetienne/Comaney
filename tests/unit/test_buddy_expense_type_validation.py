@@ -40,10 +40,10 @@ class TestBuddyExpenseTypeValidation:
         assert is_buddy_expense_type_valid("savings_dep", project=object()) is False
         assert is_buddy_expense_type_valid("savings_wit", project=object()) is False
 
-    def test_direct_buddy_spendings_income_is_invalid(self):
+    def test_contact_spendings_income_is_invalid(self):
         assert is_buddy_expense_type_valid("income", buddy_spendings=[{"type": "feuser", "id": 1, "share_percent": 50}]) is False
 
-    def test_direct_buddy_spendings_expense_is_valid(self):
+    def test_contact_spendings_expense_is_valid(self):
         assert is_buddy_expense_type_valid("expense", buddy_spendings=[{"type": "feuser", "id": 1, "share_percent": 50}]) is True
 
     def test_empty_buddy_spendings_does_not_trigger_rule(self):

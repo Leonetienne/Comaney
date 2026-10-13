@@ -18,7 +18,7 @@ Tags: Security
 ### Shared expense authorisation
 `req~quality.security.buddy-authz~1`
 
-If a request names an upfront payer or participant who is neither the feuser's direct buddy nor offline buddy, nor a member of the selected project, then the system shall reject it.
+If a request names an upfront payer or participant who is neither the feuser's contact nor offline contact, nor a member of the selected project, then the system shall reject it.
 
 Covers:
 - `feat~quality~1`

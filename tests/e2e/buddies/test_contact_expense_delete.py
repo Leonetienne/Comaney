@@ -1,6 +1,6 @@
 """
-Direct buddy expense delete: the owning feuser can delete their own direct
-(non-settlement) buddy expense from the buddy summary page.
+Contact expense delete: the owning feuser can delete their own direct
+(non-settlement) contact expense from the contact summary page.
 
 Covers:
 - Delete button is visible for the owner on /buddies/summary/
@@ -17,7 +17,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import (
-    _shell, _login_as, _create_buddy_link, _get_pk,
+    _shell, _login_as, _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy,
 )
 
@@ -34,15 +34,15 @@ def _expense_exists(exp_pk: str) -> bool:
 # Owner sees and can use the delete button
 # ---------------------------------------------------------------------------
 
-class TestOwnerDeletesDirectBuddyExpense:
-    """The owning feuser can delete their own direct buddy expense from the
-    buddy summary page."""
+class TestOwnerDeletesContactExpense:
+    """The owning feuser can delete their own contact expense from the
+    contact summary page."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         owner = setup_user(driver, w, first_name="DirDel", last_name="Owner")
         partner = setup_user(None, None, first_name="DirDel", last_name="Partner")
-        _create_buddy_link(owner["email"], partner["email"])
+        _create_contact_link(owner["email"], partner["email"])
         partner_pk = int(_get_pk(partner["email"]))
         exp_pk = _create_personal_expense_with_buddy(
             owner_email=owner["email"],
@@ -61,14 +61,14 @@ class TestOwnerDeletesDirectBuddyExpense:
         driver.get(_url("/buddies/summary/"))
         time.sleep(1)
         assert "Direct Deletable Expense" in driver.page_source, \
-            "Direct buddy expense must appear on the summary page for the owner"
+            "Contact expense must appear on the summary page for the owner"
 
     def test_delete_button_visible_for_owner(self, driver, w, ctx):
         delete_forms = driver.find_elements(
             By.CSS_SELECTOR, "form[action*='/delete/']"
         )
         assert delete_forms, \
-            "Owner must see a delete button for their own direct buddy expense"
+            "Owner must see a delete button for their own contact expense"
 
     def test_owner_deletes_expense(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-delete-exp-']").click()
@@ -91,7 +91,7 @@ class TestOwnerDeletesDirectBuddyExpense:
 # Non-owner (participant) has no delete button
 # ---------------------------------------------------------------------------
 
-class TestParticipantCannotDeleteDirectBuddyExpense:
+class TestParticipantCannotDeleteContactExpense:
     """The participant (non-owner) must not see a delete button and a direct
     POST must not delete the expense."""
 
@@ -99,7 +99,7 @@ class TestParticipantCannotDeleteDirectBuddyExpense:
     def ctx(self, driver, w):
         owner = setup_user(None, None, first_name="NDirO", last_name="Owner")
         partner = setup_user(driver, w, first_name="NDirP", last_name="Partner")
-        _create_buddy_link(owner["email"], partner["email"])
+        _create_contact_link(owner["email"], partner["email"])
         partner_pk = int(_get_pk(partner["email"]))
         exp_pk = _create_personal_expense_with_buddy(
             owner_email=owner["email"],

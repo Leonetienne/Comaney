@@ -121,7 +121,7 @@ def _create_feuser_paid_expense(owner_email: str, dummy_pk: int, value: str = "6
 
 class TestDirectSettlementFromDummy:
     """
-    Personal offline buddy owes feuser: 'who pays' dropdown appears with the dummy
+    Personal offline contact owes feuser: 'who pays' dropdown appears with the dummy
     listed, and recording a dummy-pays-feuser settlement is auto-approved and clears
     the debt.
     """
@@ -141,21 +141,21 @@ class TestDirectSettlementFromDummy:
         time.sleep(1)
         row = driver.find_element("id", "direct-settle-debtor-row")
         assert row.is_displayed(), \
-            "Who's paying row must be visible when user has personal offline buddies"
+            "Who's paying row must be visible when user has personal offline contacts"
 
-    def test_who_pays_contains_offline_buddy(self, driver, w, ctx):
+    def test_who_pays_contains_offline_contact(self, driver, w, ctx):
         assert "Owing Offline" in driver.page_source, \
             "Offline buddy must appear in the page (in JSON or dropdown)"
 
     def test_selecting_dummy_as_debtor_locks_pay_to_you(self, driver, w, ctx):
         from selenium.webdriver.support.ui import Select
         debtor_sel = Select(driver.find_element("id", "direct-settle-debtor-select"))
-        debtor_sel.select_by_visible_text("Owing Offline (offline buddy)")
+        debtor_sel.select_by_visible_text("Owing Offline (offline contact)")
         time.sleep(0.3)
         creditor_sel = Select(driver.find_element("id", "direct-settle-creditor"))
         options = [o.text for o in creditor_sel.options]
         assert options == ["You"], \
-            f"When offline buddy is debtor, Pay to must only offer 'You', got {options}"
+            f"When offline contact is debtor, Pay to must only offer 'You', got {options}"
 
     def test_amount_prefilled_with_debt_owed_to_feuser(self, driver, w, ctx):
         inp = driver.find_element("id", "direct-settle-amount")
@@ -167,7 +167,7 @@ class TestDirectSettlementFromDummy:
         time.sleep(0.5)
         msg = driver.find_element("id", "cdialog-msg").text
         assert "Owing Offline" in msg, \
-            "Dialog must name the offline buddy as the payer"
+            "Dialog must name the offline contact as the payer"
         assert "automatically" in msg.lower(), \
             "Dialog must say the settlement will be approved automatically"
         driver.find_element("id", "cdialog-cancel").click()

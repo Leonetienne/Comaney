@@ -27,7 +27,7 @@ def _make_file(path_expr: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# DummyUser (offline buddy) picture - explicit delete
+# DummyUser (offline contact) picture - explicit delete
 # ---------------------------------------------------------------------------
 
 class TestDummyPictureCleanupOnDelete:

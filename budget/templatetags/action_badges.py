@@ -97,16 +97,16 @@ def partnership_invite_state(viewer_feuser, target_feuser):
 
 
 @register.simple_tag
-def buddy_invite_state(viewer_feuser, target_feuser):
+def contact_invite_state(viewer_feuser, target_feuser):
     """
-    Returns: 'buddy' | 'pending' | 'invite'
-    - buddy:   viewer and target are already direct buddies
+    Returns: 'contact' | 'pending' | 'invite'
+    - contact: viewer and target are already contacts
     - pending: viewer already has an outgoing invite to target
-    - invite:  viewer can invite target as a direct buddy
+    - invite:  viewer can invite target as a contact
     """
     from buddies.services.query import BuddyQueryService
-    if BuddyQueryService.are_buddies(viewer_feuser, target_feuser):
-        return "buddy"
+    if BuddyQueryService.are_contacts(viewer_feuser, target_feuser):
+        return "contact"
     if BuddyQueryService.has_pending_invite_to(viewer_feuser, target_feuser):
         return "pending"
     return "invite"
@@ -129,12 +129,12 @@ def _count_partnership_actions(feuser) -> int:
     return pending_invites + pending_onboarding
 
 
-@register_badge("buddies")
-def _count_buddy_actions(feuser) -> int:
+@register_badge("contacts")
+def _count_contact_actions(feuser) -> int:
     from django.utils import timezone
-    from buddies.models import BuddyInvite, DummyMergeInvite
+    from buddies.models import ContactInvite, DummyMergeInvite
     now = timezone.now()
-    incoming = BuddyInvite.objects.filter(
+    incoming = ContactInvite.objects.filter(
         invitee_email=feuser.email,
         expires_at__gt=now,
     ).count()
@@ -148,8 +148,8 @@ def _count_buddy_actions(feuser) -> int:
     return incoming + merge_in
 
 
-@register_badge("buddy_expenses")
-def _count_buddy_expense_actions(feuser) -> int:
+@register_badge("contact_expenses")
+def _count_contact_expense_actions(feuser) -> int:
     from budget.models import Expense
     from buddies.models import Project
     count = 0

@@ -228,10 +228,10 @@
           minimum number of payments needed to clear it all.
         </p>
         <div class="lp-split-modes">
-          <button class="lp-split-mode lp-split-mode--active" data-target="buddy">
+          <button class="lp-split-mode lp-split-mode--active" data-target="contact">
             <div class="lp-split-mode-icon">👫</div>
             <div class="lp-split-mode-text">
-              <strong>Direct buddies</strong>
+              <strong>Contacts</strong>
               <span>One-on-one with a friend or partner</span>
             </div>
           </button>
@@ -245,10 +245,10 @@
         </div>
       </div>
       <div class="lp-split-visual">
-        <div class="lp-split-img-wrap lp-split-img-wrap--active" id="lp-split-buddy">
+        <div class="lp-split-img-wrap lp-split-img-wrap--active" id="lp-split-contact">
           <img
-            src="{% static 'images/landingpage/direct-buddies.png' %}"
-            alt="The direct buddy view showing shared expenses and who owes what"
+            src="{% static 'images/landingpage/contacts.png' %}"
+            alt="The contacts view showing shared expenses and who owes what"
             class="lp-split-img"
           >
         </div>
@@ -374,7 +374,7 @@
         <details class="lp-faq-item">
           <summary class="lp-faq-q">How does splitting costs work?</summary>
           <p class="lp-faq-a">
-            You can split costs one-on-one using Buddies, or with a whole group using Projects. When you log an expense you set
+            You can split costs one-on-one using Contacts, or with a whole group using Projects. When you log an expense you set
             who paid upfront, who participated, and how the cost is divided (equal shares or custom percentages). Comaney works
             out the simplest way to settle everything. If three people owe each other in different directions, it calculates
             the minimum number of payments to clear it all. Connected users get a notification and must confirm receipt before the
@@ -483,7 +483,7 @@
 // ── Split section tab switcher ──────────────────────────────────
 (function () {
   var tabs   = document.querySelectorAll('.lp-split-mode');
-  var panels = { buddy: document.getElementById('lp-split-buddy'), project: document.getElementById('lp-split-project') };
+  var panels = { contact: document.getElementById('lp-split-contact'), project: document.getElementById('lp-split-project') };
   if (!tabs.length) return;
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
