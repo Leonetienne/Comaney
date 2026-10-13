@@ -18,7 +18,8 @@
 - New feature area: add a `feat~...~1` item to `specs/features.md` (with `Needs: req`) plus its requirements file.
 - Changed meaning of a requirement: bump its revision (`~1` -> `~2`). Removed behaviour: delete the item. Never reuse an ID for something else.
 - Every `req` item covers exactly one `feat` item via `Covers:`.
-- Never create loose `*-spec.md` or plan files for features: design decisions go into `specs/` directly.
+- `specs/` is a long-term archive of how the app is supposed to behave, not a plan for implementing a feature. Never write requirements for unbuilt behaviour there; they go in together with the code.
+- Plans for unbuilt features live in an untracked `<feature>-plan.md` in the repo root (e.g. `mcp-plan.md`). Once built, their decisions move into `specs/` and the plan file is deleted. Never create loose `*-spec.md` files.
 
 ## Stack
 - Python 3.12, Django, Gunicorn, WhiteNoise, mysqlclient, MariaDB
