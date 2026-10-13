@@ -42,7 +42,7 @@ class TestContactInviteAccept:
         assert ctx["b"]["email"] in driver.page_source
 
     def test_invite_email_arrives(self, driver, w, ctx):
-        body = fetch_email(ctx["b"]["email"], "invited you to be spending buddies")
+        body = fetch_email(ctx["b"]["email"], "invited you to connect as contacts")
         ctx["invite_link"] = extract_link(body)
         assert "/buddies/invite/" in ctx["invite_link"]
 
@@ -56,7 +56,7 @@ class TestContactInviteAccept:
     def test_b_accepts_via_invite_link(self, driver, w, ctx):
         driver.get(ctx["invite_link"])
         time.sleep(1)
-        assert "invited you to be spending buddies" in driver.page_source
+        assert "invited you to connect as contacts" in driver.page_source
         driver.find_element(By.ID, "btn-accept-invite").click()
         time.sleep(1)
         assert "/buddies/" in driver.current_url

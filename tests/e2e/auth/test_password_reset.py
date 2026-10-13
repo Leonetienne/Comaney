@@ -13,7 +13,7 @@ from selenium.webdriver.common.by import By
 from helpers import (
     _url, fill, click, mailpit_seen_ids,
     fetch_email, extract_link, setup_user, cleanup_user,
-    PASSWORD,
+    PASSWORD, reset_browser,
 )
 
 NEW_PASSWORD = "R41n3RWlnKl3R"
@@ -23,8 +23,7 @@ NEW_PASSWORD = "R41n3RWlnKl3R"
 def ctx(driver, w):
     c = setup_user(driver, w)
     # Password-reset tests start from an unauthenticated state.
-    driver.delete_all_cookies()
-    driver.execute_script("sessionStorage.clear(); localStorage.clear();")
+    reset_browser(driver)
     yield c
     cleanup_user(c["email"])
 

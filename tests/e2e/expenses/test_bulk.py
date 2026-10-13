@@ -15,7 +15,7 @@ import subprocess
 from helpers import (
     _url, click, wait_text, server_today,
     api_get, api_post, api_patch, api_delete, CLICK_PACE,
-    setup_user, cleanup_user, DOCKER_WEB,
+    setup_user, cleanup_user, reset_browser, DOCKER_WEB,
 )
 
 
@@ -29,8 +29,7 @@ def _shell(code: str) -> str:
 
 
 def _login_as(driver, ctx_user: dict) -> None:
-    driver.delete_all_cookies()
-    driver.execute_script("sessionStorage.clear(); localStorage.clear();")
+    reset_browser(driver)
     driver.get(_url("/login/"))
     time.sleep(1)
     email_el = driver.find_element(By.ID, "id_email")

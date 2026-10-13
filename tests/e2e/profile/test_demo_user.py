@@ -364,7 +364,7 @@ class TestDemoUserServerEnforcement:
             "csrfmiddlewaretoken": csrf,
             "email": target_email,
         }, allow_redirects=True, timeout=10)
-        assert "Demo accounts cannot invite buddies" in r.text or r.status_code in (403, 400)
+        assert "Demo accounts cannot invite contacts" in r.text or r.status_code in (403, 400)
 
     def test_cannot_send_personal_merge_invite(self, demo_ctx):
         """Demo user cannot use 'merge into...' on their personal offline contact."""

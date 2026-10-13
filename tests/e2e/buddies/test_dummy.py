@@ -27,7 +27,7 @@ class TestDummyCRUD:
     def test_onboarding_hint_no_buddies(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
         time.sleep(1)
-        assert "How Buddies work:" in driver.page_source
+        assert "How contacts work:" in driver.page_source
 
     def test_add_dummy(self, driver, w, ctx):
         inp = driver.find_element(By.CSS_SELECTOR, "input[name='display_name']")
@@ -38,7 +38,7 @@ class TestDummyCRUD:
         assert "Offline Alice" in driver.page_source
 
     def test_onboarding_hint_hidden_with_dummy(self, driver, w, ctx):
-        assert "How Buddies work:" not in driver.page_source
+        assert "How contacts work:" not in driver.page_source
 
     def test_dummy_appears_in_expense_form(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
@@ -61,7 +61,7 @@ class TestDummyCRUD:
         assert "/buddies/" in driver.current_url
 
     def test_onboarding_hint_shown_again_after_kick(self, driver, w, ctx):
-        assert "How Buddies work:" in driver.page_source
+        assert "How contacts work:" in driver.page_source
 
 
 # ---------------------------------------------------------------------------

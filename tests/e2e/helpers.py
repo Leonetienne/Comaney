@@ -140,6 +140,18 @@ def _url(path: str) -> str:
     return f"{BASE_URL}{path}"
 
 
+def reset_browser(driver) -> None:
+    """Drop cookies and web storage of the app origin.
+
+    Storage is only reachable from an app page: a chrome-error page left by a
+    server hiccup, or the initial blank page, denies access to it.
+    """
+    driver.delete_all_cookies()
+    if not driver.current_url.startswith(BASE_URL):
+        driver.get(_url("/login/"))
+    driver.execute_script("sessionStorage.clear(); localStorage.clear();")
+
+
 # ── Browser helpers ───────────────────────────────────────────────────────────
 
 def fill(w, by, locator, value):
@@ -339,8 +351,7 @@ def server_today() -> str:
 
 def register_user(driver, w) -> dict:
     """Register a fresh user via the UI. Returns ctx dict with email and password."""
-    driver.delete_all_cookies()
-    driver.execute_script("sessionStorage.clear(); localStorage.clear();")
+    reset_browser(driver)
     email = f"sel.{uuid.uuid4().hex[:8]}@example.com"
     driver.get(_url("/register/"))
     fill(w, By.ID, "id_first_name", "Selenium")
@@ -416,8 +427,7 @@ def setup_user(driver, w, first_name: str = "", last_name: str = "",
 
     ctx = {"email": email, "password": PASSWORD, "api_key": key_result.stdout.strip()}
     if driver is not None and w is not None:
-        driver.delete_all_cookies()
-        driver.execute_script("sessionStorage.clear(); localStorage.clear();")
+        reset_browser(driver)
         browser_login(driver, w, email, PASSWORD)
     return ctx
 

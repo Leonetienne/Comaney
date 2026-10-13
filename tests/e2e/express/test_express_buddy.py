@@ -18,7 +18,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import (
     _url, ai_unavailable, api_get, api_delete, setup_user, cleanup_user,
-    session_cookies, fetch_email, mailpit_seen_ids, set_ai_user_config,
+    session_cookies, fetch_email, mailpit_seen_ids, set_ai_user_config, reset_browser,
 )
 
 DOCKER_WEB = "comaney-web-1"
@@ -124,8 +124,7 @@ class TestExpressBuddyPageConfig:
         _set_fake_api_key(c2["email"])
         try:
             # Log in as user without buddies
-            driver.delete_all_cookies()
-            driver.execute_script("sessionStorage.clear(); localStorage.clear();")
+            reset_browser(driver)
             driver.get(_url("/login/"))
             time.sleep(1)
             email_el = driver.find_element(By.ID, "id_email")
@@ -141,8 +140,7 @@ class TestExpressBuddyPageConfig:
         finally:
             cleanup_user(c2["email"])
             # Log back in as original user
-            driver.delete_all_cookies()
-            driver.execute_script("sessionStorage.clear(); localStorage.clear();")
+            reset_browser(driver)
             driver.get(_url("/login/"))
             time.sleep(1)
             email_el = driver.find_element(By.ID, "id_email")

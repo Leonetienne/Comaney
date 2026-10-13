@@ -9,7 +9,7 @@ import pytest
 import requests
 from selenium.webdriver.common.by import By
 
-from helpers import _url, fill, click, wait_text, cleanup_user, DOCKER_WEB, PASSWORD
+from helpers import _url, fill, click, wait_text, cleanup_user, reset_browser, DOCKER_WEB, PASSWORD
 from bhelpers import _shell
 
 
@@ -30,8 +30,7 @@ def demo_ctx(driver, w):
     )
     assert result.returncode == 0, f"create_user --demo failed:\n{result.stderr}"
 
-    driver.delete_all_cookies()
-    driver.execute_script("sessionStorage.clear(); localStorage.clear();")
+    reset_browser(driver)
     driver.get(_url("/login/"))
     fill(w, By.ID, "id_email", email)
     fill(w, By.ID, "id_password", PASSWORD)

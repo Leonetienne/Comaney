@@ -378,9 +378,8 @@ def _ensure_tag(ctx, title) -> str:
 
 
 def _relogin(driver, w, ctx):
-    from helpers import browser_login
-    driver.delete_all_cookies()
-    driver.execute_script("sessionStorage.clear(); localStorage.clear();")
+    from helpers import browser_login, reset_browser
+    reset_browser(driver)
     browser_login(driver, w, ctx["email"], ctx["password"])
 
 
@@ -428,7 +427,13 @@ class TestUnclassifiedExpensesAI:
             not driver.find_element(By.XPATH, "//button[text()='Save all']").is_displayed()
 
         driver.find_element(By.XPATH, "//button[contains(text(),'Let AI resolve all')]").click()
-        time.sleep(25)
+        # resolves every open row of the account, one AI call each; Save all stays disabled meanwhile
+        panel = driver.find_element(By.CSS_SELECTOR, ".unclassified-progress-panel")
+        deadline = time.time() + 300
+        time.sleep(5)
+        while panel.is_displayed() and time.time() < deadline:
+            time.sleep(2)
+        assert not panel.is_displayed(), "Let AI resolve all did not finish"
 
         save_all = driver.find_element(By.XPATH, "//button[text()='Save all']")
         assert save_all.is_displayed()

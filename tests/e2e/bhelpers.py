@@ -8,7 +8,7 @@ import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
-from helpers import _url, DOCKER_WEB, PASSWORD
+from helpers import _url, DOCKER_WEB, PASSWORD, reset_browser
 
 
 def _shell(code: str) -> str:
@@ -23,8 +23,7 @@ def _shell(code: str) -> str:
 
 def _login_as(driver, ctx_user: dict) -> None:
     """Switch the browser session to ctx_user (clears cookies first)."""
-    driver.delete_all_cookies()
-    driver.execute_script("sessionStorage.clear(); localStorage.clear();")
+    reset_browser(driver)
     driver.get(_url("/login/"))
     time.sleep(1)
     email_el = driver.find_element(By.ID, "id_email")

@@ -1,12 +1,12 @@
 """
-Project Settings "Add members": contact contact hints
+Project Settings "Add members": contact hints
 (build/js/project_member_add.js).
 
 - Invite by email: typing part of a contact's first name, last name or
   email (any case) suggests them; clicking a suggestion fills their email.
-  Existing members are never suggested. A green check + "This buddy is in your
-  contacts" shows for a contact's email, a gray "This buddy is not in your
-  contact list" for any other email address.
+  Existing members are never suggested. A green check + "Already in your contacts"
+  shows for a contact's email, a gray "Not in your contacts" for any other
+  email address.
 - Add offline member: an email-like value, or a name matching a contact
   (same matching rule), shows a warning; submitting anyway asks for
   confirmation first. Only one warning/dialog ever shows, email first.
@@ -127,7 +127,7 @@ class TestInviteHint:
         time.sleep(1)
         ctx["top_empty"] = _section_top(driver)
         _type(driver, "project-invite-email", ctx["leon"]["email"].upper())
-        assert _hint(driver, "project-invite-hint") == "This buddy is in your contacts"
+        assert _hint(driver, "project-invite-hint") == "Already in your contacts"
         assert "input-hint--success" in driver.find_element(By.ID, "project-invite-hint").get_attribute("class")
         assert driver.find_element(By.ID, "project-invite-check").is_displayed()
 
@@ -136,7 +136,7 @@ class TestInviteHint:
 
     def test_unknown_email_shows_gray_hint(self, driver, w, ctx):
         _type(driver, "project-invite-email", "stranger@example.com")
-        assert _hint(driver, "project-invite-hint") == "This buddy is not in your contact list"
+        assert _hint(driver, "project-invite-hint") == "Not in your contacts"
         cls = driver.find_element(By.ID, "project-invite-hint").get_attribute("class")
         assert "input-hint--success" not in cls
         assert not driver.find_element(By.ID, "project-invite-check").is_displayed()
