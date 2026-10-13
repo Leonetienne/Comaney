@@ -6,7 +6,7 @@
 {% block extra_head %}
 <script>
 window.EXPENSE_CONFIG = {
-    apiUrl:        "/api/v1/expenses/",
+    apiUrl:        "/api/v2/expenses/",
     initialDateFrom: "{{ initial_date_from }}",
     initialDateTo:   "{{ initial_date_to }}",
     currency:      "{{ current_feuser.currency|escapejs }}",

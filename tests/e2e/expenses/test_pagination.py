@@ -105,7 +105,7 @@ class TestExpenseListPagination:
     def ctx(self, driver, w):
         c = setup_user(driver, w)
         for i in range(N_ITEMS):
-            r = api_post("/api/v1/expenses/", c, json={
+            r = api_post("/api/v2/expenses/", c, json={
                 "title": f"{self.PREFIX} {i:02d}",
                 "type": "expense",
                 "value": "10.00",
@@ -192,7 +192,7 @@ class TestExpenseListPagination:
         """A user with fewer items than PAGE_SIZE sees no pagination nav."""
         c2 = setup_user(None, None)
         try:
-            r = api_post("/api/v1/expenses/", c2, json={
+            r = api_post("/api/v2/expenses/", c2, json={
                 "title": "Solo", "type": "expense",
                 "value": "5.00", "date_due": DATE, "settled": False,
             })
@@ -353,7 +353,7 @@ class TestExpenseListScrollTo:
     def ctx(self, driver, w):
         c = setup_user(driver, w)
         for i in range(N_ITEMS):
-            r = api_post("/api/v1/expenses/", c, json={
+            r = api_post("/api/v2/expenses/", c, json={
                 "title": f"{self.PREFIX} {i:02d}",
                 "type": "expense",
                 "value": "10.00",

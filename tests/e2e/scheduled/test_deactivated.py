@@ -21,7 +21,7 @@ from helpers import (
 
 
 def _expenses_by_title_year(ctx, title):
-    resp = api_get("/api/v1/expenses/", ctx, params={"year": 2026, "view": "year"})
+    resp = api_get("/api/v2/expenses/", ctx, params={"year": 2026, "view": "year"})
     assert resp.status_code == 200
     return [e for e in resp.json()["expenses"] if e["title"] == title]
 
@@ -68,32 +68,32 @@ class TestDeactivatedScheduler:
     def test_cleanup_deactivated_scheduler(self, driver, w, ctx):
         uid = ctx.pop("deact_sched_uid", None)
         if uid:
-            api_delete(f"/api/v1/scheduled/{uid}/", ctx)
+            api_delete(f"/api/v2/scheduled/{uid}/", ctx)
 
 
 class TestEndOnScheduler:
 
     def test_end_on_stops_generation(self, driver, w, ctx):
         """Scheduler with end_on=2026-03-31 must not generate for April 2026."""
-        sid = api_post("/api/v1/scheduled/", ctx, json={
+        sid = api_post("/api/v2/scheduled/", ctx, json={
             "title": "EndOn Test", "type": "expense", "value": "10.00",
             "repeat_every_factor": 1, "repeat_every_unit": "months",
             "repeat_base_date": "2026-01-01", "end_on": "2026-03-31",
         }).json()["id"]
 
         run_cmd("generate_scheduled_expenses", "--year", "2026")
-        resp = api_get("/api/v1/expenses/", ctx, params={"year": 2026, "month": 4})
+        resp = api_get("/api/v2/expenses/", ctx, params={"year": 2026, "month": 4})
         april = [e for e in resp.json()["expenses"] if e["title"] == "EndOn Test"]
         assert len(april) == 0, f"No entries expected for April, got: {april}"
 
         # March must have an entry
-        resp_mar = api_get("/api/v1/expenses/", ctx, params={"year": 2026, "month": 3})
+        resp_mar = api_get("/api/v2/expenses/", ctx, params={"year": 2026, "month": 3})
         march = [e for e in resp_mar.json()["expenses"] if e["title"] == "EndOn Test"]
         assert len(march) == 1
 
         for e in _expenses_by_title_year(ctx, "EndOn Test"):
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
 
 class TestDeactivatedExpense:
@@ -118,40 +118,40 @@ class TestDeactivatedExpense:
         assert "Deact Expense Test" in src, "Expense not found in list"
         assert "exp-card--deactivated" in src, "Deactivated style class missing"
         assert "Deactivated" in src, "Deactivated badge missing"
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "Deact Expense Test", "view": "year"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "Deact Expense Test", "view": "year"})
         for e in resp.json()["expenses"]:
             if e["title"] == "Deact Expense Test":
-                api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+                api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
                 break
 
     def test_excluded_from_dashboard(self, driver, w, ctx):
         """A deactivated expense must NOT appear in dashboard totals."""
         today = server_today()
         # Active settled expense
-        active = api_post("/api/v1/expenses/", ctx, json={
+        active = api_post("/api/v2/expenses/", ctx, json={
             "title": "Deact Active", "type": "expense", "value": "100.00",
             "date_due": today, "settled": True,
         })
         assert active.status_code == 201
         active_id = active.json()["id"]
 
-        dash_before = api_get("/api/v1/dashboard/", ctx).json()
+        dash_before = api_get("/api/v2/dashboard/", ctx).json()
         paid_before = float(dash_before["expenses_paid"])
 
         # Create a deactivated settled expense with same value
-        deact = api_post("/api/v1/expenses/", ctx, json={
+        deact = api_post("/api/v2/expenses/", ctx, json={
             "title": "Deact Hidden", "type": "expense", "value": "999.00",
             "date_due": today, "settled": True, "deactivated": True,
         })
         assert deact.status_code == 201
         deact_id = deact.json()["id"]
 
-        dash_after = api_get("/api/v1/dashboard/", ctx).json()
+        dash_after = api_get("/api/v2/dashboard/", ctx).json()
         paid_after = float(dash_after["expenses_paid"])
 
         # Dashboard total must not have increased by 999
         assert paid_after < paid_before + 500, (
             f"Deactivated expense must not affect dashboard: before={paid_before} after={paid_after}")
 
-        api_delete(f"/api/v1/expenses/{active_id}/", ctx)
-        api_delete(f"/api/v1/expenses/{deact_id}/", ctx)
+        api_delete(f"/api/v2/expenses/{active_id}/", ctx)
+        api_delete(f"/api/v2/expenses/{deact_id}/", ctx)

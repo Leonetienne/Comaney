@@ -31,16 +31,44 @@ The core budgeting functionality. Contains all models (`Expense`, `ScheduledExpe
 
 ### `api/`
 
-A thin REST API layer over the `budget` models. Authenticated via Bearer token rather than session cookies. Contains serializers for converting model instances to JSON, and an `@_require_auth` decorator that validates the token and injects the `FeUser` into the view.
+The REST API (v2) and the source of every MCP tool. Each action is defined once as an `Operation` in a registry (`api/registry.py`): name, permission concern (Expenses, Projects, ...), read or write, HTTP method and path, description, JSON-schema parameters and a handler. The handlers live in `api/operations/`, one module per concern. `api/rest.py` turns the registry into URL routes (Bearer API key or browser session with CSRF), and the MCP server turns the same registry into tools, so both always share validation, permissions and side effects.
 
-No business logic lives here that isn't already in the `budget` layer.
+Handlers contain no business logic of their own: they validate input (reusing the web forms where there are any) and call the same service functions the web views call. Two-step destructive operations (bulk delete, Catalog Partnership onboarding) return a signed, caller-bound confirmation token from their preview (`api/operations/confirm.py`).
+
+After adding or changing an operation, list it in the user manual's API page and regenerate the Postman collection:
+
+```bash
+docker exec comaney-web-1 python manage.py export_postman_collection
+```
+
+### `mcp_server/`
+
+The Model Context Protocol server at `/mcp` and the agent keys behind it. `AgentKey` stores a label, a visible prefix, the SHA-256 hash of the key and a read/write flag per concern. `mcp_server/protocol.py` (JSON-RPC, Django-free) answers `initialize`, `tools/*` and `resources/*` statelessly; `mcp_server/endpoint.py` authenticates the key, lists only the operations it allows and adds two tools that every key has, `docs_search` and `docs_read`, over the user manual (`mcp_server/docs.py`). The manual pages are also MCP resources.
+
+## Shared services
+
+Every write the web views, the REST API and the MCP server perform goes through one service function, so all three apply the same rules, notifications and side effects:
+
+| Area | Module |
+|---|---|
+| Expenses (create, edit with approval reset, delete, clone, bulk, overlays) | `budget/expense_service.py` |
+| Recurring expenses | `budget/scheduled_service.py` |
+| Categories and tags (with Catalog Partnership sync) | `budget/catalog_service.py` |
+| Dashboards and cards | `budget/dashboard_service.py` |
+| Account settings | `feusers/settings_service.py` |
+| Projects | `buddies/services/project_actions.py` |
+| Contacts | `buddies/services/contact_actions.py` |
+| Approvals, project expense removal | `buddies/services/approvals.py` |
+| Settlements | `buddies/services/settlement_actions.py` |
+| Catalog Partnership | `buddies/services/partnership_actions.py` |
 
 ## URL routing
 
 ```
 /                 → feusers app (login, register, public pages)
 /budget/          → budget app (expenses, dashboard, scheduled, categories)
-/api/v1/          → api app (Bearer token REST API)
+/api/v2/          → api app (Bearer token REST API)
+/mcp              → mcp_server app (MCP server, agent keys)
 /admin/           → Django admin
 /docs/            → Docs site served from docs/build/site/
 ```
@@ -60,7 +88,7 @@ Requests pass through the middleware stack in this order:
 
 All budget data is scoped to a financial period. The period is determined by the user's `month_start_day` and `month_start_prev` settings. `budget/date_utils.py` provides `financial_month_range()` and `financial_year_range()` to compute the date boundaries for any given month or year.
 
-The dashboard, expense list, and API all accept `?year=` and `?month=` parameters and use these helpers to scope queries.
+The dashboard, expense list, API and MCP tools all accept `?year=` and `?month=` parameters and use these helpers to scope queries.
 
 ## Dashboard card system
 
@@ -94,5 +122,7 @@ SCSS and JS source files in `build/` are compiled to `static/dist/` by the build
 Exactly one factor (of any type) is `is_primary=True` per user at a time, enforced by `second_factor_service.set_primary()`. A single global `FeUser.twofa_recovery_hash` (not per-method) protects the whole account: it is generated once on a user's first-ever factor, and consuming it via `second_factor_service.consume_recovery_code()` deletes every factor of every method, since a user who needed the recovery code has just proven they can reach none of them.
 
 **Bearer token auth (REST API):** The `Authorization: Bearer <key>` header is read on every API request. The key is looked up against `FeUser.api_key` in the database.
+
+**Agent key auth (MCP):** `/mcp` accepts only agent keys, never the API key, and the REST API never accepts agent keys. The key is hashed and looked up in `AgentKey`; demo users have none. A browser `Origin` header must name the site itself.
 
 **Registration protection:** The registration form uses a client-side proof-of-work challenge to deter bot signups. The browser must compute a hash nonce before the form can be submitted.

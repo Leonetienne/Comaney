@@ -240,7 +240,7 @@ class TestCardCrud:
     def test_chart_method_total(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        inc = api_post("/api/v1/expenses/", ctx, json={
+        inc = api_post("/api/v2/expenses/", ctx, json={
             "title": "ChartTotal Inc", "type": "income", "value": "100.00",
             "date_due": today, "settled": True,
         })
@@ -257,7 +257,7 @@ class TestCardCrud:
         chart = next((c for c in cards if c["id"] == card_id), None)
         assert chart is not None
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{inc.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{inc.json()['id']}/", ctx)
 
 
 class TestCardData:
@@ -265,7 +265,7 @@ class TestCardData:
     def test_computed_sum(self, driver, w, ctx, sess):
         """Create an expense and verify the cell computes the correct sum."""
         today = server_today()
-        resp = api_post("/api/v1/expenses/", ctx, json={
+        resp = api_post("/api/v2/expenses/", ctx, json={
             "title": "Card Compute", "type": "expense", "value": "123.45",
             "date_due": today, "settled": True,
         })
@@ -290,13 +290,13 @@ class TestCardData:
         assert float(card_data.get("value", 0)) >= 123.45
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_method_total(self, driver, w, ctx, sess):
         """method=total: income entries count as negative."""
         today = server_today()
         year, month = today[:4], today[5:7]
-        inc_r = api_post("/api/v1/expenses/", ctx, json={
+        inc_r = api_post("/api/v2/expenses/", ctx, json={
             "title": "Total Inc", "type": "income", "value": "100.00",
             "date_due": today, "settled": True,
         })
@@ -312,7 +312,7 @@ class TestCardData:
         data_r = sess.get(CARDS_URL, params={"year": year, "month": month})
         card_data = next((c["data"] for c in data_r.json()["cards"] if c["id"] == card_id), {})
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{inc_r.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{inc_r.json()['id']}/", ctx)
         # income should reduce the total value
         assert float(card_data.get("value", 0)) <= 0
 
@@ -320,7 +320,7 @@ class TestCardData:
         """flip_signs: true inverts the computed value."""
         today = server_today()
         year, month = today[:4], today[5:7]
-        exp_r = api_post("/api/v1/expenses/", ctx, json={
+        exp_r = api_post("/api/v2/expenses/", ctx, json={
             "title": "FlipSign Exp", "type": "expense", "value": "50.00",
             "date_due": today, "settled": True,
         })
@@ -337,7 +337,7 @@ class TestCardData:
         data_r = sess.get(CARDS_URL, params={"year": year, "month": month})
         card_data = next((c["data"] for c in data_r.json()["cards"] if c["id"] == card_id), {})
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{exp_r.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{exp_r.json()['id']}/", ctx)
         # With flip_signs, expense sum (positive) becomes negative
         assert float(card_data.get("value", 0)) < 0
 
@@ -672,7 +672,7 @@ class TestBrowserSmoke:
         )
 
     def _bp_setup(self, driver, ctx, sess, tag, value, title):
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": f"BPBrowserTest {tag}", "type": "income",
             "value": str(value), "date_due": server_today(), "settled": False,
         })
@@ -685,7 +685,7 @@ class TestBrowserSmoke:
     def _bp_teardown(self, driver, ctx, sess, exp_id, card_id):
         csrf = _csrf(sess)
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{exp_id}/", ctx)
+        api_delete(f"/api/v2/expenses/{exp_id}/", ctx)
 
     def test_color_breakpoint_green(self, driver, w, ctx, sess):
         exp_id, card_id = self._bp_setup(driver, ctx, sess, "bptest_35a", 200, "BPGreenCard")

@@ -207,3 +207,60 @@
 
   @media (prefers-color-scheme: dark) { color: #6ecf8a; background: #1a3326; }
 }
+
+.agent-key-access {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+
+  &--restricted {
+    color: var(--text);
+    font-weight: 600;
+  }
+}
+
+.agent-key-new {
+  margin-bottom: 12px;
+}
+
+.agent-key-permissions {
+  margin-top: 12px;
+}
+
+.agent-key-permission-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-size: 0.88rem;
+
+  th,
+  td {
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  thead th,
+  td {
+    text-align: center;
+    width: 64px;
+  }
+
+  thead th:first-child,
+  tbody th {
+    text-align: left;
+    width: auto;
+  }
+
+  tbody th {
+    font-weight: normal;
+  }
+}
+
+.agent-key-create {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .edit-input {
+    flex: 1 1 200px;
+  }
+}

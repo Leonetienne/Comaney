@@ -144,7 +144,7 @@ class TestIsDummyExpenseVisibility:
         cleanup_user(c["email"])
 
     def test_not_in_expense_api(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "Hidden Payer Expense"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "Hidden Payer Expense"})
         assert resp.status_code == 200
         assert not any(e["title"] == "Hidden Payer Expense"
                        for e in resp.json()["expenses"]), \

@@ -5,6 +5,7 @@ All tag/category mutations by a partner propagate here to every other
 onboarding-complete partner. Auto-removal logic for lost connections lives here too.
 """
 import logging
+from typing import NamedTuple
 
 _log = logging.getLogger(__name__)
 
@@ -179,15 +180,19 @@ def _mapped_title(title: str, master_titles: set, mapping: dict) -> str | None:
     return target if target in master_titles else None
 
 
-def apply_onboarding_catalog(feuser, master, tag_map: dict, cat_map: dict) -> None:
+class OnboardingPlan(NamedTuple):
+    master_tags: list
+    master_cats: list
+    records: list  # (record, new tag titles, new category title)
+
+
+def plan_onboarding_catalog(feuser, master, tag_map: dict, cat_map: dict) -> OnboardingPlan:
     """
-    Replace feuser's catalog with a copy of master's and remap every record
-    carrying feuser's labels: own expenses, own recurring expenses and own
-    expense overlays. Maps are {source title: target title or None (drop)};
-    unmapped titles are dropped. Run inside a transaction.
+    Read-only: what every record carrying feuser's labels (own expenses, own
+    recurring expenses, own overlays) ends up labelled with under these maps.
+    Maps are {source title: target title or None (drop)}; unmapped titles are dropped.
     """
     from budget.models import Category, Expense, ExpenseDataOverlay, ScheduledExpense, Tag
-    from budget.services import upsert_overlay
 
     master_tags = list(Tag.objects.filter(owning_feuser=master))
     master_cats = list(Category.objects.filter(owning_feuser=master))
@@ -199,7 +204,7 @@ def apply_onboarding_catalog(feuser, master, tag_map: dict, cat_map: dict) -> No
         ScheduledExpense.objects.filter(owning_feuser=feuser),
         ExpenseDataOverlay.objects.filter(feuser=feuser).select_related("expense"),
     ]
-    plans = []
+    records = []
     for qs in labelled:
         for record in qs.select_related("category").prefetch_related("tags"):
             tag_titles = {_mapped_title(t.title, master_tag_titles, tag_map) for t in record.tags.all()}
@@ -208,17 +213,29 @@ def apply_onboarding_catalog(feuser, master, tag_map: dict, cat_map: dict) -> No
                 _mapped_title(record.category.title, master_cat_titles, cat_map)
                 if record.category else None
             )
-            plans.append((record, tag_titles, cat_title))
+            records.append((record, tag_titles, cat_title))
+    return OnboardingPlan(master_tags, master_cats, records)
+
+
+def apply_onboarding_catalog(feuser, master, tag_map: dict, cat_map: dict) -> None:
+    """
+    Replace feuser's catalog with a copy of master's and remap every record
+    carrying feuser's labels as plan_onboarding_catalog() describes. Run inside a transaction.
+    """
+    from budget.models import Category, ExpenseDataOverlay, Tag
+    from budget.services import upsert_overlay
+
+    plan = plan_onboarding_catalog(feuser, master, tag_map, cat_map)
 
     Tag.objects.filter(owning_feuser=feuser).delete()
     Category.objects.filter(owning_feuser=feuser).delete()
     new_tags, new_cats = {}, {}
-    for tag in master_tags:
+    for tag in plan.master_tags:
         new_tags.setdefault(tag.title, Tag.objects.create(owning_feuser=feuser, title=tag.title))
-    for cat in master_cats:
+    for cat in plan.master_cats:
         new_cats.setdefault(cat.title, Category.objects.create(owning_feuser=feuser, title=cat.title))
 
-    for record, tag_titles, cat_title in plans:
+    for record, tag_titles, cat_title in plan.records:
         category = new_cats.get(cat_title)
         tags = [new_tags[t] for t in sorted(tag_titles)]
         if isinstance(record, ExpenseDataOverlay):

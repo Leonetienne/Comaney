@@ -182,37 +182,37 @@ class TestExpressCreation:
 
     @pytest.fixture(autouse=True, scope="class")
     def _setup_teardown(self, ctx):
-        prior_cats = api_get("/api/v1/categories/", ctx).json().get("categories", [])
+        prior_cats = api_get("/api/v2/categories/", ctx).json().get("categories", [])
         for c in prior_cats:
-            api_delete(f"/api/v1/categories/{c['id']}/", ctx)
-        prior_tags = api_get("/api/v1/tags/", ctx).json().get("tags", [])
+            api_delete(f"/api/v2/categories/{c['id']}/", ctx)
+        prior_tags = api_get("/api/v2/tags/", ctx).json().get("tags", [])
         for t in prior_tags:
-            api_delete(f"/api/v1/tags/{t['id']}/", ctx)
+            api_delete(f"/api/v2/tags/{t['id']}/", ctx)
 
         cat_ids = []
         for name in _CATEGORIES:
-            r = api_post("/api/v1/categories/", ctx, json={"title": name})
+            r = api_post("/api/v2/categories/", ctx, json={"title": name})
             assert r.status_code == 201
             cat_ids.append(r.json()["id"])
 
         tag_ids = []
         for name in _TAGS:
-            r = api_post("/api/v1/tags/", ctx, json={"title": name})
+            r = api_post("/api/v2/tags/", ctx, json={"title": name})
             assert r.status_code == 201
             tag_ids.append(r.json()["id"])
 
         yield
 
         for exp_id in ctx.get("express_created_expense_ids", []):
-            api_delete(f"/api/v1/expenses/{exp_id}/", ctx)
+            api_delete(f"/api/v2/expenses/{exp_id}/", ctx)
         for uid in tag_ids:
-            api_delete(f"/api/v1/tags/{uid}/", ctx)
+            api_delete(f"/api/v2/tags/{uid}/", ctx)
         for uid in cat_ids:
-            api_delete(f"/api/v1/categories/{uid}/", ctx)
+            api_delete(f"/api/v2/categories/{uid}/", ctx)
         for c in prior_cats:
-            api_post("/api/v1/categories/", ctx, json={"title": c["title"]})
+            api_post("/api/v2/categories/", ctx, json={"title": c["title"]})
         for t in prior_tags:
-            api_post("/api/v1/tags/", ctx, json={"title": t["title"]})
+            api_post("/api/v2/tags/", ctx, json={"title": t["title"]})
 
     def test_trial_available(self, driver, w, ctx):
         ok, reason = _trial_status(driver)
@@ -299,7 +299,7 @@ class TestExpressCreation:
             "Confirm button was not locked on submit"
         time.sleep(5)
         assert driver.find_elements(By.CSS_SELECTOR, ".success-banner"), "No success banner appeared"
-        all_expenses = api_get("/api/v1/expenses/", ctx).json().get("expenses", [])
+        all_expenses = api_get("/api/v2/expenses/", ctx).json().get("expenses", [])
         created = [e for e in all_expenses if "XExpressTestEdited" in e.get("title", "")]
         assert created, "Edited expense not found via API after submit"
         ctx["express_created_expense_ids"] = [e["id"] for e in created]
@@ -378,10 +378,10 @@ class TestExpressCreation:
                 )
             else:
                 assert "trial budget is now used up" in src.lower()
-            all_exp = api_get("/api/v1/expenses/", ctx).json().get("expenses", [])
+            all_exp = api_get("/api/v2/expenses/", ctx).json().get("expenses", [])
             for e in all_exp:
                 if "coffee" in e.get("title", "").lower():
-                    api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+                    api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
             driver.get(_url("/budget/ai/express-creation/"))
             time.sleep(1)
             src = driver.page_source

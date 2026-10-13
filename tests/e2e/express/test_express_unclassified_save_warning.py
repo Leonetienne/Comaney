@@ -92,7 +92,7 @@ class TestExpressCreationUnclassifiedWarning:
         driver.find_element(By.ID, "cdialog-cancel").click()
         time.sleep(1)
         assert not driver.find_elements(By.CSS_SELECTOR, ".success-banner")
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": TITLE})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": TITLE})
         assert not any(e["title"] == TITLE for e in resp.json()["expenses"])
 
     def test_save_anyway_saves(self, driver, w, ctx):
@@ -103,8 +103,8 @@ class TestExpressCreationUnclassifiedWarning:
         driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(5)
         assert driver.find_elements(By.CSS_SELECTOR, ".success-banner")
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": TITLE})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": TITLE})
         matches = [e for e in resp.json()["expenses"] if e["title"] == TITLE]
         assert matches, "Saving anyway must still create the expense"
         for e in matches:
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)

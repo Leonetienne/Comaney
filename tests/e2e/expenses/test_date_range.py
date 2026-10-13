@@ -14,7 +14,7 @@ from helpers import _url, setup_user, cleanup_user, api_post, server_today, DOCK
 def ctx(driver, w):
     c = setup_user(driver, w)
     today = server_today()
-    api_post("/api/v1/expenses/", c, json={
+    api_post("/api/v2/expenses/", c, json={
         "title": "DateRange Today Exp",
         "value": "10.00",
         "type": "expense",

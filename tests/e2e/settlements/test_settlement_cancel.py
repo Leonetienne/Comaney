@@ -137,7 +137,7 @@ class TestCloneButtonAbsentForSettlements:
 
     def test_clone_post_is_blocked_server_side(self, driver, w, ctx):
         """A direct clone POST should redirect without creating a clone."""
-        seen_before = {e["id"] for e in api_get("/api/v1/expenses/", ctx["a"]).json()["expenses"]}
+        seen_before = {e["id"] for e in api_get("/api/v2/expenses/", ctx["a"]).json()["expenses"]}
         driver.execute_script(
             f"var f = document.createElement('form');"
             f"f.method = 'POST';"
@@ -148,7 +148,7 @@ class TestCloneButtonAbsentForSettlements:
             f"document.body.appendChild(f); f.submit();"
         )
         time.sleep(2)
-        current_ids = {e["id"] for e in api_get("/api/v1/expenses/", ctx["a"]).json()["expenses"]}
+        current_ids = {e["id"] for e in api_get("/api/v2/expenses/", ctx["a"]).json()["expenses"]}
         assert current_ids == seen_before, \
             "Cloning a settlement must not create a new expense"
 
@@ -258,7 +258,7 @@ class TestApprovedRealUserSettlementNotDeletable:
         time.sleep(2)
 
     def test_approved_settlement_still_exists(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx["a"], params={"q": "Test Settlement"})
+        resp = api_get("/api/v2/expenses/", ctx["a"], params={"q": "Test Settlement"})
         assert any(e["id"] == ctx["exp_pk"] for e in resp.json()["expenses"]), \
             "Approved settlement must survive a delete attempt"
 
@@ -308,7 +308,7 @@ class TestUnapprovedSettlementCancellationEmail:
         time.sleep(2)
 
     def test_settlement_is_deleted(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx["a"], params={"q": "Test Settlement"})
+        resp = api_get("/api/v2/expenses/", ctx["a"], params={"q": "Test Settlement"})
         assert not any(e["id"] == ctx["exp_pk"] for e in resp.json()["expenses"]), \
             "Settlement must be deleted after debtor removes it"
 
@@ -374,12 +374,12 @@ class TestBulkDeleteSkipsSettlements:
         time.sleep(2)
 
     def test_normal_expense_deleted(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx["a"], params={"q": "Bulk Normal Expense"})
+        resp = api_get("/api/v2/expenses/", ctx["a"], params={"q": "Bulk Normal Expense"})
         assert not any(e["title"] == "Bulk Normal Expense" for e in resp.json()["expenses"]), \
             "Normal expense must be deleted by bulk action"
 
     def test_settlement_survives_bulk_delete(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx["a"], params={"q": "Test Settlement"})
+        resp = api_get("/api/v2/expenses/", ctx["a"], params={"q": "Test Settlement"})
         assert any(e["id"] == ctx["settle_pk"] for e in resp.json()["expenses"]), \
             "Settlement expense must survive bulk delete"
 
@@ -508,7 +508,7 @@ class TestGroupViewApprovedSettlementNotDeletable:
         time.sleep(2)
 
     def test_approved_settlement_still_exists_after_delete_attempt(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx["a"], params={"q": "Test Settlement"})
+        resp = api_get("/api/v2/expenses/", ctx["a"], params={"q": "Test Settlement"})
         assert any(e["id"] == ctx["exp_pk"] for e in resp.json()["expenses"]), \
             "Approved settlement must survive debtor's delete attempt from group view"
 
@@ -544,7 +544,7 @@ class TestApiCanDeleteField:
         cleanup_user(b["email"])
 
     def _get_expense(self, ctx, pk):
-        resp = api_get("/api/v1/expenses/", ctx["a"])
+        resp = api_get("/api/v2/expenses/", ctx["a"])
         return next((e for e in resp.json()["expenses"] if e["id"] == pk), None)
 
     def test_unapproved_settlement_can_delete_true(self, driver, w, ctx):

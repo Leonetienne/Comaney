@@ -83,7 +83,7 @@ def _dialog_text(driver) -> str:
 
 
 def _expense_exists(ctx, title) -> bool:
-    resp = api_get("/api/v1/expenses/", ctx, params={"q": title})
+    resp = api_get("/api/v2/expenses/", ctx, params={"q": title})
     return any(e["title"] == title for e in resp.json()["expenses"])
 
 

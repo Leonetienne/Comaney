@@ -77,6 +77,7 @@ nav:
     - Notifications: user-manual/notifications.md
     - Account & Settings: user-manual/account-settings.md
     - Two-Factor Authentication: user-manual/two-factor-auth.md
+    - AI Assistants (MCP): user-manual/ai-assistants.md
     - REST API Access: user-manual/api-access.md
     - Data Export: user-manual/data-export.md
   - Admin Manual:

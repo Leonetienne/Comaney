@@ -170,9 +170,9 @@ class TestExpressBuddyConfirmDummyParticipant:
         c["dummy_id"] = dummy_id
         c["me_pk"] = me_pk
         yield c
-        for exp in api_get("/api/v1/expenses/", c).json().get("expenses", []):
+        for exp in api_get("/api/v2/expenses/", c).json().get("expenses", []):
             if "ExpressDummyPart" in exp.get("title", ""):
-                api_delete(f"/api/v1/expenses/{exp['id']}/", c)
+                api_delete(f"/api/v2/expenses/{exp['id']}/", c)
         cleanup_user(c["email"])
 
     def test_confirm_with_dummy_participant(self, driver, w, ctx):
@@ -189,7 +189,7 @@ class TestExpressBuddyConfirmDummyParticipant:
         assert resp.status_code in (200, 302), f"Unexpected status: {resp.status_code}"
 
     def test_expense_in_api(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "ExpressDummyPart"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "ExpressDummyPart"})
         assert resp.status_code == 200
         assert any(e["title"] == "ExpressDummyPart" for e in resp.json()["expenses"]), \
             "Expense must appear in the expense API (me is upfront payer)"
@@ -237,7 +237,7 @@ class TestExpressBuddyConfirmDummyPayer:
         assert resp.status_code in (200, 302), f"Unexpected status: {resp.status_code}"
 
     def test_expense_not_in_api(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "ExpressDummyPayer"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "ExpressDummyPayer"})
         assert resp.status_code == 200
         assert not any(e["title"] == "ExpressDummyPayer" for e in resp.json()["expenses"]), \
             "Dummy-payer expense must not appear in the expense API (is_dummy=True)"
@@ -289,7 +289,7 @@ class TestExpressBuddyConfirmFeuserPayer:
         assert resp.status_code in (200, 302), f"Unexpected status: {resp.status_code}"
 
     def test_expense_not_in_askers_api(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "ExpressFeuserPayer"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "ExpressFeuserPayer"})
         assert resp.status_code == 200
         assert not any(e["title"] == "ExpressFeuserPayer" for e in resp.json()["expenses"]), \
             "Expense on buddy's account must not appear in the asker's expense API"
@@ -542,7 +542,7 @@ class TestExpressProjectUidConfirm:
         assert resp.status_code in (200, 302), f"Unexpected status: {resp.status_code}"
 
     def test_expense_in_api_with_project(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "ExpressProjUID"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "ExpressProjUID"})
         assert resp.status_code == 200
         expenses = resp.json().get("expenses", [])
         match = next((e for e in expenses if e["title"] == "ExpressProjUID"), None)
@@ -556,7 +556,7 @@ class TestExpressProjectUidConfirm:
         item = _base_item(title="ExpressNoProjUID")
         resp = _submit_confirm(driver, [item])
         assert resp.status_code in (200, 302)
-        resp2 = api_get("/api/v1/expenses/", ctx, params={"q": "ExpressNoProjUID"})
+        resp2 = api_get("/api/v2/expenses/", ctx, params={"q": "ExpressNoProjUID"})
         expenses = resp2.json().get("expenses", [])
         match = next((e for e in expenses if e["title"] == "ExpressNoProjUID"), None)
         assert match is not None, "Expense must appear in the API"
@@ -596,7 +596,7 @@ class TestExpressForcedExpenseType:
         item = _base_item(title="ForcedProjIncome", type="income", project_uid=ctx["project_uid"])
         resp = _submit_confirm(driver, [item])
         assert resp.status_code in (200, 302), f"Confirm must succeed (forced, not rejected): {resp.status_code}"
-        resp2 = api_get("/api/v1/expenses/", ctx, params={"q": "ForcedProjIncome"})
+        resp2 = api_get("/api/v2/expenses/", ctx, params={"q": "ForcedProjIncome"})
         expenses = resp2.json().get("expenses", [])
         match = next((e for e in expenses if e["title"] == "ForcedProjIncome"), None)
         assert match is not None, "Expense must be saved (not dropped by a batch failure)"
@@ -616,7 +616,7 @@ class TestExpressForcedExpenseType:
         )
         resp = _submit_confirm(driver, [item])
         assert resp.status_code in (200, 302), f"Confirm must succeed (forced, not rejected): {resp.status_code}"
-        resp2 = api_get("/api/v1/expenses/", ctx, params={"q": "ForcedBuddyIncome"})
+        resp2 = api_get("/api/v2/expenses/", ctx, params={"q": "ForcedBuddyIncome"})
         expenses = resp2.json().get("expenses", [])
         match = next((e for e in expenses if e["title"] == "ForcedBuddyIncome"), None)
         assert match is not None, "Expense must be saved (not dropped by a batch failure)"

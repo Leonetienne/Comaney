@@ -81,7 +81,7 @@ def _expenses(ctx, q, sharing="", year=FIXED_YEAR):
     params = {"q": q, "year": year, "view": "year"}
     if sharing:
         params["sharing"] = sharing
-    resp = api_get("/api/v1/expenses/", ctx, params=params)
+    resp = api_get("/api/v2/expenses/", ctx, params=params)
     assert resp.status_code == 200
     return resp.json()["expenses"]
 
@@ -119,7 +119,7 @@ def setup_data(ctx_a, ctx_b):
     email_b = ctx_b["email"]
 
     # sm_plain – A's solo expense
-    r = api_post("/api/v1/expenses/", ctx_a, json={
+    r = api_post("/api/v2/expenses/", ctx_a, json={
         "title": "ShrMode Plain", "type": "expense",
         "value": "100.00", "date_due": DATE,
     })
@@ -136,7 +136,7 @@ def setup_data(ctx_a, ctx_b):
     ctx_a["sm_dummy_pk"] = dummy_pk
 
     # sm_dummy_part – A paid, dummy is participant at 50% -> owner residual 50%
-    r = api_post("/api/v1/expenses/", ctx_a, json={
+    r = api_post("/api/v2/expenses/", ctx_a, json={
         "title": "ShrMode DummyParticipant", "type": "expense",
         "value": "80.00", "date_due": DATE,
     })
@@ -149,7 +149,7 @@ def setup_data(ctx_a, ctx_b):
     )
 
     # sm_dummy_payer – dummy paid upfront (is_dummy=True); B owes 40%, A implied 60%
-    r = api_post("/api/v1/expenses/", ctx_a, json={
+    r = api_post("/api/v2/expenses/", ctx_a, json={
         "title": "ShrMode DummyPayer", "type": "expense",
         "value": "60.00", "date_due": DATE,
     })
@@ -180,7 +180,7 @@ def setup_data(ctx_a, ctx_b):
     ctx_a["sm_foreign"] = foreign_uid
 
     # sm_settlement – excluded from shared qs regardless
-    r = api_post("/api/v1/expenses/", ctx_a, json={
+    r = api_post("/api/v2/expenses/", ctx_a, json={
         "title": "ShrMode Settlement", "type": "expense",
         "value": "50.00", "date_due": DATE,
     })
@@ -198,7 +198,7 @@ def setup_data(ctx_a, ctx_b):
     for key in ("sm_plain", "sm_dummy_part", "sm_dummy_payer", "sm_settlement"):
         uid = ctx_a.get(key)
         if uid:
-            api_delete(f"/api/v1/expenses/{uid}/", ctx_a)
+            api_delete(f"/api/v2/expenses/{uid}/", ctx_a)
     # Foreign expense and dummy via shell
     if "sm_foreign" in ctx_a:
         _shell(

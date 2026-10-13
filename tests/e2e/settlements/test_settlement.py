@@ -106,7 +106,7 @@ class TestDirectSettlement:
             f"print(FeUser.objects.get(email='{ctx['a']['email']}').api_key)"
         )
         resp = requests.get(
-            _url("/api/v1/expenses/"),
+            _url("/api/v2/expenses/"),
             headers={"Authorization": f"Bearer {api_key}"},
         )
         assert resp.status_code == 200
@@ -184,7 +184,7 @@ class TestDirectSettlement:
             f"print(FeUser.objects.get(email='{ctx['b']['email']}').api_key)"
         )
         resp = requests.get(
-            _url("/api/v1/expenses/"),
+            _url("/api/v2/expenses/"),
             headers={"Authorization": f"Bearer {api_key}"},
         )
         assert resp.status_code == 200
@@ -441,7 +441,7 @@ class TestGroupSettlement:
             f"print(FeUser.objects.get(email='{ctx['member']['email']}').api_key)"
         )
         resp = requests.get(
-            _url("/api/v1/expenses/"),
+            _url("/api/v2/expenses/"),
             headers={"Authorization": f"Bearer {api_key}"},
         )
         assert resp.status_code == 200
@@ -596,7 +596,7 @@ class TestGroupSettlementReviewFlow:
             f"print(FeUser.objects.get(email='{ctx['admin']['email']}').api_key)"
         )
         resp = requests.get(
-            _url("/api/v1/expenses/"),
+            _url("/api/v2/expenses/"),
             headers={"Authorization": f"Bearer {api_key}"},
         )
         assert resp.status_code == 200

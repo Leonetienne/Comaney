@@ -97,7 +97,7 @@ class TestExpressCreationDateRangeWarning:
         driver.find_element(By.ID, "cdialog-cancel").click()
         time.sleep(1)
         assert not driver.find_elements(By.CSS_SELECTOR, ".success-banner")
-        resp = api_get("/api/v1/expenses/", ctx, params={
+        resp = api_get("/api/v2/expenses/", ctx, params={
             "date_from": "2024-01-01", "date_to": "2024-12-31",
         })
         assert not any(e["date_due"] == _OUT_OF_RANGE_DATE for e in resp.json()["expenses"])
@@ -110,10 +110,10 @@ class TestExpressCreationDateRangeWarning:
         driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(5)
         assert driver.find_elements(By.CSS_SELECTOR, ".success-banner")
-        resp = api_get("/api/v1/expenses/", ctx, params={
+        resp = api_get("/api/v2/expenses/", ctx, params={
             "date_from": "2024-01-01", "date_to": "2024-12-31",
         })
         matches = [e for e in resp.json()["expenses"] if e["date_due"] == _OUT_OF_RANGE_DATE]
         assert matches, "Expense with the out-of-range date was not created"
         for e in matches:
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)

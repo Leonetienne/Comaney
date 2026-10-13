@@ -12,9 +12,9 @@ Covers:
 - `feat~export~1`
 
 ### Account export
-`req~export.account~1`
+`req~export.account~2`
 
-When a feuser requests the account export, the system shall download a ZIP of CSV files covering profile, all expenses, expense overlays, recurring templates, categories, tags, dashboards and cards, second factors (without secrets), Catalog Partnership membership, pending invitations and approvals, contacts with their shared expenses, participation and approvals, and the Sankey graph if saved.
+When a feuser requests the account export, the system shall download a ZIP of CSV files covering profile, all expenses, expense overlays, recurring templates, categories, tags, dashboards and cards, second factors (without secrets), agent keys (label, prefix, dates and permissions, without the key hash), Catalog Partnership membership, pending invitations and approvals, contacts with their shared expenses, participation and approvals, and the Sankey graph if saved.
 
 Covers:
 - `feat~export~1`

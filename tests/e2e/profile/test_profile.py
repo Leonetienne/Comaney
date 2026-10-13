@@ -42,7 +42,7 @@ class TestProfile:
     def test_api_key_authenticates(self, driver, w, ctx):
         time.sleep(1)
         resp = requests.get(
-            f"{BASE_URL}/api/v1/account/",
+            f"{BASE_URL}/api/v2/account/",
             headers={"Authorization": f"Bearer {ctx['api_key']}"},
             timeout=10,
         )
@@ -55,7 +55,7 @@ class TestProfile:
         wait_url(w, "/profile/")
         time.sleep(1)
         resp = requests.get(
-            f"{BASE_URL}/api/v1/account/",
+            f"{BASE_URL}/api/v2/account/",
             headers={"Authorization": f"Bearer {ctx['api_key']}"},
             timeout=10,
         )

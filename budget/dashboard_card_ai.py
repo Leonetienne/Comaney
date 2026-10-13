@@ -37,7 +37,7 @@ _DOC_FILES = [
 
 
 @lru_cache(maxsize=1)
-def _build_docs_reference() -> str:
+def build_docs_reference() -> str:
     """Concatenate the dashboard user-manual pages so the AI has the full card schema."""
     parts = []
     for rel_path, slug in _DOC_FILES:
@@ -142,7 +142,7 @@ def generate_card_yaml(
     # two cacheable parts: the docs-derived instructions rarely change, the
     # per-user context changes per request
     system_prompt = [
-        SystemPart(_SYSTEM_INSTRUCTIONS + "\n" + _build_docs_reference()),
+        SystemPart(_SYSTEM_INSTRUCTIONS + "\n" + build_docs_reference()),
         SystemPart("\n\n".join(context_parts)),
     ]
 

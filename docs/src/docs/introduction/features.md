@@ -72,6 +72,8 @@ Choose what happens to unspent budget at the end of each month:
 
 **REST API**: connect other tools or scripts to your Comaney data using a personal API key. More advanced, but useful if you want to automate imports or build your own reports.
 
+**AI assistants**: connect an assistant such as Claude through MCP and let it record expenses, answer questions about your spending or set up projects, with permissions you choose per assistant.
+
 ## What Comaney does not do
 
 Comaney deliberately keeps its scope narrow. The following are not supported, and that is by design:

@@ -123,7 +123,7 @@ class TestAISettings:
 class TestEmailNotificationsToggle:
 
     def test_disable_via_notifications_form(self, driver, w, ctx):
-        api_patch("/api/v1/account/", ctx, json={"email_notifications": True})
+        api_patch("/api/v2/account/", ctx, json={"email_notifications": True})
 
         driver.get(_url("/profile/"))
         time.sleep(1)
@@ -137,7 +137,7 @@ class TestEmailNotificationsToggle:
         assert "Saved." in driver.page_source
 
         time.sleep(1)
-        assert api_get("/api/v1/account/", ctx).json()["email_notifications"] is False
+        assert api_get("/api/v2/account/", ctx).json()["email_notifications"] is False
 
     def test_enable_via_notifications_form(self, driver, w, ctx):
         driver.get(_url("/profile/"))
@@ -152,7 +152,7 @@ class TestEmailNotificationsToggle:
         assert "Saved." in driver.page_source
 
         time.sleep(1)
-        assert api_get("/api/v1/account/", ctx).json()["email_notifications"] is True
+        assert api_get("/api/v2/account/", ctx).json()["email_notifications"] is True
 
 
 class TestPasswordChange:

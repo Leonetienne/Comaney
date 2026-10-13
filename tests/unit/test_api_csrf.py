@@ -1,5 +1,5 @@
 """
-Unit tests for the CSRF enforcement decision in api/utils._require_auth (Issue 3).
+Unit tests for the CSRF enforcement decision in api/rest.dispatch.
 
 Tests the core branching logic: Bearer-token requests bypass CSRF checks; session-
 cookie requests are subject to CSRF verification on unsafe methods. This is tested
@@ -10,7 +10,7 @@ Run with: venv/bin/pytest tests/unit/test_api_csrf.py -v
 
 
 def _is_bearer_request(authorization_header: str) -> bool:
-    """Mirror the guard in _require_auth: True means CSRF check is skipped."""
+    """Mirror the guard in dispatch: True means CSRF check is skipped."""
     return authorization_header.startswith("Bearer ")
 
 

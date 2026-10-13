@@ -2,9 +2,10 @@ import json
 
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
-from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from .. import catalog_service
+from ..catalog_service import CatalogError
 from ..decorators import feuser_required
 from ..models import Category, Tag
 
@@ -82,29 +83,25 @@ def categories_tags(request):
     return render(request, "budget/categories_tags.html", ctx)
 
 
+def _catalog_json(fn):
+    try:
+        item = fn()
+    except CatalogError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    return JsonResponse({"uid": item.uid, "title": item.title})
+
+
 @feuser_required
 @require_POST
 def category_create(request):
-    data = json.loads(request.body)
-    title = data.get("title", "").strip()
-    if not title:
-        return JsonResponse({"error": "Title required."}, status=400)
-    if len(title) > 128:
-        return JsonResponse({"error": "Title must be 128 characters or fewer."}, status=400)
-    category = Category.objects.create(owning_feuser=request.feuser, title=title)
-    from buddies.services.partnership import sync_category_create
-    sync_category_create(title, request.feuser)
-    return JsonResponse({"uid": category.uid, "title": category.title})
+    title = json.loads(request.body).get("title", "")
+    return _catalog_json(lambda: catalog_service.create_category(request.feuser, title))
 
 
 @feuser_required
 @require_POST
 def category_delete(request, uid):
-    category = get_object_or_404(Category, uid=uid, owning_feuser=request.feuser)
-    title = category.title
-    category.delete()
-    from buddies.services.partnership import sync_category_delete
-    sync_category_delete(title, request.feuser)
+    catalog_service.delete_category(get_object_or_404(Category, uid=uid, owning_feuser=request.feuser), request.feuser)
     return JsonResponse({"ok": True})
 
 
@@ -112,44 +109,21 @@ def category_delete(request, uid):
 @require_POST
 def category_rename(request, uid):
     category = get_object_or_404(Category, uid=uid, owning_feuser=request.feuser)
-    old_title = category.title
-    data = json.loads(request.body)
-    title = data.get("title", "").strip()
-    if not title:
-        return JsonResponse({"error": "Title required."}, status=400)
-    if len(title) > 128:
-        return JsonResponse({"error": "Title must be 128 characters or fewer."}, status=400)
-    category.title = title
-    category.last_mod = timezone.now()
-    category.save(update_fields=["title", "last_mod"])
-    from buddies.services.partnership import sync_category_rename
-    sync_category_rename(old_title, title, request.feuser)
-    return JsonResponse({"uid": category.uid, "title": category.title})
+    title = json.loads(request.body).get("title", "")
+    return _catalog_json(lambda: catalog_service.rename_category(category, request.feuser, title))
 
 
 @feuser_required
 @require_POST
 def tag_create(request):
-    data = json.loads(request.body)
-    title = data.get("title", "").strip()
-    if not title:
-        return JsonResponse({"error": "Title required."}, status=400)
-    if len(title) > 128:
-        return JsonResponse({"error": "Title must be 128 characters or fewer."}, status=400)
-    tag = Tag.objects.create(owning_feuser=request.feuser, title=title)
-    from buddies.services.partnership import sync_tag_create
-    sync_tag_create(title, request.feuser)
-    return JsonResponse({"uid": tag.uid, "title": tag.title})
+    title = json.loads(request.body).get("title", "")
+    return _catalog_json(lambda: catalog_service.create_tag(request.feuser, title))
 
 
 @feuser_required
 @require_POST
 def tag_delete(request, uid):
-    tag = get_object_or_404(Tag, uid=uid, owning_feuser=request.feuser)
-    title = tag.title
-    tag.delete()
-    from buddies.services.partnership import sync_tag_delete
-    sync_tag_delete(title, request.feuser)
+    catalog_service.delete_tag(get_object_or_404(Tag, uid=uid, owning_feuser=request.feuser), request.feuser)
     return JsonResponse({"ok": True})
 
 
@@ -157,16 +131,5 @@ def tag_delete(request, uid):
 @require_POST
 def tag_rename(request, uid):
     tag = get_object_or_404(Tag, uid=uid, owning_feuser=request.feuser)
-    old_title = tag.title
-    data = json.loads(request.body)
-    title = data.get("title", "").strip()
-    if not title:
-        return JsonResponse({"error": "Title required."}, status=400)
-    if len(title) > 128:
-        return JsonResponse({"error": "Title must be 128 characters or fewer."}, status=400)
-    tag.title = title
-    tag.last_mod = timezone.now()
-    tag.save(update_fields=["title", "last_mod"])
-    from buddies.services.partnership import sync_tag_rename
-    sync_tag_rename(old_title, title, request.feuser)
-    return JsonResponse({"uid": tag.uid, "title": tag.title})
+    title = json.loads(request.body).get("title", "")
+    return _catalog_json(lambda: catalog_service.rename_tag(tag, request.feuser, title))

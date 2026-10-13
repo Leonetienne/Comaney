@@ -20,6 +20,7 @@ You do not need any technical knowledge to use Comaney. If you can fill in a for
 | Track expenses for a trip, project, or goal | [Projects](projects.md) |
 | Log an expense from a receipt photo | [AI Express Creation](ai-express-creation.md) |
 | Download my data as a spreadsheet | [Data Export](data-export.md) |
+| Let an AI assistant manage my budget | [AI Assistants (MCP)](ai-assistants.md) |
 | Use Comaney from another app or script | [REST API Access](api-access.md) |
 | Learn the search bar filters | [Search & Filters](dashboard/query-language.md) |
 | Customise my dashboard cards | [Dashboard Cards](dashboard/cards/index.md) |

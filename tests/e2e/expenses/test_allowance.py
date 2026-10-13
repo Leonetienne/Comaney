@@ -26,12 +26,12 @@ UNSPENT    = "400.00"
 
 
 def _setup_prev_month(ctx):
-    inc = api_post("/api/v1/expenses/", ctx, json={
+    inc = api_post("/api/v2/expenses/", ctx, json={
         "title": "AT Income", "type": "income", "value": "1000.00",
         "date_due": PREV_15, "settled": True,
     })
     assert inc.status_code == 201
-    exp = api_post("/api/v1/expenses/", ctx, json={
+    exp = api_post("/api/v2/expenses/", ctx, json={
         "title": "AT Expense", "type": "expense", "value": "600.00",
         "date_due": PREV_20, "settled": True,
     })
@@ -40,22 +40,26 @@ def _setup_prev_month(ctx):
 
 
 def _teardown_prev_month(ctx, inc_id, exp_id):
-    api_delete(f"/api/v1/expenses/{inc_id}/", ctx)
-    api_delete(f"/api/v1/expenses/{exp_id}/", ctx)
+    api_delete(f"/api/v2/expenses/{inc_id}/", ctx)
+    api_delete(f"/api/v2/expenses/{exp_id}/", ctx)
 
 
 def _reset_action(ctx, action):
-    resp = api_patch("/api/v1/account/", ctx, json={
+    resp = api_patch("/api/v2/account/", ctx, json={
         "unspent_allowance_action": action,
-        "allowance_transition_month": "",
         "month_start_day": 1,
         "month_start_prev": False,
     })
     assert resp.status_code == 200
+    # bookkeeping field of the cron, read-only in the API
+    run_cmd(
+        "shell", "-c",
+        f"from feusers.models import FeUser; FeUser.objects.filter(email={ctx['email']!r}).update(allowance_transition_month='')",
+    )
 
 
 def _expenses_in(ctx, year, month):
-    resp = api_get("/api/v1/expenses/", ctx, params={"year": year, "month": month})
+    resp = api_get("/api/v2/expenses/", ctx, params={"year": year, "month": month})
     assert resp.status_code == 200
     return resp.json()["expenses"]
 
@@ -94,7 +98,7 @@ class TestAllowanceTransition:
         savings = _by_type(_expenses_in(ctx, PREV_YEAR, PREV_MONTH), "savings_dep")
         assert len(savings) == 1
         assert savings[0]["value"] == UNSPENT
-        api_delete(f"/api/v1/expenses/{savings[0]['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{savings[0]['id']}/", ctx)
         _teardown_prev_month(ctx, inc_id, exp_id)
         time.sleep(1)
 
@@ -109,17 +113,17 @@ class TestAllowanceTransition:
         time.sleep(1)
         savings = _by_type(_expenses_in(ctx, PREV_YEAR, PREV_MONTH), "savings_dep")
         assert len(savings) == 1, f"Expected 1 savings_dep, got {len(savings)}"
-        api_delete(f"/api/v1/expenses/{savings[0]['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{savings[0]['id']}/", ctx)
         _teardown_prev_month(ctx, inc_id, exp_id)
-        api_patch("/api/v1/account/", ctx, json={"unspent_allowance_action": "do_nothing"})
+        api_patch("/api/v2/account/", ctx, json={"unspent_allowance_action": "do_nothing"})
 
     def test_no_entry_when_left_is_zero(self, driver, w, ctx):
         """When income equals expenses (left=0), no transition entry is created."""
-        inc = api_post("/api/v1/expenses/", ctx, json={
+        inc = api_post("/api/v2/expenses/", ctx, json={
             "title": "AT Zero Income", "type": "income",
             "value": "500.00", "date_due": PREV_15, "settled": True,
         })
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "AT Zero Expense", "type": "expense",
             "value": "500.00", "date_due": PREV_20, "settled": True,
         })
@@ -131,7 +135,7 @@ class TestAllowanceTransition:
         time.sleep(1)
         savings = _by_type(_expenses_in(ctx, PREV_YEAR, PREV_MONTH), "savings_dep")
         assert savings == [], f"Expected no savings_dep for zero left, got {savings}"
-        api_delete(f"/api/v1/expenses/{inc.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{exp.json()['id']}/", ctx)
-        api_patch("/api/v1/account/", ctx, json={"unspent_allowance_action": "do_nothing"})
+        api_delete(f"/api/v2/expenses/{inc.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{exp.json()['id']}/", ctx)
+        api_patch("/api/v2/account/", ctx, json={"unspent_allowance_action": "do_nothing"})
         time.sleep(1)

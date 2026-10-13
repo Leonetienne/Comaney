@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from budget.dashboard_card_ai import _DOC_FILES, _DOCS_BASE_URL, _build_docs_reference
+from budget.dashboard_card_ai import _DOC_FILES, _DOCS_BASE_URL, build_docs_reference
 
 
 def _parse_envelope(raw: str) -> str:
@@ -92,15 +92,15 @@ class TestEnvelopeParsing:
 class TestDocsReference:
 
     def test_builds_non_empty_reference(self):
-        assert len(_build_docs_reference()) > 1000
+        assert len(build_docs_reference()) > 1000
 
     def test_cites_every_child_page_url(self):
-        ref = _build_docs_reference()
+        ref = build_docs_reference()
         for _, slug in _DOC_FILES:
             url = f"{_DOCS_BASE_URL}/{slug}/" if slug else f"{_DOCS_BASE_URL}/"
             assert url in ref, f"missing citation for {url}"
 
     def test_includes_known_schema_keywords(self):
-        ref = _build_docs_reference()
+        ref = build_docs_reference()
         for keyword in ("positioning", "color_breakpoints", "line-chart", "query"):
             assert keyword in ref

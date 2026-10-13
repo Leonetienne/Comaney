@@ -10,7 +10,7 @@ authenticated denial of service.
 These tests hit the real endpoints and assert they no longer return 500.
 
 EXPECTED TO FAIL until the parse helpers clamp the year: today
-`GET /api/v1/expenses/?view=year&year=10000` and friends return 500.
+`GET /api/v2/expenses/?view=year&year=10000` and friends return 500.
 
 Run with (live stack at :8080 required):
     pytest tests/e2e/api/test_year_param_crash.py -sxv | tee logfile.log
@@ -37,23 +37,23 @@ class TestApiYearParam:
 
     @pytest.mark.parametrize("year", CRASH_YEARS)
     def test_expenses_year_view_no_500(self, driver, w, ctx, year):
-        resp = api_get("/api/v1/expenses/", ctx, params={"view": "year", "year": year})
+        resp = api_get("/api/v2/expenses/", ctx, params={"view": "year", "year": year})
         assert resp.status_code != 500, \
-            f"/api/v1/expenses/ crashed (500) for year={year}"
+            f"/api/v2/expenses/ crashed (500) for year={year}"
         assert resp.status_code == 200
 
     @pytest.mark.parametrize("year", CRASH_YEARS)
     def test_expenses_month_view_no_500(self, driver, w, ctx, year):
-        resp = api_get("/api/v1/expenses/", ctx, params={"year": year, "month": "1"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"year": year, "month": "1"})
         assert resp.status_code != 500, \
-            f"/api/v1/expenses/ crashed (500) for year={year}&month=1"
+            f"/api/v2/expenses/ crashed (500) for year={year}&month=1"
         assert resp.status_code == 200
 
     @pytest.mark.parametrize("year", CRASH_YEARS)
     def test_dashboard_year_no_500(self, driver, w, ctx, year):
-        resp = api_get("/api/v1/dashboard/", ctx, params={"year": year, "month": "1"})
+        resp = api_get("/api/v2/dashboard/", ctx, params={"year": year, "month": "1"})
         assert resp.status_code != 500, \
-            f"/api/v1/dashboard/ crashed (500) for year={year}"
+            f"/api/v2/dashboard/ crashed (500) for year={year}"
         assert resp.status_code == 200
 
 

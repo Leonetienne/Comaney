@@ -134,7 +134,7 @@ class TestCreateProjectExpenseNoParticipants:
             "A zero-participant project expense must have no BuddySpending rows"
 
     def test_expense_in_owner_api_list(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "Just For Me"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "Just For Me"})
         assert resp.status_code == 200
         assert any(e["title"] == "Just For Me" for e in resp.json()["expenses"]), \
             "The expense must appear in the payer's own expense list"
@@ -326,7 +326,7 @@ class TestNoParticipantsOfflineMemberPayer:
 
     def test_not_in_creator_expense_list(self, driver, w, ctx):
         # is_dummy expenses never surface in the regular expense list/API.
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "Olga Paid Alone"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "Olga Paid Alone"})
         assert resp.status_code == 200
         assert not any(e["title"] == "Olga Paid Alone" for e in resp.json()["expenses"]), \
             "Offline-payer expense must not appear in the creator's regular expense list"

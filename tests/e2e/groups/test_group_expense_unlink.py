@@ -119,7 +119,7 @@ class TestOwnerUnlinksOwnExpense:
             f"print(FeUser.objects.get(email='{ctx['admin']['email']}').api_key)"
         )
         resp = req.get(
-            _url("/api/v1/expenses/"),
+            _url("/api/v2/expenses/"),
             headers={"Authorization": f"Bearer {api_key}"},
             timeout=10,
         )
@@ -197,7 +197,7 @@ class TestAdminUnlinksMemberExpense:
             f"print(FeUser.objects.get(email='{ctx['member']['email']}').api_key)"
         )
         resp = req.get(
-            _url("/api/v1/expenses/"),
+            _url("/api/v2/expenses/"),
             headers={"Authorization": f"Bearer {api_key}"},
             timeout=10,
         )

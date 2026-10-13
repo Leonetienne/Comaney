@@ -227,11 +227,11 @@ class TestGaugeData:
     def test_fixed_max_percent_computation(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e1 = api_post("/api/v1/expenses/", ctx, json={
+        e1 = api_post("/api/v2/expenses/", ctx, json={
             "title": "GaugeFixed1", "type": "expense", "value": "50.00",
             "date_due": today, "settled": True,
         })
-        e2 = api_post("/api/v1/expenses/", ctx, json={
+        e2 = api_post("/api/v2/expenses/", ctx, json={
             "title": "GaugeFixed2", "type": "expense", "value": "70.00",
             "date_due": today, "settled": True,
         })
@@ -250,17 +250,17 @@ class TestGaugeData:
         assert pytest.approx(card["data"]["percent"], abs=0.01) == 60.0
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e2.json()['id']}/", ctx)
 
     def test_dynamic_max_value_query_computation(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "GaugeDynExp", "type": "expense", "value": "120.00",
             "date_due": today, "settled": True,
         })
-        inc = api_post("/api/v1/expenses/", ctx, json={
+        inc = api_post("/api/v2/expenses/", ctx, json={
             "title": "GaugeDynInc", "type": "income", "value": "300.00",
             "date_due": today, "settled": True,
         })
@@ -281,17 +281,17 @@ class TestGaugeData:
         assert pytest.approx(card["data"]["percent"], abs=0.01) == 40.0
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{exp.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{inc.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{exp.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{inc.json()['id']}/", ctx)
 
     def test_method_count(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e1 = api_post("/api/v1/expenses/", ctx, json={
+        e1 = api_post("/api/v2/expenses/", ctx, json={
             "title": "GaugeCount1", "type": "expense", "value": "1.00",
             "date_due": today, "settled": True,
         })
-        e2 = api_post("/api/v1/expenses/", ctx, json={
+        e2 = api_post("/api/v2/expenses/", ctx, json={
             "title": "GaugeCount2", "type": "expense", "value": "1.00",
             "date_due": today, "settled": True,
         })
@@ -308,14 +308,14 @@ class TestGaugeData:
         assert card["data"]["value"] == 2.0
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e2.json()['id']}/", ctx)
 
     def test_dynamic_max_zero_is_safe(self, driver, w, ctx, sess):
         """When max_value_query matches nothing, percent must be 0, never a divide-by-zero error."""
         today = server_today()
         year, month = today[:4], today[5:7]
-        e = api_post("/api/v1/expenses/", ctx, json={
+        e = api_post("/api/v2/expenses/", ctx, json={
             "title": "GaugeZeroMax", "type": "expense", "value": "10.00",
             "date_due": today, "settled": True,
         })
@@ -337,14 +337,14 @@ class TestGaugeData:
         assert card["error"] is None
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e.json()['id']}/", ctx)
 
 
 class TestGaugeBrowser:
 
     def test_gauge_svg_renders(self, driver, w, ctx, sess):
         today = server_today()
-        e = api_post("/api/v1/expenses/", ctx, json={
+        e = api_post("/api/v2/expenses/", ctx, json={
             "title": "GaugeBrowserTest", "type": "expense", "value": "33.00",
             "date_due": today, "settled": True,
         })
@@ -383,7 +383,7 @@ class TestGaugeBrowser:
         assert "33%" in body_text
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e.json()['id']}/", ctx)
 
     def test_color_breakpoints_compare_against_percent_not_raw_value(self, driver, w, ctx, sess):
         """
@@ -396,7 +396,7 @@ class TestGaugeBrowser:
         so this pins down which comparison basis is actually in effect.
         """
         today = server_today()
-        e = api_post("/api/v1/expenses/", ctx, json={
+        e = api_post("/api/v2/expenses/", ctx, json={
             "title": "GaugePercentBreakpoint", "type": "expense", "value": "6.30",
             "date_due": today, "settled": True,
         })
@@ -429,7 +429,7 @@ class TestGaugeBrowser:
         assert stroke == "rgb(255, 200, 0)", f"expected amber (percent-based), got {stroke!r}"
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e.json()['id']}/", ctx)
 
     def test_cleanup_all_cards(self, driver, w, ctx, sess):
         csrf = _csrf(sess)

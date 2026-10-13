@@ -36,7 +36,7 @@ class TestExpenses:
         time.sleep(2)
         assert "/budget/expenses/" in driver.current_url
         assert "E2E Expense" in driver.page_source
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "E2E Expense"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "E2E Expense"})
         ctx["exp_uid"] = str(resp.json()["expenses"][0]["id"])
 
     def test_edit(self, driver, w, ctx):
@@ -95,13 +95,13 @@ class TestExpenses:
         submit(w)
         time.sleep(2)
         # Presentation already covered by other tests; verify via API
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "E2E AllFields"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "E2E AllFields"})
         assert resp.status_code == 200
         data = resp.json()["expenses"][0]
         assert data["payee"] == "Test Payee"
         assert data["note"] == "Test note"
         assert data["auto_settle_on_due_date"] is True
-        api_delete(f"/api/v1/expenses/{data['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{data['id']}/", ctx)
 
     def test_type_income(self, driver, w, ctx):
         today = server_today()
@@ -116,7 +116,7 @@ class TestExpenses:
         )
         submit(w)
         time.sleep(2)
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "E2E Income"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "E2E Income"})
         assert resp.status_code == 200
         data = resp.json()["expenses"][0]
         assert data["type"] == "income"
@@ -136,7 +136,7 @@ class TestExpenses:
         )
         submit(w)
         time.sleep(2)
-        dep = api_get("/api/v1/expenses/", ctx, params={"q": "E2E SavingsDep"})
+        dep = api_get("/api/v2/expenses/", ctx, params={"q": "E2E SavingsDep"})
         assert dep.json()["expenses"][0]["type"] == "savings_dep"
         ctx["dep_id"] = dep.json()["expenses"][0]["id"]
         # savings_wit
@@ -151,7 +151,7 @@ class TestExpenses:
         )
         submit(w)
         time.sleep(2)
-        wit = api_get("/api/v1/expenses/", ctx, params={"q": "E2E SavingsWit"})
+        wit = api_get("/api/v2/expenses/", ctx, params={"q": "E2E SavingsWit"})
         assert wit.json()["expenses"][0]["type"] == "savings_wit"
         ctx["wit_id"] = wit.json()["expenses"][0]["id"]
 
@@ -166,7 +166,7 @@ class TestExpenses:
     def test_cleanup(self, driver, w, ctx):
         for key in ("income_id", "dep_id", "wit_id"):
             if key in ctx:
-                api_delete(f"/api/v1/expenses/{ctx.pop(key)}/", ctx)
+                api_delete(f"/api/v2/expenses/{ctx.pop(key)}/", ctx)
 
 
 class TestExpenseSorting:
@@ -178,7 +178,7 @@ class TestExpenseSorting:
         year, month = today[:4], str(int(today[5:7]))
         ids = []
         for title, value in [("ZZZ Sort", "10.00"), ("AAA Sort", "50.00"), ("MMM Sort", "30.00")]:
-            r = api_post("/api/v1/expenses/", c, json={
+            r = api_post("/api/v2/expenses/", c, json={
                 "title": title, "value": value, "type": "expense",
                 "date_due": today, "settled": True,
             })
@@ -189,7 +189,7 @@ class TestExpenseSorting:
         c["sort_month"] = month
         yield c
         for uid in ids:
-            api_delete(f"/api/v1/expenses/{uid}/", c)
+            api_delete(f"/api/v2/expenses/{uid}/", c)
         cleanup_user(c["email"])
 
     def _card_titles(self, driver):
@@ -287,10 +287,10 @@ class TestDoubleSubmitGuard:
         assert "/budget/expenses/" in driver.current_url
         locked = driver.execute_script("return sessionStorage.getItem('e2eSubmitBtnLocked');")
         assert locked == "true", f"Submit button was not locked on submit (recorded: {locked!r})"
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "E2E DoubleClickGuard"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "E2E DoubleClickGuard"})
         expenses = resp.json()["expenses"]
         assert len(expenses) == 1, f"Expected exactly one expense, found {len(expenses)}"
-        api_delete(f"/api/v1/expenses/{expenses[0]['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{expenses[0]['id']}/", ctx)
 
     def test_back_resubmit_creates_only_one_expense(self, ctx):
         import re as _re
@@ -339,11 +339,11 @@ class TestDoubleSubmitGuard:
         assert r.status_code in (301, 302), f"Second POST returned {r.status_code}"
 
         # --- assert only one expense was created ---
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "E2E NoDuplicate"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "E2E NoDuplicate"})
         assert resp.status_code == 200
         matches = resp.json()["expenses"]
         dupes = [e for e in matches if "DUPE" in e["title"]]
         assert dupes == [], f"Duplicate expense was created: {dupes}"
         originals = [e for e in matches if e["title"] == title]
         assert len(originals) == 1, f"Expected 1 original, found {len(originals)}"
-        api_delete(f"/api/v1/expenses/{originals[0]['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{originals[0]['id']}/", ctx)

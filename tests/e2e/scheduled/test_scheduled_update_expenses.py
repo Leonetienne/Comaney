@@ -30,7 +30,7 @@ def ctx(driver, w):
 
 
 def _all_expenses(ctx):
-    return api_get("/api/v1/expenses/", ctx, params={"view": "year"}).json()["expenses"]
+    return api_get("/api/v2/expenses/", ctx, params={"view": "year"}).json()["expenses"]
 
 
 def _expenses_by_title(ctx, title):
@@ -53,7 +53,7 @@ class TestUpdateExpensesModal:
     def test_modal_opens_and_shows_expenses(self, driver, w, ctx):
         """Modal opens and lists at least one expense for the current year."""
         title = "UE Modal Open Test"
-        sched_id = api_post("/api/v1/scheduled/", ctx, json={
+        sched_id = api_post("/api/v2/scheduled/", ctx, json={
             "title": title,
             "type": "expense",
             "value": "50.00",
@@ -84,13 +84,13 @@ class TestUpdateExpensesModal:
         driver.find_element(By.ID, "update-exp-cancel").click()
         time.sleep(0.3)
         for e in generated:
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sched_id}/", ctx)
 
     def test_modal_title_renders_hyphen_literally(self, driver, w, ctx):
         """Scheduled titles containing a hyphen must not leak JS escape codes (e.g. \\u002D) into the modal."""
         title = "UE Givvee-Karte Test"
-        sched_id = api_post("/api/v1/scheduled/", ctx, json={
+        sched_id = api_post("/api/v2/scheduled/", ctx, json={
             "title": title,
             "type": "expense",
             "value": "10.00",
@@ -112,8 +112,8 @@ class TestUpdateExpensesModal:
         driver.find_element(By.ID, "update-exp-cancel").click()
         time.sleep(0.3)
         for e in generated:
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sched_id}/", ctx)
 
     def test_update_applies_changes_to_selected_expenses(self, driver, w, ctx):
         """After editing the scheduled expense, Update expenses syncs changes to generated ones."""
@@ -121,7 +121,7 @@ class TestUpdateExpensesModal:
         new_title = "UE After Update"
         today = server_today()
 
-        sched_id = api_post("/api/v1/scheduled/", ctx, json={
+        sched_id = api_post("/api/v2/scheduled/", ctx, json={
             "title": old_title,
             "type": "expense",
             "value": "40.00",
@@ -138,7 +138,7 @@ class TestUpdateExpensesModal:
         assert float(exp_before["value"]) == 40.0
 
         # PATCH the scheduled expense to change title and value
-        api_patch(f"/api/v1/scheduled/{sched_id}/", ctx, json={
+        api_patch(f"/api/v2/scheduled/{sched_id}/", ctx, json={
             "title": new_title,
             "type": "expense",
             "value": "77.00",
@@ -173,8 +173,8 @@ class TestUpdateExpensesModal:
         assert float(updated[0]["value"]) == 77.0
 
         for e in _expenses_by_title(ctx, new_title):
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sched_id}/", ctx)
 
     def test_deselected_expense_is_not_updated(self, driver, w, ctx):
         """Unchecking an expense in the modal excludes it from the update."""
@@ -184,7 +184,7 @@ class TestUpdateExpensesModal:
         # generation covers the whole financial year: 12 monthly occurrences
         base_date = f"{server_today()[:4]}-01-01"
 
-        sched_id = api_post("/api/v1/scheduled/", ctx, json={
+        sched_id = api_post("/api/v2/scheduled/", ctx, json={
             "title": title_before,
             "type": "expense",
             "value": "20.00",
@@ -202,7 +202,7 @@ class TestUpdateExpensesModal:
         first_id = generated[0]["id"]
         second_id = generated[1]["id"]
 
-        api_patch(f"/api/v1/scheduled/{sched_id}/", ctx, json={
+        api_patch(f"/api/v2/scheduled/{sched_id}/", ctx, json={
             "title": title_after,
             "type": "expense",
             "value": "20.00",
@@ -236,8 +236,8 @@ class TestUpdateExpensesModal:
 
         for e in _all_expenses(ctx):
             if e["id"] in {first_id, second_id}:
-                api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
+                api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sched_id}/", ctx)
 
     def test_select_unsettled_only_checks_unsettled_expenses(self, driver, w, ctx):
         """'Select unsettled' link checks only expenses that are not yet settled."""
@@ -247,7 +247,7 @@ class TestUpdateExpensesModal:
         # generation covers the whole financial year: 12 monthly occurrences
         base_date = f"{server_today()[:4]}-01-01"
 
-        sched_id = api_post("/api/v1/scheduled/", ctx, json={
+        sched_id = api_post("/api/v2/scheduled/", ctx, json={
             "title": title_before,
             "type": "expense",
             "value": "30.00",
@@ -264,11 +264,11 @@ class TestUpdateExpensesModal:
         settled_id = generated[0]["id"]
         unsettled_id = generated[1]["id"]
 
-        api_patch(f"/api/v1/expenses/{settled_id}/", ctx, json={"settled": True})
-        api_patch(f"/api/v1/expenses/{unsettled_id}/", ctx, json={"settled": False})
+        api_patch(f"/api/v2/expenses/{settled_id}/", ctx, json={"settled": True})
+        api_patch(f"/api/v2/expenses/{unsettled_id}/", ctx, json={"settled": False})
         time.sleep(0.3)
 
-        api_patch(f"/api/v1/scheduled/{sched_id}/", ctx, json={
+        api_patch(f"/api/v2/scheduled/{sched_id}/", ctx, json={
             "title": title_after,
             "type": "expense",
             "value": "30.00",
@@ -309,12 +309,12 @@ class TestUpdateExpensesModal:
 
         for e in _all_expenses(ctx):
             if e["id"] in {settled_id, unsettled_id}:
-                api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
+                api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sched_id}/", ctx)
 
     def test_no_expenses_shows_empty_state(self, driver, w, ctx):
         """Modal shows a message when no expenses exist for the current year."""
-        sched_id = api_post("/api/v1/scheduled/", ctx, json={
+        sched_id = api_post("/api/v2/scheduled/", ctx, json={
             "title": "UE Empty State",
             "type": "expense",
             "value": "5.00",
@@ -334,4 +334,4 @@ class TestUpdateExpensesModal:
         assert not ok_btn.is_enabled()
 
         driver.find_element(By.ID, "update-exp-cancel").click()
-        api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sched_id}/", ctx)

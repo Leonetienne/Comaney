@@ -134,7 +134,7 @@ class TestScheduledAllFields:
         assert Select(driver.find_element(By.ID, "id_repeat_every_unit")).first_selected_option.get_attribute("value") == "days"
         assert driver.find_element(By.ID, "id_repeat_base_date").get_attribute("value") == new_base
 
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
 
 class TestScheduledDoubleSubmitGuard:
@@ -187,14 +187,14 @@ class TestScheduledDoubleSubmitGuard:
         assert r.status_code in (301, 302), f"Second POST returned {r.status_code}"
 
         # --- assert only one scheduled expense was created ---
-        resp = api_get("/api/v1/scheduled/", ctx)
+        resp = api_get("/api/v2/scheduled/", ctx)
         assert resp.status_code == 200
         all_scheduled = resp.json()["scheduled"]
         dupes = [e for e in all_scheduled if "DUPE" in e["title"]]
         assert dupes == [], f"Duplicate scheduled expense was created: {dupes}"
         originals = [e for e in all_scheduled if e["title"] == title]
         assert len(originals) == 1, f"Expected 1 original, found {len(originals)}"
-        api_delete(f"/api/v1/scheduled/{originals[0]['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{originals[0]['id']}/", ctx)
 
 
 class TestScheduledImmediateGeneration:
@@ -207,7 +207,7 @@ class TestScheduledImmediateGeneration:
         today = server_today()
         title = "E2E ImmGen Create"
 
-        sid = api_post("/api/v1/scheduled/", ctx, json={
+        sid = api_post("/api/v2/scheduled/", ctx, json={
             "title": title,
             "type": "expense",
             "value": "42.00",
@@ -216,14 +216,14 @@ class TestScheduledImmediateGeneration:
             "repeat_base_date": today,
         }).json()["id"]
 
-        resp = api_get("/api/v1/expenses/", ctx)
+        resp = api_get("/api/v2/expenses/", ctx)
         assert resp.status_code == 200
         hits = [e for e in resp.json()["expenses"] if e["title"] == title]
         assert len(hits) >= 1, "Expected at least one generated expense immediately after saving scheduled"
 
         for e in hits:
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
     def test_create_via_gui_generates_expenses_immediately(self, driver, w, ctx):
         """Saving a new scheduled expense via the browser form generates expenses immediately."""
@@ -240,16 +240,16 @@ class TestScheduledImmediateGeneration:
         submit(w)
         wait_url(w, "/budget/scheduled/")
 
-        resp = api_get("/api/v1/expenses/", ctx)
+        resp = api_get("/api/v2/expenses/", ctx)
         assert resp.status_code == 200
         hits = [e for e in resp.json()["expenses"] if e["title"] == title]
         assert len(hits) >= 1, "Expected at least one generated expense immediately after saving via GUI"
 
         for e in hits:
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        all_sched = api_get("/api/v1/scheduled/", ctx).json()["scheduled"]
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        all_sched = api_get("/api/v2/scheduled/", ctx).json()["scheduled"]
         for s in [s for s in all_sched if s["title"] == title]:
-            api_delete(f"/api/v1/scheduled/{s['id']}/", ctx)
+            api_delete(f"/api/v2/scheduled/{s['id']}/", ctx)
 
     def test_edit_generates_new_expenses_immediately(self, ctx):
         """Editing a scheduled expense (e.g. changing the base date) triggers
@@ -258,7 +258,7 @@ class TestScheduledImmediateGeneration:
         title = "E2E ImmGen Edit"
 
         # Create with a far-future base date so no expenses are generated yet
-        sid = api_post("/api/v1/scheduled/", ctx, json={
+        sid = api_post("/api/v2/scheduled/", ctx, json={
             "title": title,
             "type": "expense",
             "value": "7.00",
@@ -267,7 +267,7 @@ class TestScheduledImmediateGeneration:
             "repeat_base_date": "2099-01-01",
         }).json()["id"]
 
-        hits_before = [e for e in api_get("/api/v1/expenses/", ctx).json()["expenses"]
+        hits_before = [e for e in api_get("/api/v2/expenses/", ctx).json()["expenses"]
                        if e["title"] == title]
         assert hits_before == [], "Should be no expenses before edit"
 
@@ -298,10 +298,10 @@ class TestScheduledImmediateGeneration:
             "confirm_modify_schedule_window": "on",
         }, allow_redirects=False)
 
-        hits_after = [e for e in api_get("/api/v1/expenses/", ctx).json()["expenses"]
+        hits_after = [e for e in api_get("/api/v2/expenses/", ctx).json()["expenses"]
                       if e["title"] == title]
         assert len(hits_after) >= 1, "Expected at least one generated expense immediately after editing scheduled"
 
         for e in hits_after:
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)

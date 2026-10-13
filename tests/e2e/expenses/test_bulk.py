@@ -90,15 +90,15 @@ class TestBulkSetup:
 
     def test_create_expenses(self, driver, w, ctx):
         today = server_today()
-        a = api_post("/api/v1/expenses/", ctx, json={
+        a = api_post("/api/v2/expenses/", ctx, json={
             "title": TITLE_A, "type": "expense", "value": "100.00",
             "date_due": today, "settled": False,
         })
-        b = api_post("/api/v1/expenses/", ctx, json={
+        b = api_post("/api/v2/expenses/", ctx, json={
             "title": TITLE_B, "type": "expense", "value": "200.00",
             "date_due": today, "settled": False,
         })
-        c_exp = api_post("/api/v1/expenses/", ctx, json={
+        c_exp = api_post("/api/v2/expenses/", ctx, json={
             "title": TITLE_C, "type": "income", "value": "300.00",
             "date_due": today, "settled": False,
         })
@@ -205,7 +205,7 @@ class TestBulkActions:
         _select_prefix(driver, w)
         _bulk_action(driver, w, "settle")
         for key in ("uid_a", "uid_b", "uid_c"):
-            assert api_get(f"/api/v1/expenses/{ctx[key]}/", ctx).json()["settled"] is True
+            assert api_get(f"/api/v2/expenses/{ctx[key]}/", ctx).json()["settled"] is True
 
     def test_bulk_unsettle(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/"))
@@ -213,7 +213,7 @@ class TestBulkActions:
         _select_prefix(driver, w)
         _bulk_action(driver, w, "unsettle")
         for key in ("uid_a", "uid_b", "uid_c"):
-            assert api_get(f"/api/v1/expenses/{ctx[key]}/", ctx).json()["settled"] is False
+            assert api_get(f"/api/v2/expenses/{ctx[key]}/", ctx).json()["settled"] is False
 
     def test_bulk_action_scoped_to_filter(self, driver, w, ctx):
         """Settling only Alpha via filtered bulk action must not touch Beta."""
@@ -222,8 +222,8 @@ class TestBulkActions:
         search_type(driver, TITLE_A)
         click(w, By.ID, "exp-select-all")
         _bulk_action(driver, w, "settle")
-        assert api_get(f"/api/v1/expenses/{ctx['uid_a']}/", ctx).json()["settled"] is True
-        assert api_get(f"/api/v1/expenses/{ctx['uid_b']}/", ctx).json()["settled"] is False
+        assert api_get(f"/api/v2/expenses/{ctx['uid_a']}/", ctx).json()["settled"] is True
+        assert api_get(f"/api/v2/expenses/{ctx['uid_b']}/", ctx).json()["settled"] is False
         # restore
         driver.get(_url("/budget/expenses/"))
         _select_prefix(driver, w)
@@ -265,11 +265,11 @@ class TestBulkTagCategory:
     @pytest.fixture(autouse=True)
     def setup_expenses(self, driver, w, ctx):
         today = server_today()
-        a = api_post("/api/v1/expenses/", ctx, json={
+        a = api_post("/api/v2/expenses/", ctx, json={
             "title": f"{PREFIX} TagCat Alpha", "type": "expense", "value": "10.00",
             "date_due": today, "settled": False,
         })
-        b = api_post("/api/v1/expenses/", ctx, json={
+        b = api_post("/api/v2/expenses/", ctx, json={
             "title": f"{PREFIX} TagCat Beta", "type": "expense", "value": "20.00",
             "date_due": today, "settled": False,
         })
@@ -278,20 +278,20 @@ class TestBulkTagCategory:
         ctx["tc_uid_a"] = a.json()["id"]
         ctx["tc_uid_b"] = b.json()["id"]
 
-        tag = api_post("/api/v1/tags/", ctx, json={"title": TAG_TITLE})
+        tag = api_post("/api/v2/tags/", ctx, json={"title": TAG_TITLE})
         assert tag.status_code == 201
         ctx["tag_id"] = tag.json()["id"]
 
-        cat = api_post("/api/v1/categories/", ctx, json={"title": CAT_TITLE})
+        cat = api_post("/api/v2/categories/", ctx, json={"title": CAT_TITLE})
         assert cat.status_code == 201
         ctx["cat_id"] = cat.json()["id"]
 
         yield
 
-        api_delete(f"/api/v1/expenses/{ctx['tc_uid_a']}/", ctx)
-        api_delete(f"/api/v1/expenses/{ctx['tc_uid_b']}/", ctx)
-        api_delete(f"/api/v1/tags/{ctx['tag_id']}/", ctx)
-        api_delete(f"/api/v1/categories/{ctx['cat_id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{ctx['tc_uid_a']}/", ctx)
+        api_delete(f"/api/v2/expenses/{ctx['tc_uid_b']}/", ctx)
+        api_delete(f"/api/v2/tags/{ctx['tag_id']}/", ctx)
+        api_delete(f"/api/v2/categories/{ctx['cat_id']}/", ctx)
         for key in ("tc_uid_a", "tc_uid_b", "tag_id", "cat_id"):
             ctx.pop(key, None)
 
@@ -305,7 +305,7 @@ class TestBulkTagCategory:
         self._select_tc(driver, w)
         _bulk_action(driver, w, "add-tag", "exp-bulk-tag", str(ctx["tag_id"]))
         for key in ("tc_uid_a", "tc_uid_b"):
-            tags = [t["title"] for t in api_get(f"/api/v1/expenses/{ctx[key]}/", ctx).json()["tags"]]
+            tags = [t["title"] for t in api_get(f"/api/v2/expenses/{ctx[key]}/", ctx).json()["tags"]]
             assert TAG_TITLE in tags, f"Expected tag on expense {key}"
 
     def test_bulk_add_tag_idempotent(self, driver, w, ctx):
@@ -319,20 +319,20 @@ class TestBulkTagCategory:
         self._select_tc(driver, w)
         _bulk_action(driver, w, "add-tag", "exp-bulk-tag", str(ctx["tag_id"]))
         for key in ("tc_uid_a", "tc_uid_b"):
-            tags = [t["title"] for t in api_get(f"/api/v1/expenses/{ctx[key]}/", ctx).json()["tags"]]
+            tags = [t["title"] for t in api_get(f"/api/v2/expenses/{ctx[key]}/", ctx).json()["tags"]]
             assert tags.count(TAG_TITLE) == 1, f"Tag should appear exactly once on expense {key}"
 
     def test_bulk_remove_tag(self, driver, w, ctx):
         # First add the tag
-        api_patch(f"/api/v1/expenses/{ctx['tc_uid_a']}/", ctx, json={"tags": [ctx["tag_id"]]})
-        api_patch(f"/api/v1/expenses/{ctx['tc_uid_b']}/", ctx, json={"tags": [ctx["tag_id"]]})
+        api_patch(f"/api/v2/expenses/{ctx['tc_uid_a']}/", ctx, json={"tags": [ctx["tag_id"]]})
+        api_patch(f"/api/v2/expenses/{ctx['tc_uid_b']}/", ctx, json={"tags": [ctx["tag_id"]]})
 
         driver.get(_url("/budget/expenses/"))
         wait_text(driver, w, f"{PREFIX} TagCat Alpha")
         self._select_tc(driver, w)
         _bulk_action(driver, w, "remove-tag", "exp-bulk-tag", str(ctx["tag_id"]))
         for key in ("tc_uid_a", "tc_uid_b"):
-            tags = [t["title"] for t in api_get(f"/api/v1/expenses/{ctx[key]}/", ctx).json()["tags"]]
+            tags = [t["title"] for t in api_get(f"/api/v2/expenses/{ctx[key]}/", ctx).json()["tags"]]
             assert TAG_TITLE not in tags, f"Tag should be removed from expense {key}"
 
     def test_bulk_set_category(self, driver, w, ctx):
@@ -341,14 +341,14 @@ class TestBulkTagCategory:
         self._select_tc(driver, w)
         _bulk_action(driver, w, "set-category", "exp-bulk-category", str(ctx["cat_id"]))
         for key in ("tc_uid_a", "tc_uid_b"):
-            cat = api_get(f"/api/v1/expenses/{ctx[key]}/", ctx).json()["category"]
+            cat = api_get(f"/api/v2/expenses/{ctx[key]}/", ctx).json()["category"]
             assert cat is not None, f"Category should be set on expense {key}"
             assert cat["title"] == CAT_TITLE
 
     def test_bulk_clear_category(self, driver, w, ctx):
         # First set category
-        api_patch(f"/api/v1/expenses/{ctx['tc_uid_a']}/", ctx, json={"category": ctx["cat_id"]})
-        api_patch(f"/api/v1/expenses/{ctx['tc_uid_b']}/", ctx, json={"category": ctx["cat_id"]})
+        api_patch(f"/api/v2/expenses/{ctx['tc_uid_a']}/", ctx, json={"category": ctx["cat_id"]})
+        api_patch(f"/api/v2/expenses/{ctx['tc_uid_b']}/", ctx, json={"category": ctx["cat_id"]})
 
         driver.get(_url("/budget/expenses/"))
         wait_text(driver, w, f"{PREFIX} TagCat Alpha")
@@ -356,7 +356,7 @@ class TestBulkTagCategory:
         # Select "— No category —" (empty value)
         _bulk_action(driver, w, "set-category", "exp-bulk-category", "")
         for key in ("tc_uid_a", "tc_uid_b"):
-            cat = api_get(f"/api/v1/expenses/{ctx[key]}/", ctx).json()["category"]
+            cat = api_get(f"/api/v2/expenses/{ctx[key]}/", ctx).json()["category"]
             assert cat is None, f"Category should be cleared on expense {key}"
 
 
@@ -393,7 +393,7 @@ class TestBulkPentest:
         )
 
         # B creates the foreign expense
-        r = api_post("/api/v1/expenses/", ctx_b, json={
+        r = api_post("/api/v2/expenses/", ctx_b, json={
             "title": f"{PENTEST_PREFIX} Foreign",
             "type": "expense", "value": "55.00",
             "date_due": server_today(), "settled": False,
@@ -412,8 +412,8 @@ class TestBulkPentest:
         )
 
         # A's tag and category (needed for overlay tests)
-        tag_r = api_post("/api/v1/tags/",       ctx_a, json={"title": PENTEST_TAG})
-        cat_r = api_post("/api/v1/categories/", ctx_a, json={"title": PENTEST_CAT})
+        tag_r = api_post("/api/v2/tags/",       ctx_a, json={"title": PENTEST_TAG})
+        cat_r = api_post("/api/v2/categories/", ctx_a, json={"title": PENTEST_CAT})
         assert tag_r.status_code == 201
         assert cat_r.status_code == 201
 
@@ -424,7 +424,7 @@ class TestBulkPentest:
             "cat_id": cat_r.json()["id"],
         }
 
-        api_delete(f"/api/v1/expenses/{foreign_pk}/", ctx_b)
+        api_delete(f"/api/v2/expenses/{foreign_pk}/", ctx_b)
         cleanup_user(ctx_a["email"])
         cleanup_user(ctx_b["email"])
 
@@ -480,7 +480,7 @@ class TestBulkPentest:
         self._load_shared(driver, w)
         self._select_foreign(driver, w)
         self._do_bulk(driver, w, "delete")
-        assert api_get(f"/api/v1/expenses/{d['foreign_pk']}/", d["ctx_b"]).status_code == 200, \
+        assert api_get(f"/api/v2/expenses/{d['foreign_pk']}/", d["ctx_b"]).status_code == 200, \
             "B's expense must still exist after A's blocked delete"
         assert "could not be updated" in driver.page_source
 
@@ -490,21 +490,21 @@ class TestBulkPentest:
         self._load_shared(driver, w)
         self._select_foreign(driver, w)
         self._do_bulk(driver, w, "settle")
-        exp = api_get(f"/api/v1/expenses/{d['foreign_pk']}/", d["ctx_b"]).json()
+        exp = api_get(f"/api/v2/expenses/{d['foreign_pk']}/", d["ctx_b"]).json()
         assert exp["settled"] is False, "B's expense must remain unsettled"
         assert "could not be updated" in driver.page_source
 
     def test_unsettle_blocked(self, driver, w, setup_users):
         d = setup_users
-        api_patch(f"/api/v1/expenses/{d['foreign_pk']}/", d["ctx_b"], json={"settled": True})
+        api_patch(f"/api/v2/expenses/{d['foreign_pk']}/", d["ctx_b"], json={"settled": True})
         self._login_a(driver, d)
         self._load_shared(driver, w)
         self._select_foreign(driver, w)
         self._do_bulk(driver, w, "unsettle")
-        exp = api_get(f"/api/v1/expenses/{d['foreign_pk']}/", d["ctx_b"]).json()
+        exp = api_get(f"/api/v2/expenses/{d['foreign_pk']}/", d["ctx_b"]).json()
         assert exp["settled"] is True, "B's expense must remain settled — A cannot unsettle it"
         assert "could not be updated" in driver.page_source
-        api_patch(f"/api/v1/expenses/{d['foreign_pk']}/", d["ctx_b"], json={"settled": False})
+        api_patch(f"/api/v2/expenses/{d['foreign_pk']}/", d["ctx_b"], json={"settled": False})
 
     def test_add_tag_goes_to_overlay(self, driver, w, setup_users):
         d = setup_users
@@ -513,7 +513,7 @@ class TestBulkPentest:
         self._select_foreign(driver, w)
         self._do_bulk(driver, w, "add-tag", "exp-bulk-tag", str(d["tag_id"]))
         # B's expense itself has no tag
-        assert api_get(f"/api/v1/expenses/{d['foreign_pk']}/", d["ctx_b"]).json()["tags"] == []
+        assert api_get(f"/api/v2/expenses/{d['foreign_pk']}/", d["ctx_b"]).json()["tags"] == []
         # A's overlay has it
         assert PENTEST_TAG in self._overlay_tags(d["foreign_pk"], d["ctx_a"]["email"])
         assert "personal view only" in driver.page_source
@@ -525,7 +525,7 @@ class TestBulkPentest:
         self._load_shared(driver, w)
         self._select_foreign(driver, w)
         self._do_bulk(driver, w, "remove-tag", "exp-bulk-tag", str(d["tag_id"]))
-        assert api_get(f"/api/v1/expenses/{d['foreign_pk']}/", d["ctx_b"]).json()["tags"] == []
+        assert api_get(f"/api/v2/expenses/{d['foreign_pk']}/", d["ctx_b"]).json()["tags"] == []
         assert PENTEST_TAG not in self._overlay_tags(d["foreign_pk"], d["ctx_a"]["email"])
         assert "personal view only" in driver.page_source
 
@@ -536,7 +536,7 @@ class TestBulkPentest:
         self._select_foreign(driver, w)
         self._do_bulk(driver, w, "set-category", "exp-bulk-category", str(d["cat_id"]))
         # B's expense itself has no category
-        assert api_get(f"/api/v1/expenses/{d['foreign_pk']}/", d["ctx_b"]).json()["category"] is None
+        assert api_get(f"/api/v2/expenses/{d['foreign_pk']}/", d["ctx_b"]).json()["category"] is None
         # A's overlay has it
         assert PENTEST_CAT in self._overlay_category(d["foreign_pk"], d["ctx_a"]["email"])
         assert "personal view only" in driver.page_source

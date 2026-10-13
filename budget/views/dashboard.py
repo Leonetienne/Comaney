@@ -1,21 +1,12 @@
-import json
-
 from django.shortcuts import redirect, render, get_object_or_404
 
 from comaney.json_utils import safe_json
 
+from .. import dashboard_service
 from ..decorators import feuser_required
 from ..models import Dashboard
 from ._period import _date_range_presets_context
 from ._sharing import has_contact_or_multiuser_project
-
-
-def _first_dashboard(feuser):
-    return (
-        Dashboard.objects.filter(owning_feuser=feuser)
-        .order_by('sorting', 'uid')
-        .first()
-    )
 
 
 def _dashboard_list_json(feuser):
@@ -30,12 +21,12 @@ def _dashboard_list_json(feuser):
 def dashboard(request):
     """Redirect to the user's first dashboard, preserving query params."""
     feuser = request.feuser
-    first = _first_dashboard(feuser)
+    first = dashboard_service.first_dashboard(feuser)
     if first is None:
         # create_defaults was not yet called; create one now
         from ..fixtures import create_defaults
         create_defaults(feuser)
-        first = _first_dashboard(feuser)
+        first = dashboard_service.first_dashboard(feuser)
     qs = request.GET.urlencode()
     target = f'/budget/dash/{first.pk}/'
     if qs:
@@ -48,7 +39,7 @@ def dashboard_detail(request, uid: int):
     feuser = request.feuser
     dash = get_object_or_404(Dashboard, pk=uid, owning_feuser=feuser)
 
-    first = _first_dashboard(feuser)
+    first = dashboard_service.first_dashboard(feuser)
     is_first = (first is not None and first.pk == dash.pk)
 
     dashboards_json = safe_json(_dashboard_list_json(feuser))

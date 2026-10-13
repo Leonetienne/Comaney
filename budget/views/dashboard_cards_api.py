@@ -13,16 +13,17 @@ Endpoints:
 
 import json
 import logging
-from decimal import Decimal
 
 import yaml
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
-from ..dashboard_cards import PRESETS, CardConfigError, compute_card_data, parse_card_config
+from .. import dashboard_service
+from ..dashboard_cards import PRESETS
+from ..dashboard_service import DashboardError
 from ..date_utils import financial_month_range, financial_year_range
 from ..decorators import feuser_required
-from ..models import Dashboard, DashboardCard, Expense
+from ..models import DashboardCard
 from ._period import _get_month, _get_period_mode, _get_year
 
 _log = logging.getLogger(__name__)
@@ -47,7 +48,6 @@ def _parse_body(request) -> dict:
         return {}
 
 
-from ._sharing import build_shared_qs, has_contact_or_multiuser_project
 
 
 def _period_qs(request, feuser):
@@ -75,75 +75,15 @@ def _period_qs(request, feuser):
             year, month = _get_month(request, feuser.month_start_day, feuser.month_start_prev)
             start, end = financial_month_range(year, month, feuser.month_start_day, feuser.month_start_prev)
 
-    sharing = request.GET.get('sharing', '')
-    if sharing == 'shared':
-        qs = build_shared_qs(feuser, start, end)
-        value_field = 'effective_value'
-    else:
-        qs = Expense.objects.filter(
-            owning_feuser=feuser,
-            date_due__gte=start,
-            date_due__lte=end,
-            deactivated=False,
-            is_dummy=False,
-        )
-        value_field = 'value'
-
-    return qs, {'start': start, 'end': end, 'mode': mode, 'sharing': sharing,
-                'value_field': value_field}
-
-
-def _card_to_json(card: DashboardCard, period_qs, feuser, period_info: dict = None) -> dict:
-    """Serialise a card including its computed data for the current period."""
-    value_field = (period_info or {}).get('value_field', 'value')
-    try:
-        config = parse_card_config(card.yaml_config)
-        data = compute_card_data(config, period_qs, feuser, period_info=period_info,
-                                 value_field=value_field)
-        error = None
-    except CardConfigError as exc:
-        config = {}
-        data = {}
-        error = str(exc)
-
-    pos = config.get('positioning', {}) if config else {}
-    mobile = (pos.get('mobile') or {}) if pos else {}
-    return {
-        'id':              card.pk,
-        'dashboard_id':    card.dashboard_id,
-        'yaml_config':     card.yaml_config,
-        'position':        pos.get('position', 0),
-        'width':           pos.get('width', 2),
-        'height':          pos.get('height', 2),
-        'mobile_position': mobile.get('position'),
-        'mobile_width':    mobile.get('width'),
-        'mobile_height':   mobile.get('height'),
-        'config':          config,
-        'data':            data,
-        'error':           error,
-    }
-
-
-def _first_dashboard(feuser):
-    return (
-        Dashboard.objects.filter(owning_feuser=feuser)
-        .order_by('sorting', 'uid')
-        .first()
-    )
+    return dashboard_service.period_qs(feuser, start, end, request.GET.get('sharing', ''), mode)
 
 
 def _resolve_dashboard(feuser, dashboard_id):
     """Return (Dashboard, error_response). If dashboard_id is None, return first."""
-    if dashboard_id is None:
-        first = _first_dashboard(feuser)
-        if first is None:
-            return None, _err('No dashboard found', 404)
-        return first, None
     try:
-        dash = Dashboard.objects.get(pk=int(dashboard_id), owning_feuser=feuser)
-        return dash, None
-    except (Dashboard.DoesNotExist, ValueError, TypeError):
-        return None, _err('Dashboard not found', 404)
+        return dashboard_service.resolve_dashboard(feuser, dashboard_id), None
+    except DashboardError as exc:
+        return None, _err(str(exc), exc.status)
 
 
 # ---------------------------------------------------------------------------
@@ -161,12 +101,7 @@ def cards_api(request):
         if err:
             return err
         period_qs, period_info = _period_qs(request, feuser)
-        cards = DashboardCard.objects.filter(owning_feuser=feuser, dashboard=dash)
-        card_list = sorted(
-            [_card_to_json(c, period_qs, feuser, period_info) for c in cards],
-            key=lambda c: (c['position'], c['id']),
-        )
-        return _ok({'cards': card_list})
+        return _ok({'cards': dashboard_service.cards_json(feuser, dash, period_qs, period_info)})
 
     # POST: create new card
     body = _parse_body(request)
@@ -175,20 +110,13 @@ def cards_api(request):
     if err:
         return err
 
-    yaml_str = body.get('yaml_config', '').strip()
-    if not yaml_str:
-        return _err('yaml_config is required')
-
     try:
-        config = parse_card_config(yaml_str)
-    except CardConfigError as exc:
-        return _err(str(exc))
-
-    card = DashboardCard(owning_feuser=feuser, dashboard=dash, yaml_config=yaml_str)
-    card.save()
+        card = dashboard_service.create_card(feuser, dash, body.get('yaml_config', ''))
+    except DashboardError as exc:
+        return _err(str(exc), exc.status)
 
     period_qs, period_info = _period_qs(request, feuser)
-    return _ok({'card': _card_to_json(card, period_qs, feuser, period_info)}, status=201)
+    return _ok({'card': dashboard_service.card_json(card, period_qs, feuser, period_info)}, status=201)
 
 
 # ---------------------------------------------------------------------------
@@ -211,29 +139,15 @@ def card_detail_api(request, uid: int):
     # PATCH: update yaml and/or move to another dashboard
     body = _parse_body(request)
 
-    # Optional dashboard move
-    new_dashboard_id = body.get('dashboard_id')
-    if new_dashboard_id is not None:
-        try:
-            new_dash = Dashboard.objects.get(pk=int(new_dashboard_id), owning_feuser=feuser)
-            card.dashboard = new_dash
-        except (Dashboard.DoesNotExist, ValueError, TypeError):
-            return _err('Dashboard not found', 404)
-
-    yaml_str = body.get('yaml_config', '').strip()
-    if yaml_str:
-        try:
-            config = parse_card_config(yaml_str)
-        except CardConfigError as exc:
-            return _err(str(exc))
-        card.yaml_config = yaml_str
-    elif new_dashboard_id is None:
-        return _err('yaml_config is required')
-
-    card.save()
+    try:
+        dashboard_service.update_card(
+            feuser, card, yaml_str=body.get('yaml_config', ''), dashboard_id=body.get('dashboard_id'),
+        )
+    except DashboardError as exc:
+        return _err(str(exc), exc.status)
 
     period_qs, period_info = _period_qs(request, feuser)
-    return _ok({'card': _card_to_json(card, period_qs, feuser, period_info)})
+    return _ok({'card': dashboard_service.card_json(card, period_qs, feuser, period_info)})
 
 
 # ---------------------------------------------------------------------------
@@ -418,7 +332,7 @@ def cards_reset_api(request):
     if err:
         return err
 
-    first = _first_dashboard(feuser)
+    first = dashboard_service.first_dashboard(feuser)
     if first is None or dash.pk != first.pk:
         return _err('Reset is only allowed on the first dashboard', 409)
 
@@ -432,9 +346,4 @@ def cards_reset_api(request):
         for card_key in default_card_keys
     ])
     period_qs, period_info = _period_qs(request, feuser)
-    cards = DashboardCard.objects.filter(owning_feuser=feuser, dashboard=dash)
-    card_list = sorted(
-        [_card_to_json(c, period_qs, feuser, period_info) for c in cards],
-        key=lambda c: (c['position'], c['id']),
-    )
-    return _ok({'cards': card_list})
+    return _ok({'cards': dashboard_service.cards_json(feuser, dash, period_qs, period_info)})

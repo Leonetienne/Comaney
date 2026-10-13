@@ -61,7 +61,7 @@ class TestDateOutsideRangeWarningOnCreate:
         driver.find_element(By.ID, "cdialog-cancel").click()
         time.sleep(1)
         assert "/budget/expenses/new/" in driver.current_url
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "Out Of Range Expense"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "Out Of Range Expense"})
         assert not any(e["title"] == "Out Of Range Expense" for e in resp.json()["expenses"]), \
             "Expense must not be created while the warning dialog is pending/cancelled"
 
@@ -71,7 +71,7 @@ class TestDateOutsideRangeWarningOnCreate:
         driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(2)
         assert "/budget/expenses/" in driver.current_url
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "Out Of Range Expense"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "Out Of Range Expense"})
         assert any(e["title"] == "Out Of Range Expense" for e in resp.json()["expenses"]), \
             "Confirming the dialog must still save the expense"
 
@@ -119,7 +119,7 @@ class TestDateOutsideRangeWarningOnEdit:
     @pytest.fixture(scope="class")
     def exp_id(self, driver, w, ctx):
         today = server_today()
-        resp = api_post("/api/v1/expenses/", ctx, json={
+        resp = api_post("/api/v2/expenses/", ctx, json={
             "title": "Edit Range Expense",
             "value": "5.00",
             "type": "expense",
@@ -151,7 +151,7 @@ class TestDateOutsideRangeWarningOnEdit:
     def test_confirm_saves_the_new_date(self, driver, w, ctx, exp_id):
         driver.find_element(By.ID, "cdialog-ok").click()
         time.sleep(2)
-        resp = api_get("/api/v1/expenses/", ctx, params={
+        resp = api_get("/api/v2/expenses/", ctx, params={
             "q": "Edit Range Expense",
             "date_from": "2019-01-01",
             "date_to": "2021-01-01",

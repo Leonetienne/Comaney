@@ -20,7 +20,8 @@ def _serve_docs(request, path):
 urlpatterns = [
     path("admin/ai-trial/", admin.site.admin_view(ai_trial_admin_view), name="admin_ai_trial"),
     path("admin/", admin.site.urls),
-    path("api/v1/", include("api.urls")),
+    path("api/v2/", include("api.urls")),
+    path("", include("mcp_server.urls")),
     path("budget/", include("budget.urls")),
     path("buddies/", include("buddies.urls")),
     path("projects/", include("buddies.urls_projects", namespace="projects")),

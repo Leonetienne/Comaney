@@ -28,11 +28,11 @@ class TestCategoryCascade:
 
     def test_delete_category_nullifies_expense_category(self, driver, w, ctx):
         # Setup via API: create category and expense assigned to it
-        cat = api_post("/api/v1/categories/", ctx, json={"title": "CascadeCat"})
+        cat = api_post("/api/v2/categories/", ctx, json={"title": "CascadeCat"})
         assert cat.status_code == 201
         cat_id = cat.json()["id"]
 
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "CascadeExpense", "type": "expense",
             "value": "10.00", "date_due": server_today(), "settled": True,
             "category_id": cat_id,
@@ -58,15 +58,15 @@ class TestCategoryCascade:
             f"Expense category must be blank after deleting the category; got: {selected_value!r}"
         )
 
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_delete_tag_removes_from_expense(self, driver, w, ctx):
         # Setup via API: create tag and expense with that tag
-        tag = api_post("/api/v1/tags/", ctx, json={"title": "CascadeTagUI"})
+        tag = api_post("/api/v2/tags/", ctx, json={"title": "CascadeTagUI"})
         assert tag.status_code == 201
         tag_id = tag.json()["id"]
 
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "TagCascadeExpenseUI", "type": "expense",
             "value": "5.00", "date_due": server_today(), "settled": True,
             "tag_ids": [tag_id],
@@ -91,15 +91,15 @@ class TestCategoryCascade:
             "Deleted tag must not appear as a checkbox in the expense edit form"
         )
 
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_delete_category_nullifies_scheduled_category(self, driver, w, ctx):
         # Setup via API
-        cat = api_post("/api/v1/categories/", ctx, json={"title": "CascadeSchedCat"})
+        cat = api_post("/api/v2/categories/", ctx, json={"title": "CascadeSchedCat"})
         assert cat.status_code == 201
         cat_id = cat.json()["id"]
 
-        sched = api_post("/api/v1/scheduled/", ctx, json={
+        sched = api_post("/api/v2/scheduled/", ctx, json={
             "title": "CascadeSchedExp", "type": "expense", "value": "20.00",
             "repeat_every_factor": 1, "repeat_every_unit": "months",
             "repeat_base_date": server_today(),
@@ -126,15 +126,15 @@ class TestCategoryCascade:
             "Scheduled expense category must be blank after deleting the category"
         )
 
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
     def test_delete_tag_removes_from_scheduled(self, driver, w, ctx):
         # Setup via API
-        tag = api_post("/api/v1/tags/", ctx, json={"title": "SchedTagCascadeUI"})
+        tag = api_post("/api/v2/tags/", ctx, json={"title": "SchedTagCascadeUI"})
         assert tag.status_code == 201
         tag_id = tag.json()["id"]
 
-        sched = api_post("/api/v1/scheduled/", ctx, json={
+        sched = api_post("/api/v2/scheduled/", ctx, json={
             "title": "TagCascadeSchedUI", "type": "expense", "value": "15.00",
             "repeat_every_factor": 1, "repeat_every_unit": "months",
             "repeat_base_date": server_today(),
@@ -160,4 +160,4 @@ class TestCategoryCascade:
             "Deleted tag must not appear as a checkbox in the scheduled expense edit form"
         )
 
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)

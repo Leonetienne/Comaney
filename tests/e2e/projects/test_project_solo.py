@@ -114,7 +114,7 @@ class TestSoloProjectExpenseCreation:
             f"print(e.pk if e else 'none')"
         )
         assert exp_pk != "none", "The earlier test's 'Solo Repair Cost' expense was not created"
-        result = api_get(f"/api/v1/expenses/{exp_pk}/", ctx["a"])
+        result = api_get(f"/api/v2/expenses/{exp_pk}/", ctx["a"])
         assert result.status_code == 200
         exp_data = result.json()
         assert exp_data.get("project") is not None

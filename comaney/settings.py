@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "feusers",
     "budget",
     "buddies",
+    "mcp_server",
 ]
 
 MIDDLEWARE = [

@@ -131,7 +131,7 @@ class TestDataExport:
             assert removed not in names, f"{removed} is redundant and must no longer be in the export ZIP"
 
     def test_expense_appears_in_export(self, driver, w, ctx):
-        r = api_post("/api/v1/expenses/", ctx, json={
+        r = api_post("/api/v2/expenses/", ctx, json={
             "title": "ExportTestExpense",
             "type": "expense",
             "value": "99.99",
@@ -146,7 +146,7 @@ class TestDataExport:
             expenses_csv = _read_csv(zf, "expenses.csv")
         assert "ExportTestExpense" in expenses_csv
 
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_profile_email_in_export(self, driver, w, ctx):
         resp = _get_export(driver)
@@ -241,7 +241,7 @@ class TestDataExport:
             )
 
     def test_category_appears_in_export(self, driver, w, ctx):
-        r = api_post("/api/v1/categories/", ctx, json={"title": "ExportCat"})
+        r = api_post("/api/v2/categories/", ctx, json={"title": "ExportCat"})
         assert r.status_code == 201
         cat_id = r.json()["id"]
 
@@ -250,7 +250,7 @@ class TestDataExport:
             cats_csv = _read_csv(zf, "categories.csv")
         assert "ExportCat" in cats_csv
 
-        api_delete(f"/api/v1/categories/{cat_id}/", ctx)
+        api_delete(f"/api/v2/categories/{cat_id}/", ctx)
 
     def test_buddy_owned_expense_appears_in_export(self, driver, w, ctx):
         """Personal expense owned by a direct (ContactLink-connected) buddy where ctx user
@@ -568,17 +568,17 @@ class TestDataExport:
 
     def test_expense_tag_ids_in_export(self, driver, w, ctx):
         """expenses.csv must contain tag UIDs, not tag titles."""
-        r = api_post("/api/v1/tags/", ctx, json={"title": "ExportTagTitle"})
+        r = api_post("/api/v2/tags/", ctx, json={"title": "ExportTagTitle"})
         assert r.status_code == 201
         tag_id = str(r.json()["id"])
 
-        r = api_post("/api/v1/expenses/", ctx, json={
+        r = api_post("/api/v2/expenses/", ctx, json={
             "title": "TagIdFormatExpense", "type": "expense",
             "value": "1.00", "date_due": server_today(), "settled": True,
         })
         assert r.status_code == 201
         eid = r.json()["id"]
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"tag_ids": [int(tag_id)]})
+        api_patch(f"/api/v2/expenses/{eid}/", ctx, json={"tag_ids": [int(tag_id)]})
 
         try:
             time.sleep(1)
@@ -589,16 +589,16 @@ class TestDataExport:
             assert tag_id in expenses_csv, "Tag UID must appear in expenses.csv"
             assert "ExportTagTitle" not in expenses_csv, "Tag title must NOT appear in expenses.csv"
         finally:
-            api_delete(f"/api/v1/expenses/{eid}/", ctx)
-            api_delete(f"/api/v1/tags/{tag_id}/", ctx)
+            api_delete(f"/api/v2/expenses/{eid}/", ctx)
+            api_delete(f"/api/v2/tags/{tag_id}/", ctx)
 
     def test_expense_category_id_in_export(self, driver, w, ctx):
         """expenses.csv must contain category_id as a raw numeric FK, not the category title."""
-        r = api_post("/api/v1/categories/", ctx, json={"title": "ExportCatTitle"})
+        r = api_post("/api/v2/categories/", ctx, json={"title": "ExportCatTitle"})
         assert r.status_code == 201
         cat_id = str(r.json()["id"])
 
-        r = api_post("/api/v1/expenses/", ctx, json={
+        r = api_post("/api/v2/expenses/", ctx, json={
             "title": "CatIdFormatExpense", "type": "expense",
             "value": "1.00", "date_due": server_today(), "settled": True,
             "category_id": int(cat_id),
@@ -615,8 +615,8 @@ class TestDataExport:
             assert cat_id in expenses_csv, "Category UID must appear in expenses.csv"
             assert "ExportCatTitle" not in expenses_csv, "Category title must NOT appear in expenses.csv"
         finally:
-            api_delete(f"/api/v1/expenses/{eid}/", ctx)
-            api_delete(f"/api/v1/categories/{cat_id}/", ctx)
+            api_delete(f"/api/v2/expenses/{eid}/", ctx)
+            api_delete(f"/api/v2/categories/{cat_id}/", ctx)
 
     def test_buddies_expenses_no_category_tag_columns(self, driver, w, ctx):
         """contact-expenses.csv must not expose the expense owner's category_id or tag_ids."""
@@ -666,11 +666,11 @@ class TestDataExport:
 
     def test_expense_overlays_in_export(self, driver, w, ctx):
         """expense_overlays.csv must list category_id and tag_ids as raw IDs, not titles."""
-        r = api_post("/api/v1/categories/", ctx, json={"title": "OverlayCat"})
+        r = api_post("/api/v2/categories/", ctx, json={"title": "OverlayCat"})
         assert r.status_code == 201
         cat_id = r.json()["id"]
 
-        r = api_post("/api/v1/tags/", ctx, json={"title": "OverlayTag"})
+        r = api_post("/api/v2/tags/", ctx, json={"title": "OverlayTag"})
         assert r.status_code == 201
         tag_id = r.json()["id"]
 
@@ -713,8 +713,8 @@ class TestDataExport:
             assert "OverlayTag" not in overlays_csv, "Tag title must not appear in expense_overlays.csv"
         finally:
             cleanup_user(owner_email)
-            api_delete(f"/api/v1/categories/{cat_id}/", ctx)
-            api_delete(f"/api/v1/tags/{tag_id}/", ctx)
+            api_delete(f"/api/v2/categories/{cat_id}/", ctx)
+            api_delete(f"/api/v2/tags/{tag_id}/", ctx)
 
     def test_real_user_buddy_in_contacts_csv(self, driver, w, ctx):
         """contacts.csv must contain entries for confirmed buddy

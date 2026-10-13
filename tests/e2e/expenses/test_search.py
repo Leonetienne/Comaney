@@ -59,7 +59,7 @@ def _expenses_url(year=FIXED_YEAR):
 
 
 def _api_titles(ctx, q, year=FIXED_YEAR):
-    resp = api_get("/api/v1/expenses/", ctx,
+    resp = api_get("/api/v2/expenses/", ctx,
                    params={"q": q, "year": year, "view": "year"})
     assert resp.status_code == 200
     return [e["title"] for e in resp.json()["expenses"]]
@@ -75,11 +75,11 @@ def ctx(driver, w):
 @pytest.fixture(scope="module", autouse=True)
 def setup_data(ctx, driver, w):
     """Create all test expenses, category, and tags. Clean up after module."""
-    cat_r = api_post("/api/v1/categories/", ctx, json={"title": "SrchTestCat"})
+    cat_r = api_post("/api/v2/categories/", ctx, json={"title": "SrchTestCat"})
     assert cat_r.status_code == 201
     cat_id = cat_r.json()["id"]
 
-    tag_r = api_post("/api/v1/tags/", ctx, json={"title": "SrchTestTag"})
+    tag_r = api_post("/api/v2/tags/", ctx, json={"title": "SrchTestTag"})
     assert tag_r.status_code == 201
     tag_id = tag_r.json()["id"]
 
@@ -100,7 +100,7 @@ def setup_data(ctx, driver, w):
     ]
     eids = []
     for body in expenses:
-        r = api_post("/api/v1/expenses/", ctx, json=body)
+        r = api_post("/api/v2/expenses/", ctx, json=body)
         assert r.status_code == 201, r.text
         eids.append(r.json()["id"])
 
@@ -111,11 +111,11 @@ def setup_data(ctx, driver, w):
     yield
 
     for eid in ctx.get("srch_eids", []):
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
     if "srch_cat_id" in ctx:
-        api_delete(f"/api/v1/categories/{ctx['srch_cat_id']}/", ctx)
+        api_delete(f"/api/v2/categories/{ctx['srch_cat_id']}/", ctx)
     if "srch_tag_id" in ctx:
-        api_delete(f"/api/v1/tags/{ctx['srch_tag_id']}/", ctx)
+        api_delete(f"/api/v2/tags/{ctx['srch_tag_id']}/", ctx)
 
 
 class TestFilterByAttributes:

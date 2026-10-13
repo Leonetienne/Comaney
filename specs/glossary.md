@@ -27,6 +27,8 @@
 | Project admin | The one member of a project allowed to manage it. |
 | Solo project | A project with no member other than the admin. |
 | Settlement | An expense flagged as a debt payoff between two participants, not real spending. |
+| Agent key | A revocable Bearer key for the MCP server, one per AI assistant, with a read and a write permission per concern. |
+| Concern | One of the permission groups an agent key can be restricted on, e.g. Expenses or Projects. Every API operation belongs to exactly one. |
 | Debtor / creditor | The paying / receiving side of a settlement. |
 | Approval (participant) | A participant's check-or-cross consent to their share of an expense. |
 | Auto-accept trust | A feuser's per-contact opt-in to accept that contact's entries without confirmation. |

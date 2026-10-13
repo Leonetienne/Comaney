@@ -95,11 +95,11 @@ class TestPieChartCard:
         today = server_today()
         year, month = today[:4], today[5:7]
 
-        cat = api_post("/api/v1/categories/", ctx, json={"title": "PieCatA"})
+        cat = api_post("/api/v2/categories/", ctx, json={"title": "PieCatA"})
         assert cat.status_code == 201
         cat_id = cat.json()["id"]
 
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "PieExp", "type": "expense", "value": "77.00",
             "date_due": today, "settled": True,
             "category_id": cat_id,
@@ -116,18 +116,18 @@ class TestPieChartCard:
         assert len(data["labels"]) == len(data["values"])
         assert "PieCatA" in data["labels"]
 
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
-        api_delete(f"/api/v1/categories/{cat_id}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/categories/{cat_id}/", ctx)
 
     def test_pie_chart_by_tags_data(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
 
-        tag = api_post("/api/v1/tags/", ctx, json={"title": "PieTagA"})
+        tag = api_post("/api/v2/tags/", ctx, json={"title": "PieTagA"})
         assert tag.status_code == 201
         tag_id = tag.json()["id"]
 
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "PieTagExp", "type": "expense", "value": "55.00",
             "date_due": today, "settled": True,
             "tag_ids": [tag_id],
@@ -139,8 +139,8 @@ class TestPieChartCard:
         assert data is not None
         assert "PieTagA" in data.get("labels", [])
 
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
-        api_delete(f"/api/v1/tags/{tag_id}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/tags/{tag_id}/", ctx)
 
     def test_pie_chart_method_total(self, driver, w, ctx, sess):
         csrf = _csrf(sess)
@@ -197,11 +197,11 @@ class TestPieChartCard:
         today = server_today()
         year, month = today[:4], today[5:7]
 
-        cat = api_post("/api/v1/categories/", ctx, json={"title": "PieFlipCat"})
+        cat = api_post("/api/v2/categories/", ctx, json={"title": "PieFlipCat"})
         assert cat.status_code == 201
         cat_id = cat.json()["id"]
 
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "PieFlipExp", "type": "expense", "value": "40.00",
             "date_due": today, "settled": True, "category_id": cat_id,
         })
@@ -226,8 +226,8 @@ class TestPieChartCard:
             assert data["values"][pie_flip_idx] < 0, "flip_signs should negate values"
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
-        api_delete(f"/api/v1/categories/{cat_id}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/categories/{cat_id}/", ctx)
 
     def test_cleanup_pie_cards(self, driver, w, ctx, sess):
         csrf = _csrf(sess)

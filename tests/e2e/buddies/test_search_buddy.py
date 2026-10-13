@@ -40,7 +40,7 @@ def _shell(code: str) -> str:
 
 
 def _api_titles(ctx, q, year=FIXED_YEAR):
-    resp = api_get("/api/v1/expenses/", ctx,
+    resp = api_get("/api/v2/expenses/", ctx,
                    params={"q": q, "year": year, "view": "year"})
     assert resp.status_code == 200
     return [e["title"] for e in resp.json()["expenses"]]
@@ -59,7 +59,7 @@ def setup_data(ctx):
     email = ctx["email"]
 
     # Plain expense (no buddy spending)
-    r = api_post("/api/v1/expenses/", ctx, json={
+    r = api_post("/api/v2/expenses/", ctx, json={
         "title": "BuddySrch Plain",
         "type": "expense",
         "value": "10.00",
@@ -79,7 +79,7 @@ def setup_data(ctx):
     ctx["bsrch_dummy_pk"] = dummy_pk
 
     # Buddy expense with DummyUser participant
-    r = api_post("/api/v1/expenses/", ctx, json={
+    r = api_post("/api/v2/expenses/", ctx, json={
         "title": "BuddySrch WithDummy",
         "type": "expense",
         "value": "20.00",
@@ -107,7 +107,7 @@ def setup_data(ctx):
     ))
     ctx["bsrch_group_pk"] = group_pk
 
-    r = api_post("/api/v1/expenses/", ctx, json={
+    r = api_post("/api/v2/expenses/", ctx, json={
         "title": "BuddySrch WithGroup",
         "type": "expense",
         "value": "30.00",
@@ -128,7 +128,7 @@ def setup_data(ctx):
     for key in ("bsrch_plain_id", "bsrch_dummy_exp_id", "bsrch_group_exp_id"):
         eid = ctx.get(key)
         if eid:
-            api_delete(f"/api/v1/expenses/{eid}/", ctx)
+            api_delete(f"/api/v2/expenses/{eid}/", ctx)
     # Delete dummy user and group via shell (cascade handles spending rows and group members)
     if "bsrch_dummy_pk" in ctx:
         _shell(

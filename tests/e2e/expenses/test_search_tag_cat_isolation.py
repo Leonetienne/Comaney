@@ -36,7 +36,7 @@ def _shell(code: str) -> str:
 
 
 def _api_titles(ctx, q, sharing="shared"):
-    resp = api_get("/api/v1/expenses/", ctx,
+    resp = api_get("/api/v2/expenses/", ctx,
                    params={"q": q, "year": FIXED_YEAR, "view": "year", "sharing": sharing})
     assert resp.status_code == 200, resp.text
     return [e["title"] for e in resp.json()["expenses"]]

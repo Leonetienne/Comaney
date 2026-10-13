@@ -33,7 +33,7 @@ IN_10_DAYS = (_today + timedelta(days=10)).isoformat()
 
 
 def _mk(ctx, title, date_due, notify=True, settled=False, **kwargs):
-    resp = api_post("/api/v1/expenses/", ctx, json={
+    resp = api_post("/api/v2/expenses/", ctx, json={
         "title": title, "type": "expense", "value": "42.00",
         "date_due": date_due, "settled": settled, "notify": notify, **kwargs,
     })
@@ -42,7 +42,15 @@ def _mk(ctx, title, date_due, notify=True, settled=False, **kwargs):
 
 
 def _get(ctx, eid):
-    return api_get(f"/api/v1/expenses/{eid}/", ctx).json()
+    return api_get(f"/api/v2/expenses/{eid}/", ctx).json()
+
+
+def _move_due(eid, date_due):
+    """Shift the due date as if time passed: an edit would reset the notification class."""
+    run_cmd(
+        "shell", "-c",
+        f"from budget.models import Expense; Expense.objects.filter(uid={eid}).update(date_due={date_due!r})",
+    )
 
 
 def _run_notify():
@@ -68,32 +76,32 @@ class TestInitialClass:
     def test_far_future_empty(self, driver, w, ctx):
         e = _mk(ctx, "NC Far", IN_10_DAYS)
         assert e["last_notification_class_sent"] == ""
-        api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
 
     def test_soon_class(self, driver, w, ctx):
         e = _mk(ctx, "NC Soon", IN_3_DAYS)
         assert e["last_notification_class_sent"] == "soon"
-        api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
 
     def test_tomorrow_class(self, driver, w, ctx):
         e = _mk(ctx, "NC Tomorrow", TOMORROW)
         assert e["last_notification_class_sent"] == "tomorrow"
-        api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
 
     def test_today_class(self, driver, w, ctx):
         e = _mk(ctx, "NC Today", TODAY)
         assert e["last_notification_class_sent"] == "today"
-        api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
 
     def test_late_class(self, driver, w, ctx):
         e = _mk(ctx, "NC Late", YESTERDAY)
         assert e["last_notification_class_sent"] == "late"
-        api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
 
     def test_settled_class(self, driver, w, ctx):
         e = _mk(ctx, "NC Settled", YESTERDAY, settled=True)
         assert e["last_notification_class_sent"] == "settled"
-        api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
 
     def test_edit_updates_class(self, driver, w, ctx):
         """Editing due date via web form updates last_notification_class_sent."""
@@ -106,7 +114,7 @@ class TestInitialClass:
         submit(w)
         time.sleep(2)
         assert _get(ctx, eid)["last_notification_class_sent"] == "tomorrow"
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
 
 class TestCronNotifications:
@@ -115,8 +123,7 @@ class TestCronNotifications:
         """Expense at class '' with due_date in 3 days: cron sends email, class advances to 'soon'."""
         e = _mk(ctx, "Cron Soon", IN_10_DAYS)
         eid = e["id"]
-        # Patch due date without resetting class (API patch does not change class)
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": IN_3_DAYS})
+        _move_due(eid, IN_3_DAYS)
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
         seen = mailpit_seen_ids()
         _run_notify()
@@ -136,7 +143,7 @@ class TestCronNotifications:
             .json().get("messages", [])
         }
         assert not (new_msgs - seen), "Second cron run must not send a duplicate email"
-        api_delete(f"/api/v1/expenses/{ctx.pop('cron_soon_eid')}/", ctx)
+        api_delete(f"/api/v2/expenses/{ctx.pop('cron_soon_eid')}/", ctx)
 
 
 class TestSettledNotification:
@@ -155,14 +162,14 @@ class TestSettledNotification:
         submit(w)
         time.sleep(2)
         fetch_email(ctx["email"], "settled", timeout=30, ignore_ids=seen)
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_no_notification_when_disabled(self, driver, w, ctx):
         """email_notifications=False: cron sends no email."""
-        api_patch("/api/v1/account/", ctx, json={"email_notifications": False})
+        api_patch("/api/v2/account/", ctx, json={"email_notifications": False})
         e = _mk(ctx, "NoNotify", IN_10_DAYS)
         eid = e["id"]
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": IN_3_DAYS})
+        _move_due(eid, IN_3_DAYS)
         seen = mailpit_seen_ids()
         _run_notify()
         time.sleep(2)
@@ -172,17 +179,17 @@ class TestSettledNotification:
             .json().get("messages", [])
         }
         assert not (new_msgs - seen), "No notification expected when email_notifications=False"
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
-        api_patch("/api/v1/account/", ctx, json={"email_notifications": True})
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
+        api_patch("/api/v2/account/", ctx, json={"email_notifications": True})
 
 
 class TestEmailActions:
 
     def _trigger_soon_email(self, ctx, title):
-        """Create expense at class '', patch to IN_3_DAYS, run cron. Returns (eid, email_body)."""
+        """Create expense at class '', move it to IN_3_DAYS, run cron. Returns (eid, email_body)."""
         e = _mk(ctx, title, IN_10_DAYS)
         eid = e["id"]
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": IN_3_DAYS})
+        _move_due(eid, IN_3_DAYS)
         seen = mailpit_seen_ids()
         _run_notify()
         time.sleep(1)
@@ -209,7 +216,7 @@ class TestEmailActions:
             s.get(settle_link, timeout=10, allow_redirects=True)
             time.sleep(1)
             assert _get(ctx, eid)["settled"] is True
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_mute_expense_link(self, driver, w, ctx):
         """Muting an expense via the email link sets notify=False."""
@@ -222,7 +229,7 @@ class TestEmailActions:
                    headers={"Referer": BASE_URL + "/"})
             time.sleep(1)
             assert _get(ctx, eid)["notify"] is False
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
 
 class TestEditClassBack:
@@ -238,7 +245,7 @@ class TestEditClassBack:
         submit(w)
         time.sleep(2)
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
 
 class TestCronSequence:
@@ -247,7 +254,7 @@ class TestCronSequence:
         """When class is 'soon' and due date becomes tomorrow, cron sends 'tomorrow'."""
         e = _mk(ctx, "CronSeq Soon", IN_10_DAYS)
         eid = e["id"]
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": IN_3_DAYS})
+        _move_due(eid, IN_3_DAYS)
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
         seen = mailpit_seen_ids()
         _run_notify()
@@ -255,7 +262,7 @@ class TestCronSequence:
         assert _get(ctx, eid)["last_notification_class_sent"] == "soon"
         fetch_email(ctx["email"], "Payment due in", timeout=30, ignore_ids=seen)
 
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": TOMORROW})
+        _move_due(eid, TOMORROW)
         seen2 = mailpit_seen_ids()
         _run_notify()
         time.sleep(1)
@@ -266,7 +273,7 @@ class TestCronSequence:
     def test_today_notification_fires(self, driver, w, ctx):
         """When class is 'tomorrow' and due date reaches today, cron sends 'today'."""
         eid = ctx["cron_seq_eid"]
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": TODAY})
+        _move_due(eid, TODAY)
         seen = mailpit_seen_ids()
         _run_notify()
         time.sleep(1)
@@ -276,30 +283,30 @@ class TestCronSequence:
     def test_late_notification_fires(self, driver, w, ctx):
         """When class is 'today' and due date passes, cron sends 'late'."""
         eid = ctx["cron_seq_eid"]
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": YESTERDAY})
+        _move_due(eid, YESTERDAY)
         seen = mailpit_seen_ids()
         _run_notify()
         time.sleep(1)
         assert _get(ctx, eid)["last_notification_class_sent"] == "late"
         fetch_email(ctx["email"], "Payment overdue", timeout=30, ignore_ids=seen)
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_no_notification_when_expense_muted(self, driver, w, ctx):
         """Expense with notify=False receives no notification from cron."""
         e = _mk(ctx, "MutedExpense", IN_10_DAYS, notify=False)
         eid = e["id"]
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": IN_3_DAYS})
+        _move_due(eid, IN_3_DAYS)
         _run_notify()
         time.sleep(1)
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
 
 class TestSettledNotifications:
 
     def test_settled_on_auto_settle(self, driver, w, ctx):
         """auto_settle_expenses sends 'settled' notification."""
-        resp = api_post("/api/v1/expenses/", ctx, json={
+        resp = api_post("/api/v2/expenses/", ctx, json={
             "title": "AutoSettle Notify", "type": "expense", "value": "5.00",
             "date_due": YESTERDAY, "settled": False,
             "auto_settle_on_due_date": True, "notify": True,
@@ -313,12 +320,12 @@ class TestSettledNotifications:
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
         fetch_email(ctx["email"], "Payment marked as paid", timeout=30, ignore_ids=seen)
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_no_settled_notification_on_create_already_settled(self, driver, w, ctx):
         """Creating an expense with settled=True does NOT send a settled email."""
         msgs_before = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
-        resp = api_post("/api/v1/expenses/", ctx, json={
+        resp = api_post("/api/v2/expenses/", ctx, json={
             "title": "CreateSettled NoNotify", "type": "expense", "value": "1.00",
             "date_due": TODAY, "settled": True,
         })
@@ -331,15 +338,15 @@ class TestSettledNotifications:
                        and "CreateSettled" in m.get("Subject", "")
                        and "marked as paid" in m.get("Subject", "")]
         assert len(new_settled) == 0
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_no_settled_on_bulk_2_plus(self, driver, w, ctx):
         """Bulk settle with 2+ expenses does NOT send settled notifications."""
-        a = api_post("/api/v1/expenses/", ctx, json={
+        a = api_post("/api/v2/expenses/", ctx, json={
             "title": "BulkNoNotify A", "type": "expense", "value": "1.00",
             "date_due": TODAY, "settled": False,
         })
-        b = api_post("/api/v1/expenses/", ctx, json={
+        b = api_post("/api/v2/expenses/", ctx, json={
             "title": "BulkNoNotify B", "type": "expense", "value": "1.00",
             "date_due": TODAY, "settled": False,
         })
@@ -368,8 +375,8 @@ class TestSettledNotifications:
                        if m.get("ID") not in {x.get("ID") for x in msgs_before}
                        and "marked as paid" in m.get("Subject", "")]
         assert len(new_settled) == 0
-        api_delete(f"/api/v1/expenses/{eid_a}/", ctx)
-        api_delete(f"/api/v1/expenses/{eid_b}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid_a}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid_b}/", ctx)
 
     def test_settled_on_bulk_exactly_1(self, driver, w, ctx):
         """Bulk settle with exactly 1 expense DOES send settled notification."""
@@ -397,7 +404,7 @@ class TestSettledNotifications:
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
         fetch_email(ctx["email"], "Payment marked as paid", timeout=30, ignore_ids=seen)
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
 
 class TestMuteAll:
@@ -405,7 +412,7 @@ class TestMuteAll:
     def _trigger_soon_email(self, ctx, title):
         e = _mk(ctx, title, IN_10_DAYS)
         eid = e["id"]
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": IN_3_DAYS})
+        _move_due(eid, IN_3_DAYS)
         seen = mailpit_seen_ids()
         run_cmd("send_expense_notifications")
         time.sleep(1)
@@ -425,40 +432,40 @@ class TestMuteAll:
 
     def test_mute_all_via_link(self, driver, w, ctx):
         """Clicking the mute-all link disables email_notifications on the account."""
-        api_patch("/api/v1/account/", ctx, json={"email_notifications": True})
+        api_patch("/api/v2/account/", ctx, json={"email_notifications": True})
         eid, body = self._trigger_soon_email(ctx, "MuteAllTest")
         mute_all_link = self._find_link(body, "mute-all")
         if mute_all_link:
             s = _auth_session(driver)
             s.get(mute_all_link, timeout=10, allow_redirects=True)
             time.sleep(1)
-            account = api_get("/api/v1/account/", ctx).json()
+            account = api_get("/api/v2/account/", ctx).json()
             assert account["email_notifications"] is False
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
-        api_patch("/api/v1/account/", ctx, json={"email_notifications": True})
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
+        api_patch("/api/v2/account/", ctx, json={"email_notifications": True})
 
 
 class TestAutoSettleAndApiSettled:
 
     def test_auto_settle_no_due_notification(self, driver, w, ctx):
         """auto_settle_on_due_date expenses get no due-date notifications from cron."""
-        resp = api_post("/api/v1/expenses/", ctx, json={
+        resp = api_post("/api/v2/expenses/", ctx, json={
             "title": "AutoSettle NoDueNotif", "type": "expense", "value": "5.00",
             "date_due": IN_10_DAYS, "settled": False,
             "auto_settle_on_due_date": True, "notify": True,
         })
         assert resp.status_code == 201
         eid = resp.json()["id"]
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": IN_3_DAYS})
+        _move_due(eid, IN_3_DAYS)
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
         run_cmd("send_expense_notifications")
         time.sleep(1)
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_auto_settle_sends_settled_for_due_today(self, driver, w, ctx):
         """auto_settle_expenses sends settled notification when due date is today."""
-        resp = api_post("/api/v1/expenses/", ctx, json={
+        resp = api_post("/api/v2/expenses/", ctx, json={
             "title": "AutoSettle DueToday", "type": "expense", "value": "3.00",
             "date_due": TODAY, "settled": False,
             "auto_settle_on_due_date": True, "notify": True,
@@ -472,12 +479,12 @@ class TestAutoSettleAndApiSettled:
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
         fetch_email(ctx["email"], "Payment marked as paid", timeout=30, ignore_ids=seen)
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_auto_settle_no_settled_for_old_due(self, driver, w, ctx):
         """auto_settle_expenses does NOT send settled notification for old due dates."""
         long_ago = (date.fromisoformat(TODAY) - timedelta(days=10)).isoformat()
-        resp = api_post("/api/v1/expenses/", ctx, json={
+        resp = api_post("/api/v2/expenses/", ctx, json={
             "title": "AutoSettle OldDue", "type": "expense", "value": "7.00",
             "date_due": long_ago, "settled": False,
             "auto_settle_on_due_date": True, "notify": True,
@@ -493,51 +500,51 @@ class TestAutoSettleAndApiSettled:
                        if m.get("ID") not in {x.get("ID") for x in msgs_before}
                        and "OldDue" in m.get("Subject", "")]
         assert len(new_settled) == 0
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_settled_via_api_patch_sends_notification(self, driver, w, ctx):
         """API PATCH settled=False -> True sends settled notification."""
         e = _mk(ctx, "ApiPatch Settle", IN_3_DAYS)
         eid = e["id"]
         seen = mailpit_seen_ids()
-        resp = api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"settled": True})
+        resp = api_patch(f"/api/v2/expenses/{eid}/", ctx, json={"settled": True})
         assert resp.status_code == 200
         time.sleep(1)
         exp = _get(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
         fetch_email(ctx["email"], "Payment marked as paid", timeout=30, ignore_ids=seen)
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_no_settled_when_profile_off(self, driver, w, ctx):
         """No settled notification when email_notifications=False."""
-        api_patch("/api/v1/account/", ctx, json={"email_notifications": False})
+        api_patch("/api/v2/account/", ctx, json={"email_notifications": False})
         e = _mk(ctx, "ApiSettle ProfileOff", IN_3_DAYS)
         eid = e["id"]
         msgs_before = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"settled": True})
+        api_patch(f"/api/v2/expenses/{eid}/", ctx, json={"settled": True})
         time.sleep(2)
         msgs_after = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         new_msgs = [m for m in msgs_after
                     if m.get("ID") not in {x.get("ID") for x in msgs_before}
                     and "ProfileOff" in m.get("Subject", "")]
         assert len(new_msgs) == 0
-        api_patch("/api/v1/account/", ctx, json={"email_notifications": True})
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_patch("/api/v2/account/", ctx, json={"email_notifications": True})
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_no_settled_when_expense_muted(self, driver, w, ctx):
         """No settled notification when expense.notify=False."""
         e = _mk(ctx, "ApiSettle ExpenseMuted", IN_3_DAYS, notify=False)
         eid = e["id"]
         msgs_before = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"settled": True})
+        api_patch(f"/api/v2/expenses/{eid}/", ctx, json={"settled": True})
         time.sleep(2)
         msgs_after = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         new_msgs = [m for m in msgs_after
                     if m.get("ID") not in {x.get("ID") for x in msgs_before}
                     and "ExpenseMuted" in m.get("Subject", "")]
         assert len(new_msgs) == 0
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
 
 class TestNotificationClasses:
@@ -548,7 +555,7 @@ class TestNotificationClasses:
         return [m for m in msgs if label in m.get("Subject", "")]
 
     def test_api_defaults_all_true(self, driver, w, ctx):
-        account = api_get("/api/v1/account/", ctx).json()
+        account = api_get("/api/v2/account/", ctx).json()
         assert account["notify_expense_reminders"] is True
         assert account["notify_expense_settled"] is True
         assert account["notify_expense_participation"] is True
@@ -558,18 +565,18 @@ class TestNotificationClasses:
         assert account["notify_group_activity"] is True
 
     def test_api_patch_class_flag(self, driver, w, ctx):
-        resp = api_patch("/api/v1/account/", ctx, json={"notify_expense_reminders": False})
+        resp = api_patch("/api/v2/account/", ctx, json={"notify_expense_reminders": False})
         assert resp.status_code == 200
         assert resp.json()["notify_expense_reminders"] is False
-        api_patch("/api/v1/account/", ctx, json={"notify_expense_reminders": True})
-        assert api_get("/api/v1/account/", ctx).json()["notify_expense_reminders"] is True
+        api_patch("/api/v2/account/", ctx, json={"notify_expense_reminders": True})
+        assert api_get("/api/v2/account/", ctx).json()["notify_expense_reminders"] is True
 
     def test_reminder_blocked_when_class_disabled(self, driver, w, ctx):
         """Cron sends no reminder when notify_expense_reminders=False."""
-        api_patch("/api/v1/account/", ctx, json={"notify_expense_reminders": False})
+        api_patch("/api/v2/account/", ctx, json={"notify_expense_reminders": False})
         e = _mk(ctx, "ClassBlock Reminder", IN_10_DAYS)
         eid = e["id"]
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": IN_3_DAYS})
+        _move_due(eid, IN_3_DAYS)
         seen = mailpit_seen_ids()
         _run_notify()
         time.sleep(2)
@@ -579,24 +586,24 @@ class TestNotificationClasses:
             .json().get("messages", [])
         }
         assert not (new_msgs - seen), "Reminder must be blocked when notify_expense_reminders=False"
-        api_patch("/api/v1/account/", ctx, json={"notify_expense_reminders": True})
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_patch("/api/v2/account/", ctx, json={"notify_expense_reminders": True})
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_settled_blocked_when_class_disabled(self, driver, w, ctx):
         """Settled notification is suppressed when notify_expense_settled=False."""
-        api_patch("/api/v1/account/", ctx, json={"notify_expense_settled": False})
+        api_patch("/api/v2/account/", ctx, json={"notify_expense_settled": False})
         e = _mk(ctx, "ClassBlock Settled", IN_3_DAYS)
         eid = e["id"]
         msgs_before = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
-        api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"settled": True})
+        api_patch(f"/api/v2/expenses/{eid}/", ctx, json={"settled": True})
         time.sleep(2)
         msgs_after = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         new_settled = [m for m in msgs_after
                        if m.get("ID") not in {x.get("ID") for x in msgs_before}
                        and "ClassBlock Settled" in m.get("Subject", "")]
         assert len(new_settled) == 0
-        api_patch("/api/v1/account/", ctx, json={"notify_expense_settled": True})
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
+        api_patch("/api/v2/account/", ctx, json={"notify_expense_settled": True})
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
     def test_profile_page_shows_notification_checkboxes(self, driver, w, ctx):
         """Profile settings page renders all notification class checkboxes."""
@@ -628,6 +635,6 @@ class TestNotificationClasses:
             "document.querySelector(\"input[name='action'][value='notifications']\").closest('form').submit()"
         )
         time.sleep(2)
-        assert api_get("/api/v1/account/", ctx).json()["notify_expense_reminders"] is False
+        assert api_get("/api/v2/account/", ctx).json()["notify_expense_reminders"] is False
         # Re-enable via API so state is clean for subsequent tests
-        api_patch("/api/v1/account/", ctx, json={"notify_expense_reminders": True})
+        api_patch("/api/v2/account/", ctx, json={"notify_expense_reminders": True})

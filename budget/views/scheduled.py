@@ -3,56 +3,17 @@ import secrets
 from datetime import date
 
 from django.contrib import messages
-from django.core.management import call_command
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from ..date_utils import current_financial_month, financial_year_range
+from ..date_utils import current_financial_month
+from .. import scheduled_service
 from ..decorators import feuser_required
 from ..forms import ScheduledExpenseForm
-from ..models import Expense, ScheduledExpense
-from .expenses import BUDDY_TYPE_CONFLICT_MSG, _buddy_context, _buddy_render_context_from_post, _parse_buddy_post
-
-
-def _generate_and_notify(scheduled: ScheduledExpense, feuser) -> None:
-    """Run generation for feuser, then notify participants of any newly created expenses."""
-    from buddies.services import BuddyEmailService
-
-    existing_ids = set(
-        Expense.objects.filter(source_scheduled=scheduled)
-        .values_list("uid", flat=True)
-    )
-    call_command("generate_scheduled_expenses", user=feuser.email)
-    new_expenses = (
-        Expense.objects
-        .filter(source_scheduled=scheduled)
-        .exclude(uid__in=existing_ids)
-        .prefetch_related(
-            "buddy_spendings__participant_feuser",
-            "buddy_spendings__participant_dummy",
-        )
-    )
-    for expense in new_expenses:
-        BuddyEmailService.notify_expense_created(expense, feuser)
-
-
-def _apply_assignment(obj: ScheduledExpense, buddy: dict | None) -> None:
-    """Write parsed buddy assignment fields onto a ScheduledExpense instance."""
-    if not buddy:
-        obj.assign_buddy_mode = ''
-        obj.assign_upfront_type = 'me'
-        obj.assign_upfront_feuser = None
-        obj.assign_upfront_dummy = None
-        obj.assign_project = None
-        obj.assign_spendings_json = '[]'
-    else:
-        obj.assign_buddy_mode = buddy['mode']
-        obj.assign_upfront_type = buddy['upfront_type']
-        obj.assign_upfront_feuser = buddy.get('upfront_feuser')
-        obj.assign_upfront_dummy = buddy.get('upfront_dummy')
-        obj.assign_project = buddy.get('group') if buddy['mode'] == 'group' else None
-        obj.assign_spendings_json = json.dumps(buddy.get('spendings', []))
+from ..models import ScheduledExpense
+from ..expense_service import BUDDY_TYPE_CONFLICT_MSG, parse_assignment_post as _parse_buddy_post
+from .expenses import _buddy_context, _buddy_render_context_from_post
 
 
 def _existing_assignment_ctx(obj: ScheduledExpense) -> dict:
@@ -111,12 +72,7 @@ def scheduled_create(request):
         form = ScheduledExpenseForm(request.POST, feuser=feuser)
         buddy = _parse_buddy_post(request.POST, feuser)
         if form.is_valid() and (buddy is None or buddy["valid"]):
-            obj = form.save(commit=False)
-            obj.owning_feuser = feuser
-            _apply_assignment(obj, buddy)
-            obj.save()
-            form.save_m2m()
-            _generate_and_notify(obj, feuser)
+            scheduled_service.save_new_scheduled(feuser, form.save(commit=False), form.cleaned_data["tags"], buddy)
             return redirect("budget:scheduled_list")
         elif buddy and buddy.get("type_conflict"):
             messages.error(request, BUDDY_TYPE_CONFLICT_MSG)
@@ -155,45 +111,25 @@ def scheduled_edit(request, uid):
     feuser = request.feuser
     obj = get_object_or_404(ScheduledExpense, uid=uid, owning_feuser=feuser)
     if request.method == "POST":
-        old_factor, old_unit = obj.repeat_every_factor, obj.repeat_every_unit
-        old_base, old_end = obj.repeat_base_date, obj.end_on
         confirm_a = request.POST.get("confirm_modify_schedule") == "on"
         confirm_b = request.POST.get("confirm_modify_schedule_window") == "on"
 
         post_data = request.POST.copy()
+        # validate unconfirmed schedule fields against their stored values
         if not confirm_a:
-            post_data["repeat_every_factor"] = old_factor
-            post_data["repeat_every_unit"] = old_unit
+            post_data["repeat_every_factor"] = obj.repeat_every_factor
+            post_data["repeat_every_unit"] = obj.repeat_every_unit
         if not confirm_b:
-            post_data["repeat_base_date"] = old_base
-            post_data["end_on"] = old_end
+            post_data["repeat_base_date"] = obj.repeat_base_date
+            post_data["end_on"] = obj.end_on
 
         form = ScheduledExpenseForm(post_data, instance=obj, feuser=feuser)
         buddy = _parse_buddy_post(request.POST, feuser)
         if form.is_valid() and (buddy is None or buddy["valid"]):
-            obj = form.save(commit=False)
-            _apply_assignment(obj, buddy)
-            obj.save()
-            form.save_m2m()
-
-            factor_unit_changed = (old_factor, old_unit) != (obj.repeat_every_factor, obj.repeat_every_unit)
-            window_changed = (old_base, old_end) != (obj.repeat_base_date, obj.end_on)
-
-            if confirm_a and factor_unit_changed:
-                year = current_financial_month(feuser.month_start_day, feuser.month_start_prev)[0]
-                start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
-                Expense.objects.filter(
-                    source_scheduled=obj,
-                    scheduled_occurrence_date__gte=start,
-                    scheduled_occurrence_date__lte=end,
-                ).delete()
-                obj.last_run = None
-                obj.save(update_fields=["last_run"])
-            elif confirm_b and window_changed:
-                obj.last_run = None
-                obj.save(update_fields=["last_run"])
-
-            _generate_and_notify(obj, feuser)
+            scheduled_service.update_scheduled(
+                feuser, form.save(commit=False), form.cleaned_data["tags"], buddy,
+                confirm_schedule=confirm_a, confirm_window=confirm_b,
+            )
             return redirect("budget:scheduled_list")
         elif buddy and buddy.get("type_conflict"):
             messages.error(request, BUDDY_TYPE_CONFLICT_MSG)
@@ -226,12 +162,9 @@ def scheduled_delete(request, uid):
 @feuser_required
 @require_POST
 def scheduled_clone(request, uid):
-    original = get_object_or_404(ScheduledExpense, uid=uid, owning_feuser=request.feuser)
-    tags = list(original.tags.all())
-    original.pk = None
-    original.title = f"CLONE - {original.title}"
-    original.save()
-    original.tags.set(tags)
+    original = scheduled_service.clone_scheduled(
+        get_object_or_404(ScheduledExpense, uid=uid, owning_feuser=request.feuser)
+    )
     return redirect("budget:scheduled_edit", uid=original.pk)
 
 
@@ -260,14 +193,9 @@ def scheduled_update_expenses_api(request, uid):
     feuser = request.feuser
     scheduled = get_object_or_404(ScheduledExpense, uid=uid, owning_feuser=feuser)
 
-    year = current_financial_month(feuser.month_start_day, feuser.month_start_prev)[0]
-    start, end = financial_year_range(year, feuser.month_start_day, feuser.month_start_prev)
-
     if request.method == "GET":
         expenses = (
-            Expense.objects
-            .filter(source_scheduled=scheduled, owning_feuser=feuser,
-                    date_due__gte=start, date_due__lte=end)
+            scheduled_service.current_year_expenses(feuser, scheduled)
             .select_related("project", "upfront_payee_dummy")
             .prefetch_related(
                 "buddy_spendings__participant_feuser",
@@ -287,74 +215,11 @@ def scheduled_update_expenses_api(request, uid):
         return JsonResponse({"expenses": data, "currency": feuser.currency})
 
     if request.method == "POST":
-        from buddies.services import BuddyEmailService, BuddyExpenseService, BuddyTrustService
-
         body = json.loads(request.body)
         expense_ids = body.get("expense_ids", [])
         if not expense_ids:
             return JsonResponse({"ok": True, "updated": 0})
-
-        expenses = list(
-            Expense.objects.filter(
-                uid__in=expense_ids,
-                source_scheduled=scheduled,
-                owning_feuser=feuser,
-            ).select_related("project")
-        )
-
-        mode = scheduled.assign_buddy_mode
-        upfront_type = scheduled.assign_upfront_type
-        spendings = json.loads(scheduled.assign_spendings_json or "[]")
-        tags = list(scheduled.tags.all())
-
-        for expense in expenses:
-            # Snapshot state before any changes for notification diffing
-            old_title = expense.title
-            old_value = expense.value
-            old_participants = {
-                bs.participant_feuser_id: (bs.participant_feuser, bs.share_percent)
-                for bs in expense.buddy_spendings
-                .select_related("participant_feuser")
-                .filter(participant_feuser__isnull=False)
-            }
-
-            expense.title = scheduled.title
-            expense.payee = scheduled.payee
-            expense.note = scheduled.note
-            expense.category = scheduled.category
-            expense.type = scheduled.type
-            expense.value = scheduled.value
-            expense.auto_settle_on_due_date = scheduled.default_auto_settle_on_due_date
-            expense.notify = scheduled.notify
-
-            if not mode:
-                expense.is_dummy = False
-                expense.upfront_payee_dummy = None
-                expense.project = None
-            elif mode == "group":
-                expense.is_dummy = False
-                expense.upfront_payee_dummy = None
-                expense.project = scheduled.assign_project
-            elif mode == "single":
-                expense.project = None
-                if upfront_type == "dummy" and scheduled.assign_upfront_dummy:
-                    expense.is_dummy = True
-                    expense.upfront_payee_dummy = scheduled.assign_upfront_dummy
-                else:
-                    expense.is_dummy = False
-                    expense.upfront_payee_dummy = None
-
-            expense.save()
-            expense.tags.set(tags)
-            BuddyExpenseService.set_buddy_spendings(expense, spendings)
-            BuddyTrustService.record_action(expense, feuser)
-            if expense.project:
-                expense.project.update_lastmod()
-
-            BuddyEmailService.notify_expense_updated(
-                expense, feuser, old_title, old_value, old_participants
-            )
-
-        return JsonResponse({"ok": True, "updated": len(expenses)})
+        updated = scheduled_service.apply_to_expenses(feuser, scheduled, expense_ids)
+        return JsonResponse({"ok": True, "updated": updated})
 
     return HttpResponseNotAllowed(["GET", "POST"])

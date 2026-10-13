@@ -13,6 +13,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from ai_providers import get_provider
+from mcp_server.views import profile_context as agent_keys_context
 
 from .. import ai_user_config
 from ..forms import AISettingsForm, ChangeEmailForm, ChangePasswordForm, EarlyAccessSettingsForm, ExpenseEntrySettingsForm, NotificationPreferencesForm, ProfileForm
@@ -253,6 +254,7 @@ def profile(request):
         "webauthn_available": bool(rp_id_from_site_url(settings.SITE_URL)),
         "yubikey_available": bool(settings.YUBICO_CLIENT_ID and settings.YUBICO_SECRET_KEY),
         "has_email_factor": has_email_factor,
+        **agent_keys_context(request, feuser),
     })
 
 
@@ -314,6 +316,20 @@ def account_export(request):
                 factor.created_at.isoformat(),
             ])
         zf.writestr("second_factors.csv", p.getvalue())
+
+        # agent_keys.csv: label, visible prefix, dates and permissions; the key hash stays out
+        p = io.StringIO()
+        w = csv.writer(p)
+        w.writerow(["label", "prefix", "created_at", "last_used_at", "permissions"])
+        for key in feuser.agent_keys.all():
+            w.writerow([
+                _csv_safe(key.label),
+                key.prefix,
+                key.created_at.isoformat(),
+                key.last_used_at.isoformat() if key.last_used_at else "",
+                json.dumps(key.effective_permissions()),
+            ])
+        zf.writestr("agent_keys.csv", p.getvalue())
 
         _TAG_IDS = ("tag_ids", lambda obj: ",".join(str(t.uid) for t in obj.tags.all()))
 

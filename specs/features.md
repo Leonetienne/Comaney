@@ -130,8 +130,16 @@ Needs: req
 ### REST API
 `feat~api~1`
 
-Bearer-token JSON API for expenses, recurring expenses, categories, tags, account and
-dashboard summary.
+Bearer-token JSON API (v2) for expenses, recurring expenses, categories, tags, dashboards,
+projects, contacts, approvals, settlements, Catalog Partnership and account settings.
+
+Needs: req
+
+### MCP server
+`feat~mcp~1`
+
+Model Context Protocol endpoint for AI assistants, agent keys with per-concern read and
+write permissions, and the user manual as tools and resources.
 
 Needs: req
 

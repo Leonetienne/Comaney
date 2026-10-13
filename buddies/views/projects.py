@@ -21,7 +21,8 @@ from budget.query_parser import apply_query, has_date_filter, visible_tag_titles
 from feusers.models import FeUser
 from ..debt_utils import compute_net_member_spending
 from ..models import Project, ProjectInvite, ProjectMember, BuddySpending, DummyUser
-from ..models import AI_PREPROMPT_MAX_LENGTH, PERMISSION_LAXITY_CHOICES
+from ..services import project_actions
+from ..services.project_actions import ProjectError
 from ..services import BuddyArchiveService, ProjectService, ProjectExportService, BuddyQueryService, _display_name
 
 
@@ -771,43 +772,17 @@ def project_export(request, project_id):
 @feuser_required
 @require_POST
 def project_invite_member(request, project_id):
-    from django.conf import settings as django_settings
     feuser = request.feuser
     project = get_object_or_404(Project, uid=project_id, admin_feuser=feuser)
-
-    if project.archived:
-        django_messages.error(request, "Cannot invite members to an archived project.")
-        return redirect("projects:project_settings", project_id=project_id)
-
     email = request.POST.get("email", "").strip()
-    if not email:
+    try:
+        outcome, _obj = project_actions.invite(project, feuser, email)
+    except ProjectError as exc:
+        if email:
+            django_messages.error(request, str(exc))
         return redirect("projects:project_settings", project_id=project_id)
-
-    outcome, obj = ProjectService.invite_member(project, feuser, email)
-    if outcome == "demo_restricted":
-        django_messages.error(request, "Demo accounts cannot invite project members.")
-    elif outcome == "invitee_is_demo":
-        django_messages.error(request, "That email address is not available.")
-    elif outcome == "registration_disabled":
-        django_messages.error(request, "That email address is not registered and registration is not enabled on this instance.")
-    elif outcome == "self":
-        django_messages.error(request, "You cannot invite yourself.")
-    elif outcome == "already_member":
-        django_messages.info(request, f"{email} is already a member of this project.")
-    elif outcome == "onboarding_no_email":
-        site_url = getattr(django_settings, "SITE_URL", "")
-        django_messages.info(request, f"Emailing is deactivated. Share this registration link: {site_url}/register/")
-    elif outcome == "onboarding":
-        django_messages.success(request, f"A registration and project invitation has been sent to {email}.")
-    elif outcome == "invite":
-        django_messages.success(request, f"Project invitation sent to {email}.")
-    elif outcome == "member":
-        django_messages.success(request, f"{email} has been added to the project.")
-    elif outcome == "auto_joined":
-        django_messages.success(
-            request,
-            f"{email} automatically accepts your invitations and has been added to the project.",
-        )
+    level, text = project_actions.invite_message(outcome, email)
+    getattr(django_messages, level)(request, text)
     return redirect("projects:project_settings", project_id=project_id)
 
 
@@ -837,16 +812,14 @@ def project_remove_member(request, project_id, member_id):
             django_messages.error(request, "Cannot remove offline members from an archived project.")
             return redirect("projects:project_detail", project_id=project_id)
 
-        if dummy.is_archive:
-            if BuddyArchiveService.archive_has_expenses(dummy):
-                django_messages.error(request, "Achim Archive still holds expenses. Delete all archived expenses first.")
-                return redirect("projects:project_detail", project_id=project_id)
-            if request.method == "POST" and request.POST.get("confirmed") == "yes":
-                dummy.delete()
+        if dummy.is_archive and BuddyArchiveService.archive_has_expenses(dummy):
+            django_messages.error(request, "Achim Archive still holds expenses. Delete all archived expenses first.")
+            return redirect("projects:project_detail", project_id=project_id)
+        if dummy.is_archive and not (request.method == "POST" and request.POST.get("confirmed") == "yes"):
             return redirect("projects:project_detail", project_id=project_id)
 
         if request.method == "POST" and request.POST.get("confirmed") == "yes":
-            archive_created = ProjectService.delete_group_dummy(project, feuser, dummy)
+            archive_created = project_actions.remove_member(project, feuser, member)
             url = reverse("projects:project_detail", kwargs={"project_id": project_id})
             if archive_created and not feuser.has_seen_achim_intro:
                 url += "?achim=new"
@@ -880,7 +853,7 @@ def project_remove_member(request, project_id, member_id):
     if request.method != "POST":
         return redirect("projects:project_detail", project_id=project_id)
 
-    ProjectService.remove_member(project, feuser, member)
+    project_actions.remove_member(project, feuser, member)
     return redirect("projects:project_detail", project_id=project_id)
 
 
@@ -925,16 +898,10 @@ def project_rename_dummy(request, project_id, dummy_id):
         data = json.loads(request.body)
     except (json.JSONDecodeError, AttributeError):
         return JsonResponse({"error": "Invalid JSON."}, status=400)
-    name = data.get("display_name", "").strip()
-    if not name:
-        return JsonResponse({"error": "Name required."}, status=400)
-    if len(name) > 128:
-        return JsonResponse({"error": "Name must be 128 characters or fewer."}, status=400)
-    if dummy.is_archive:
-        return JsonResponse({"error": "Cannot rename the archive."}, status=400)
-    dummy.display_name = name
-    dummy.last_mod = timezone.now()
-    dummy.save(update_fields=["display_name", "last_mod"])
+    try:
+        project_actions.rename_offline_member(dummy, data.get("display_name", ""))
+    except ProjectError as exc:
+        return JsonResponse({"error": str(exc)}, status=exc.status)
     return JsonResponse({"display_name": dummy.display_name})
 
 
@@ -944,13 +911,13 @@ def project_add_dummy(request, project_id):
     feuser = request.feuser
     project = get_object_or_404(Project, uid=project_id, admin_feuser=feuser)
 
-    if project.archived:
-        django_messages.error(request, "Cannot add offline members to an archived project.")
-        return redirect("projects:project_detail", project_id=project_id)
-
     name = request.POST.get("display_name", "").strip()
     if name:
-        ProjectService.create_group_dummy(project, feuser, name)
+        try:
+            project_actions.add_offline_member(project, feuser, name)
+        except ProjectError as exc:
+            django_messages.error(request, str(exc))
+            return redirect("projects:project_detail", project_id=project_id)
     return redirect("projects:project_settings", project_id=project_id)
 
 
@@ -1023,9 +990,10 @@ def project_transfer_admin(request, project_id):
     except (ValueError, FeUser.DoesNotExist):
         django_messages.error(request, "Invalid user selection.")
         return redirect("projects:project_settings", project_id=project_id)
-    ok = ProjectService.transfer_admin(project, feuser, new_admin)
-    if not ok:
-        django_messages.error(request, "That user is not a project member.")
+    try:
+        project_actions.transfer_admin(project, feuser, new_admin)
+    except ProjectError as exc:
+        django_messages.error(request, str(exc))
     return redirect("projects:project_settings", project_id=project_id)
 
 
@@ -1038,22 +1006,11 @@ def project_leave(request, project_id):
         uid=project_id,
         members__feuser=feuser,
     )
-    if project.admin_feuser_id == feuser.pk:
-        # Admin can only leave if there are other real feusers
-        other_feuser_members = [
-            m for m in project.members.all()
-            if m.feuser_id and m.feuser_id != feuser.pk
-        ]
-        if not other_feuser_members:
-            django_messages.error(request, "You are the only member. Use 'Delete Project' instead.")
-            return redirect("projects:project_detail", project_id=project_id)
-        django_messages.error(request, "You are the project admin. Transfer admin rights to another member before leaving.")
-        return redirect("projects:project_detail", project_id=project_id)
     try:
-        member = ProjectMember.objects.get(group=project, feuser=feuser)
-    except ProjectMember.DoesNotExist:
-        return redirect("projects:projects_list")
-    ProjectService.remove_member(project, project.admin_feuser, member, notify=False)
+        project_actions.leave(project, feuser)
+    except ProjectError as exc:
+        django_messages.error(request, str(exc))
+        return redirect("projects:project_detail", project_id=project_id)
     django_messages.success(request, f'You have left the project "{project.name}".')
     return redirect("projects:projects_list")
 
@@ -1065,12 +1022,12 @@ def project_delete(request, project_id):
     project = get_object_or_404(Project, uid=project_id, admin_feuser=feuser)
 
     if request.method == "POST":
-        confirmed_name = request.POST.get("confirm_name", "").strip()
-        if confirmed_name != project.name:
-            django_messages.error(request, "Project name does not match. Deletion cancelled.")
-            return redirect("projects:project_settings", project_id=project_id)
         project_name = project.name
-        project.delete()
+        try:
+            project_actions.delete(project, request.POST.get("confirm_name", ""))
+        except ProjectError as exc:
+            django_messages.error(request, str(exc))
+            return redirect("projects:project_settings", project_id=project_id)
         django_messages.success(request, f'Project "{project_name}" has been deleted.')
         return redirect("projects:projects_list")
 
@@ -1082,8 +1039,7 @@ def project_delete(request, project_id):
 def project_archive(request, project_id):
     feuser = request.feuser
     project = get_object_or_404(Project, uid=project_id, admin_feuser=feuser)
-    project.archived = True
-    project.save(update_fields=["archived"])
+    project_actions.set_archived(project, True)
     django_messages.success(request, f'Project "{project.name}" has been archived.')
     return redirect("projects:project_settings", project_id=project_id)
 
@@ -1093,8 +1049,7 @@ def project_archive(request, project_id):
 def project_unarchive(request, project_id):
     feuser = request.feuser
     project = get_object_or_404(Project, uid=project_id, admin_feuser=feuser)
-    project.archived = False
-    project.save(update_fields=["archived"])
+    project_actions.set_archived(project, False)
     django_messages.success(request, f'Project "{project.name}" has been unarchived.')
     return redirect("projects:project_settings", project_id=project_id)
 
@@ -1193,18 +1148,10 @@ def project_set_permission_laxity(request, project_id):
     """Admin sets who may edit the project's name, description and picture."""
     feuser = request.feuser
     project = get_object_or_404(Project, uid=project_id, admin_feuser=feuser)
-    raw = request.POST.get("permission_laxity", "")
-    valid = {choice[0] for choice in PERMISSION_LAXITY_CHOICES}
     try:
-        value = int(raw)
-    except (TypeError, ValueError):
-        value = None
-    if value not in valid:
+        project_actions.set_permission_laxity(project, int(request.POST.get("permission_laxity", "")))
+    except (TypeError, ValueError, ProjectError):
         django_messages.error(request, "Invalid permission setting.")
-        return redirect("projects:project_settings", project_id=project_id)
-    project.permission_laxity = value
-    project.save(update_fields=["permission_laxity"])
-    project.update_lastmod()
     return redirect("projects:project_settings", project_id=project_id)
 
 
@@ -1213,28 +1160,16 @@ def project_set_permission_laxity(request, project_id):
 def project_rename(request, project_id):
     feuser = request.feuser
     project = get_object_or_404(Project, uid=project_id, members__feuser=feuser)
-    if not project.can_edit_details(feuser):
-        django_messages.error(request, "You do not have permission to edit this project.")
-        return redirect("projects:project_settings", project_id=project_id)
-    name = request.POST.get("name", "").strip()
-    if not name:
-        django_messages.error(request, "Project name cannot be empty.")
-        return redirect("projects:project_settings", project_id=project_id)
-    if len(name) > 128:
-        django_messages.error(request, "Project name must be 128 characters or fewer.")
-        return redirect("projects:project_settings", project_id=project_id)
-    description = request.POST.get("description", "").strip()
-    # The preprompt field is only shown to feusers with AI features enabled;
-    # a form without it must leave the stored preprompt alone.
-    ai_preprompt = request.POST.get("ai_preprompt", project.ai_preprompt).strip()
-    if len(ai_preprompt) > AI_PREPROMPT_MAX_LENGTH:
-        django_messages.error(request, f"The AI preprompt must be {AI_PREPROMPT_MAX_LENGTH} characters or fewer.")
-        return redirect("projects:project_settings", project_id=project_id)
-    project.name = name
-    project.description = description
-    project.ai_preprompt = ai_preprompt
-    project.save(update_fields=["name", "description", "ai_preprompt"])
-    project.update_lastmod()
+    try:
+        project_actions.update_details(
+            project, feuser,
+            name=request.POST.get("name", ""),
+            description=request.POST.get("description", ""),
+            # the preprompt field only renders for feusers with AI features; absent means unchanged
+            ai_preprompt=request.POST.get("ai_preprompt"),
+        )
+    except ProjectError as exc:
+        django_messages.error(request, str(exc))
     return redirect("projects:project_settings", project_id=project_id)
 
 

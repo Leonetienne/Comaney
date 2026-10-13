@@ -6,32 +6,16 @@ import logging
 
 from comaney.json_utils import safe_json
 
-from django.contrib import messages as django_messages
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.http import Http404, JsonResponse
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
-from buddies.models import (
-    ContactLink,
-    CatalogPartnership,
-    CatalogPartnershipInvite,
-    CatalogPartnershipMembership,
-    ProjectMember,
-)
+from buddies.models import CatalogPartnershipInvite
+from buddies.services import partnership_actions
+from buddies.services.partnership_actions import PartnershipError
 
 _log = logging.getLogger(__name__)
-
-
-def _has_mutual_connection(feuser_a, feuser_b) -> bool:
-    """True if the two users share a ContactLink or at least one Project."""
-    from django.db.models import Q
-    if ContactLink.objects.filter(
-        Q(user_a=feuser_a, user_b=feuser_b) | Q(user_a=feuser_b, user_b=feuser_a)
-    ).exists():
-        return True
-    a_projects = set(ProjectMember.objects.filter(feuser=feuser_a).values_list("group_id", flat=True))
-    return ProjectMember.objects.filter(feuser=feuser_b, group_id__in=a_projects).exists()
 
 
 def _name(feuser) -> str:
@@ -53,62 +37,19 @@ def send_partnership_invite(request):
     """
     from feusers.models import FeUser
     feuser = request.feuser
-
     if feuser.is_demo:
         return JsonResponse({"error": "Demo accounts cannot use Catalog Partnerships."}, status=403)
-
     try:
-        data = json.loads(request.body)
-        invitee_id = int(data["invitee_id"])
-    except (KeyError, ValueError, json.JSONDecodeError):
+        invitee_id = int(json.loads(request.body)["invitee_id"])
+    except (KeyError, ValueError, TypeError, json.JSONDecodeError):
         return JsonResponse({"error": "Invalid request."}, status=400)
-
-    try:
-        invitee = FeUser.objects.get(pk=invitee_id, is_active=True)
-    except FeUser.DoesNotExist:
+    invitee = FeUser.objects.filter(pk=invitee_id, is_active=True).first()
+    if invitee is None:
         return JsonResponse({"error": "User not found."}, status=404)
-
-    if invitee == feuser:
-        return JsonResponse({"error": "Cannot invite yourself."}, status=400)
-
-    if invitee.is_demo:
-        return JsonResponse({"error": "Cannot invite a demo account as a partner."}, status=403)
-
-    if not _has_mutual_connection(feuser, invitee):
-        return JsonResponse({"error": "No mutual connection with this user."}, status=403)
-
-    # Check invitee not already in a partnership
-    if hasattr(invitee, "catalog_membership"):
-        return JsonResponse({"error": "This user is already in a Catalog Partnership."}, status=409)
-
-    # Check no pending invite already
-    if CatalogPartnershipInvite.objects.filter(
-        invitee_email=invitee.email,
-        status__in=[CatalogPartnershipInvite.STATUS_PENDING, CatalogPartnershipInvite.STATUS_IN_SETUP],
-    ).exists():
-        return JsonResponse({"error": "An invite is already pending for this user."}, status=409)
-
-    # Create or reuse the inviter's partnership
     try:
-        membership = feuser.catalog_membership
-        partnership = membership.partnership
-    except CatalogPartnershipMembership.DoesNotExist:
-        partnership = CatalogPartnership.objects.create()
-        CatalogPartnershipMembership.objects.create(
-            partnership=partnership,
-            feuser=feuser,
-            onboarding_complete=True,
-        )
-
-    invite = CatalogPartnershipInvite.objects.create(
-        partnership=partnership,
-        inviter=feuser,
-        invitee_email=invitee.email,
-    )
-
-    from buddies.services.partnership_email import notify_partner_event
-    notify_partner_event(invitee, "invite_sent", invite=invite)
-
+        invite = partnership_actions.invite(feuser, invitee)
+    except PartnershipError as exc:
+        return JsonResponse({"error": str(exc)}, status=exc.status)
     return JsonResponse({"ok": True, "invite_token": invite.token})
 
 
@@ -251,56 +192,22 @@ def onboarding_apply(request, token):
     After apply, the invitee's catalog is replaced with the master's catalog and
     their expenses, recurring expenses and overlays are remapped onto it.
     """
-    from django.db import transaction
-    from buddies.services.partnership import apply_onboarding_catalog
-
     feuser = request.feuser
     invite = get_object_or_404(
         CatalogPartnershipInvite, token=token, invitee_email=feuser.email,
         status__in=[CatalogPartnershipInvite.STATUS_PENDING, CatalogPartnershipInvite.STATUS_IN_SETUP],
     )
-
     try:
         data = json.loads(request.body)
         tag_mappings = data.get("tag_mappings", [])
         cat_mappings = data.get("cat_mappings", [])
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON."}, status=400)
-
-    master = invite.inviter
-
-    with transaction.atomic():
-        apply_onboarding_catalog(
-            feuser,
-            master,
-            tag_map={m["source"]: m["target"] for m in tag_mappings if m.get("source")},
-            cat_map={m["source"]: m["target"] for m in cat_mappings if m.get("source")},
-        )
-
-        # Mark invite as accepted and add membership
-        invite.status = CatalogPartnershipInvite.STATUS_ACTIVE
-        invite.save(update_fields=["status"])
-
-        membership, _ = CatalogPartnershipMembership.objects.get_or_create(
-            feuser=feuser,
-            defaults={"partnership": invite.partnership, "onboarding_complete": False},
-        )
-        membership.partnership = invite.partnership
-        membership.onboarding_complete = True
-        membership.save(update_fields=["partnership", "onboarding_complete"])
-
-    # Notifications
-    from buddies.services.partnership_email import notify_partner_event
-    notify_partner_event(invite.inviter, "invite_accepted", invitee=feuser)
-    existing_partners = list(
-        invite.partnership.memberships
-        .exclude(feuser=feuser)
-        .exclude(feuser=invite.inviter)
-        .select_related("feuser")
+    partnership_actions.apply_onboarding(
+        feuser, invite,
+        tag_map={m["source"]: m["target"] for m in tag_mappings if m.get("source")},
+        cat_map={m["source"]: m["target"] for m in cat_mappings if m.get("source")},
     )
-    for m in existing_partners:
-        notify_partner_event(m.feuser, "new_partner_joined", joined=feuser)
-
     return JsonResponse({"ok": True, "redirect": "/budget/categories-tags/"})
 
 
@@ -316,17 +223,7 @@ def onboarding_decline(request, token):
         CatalogPartnershipInvite, token=token, invitee_email=feuser.email,
         status__in=[CatalogPartnershipInvite.STATUS_PENDING, CatalogPartnershipInvite.STATUS_IN_SETUP],
     )
-    invite.status = CatalogPartnershipInvite.STATUS_DECLINED
-    invite.save(update_fields=["status"])
-
-    from buddies.services.partnership_email import notify_partner_event
-    notify_partner_event(invite.inviter, "invite_declined", invitee=feuser)
-
-    # Dissolve partnership if no remaining members besides inviter
-    partnership = invite.partnership
-    from buddies.services.partnership import dissolve_if_solo
-    dissolve_if_solo(partnership)
-
+    partnership_actions.decline(feuser, invite)
     return JsonResponse({"ok": True})
 
 
@@ -357,20 +254,12 @@ def onboarding_catalog_state(request, token):
 @feuser_required
 @require_POST
 def cancel_partnership_invite(request, token):
-    actor = request.feuser
     try:
-        membership = actor.catalog_membership
-    except CatalogPartnershipMembership.DoesNotExist:
-        return JsonResponse({"error": "You are not in a partnership."}, status=403)
-
-    invite = get_object_or_404(
-        CatalogPartnershipInvite,
-        token=token,
-        partnership=membership.partnership,
-        status__in=[CatalogPartnershipInvite.STATUS_PENDING, CatalogPartnershipInvite.STATUS_IN_SETUP],
-    )
-    invite.status = CatalogPartnershipInvite.STATUS_DECLINED
-    invite.save(update_fields=["status"])
+        partnership_actions.cancel_invite(request.feuser, token)
+    except PartnershipError as exc:
+        if exc.status == 404:
+            raise Http404
+        return JsonResponse({"error": str(exc)}, status=exc.status)
     return JsonResponse({"ok": True})
 
 
@@ -382,27 +271,10 @@ def cancel_partnership_invite(request, token):
 @require_POST
 def kick_partner(request, feuser_id):
     from feusers.models import FeUser
-    actor = request.feuser
-
     try:
-        membership = actor.catalog_membership
-    except CatalogPartnershipMembership.DoesNotExist:
-        return JsonResponse({"error": "You are not in a partnership."}, status=403)
-
-    try:
-        target = FeUser.objects.get(pk=feuser_id)
-        target_membership = target.catalog_membership
-    except (FeUser.DoesNotExist, CatalogPartnershipMembership.DoesNotExist):
-        return JsonResponse({"error": "Partner not found."}, status=404)
-
-    if target_membership.partnership_id != membership.partnership_id:
-        return JsonResponse({"error": "Not in the same partnership."}, status=403)
-
-    if target == actor:
-        return JsonResponse({"error": "Use 'leave' to remove yourself."}, status=400)
-
-    from buddies.services.partnership import remove_member
-    remove_member(target, reason="kicked")
+        partnership_actions.kick(request.feuser, FeUser.objects.filter(pk=feuser_id).first())
+    except PartnershipError as exc:
+        return JsonResponse({"error": str(exc)}, status=exc.status)
     return JsonResponse({"ok": True})
 
 
@@ -413,12 +285,8 @@ def kick_partner(request, feuser_id):
 @feuser_required
 @require_POST
 def leave_partnership(request):
-    feuser = request.feuser
     try:
-        feuser.catalog_membership
-    except CatalogPartnershipMembership.DoesNotExist:
-        return JsonResponse({"error": "You are not in a partnership."}, status=403)
-
-    from buddies.services.partnership import remove_member
-    remove_member(feuser, reason="left")
+        partnership_actions.leave(request.feuser)
+    except PartnershipError as exc:
+        return JsonResponse({"error": str(exc)}, status=exc.status)
     return JsonResponse({"ok": True})

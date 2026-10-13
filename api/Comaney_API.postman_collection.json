@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "Comaney API",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "REST API for Comaney. Set the `base_url` and `api_key` collection variables before use.\n\n**Authentication**: every request requires `Authorization: Bearer <api_key>`. Generate your API key on the Profile page.\n\n**IDs**: integer IDs returned by the API (BigAutoField).\n\n**Dates**: ISO 8601 format (`YYYY-MM-DD`).\n\n**Types**: `expense`, `income`, `savings_dep`, `savings_wit`.\n\n**Month params**: `year` and `month` are independent — omitting one falls back to the corresponding component of the current financial month, not both."
+    "description": "Comaney REST API v2. Set the `base_url` and `api_key` collection variables before use.\n\n**Authentication**: every request needs `Authorization: Bearer <api_key>`; generate the key in Settings.\n\n**Dates**: ISO 8601 (`YYYY-MM-DD`). **Types**: `expense`, `income`, `savings_dep`, `savings_wit`.\n\n**Periods**: `date_from`/`date_to` together, or `year`/`month`/`view`; anything left out falls back to the current financial month.\n\nEvery request is generated from the API registry (api/registry.py).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
@@ -15,10 +15,36 @@
       "value": "your-api-key-here",
       "type": "string"
     },
-    { "key": "expense_id",   "value": "", "type": "string" },
-    { "key": "scheduled_id", "value": "", "type": "string" },
-    { "key": "category_id",  "value": "", "type": "string" },
-    { "key": "tag_id",       "value": "", "type": "string" }
+    {
+      "key": "id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "invite_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "member_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "expense_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "link_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "feuser_id",
+      "value": "",
+      "type": "string"
+    }
   ],
   "auth": {
     "type": "bearer",
@@ -32,38 +58,888 @@
   },
   "item": [
     {
-      "name": "Account",
+      "name": "Expenses",
       "item": [
         {
-          "name": "Get account",
+          "name": "Expenses list",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/account/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "account", ""]
+              "raw": "{{base_url}}/api/v2/expenses/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "expenses",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "year",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "view",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sharing",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sort_by",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sort_dir",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
             },
-            "description": "Returns the authenticated user's account details."
+            "description": "List expenses in a period (default: current financial month), optionally filtered by a query."
           }
         },
         {
-          "name": "Update account",
+          "name": "Expenses totals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/expenses/totals/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "expenses",
+                "totals",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "year",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "view",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sharing",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sort_by",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sort_dir",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "group_by",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Sum expenses of one type in a period, optionally filtered by a query and grouped. In shared mode foreign and shared expenses count at the feuser's own share."
+          }
+        },
+        {
+          "name": "Expenses get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/expenses/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "expenses",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "One expense the feuser owns, administers as project admin, or participates in."
+          }
+        },
+        {
+          "name": "Expenses create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/expenses/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "expenses",
+                ""
+              ]
+            },
+            "description": "Create an expense (default settled, due today). With an assignment it is shared; participants and payers are notified like in the web app.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Coffee\",\n  \"type\": \"expense\",\n  \"value\": \"4.20\",\n  \"payee\": \"Cafe\",\n  \"settled\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Expenses update",
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/expenses/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "expenses",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Change an own expense; only given fields change. assignment replaces the sharing (null makes it personal). Changing title, value, participants or shares resets participant approvals.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Jane\",\n  \"last_name\": \"Doe\",\n  \"currency\": \"€\",\n  \"month_start_day\": 1,\n  \"month_start_prev\": false\n}"
-            },
+              "raw": "{\n  \"value\": \"3.90\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Expenses delete",
+          "request": {
+            "method": "DELETE",
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/account/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "account", ""]
+              "raw": "{{base_url}}/api/v2/expenses/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "expenses",
+                "{{id}}",
+                ""
+              ]
             },
-            "description": "Update one or more account fields. All fields are optional."
+            "description": "Delete one own expense. Confirmed settlements cannot be deleted."
+          }
+        },
+        {
+          "name": "Expenses clone",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/expenses/{{id}}/clone/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "expenses",
+                "{{id}}",
+                "clone",
+                ""
+              ]
+            },
+            "description": "Copy an own expense, participants included, as \"CLONE - <title>\".",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Expenses overlay get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/expenses/{{id}}/overlay/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "expenses",
+                "{{id}}",
+                "overlay",
+                ""
+              ]
+            },
+            "description": "The feuser's own category, tags and note on a foreign expense they participate in."
+          }
+        },
+        {
+          "name": "Expenses overlay set",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/expenses/{{id}}/overlay/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "expenses",
+                "{{id}}",
+                "overlay",
+                ""
+              ]
+            },
+            "description": "Set the feuser's own category, tags and note on a foreign expense; the owner's classification is untouched. Omitted fields are cleared.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Expenses bulk",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/expenses/bulk/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "expenses",
+                "bulk",
+                ""
+              ]
+            },
+            "description": "Apply one action to many expenses. Tag and category actions on foreign expenses change the feuser's own overlay. delete is two-step: without confirm_token nothing is deleted and the matching expenses plus a confirm_token (10 minutes) come back; repeat the call with that token to delete exactly those. Settlements are never bulk deleted.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"settle\",\n  \"ids\": [\n    1,\n    2\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recurring expenses",
+      "item": [
+        {
+          "name": "Scheduled list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/scheduled/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "scheduled",
+                ""
+              ]
+            },
+            "description": "All recurring expense templates."
+          }
+        },
+        {
+          "name": "Scheduled get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/scheduled/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "scheduled",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "One recurring expense template."
+          }
+        },
+        {
+          "name": "Scheduled create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/scheduled/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "scheduled",
+                ""
+              ]
+            },
+            "description": "Create a recurring expense; due occurrences of the current financial year are generated at once.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Rent\",\n  \"type\": \"expense\",\n  \"value\": \"900\",\n  \"repeat_every_factor\": 1,\n  \"repeat_every_unit\": \"months\",\n  \"repeat_base_date\": \"2025-01-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Scheduled update",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/scheduled/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "scheduled",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Change a recurring expense; only given fields change. Repeat factor/unit change only with confirm_modify_schedule (regenerates this financial year's occurrences, settled ones too); base date/end only with confirm_modify_schedule_window. Unconfirmed changes are discarded.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Scheduled delete",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/scheduled/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "scheduled",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Delete a recurring expense template; expenses it already generated stay."
+          }
+        },
+        {
+          "name": "Scheduled clone",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/scheduled/{{id}}/clone/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "scheduled",
+                "{{id}}",
+                "clone",
+                ""
+              ]
+            },
+            "description": "Copy a recurring expense template as \"CLONE - <title>\".",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Scheduled generated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/scheduled/{{id}}/expenses/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "scheduled",
+                "{{id}}",
+                "expenses",
+                ""
+              ]
+            },
+            "description": "Expenses this template generated in the current financial year."
+          }
+        },
+        {
+          "name": "Scheduled apply",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/scheduled/{{id}}/apply/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "scheduled",
+                "{{id}}",
+                "apply",
+                ""
+              ]
+            },
+            "description": "Copy the template's current fields and sharing onto some of its generated expenses (ids from scheduled_generated). Resets participant approvals on them.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expense_ids\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories and tags",
+      "item": [
+        {
+          "name": "Categories list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/categories/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "categories",
+                ""
+              ]
+            },
+            "description": "All of the feuser's categories."
+          }
+        },
+        {
+          "name": "Categories get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/categories/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "categories",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "One category."
+          }
+        },
+        {
+          "name": "Categories create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/categories/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "categories",
+                ""
+              ]
+            },
+            "description": "Create a category. Catalog partners get the same change.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Categories update",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/categories/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "categories",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Rename a category. Catalog partners get the same change.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Categories delete",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/categories/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "categories",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Delete a category; expenses lose it. Catalog partners get the same change."
+          }
+        },
+        {
+          "name": "Tags list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/tags/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "tags",
+                ""
+              ]
+            },
+            "description": "All of the feuser's tags."
+          }
+        },
+        {
+          "name": "Tags get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/tags/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "tags",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "One tag."
+          }
+        },
+        {
+          "name": "Tags create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/tags/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "tags",
+                ""
+              ]
+            },
+            "description": "Create a tag. Catalog partners get the same change.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Tags update",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/tags/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "tags",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Rename a tag. Catalog partners get the same change.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Tags delete",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/tags/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "tags",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Delete a tag; expenses lose it. Catalog partners get the same change."
           }
         }
       ]
@@ -72,390 +948,1513 @@
       "name": "Dashboard",
       "item": [
         {
-          "name": "Get dashboard",
+          "name": "Dashboard summary",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/dashboard/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "dashboard", ""],
+              "raw": "{{base_url}}/api/v2/dashboard/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "dashboard",
+                ""
+              ],
               "query": [
-                { "key": "year",  "value": "2025", "disabled": true, "description": "Defaults to current financial year" },
-                { "key": "month", "value": "4",    "disabled": true, "description": "1–12. Defaults to current financial month" }
+                {
+                  "key": "year",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "disabled": true
+                }
               ]
             },
-            "description": "Returns income, expenses, savings and balance for the given financial month.\n\n`year` and `month` are independent — you can supply only one. Missing values fall back to the corresponding component of the current financial month."
+            "description": "Income, paid and outstanding expenses, savings and resulting balance of one financial month (default current), own expenses only."
           }
-        }
-      ]
-    },
-    {
-      "name": "Categories",
-      "item": [
+        },
         {
-          "name": "List categories",
+          "name": "Dashboards list",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/categories/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "categories", ""]
-            }
-          }
-        },
-        {
-          "name": "Create category",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.id) pm.collectionVariables.set('category_id', res.id);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Groceries\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "categories", ""]
-            },
-            "description": "Create a category. The `id` from the response is saved to `category_id` automatically."
-          }
-        },
-        {
-          "name": "Get category",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories/{{category_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "categories", "{{category_id}}", ""]
-            }
-          }
-        },
-        {
-          "name": "Rename category",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Food & Drink\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories/{{category_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "categories", "{{category_id}}", ""]
-            }
-          }
-        },
-        {
-          "name": "Delete category",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/categories/{{category_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "categories", "{{category_id}}", ""]
-            },
-            "description": "Deletes the category. Expenses using it will have their category set to null."
-          }
-        }
-      ]
-    },
-    {
-      "name": "Tags",
-      "item": [
-        {
-          "name": "List tags",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/tags/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "tags", ""]
-            }
-          }
-        },
-        {
-          "name": "Create tag",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.id) pm.collectionVariables.set('tag_id', res.id);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Recurring\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/tags/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "tags", ""]
-            },
-            "description": "Create a tag. The `id` from the response is saved to `tag_id` automatically."
-          }
-        },
-        {
-          "name": "Get tag",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/tags/{{tag_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "tags", "{{tag_id}}", ""]
-            }
-          }
-        },
-        {
-          "name": "Rename tag",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Monthly\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/tags/{{tag_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "tags", "{{tag_id}}", ""]
-            }
-          }
-        },
-        {
-          "name": "Delete tag",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/tags/{{tag_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "tags", "{{tag_id}}", ""]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Expenses",
-      "item": [
-        {
-          "name": "List expenses",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/expenses/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "expenses", ""],
-              "query": [
-                { "key": "year",  "value": "2025", "disabled": true, "description": "Defaults to current financial year" },
-                { "key": "year",  "value": "2025", "disabled": true, "description": "Defaults to current financial year" },
-                { "key": "month", "value": "4",    "disabled": true, "description": "1–12. Defaults to current financial month" },
-                { "key": "q", "value": "",    "disabled": true, "description": "Search query" }
+              "raw": "{{base_url}}/api/v2/dashboards/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "dashboards",
+                ""
               ]
             },
-            "description": "Returns expenses whose `date_due` falls within the given financial month. `year` and `month` are independent."
+            "description": "The feuser's dashboards in display order."
           }
         },
         {
-          "name": "Create expense",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.id) pm.collectionVariables.set('expense_id', res.id);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Dashboards create",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/dashboards/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "dashboards",
+                ""
+              ]
+            },
+            "description": "Add an empty dashboard after the existing ones.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Groceries\",\n  \"type\": \"expense\",\n  \"value\": \"42.50\",\n  \"date_due\": \"2025-04-15\",\n  \"payee\": \"Supermarket\",\n  \"note\": \"\",\n  \"settled\": true,\n  \"auto_settle_on_due_date\": false,\n  \"category_id\": null,\n  \"tag_ids\": []\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/expenses/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "expenses", ""]
-            },
-            "description": "Create an expense. Required fields: `title`, `type`, `value`. The `id` from the response is saved to `expense_id` automatically."
-          }
-        },
-        {
-          "name": "Get expense",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/expenses/{{expense_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "expenses", "{{expense_id}}", ""]
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         },
         {
-          "name": "Update expense",
+          "name": "Dashboards update",
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/dashboards/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "dashboards",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Rename a dashboard.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"settled\": true,\n  \"value\": \"45.00\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/expenses/{{expense_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "expenses", "{{expense_id}}", ""]
-            },
-            "description": "Update any subset of expense fields. Only supplied fields are changed."
+              "raw": "{\n  \"title\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
         {
-          "name": "Delete expense",
+          "name": "Dashboards delete",
           "request": {
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/expenses/{{expense_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "expenses", "{{expense_id}}", ""]
+              "raw": "{{base_url}}/api/v2/dashboards/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "dashboards",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Delete a dashboard with its cards. The last dashboard cannot be deleted."
+          }
+        },
+        {
+          "name": "Cards list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/cards/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "cards",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "dashboard_id",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "year",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "view",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sharing",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "A dashboard's cards (default: first dashboard) with their data computed for a period."
+          }
+        },
+        {
+          "name": "Cards reference",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/cards/reference/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "cards",
+                "reference",
+                ""
+              ]
+            },
+            "description": "The documentation of the card YAML schema and the query language. Read it before writing a card."
+          }
+        },
+        {
+          "name": "Cards create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/cards/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "cards",
+                ""
+              ]
+            },
+            "description": "Add a card to a dashboard (default: first dashboard). Placement comes from the YAML positioning block.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"yaml_config\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cards update",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/cards/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "cards",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Replace a card's YAML and/or move it to another dashboard.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cards delete",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/cards/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "cards",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Delete a card."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "Projects list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                ""
+              ]
+            },
+            "description": "The feuser's projects with their balance in each (positive: others owe the feuser) and total spending, plus incoming project invitations."
+          }
+        },
+        {
+          "name": "Projects get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "A project with members, settings, the feuser's simplified debts in it (positive: that person owes the feuser) and, for the admin, open invitations. Its expenses: expenses_list with q=project=<name>."
+          }
+        },
+        {
+          "name": "Projects create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                ""
+              ]
+            },
+            "description": "Create a project with the feuser as admin and only member.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ibiza\",\n  \"description\": \"Summer trip\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Projects update",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Change a project; only given fields change. name, description and ai_preprompt (instructions AI Express follows for this project) need edit rights; permission_laxity and archived are admin only. An archived project blocks changes to its expenses.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Projects delete",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/?confirm_name=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "confirm_name",
+                  "value": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Delete a project with all its expenses. Admin only; confirm_name must equal the project name."
+          }
+        },
+        {
+          "name": "Projects invite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/invites/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                "invites",
+                ""
+              ]
+            },
+            "description": "Invite someone by email, or a contact by feuser_id. Contacts who auto-accept the feuser's invitations join at once; others get an email. Admin only.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Projects invite revoke",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/invites/{{invite_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                "invites",
+                "{{invite_id}}",
+                ""
+              ]
+            },
+            "description": "Withdraw an open invitation of the project. Admin only."
+          }
+        },
+        {
+          "name": "Projects invite respond",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/invites/{{invite_id}}/respond/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "invites",
+                "{{invite_id}}",
+                "respond",
+                ""
+              ]
+            },
+            "description": "Accept or decline an incoming project invitation (ids from projects_list or pending_list).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accept\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Projects add offline member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/offline-members/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                "offline-members",
+                ""
+              ]
+            },
+            "description": "Add an offline member (someone without an account). Admin only.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Projects rename offline member",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/offline-members/{{member_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                "offline-members",
+                "{{member_id}}",
+                ""
+              ]
+            },
+            "description": "Rename an offline member (member_id = their offline id from projects_get). Admin only.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Projects remove member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/members/{{member_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                "members",
+                "{{member_id}}",
+                ""
+              ]
+            },
+            "description": "Remove a member (member_id from projects_get). A removed feuser's history stays under an offline stand-in; an offline member's history moves to the project's Achim Archive. Admin only."
+          }
+        },
+        {
+          "name": "Projects transfer admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/transfer-admin/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                "transfer-admin",
+                ""
+              ]
+            },
+            "description": "Hand admin rights to another member feuser. Admin only.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"feuser_id\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Projects leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/leave/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                "leave",
+                ""
+              ]
+            },
+            "description": "Leave a project; the admin must transfer admin rights first.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Projects expense unlink",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/expenses/{{expense_id}}/unlink/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                "expenses",
+                "{{expense_id}}",
+                "unlink",
+                ""
+              ]
+            },
+            "description": "Take an expense out of the project; it stays with its owner as a personal expense.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Projects expense delete",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/expenses/{{expense_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                "expenses",
+                "{{expense_id}}",
+                ""
+              ]
+            },
+            "description": "Delete an expense of the project: own expenses, and for the admin offline-paid expenses. Approved settlements stay."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contacts",
+      "item": [
+        {
+          "name": "Contacts list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/contacts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "contacts",
+                ""
+              ]
+            },
+            "description": "Contacts and offline contacts with the balance of personal shared expenses (positive: they owe the feuser), auto-accept flags, projects in common, and open outgoing invitations."
+          }
+        },
+        {
+          "name": "Contacts invite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/contacts/invites/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "contacts",
+                "invites",
+                ""
+              ]
+            },
+            "description": "Invite someone as a contact by email, or a known feuser (e.g. a fellow project member) by feuser_id. They get an email and must accept.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Contacts invite revoke",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/contacts/invites/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "contacts",
+                "invites",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Withdraw an own outgoing contact invitation."
+          }
+        },
+        {
+          "name": "Contacts invite respond",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/contacts/invites/{{id}}/respond/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "contacts",
+                "invites",
+                "{{id}}",
+                "respond",
+                ""
+              ]
+            },
+            "description": "Accept or decline an incoming contact invitation (ids from pending_list).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accept\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Contacts remove",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/contacts/{{link_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "contacts",
+                "{{link_id}}",
+                ""
+              ]
+            },
+            "description": "End a contact link (link_id from contacts_list). Shared history stays."
+          }
+        },
+        {
+          "name": "Contacts set auto accept",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/contacts/{{link_id}}/auto-accept/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "contacts",
+                "{{link_id}}",
+                "auto-accept",
+                ""
+              ]
+            },
+            "description": "Automatically accept expenses, settlements and project invitations this contact records. Enabling also accepts everything of theirs that is pending.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Contacts add offline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/contacts/offline/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "contacts",
+                "offline",
+                ""
+              ]
+            },
+            "description": "Add an offline contact: someone without an account to split personal expenses with.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Contacts rename offline",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/contacts/offline/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "contacts",
+                "offline",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Rename an offline contact.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Contacts remove offline",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/contacts/offline/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "contacts",
+                "offline",
+                "{{id}}",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "accept_balance",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Remove an offline contact; their history moves to the feuser's Achim Archive. With an open balance pass accept_balance=true."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Approvals and settlements",
+      "item": [
+        {
+          "name": "Pending list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/pending/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pending",
+                ""
+              ]
+            },
+            "description": "Everything waiting for the feuser's decision: expenses recorded with them as upfront payer, settlements to confirm as creditor, shared expenses awaiting their consent, project admin decisions for offline members, and incoming contact, project and partnership invitations."
+          }
+        },
+        {
+          "name": "Approvals decide",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/pending/decide/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "pending",
+                "decide",
+                ""
+              ]
+            },
+            "description": "Answer a pending item. kind=paid: confirm or deny having paid upfront (deny removes the feuser and redistributes shares). kind=settlement: confirm or deny receiving a payment (deny deletes it and tells the debtor). kind=consent: approve or reject a shared expense. kind=admin: as project admin, confirm or reject for an offline member (reject deletes it).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"consent\",\n  \"expense_id\": 1,\n  \"approve\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Settlements create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/settlements/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "settlements",
+                ""
+              ]
+            },
+            "description": "Record a payment that settles debt. Without project_id: the feuser paid a contact (creditor), or with debtor an own offline contact paid the feuser. With project_id: a payment between two members; non-admins can only record their own payments. Real creditors must confirm receipt. The money itself is not moved.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"creditor\": {\n    \"type\": \"feuser\",\n    \"id\": 1\n  },\n  \"amount\": \"20.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Settlements clear project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/settle-all/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                "settle-all",
+                ""
+              ]
+            },
+            "description": "As project admin, record settlements for every open debt in the project at once and email all members.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         }
       ]
     },
     {
-      "name": "Scheduled expenses",
+      "name": "Catalog partnership",
       "item": [
         {
-          "name": "List scheduled expenses",
+          "name": "Partnership get",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/scheduled/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "scheduled", ""]
+              "raw": "{{base_url}}/api/v2/partnership/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "partnership",
+                ""
+              ]
             },
-            "description": "Returns all scheduled expenses for the user, sorted by title."
+            "description": "The feuser's Catalog Partnership: partners share one category and tag catalog, so every change to a category or tag reaches all of them. Shows partners, open invitations and any invitation to the feuser."
           }
         },
         {
-          "name": "Create scheduled expense",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.id) pm.collectionVariables.set('scheduled_id', res.id);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Partnership invite",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/partnership/invites/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "partnership",
+                "invites",
+                ""
+              ]
+            },
+            "description": "Invite a contact or fellow project member (feuser_id) into the feuser's Catalog Partnership.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Rent\",\n  \"type\": \"expense\",\n  \"value\": \"900.00\",\n  \"payee\": \"Landlord\",\n  \"note\": \"\",\n  \"default_settled\": false,\n  \"default_auto_settle_on_due_date\": false,\n  \"repeat_every_factor\": 1,\n  \"repeat_every_unit\": \"months\",\n  \"repeat_base_date\": \"2025-01-01\",\n  \"category_id\": null,\n  \"tag_ids\": []\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/scheduled/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "scheduled", ""]
-            },
-            "description": "Create a scheduled expense. `repeat_every_unit` must be `days`, `weeks`, `months`, or `years`. The `id` from the response is saved to `scheduled_id` automatically."
-          }
-        },
-        {
-          "name": "Get scheduled expense",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/scheduled/{{scheduled_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "scheduled", "{{scheduled_id}}", ""]
+              "raw": "{\n  \"feuser_id\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         },
         {
-          "name": "Update scheduled expense",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"value\": \"950.00\",\n  \"repeat_every_factor\": 1,\n  \"repeat_every_unit\": \"months\",\n  \"confirm_modify_schedule\": true\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/v1/scheduled/{{scheduled_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "scheduled", "{{scheduled_id}}", ""]
-            },
-            "description": "Update any subset of scheduled expense fields. Changing repeat_every_factor/repeat_every_unit requires confirm_modify_schedule: true, and changing repeat_base_date/end_on requires confirm_modify_schedule_window: true - otherwise those fields are silently ignored, since changing them deletes/regenerates a year's worth of generated expenses."
-          }
-        },
-        {
-          "name": "Delete scheduled expense",
+          "name": "Partnership invite cancel",
           "request": {
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/scheduled/{{scheduled_id}}/",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "scheduled", "{{scheduled_id}}", ""]
+              "raw": "{{base_url}}/api/v2/partnership/invites/{{id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "partnership",
+                "invites",
+                "{{id}}",
+                ""
+              ]
+            },
+            "description": "Withdraw an open invitation of the feuser's partnership."
+          }
+        },
+        {
+          "name": "Partnership remove partner",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/partnership/partners/{{feuser_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "partnership",
+                "partners",
+                "{{feuser_id}}",
+                ""
+              ]
+            },
+            "description": "Remove a partner from the partnership; they keep a copy of the catalog."
+          }
+        },
+        {
+          "name": "Partnership leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/partnership/leave/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "partnership",
+                "leave",
+                ""
+              ]
+            },
+            "description": "Leave the partnership; the feuser keeps a copy of the catalog.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Partnership onboarding state",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/partnership/onboarding/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "partnership",
+                "onboarding",
+                ""
+              ]
+            },
+            "description": "For the open invitation to the feuser: the inviter's catalog and the feuser's own tags and categories, split into matched (same title) and unmatched. Joining replaces the feuser's catalog with the inviter's, so every unmatched title needs a target or an explicit drop."
+          }
+        },
+        {
+          "name": "Partnership onboarding preview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/partnership/onboarding/preview/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "partnership",
+                "onboarding",
+                "preview",
+                ""
+              ]
+            },
+            "description": "Check complete mappings and show what joining would do to each own title and how many expenses, recurring expenses and overlays carry them. Changes nothing; returns a confirm_token (10 minutes) for partnership_onboarding_apply.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Partnership onboarding apply",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/partnership/onboarding/apply/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "partnership",
+                "onboarding",
+                "apply",
+                ""
+              ]
+            },
+            "description": "Join the partnership with exactly the previewed mappings: the feuser's catalog is replaced and their records remapped. Refused when anything changed since the preview.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirm_token\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Partnership onboarding decline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/partnership/onboarding/decline/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "partnership",
+                "onboarding",
+                "decline",
+                ""
+              ]
+            },
+            "description": "Decline the open partnership invitation to the feuser.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Account settings",
+      "item": [
+        {
+          "name": "Account get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/account/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "account",
+                ""
+              ]
+            },
+            "description": "The feuser's profile and settings, never any secret."
+          }
+        },
+        {
+          "name": "Account update",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v2/account/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "account",
+                ""
+              ]
+            },
+            "description": "Change profile and settings; only given fields change. email_notifications=false turns every email off. Email, password, second factors and API keys are not changeable here.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email_notifications\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         }

@@ -100,7 +100,7 @@ class TestSettlementEmailLinkApproval:
             f"print(FeUser.objects.get(email='{ctx['b']['email']}').api_key)"
         )
         resp = requests.get(
-            _url("/api/v1/expenses/"),
+            _url("/api/v2/expenses/"),
             headers={"Authorization": f"Bearer {api_key}"},
         )
         assert resp.status_code == 200

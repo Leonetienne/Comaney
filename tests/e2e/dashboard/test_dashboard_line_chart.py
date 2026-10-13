@@ -298,11 +298,11 @@ class TestLineChartData:
     def test_cum_values_are_non_decreasing(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e1 = api_post("/api/v1/expenses/", ctx, json={
+        e1 = api_post("/api/v2/expenses/", ctx, json={
             "title": "CumNonDec A", "type": "expense", "value": "10.00",
             "date_due": today, "settled": True,
         })
-        e2 = api_post("/api/v1/expenses/", ctx, json={
+        e2 = api_post("/api/v2/expenses/", ctx, json={
             "title": "CumNonDec B", "type": "expense", "value": "20.00",
             "date_due": today, "settled": True,
         })
@@ -324,17 +324,17 @@ class TestLineChartData:
             assert values[i] >= values[i - 1], f"cum dipped at index {i}: {values}"
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e2.json()['id']}/", ctx)
 
     def test_cum_final_value_equals_total_sum(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e1 = api_post("/api/v1/expenses/", ctx, json={
+        e1 = api_post("/api/v2/expenses/", ctx, json={
             "title": "CumSum1", "type": "expense", "value": "15.00",
             "date_due": today, "settled": True,
         })
-        e2 = api_post("/api/v1/expenses/", ctx, json={
+        e2 = api_post("/api/v2/expenses/", ctx, json={
             "title": "CumSum2", "type": "expense", "value": "25.00",
             "date_due": today, "settled": True,
         })
@@ -355,17 +355,17 @@ class TestLineChartData:
         assert pytest.approx(values[-1], abs=0.01) == 40.0
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e2.json()['id']}/", ctx)
 
     def test_base_values_sum_to_total(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e1 = api_post("/api/v1/expenses/", ctx, json={
+        e1 = api_post("/api/v2/expenses/", ctx, json={
             "title": "BaseVal1", "type": "expense", "value": "7.00",
             "date_due": today, "settled": True,
         })
-        e2 = api_post("/api/v1/expenses/", ctx, json={
+        e2 = api_post("/api/v2/expenses/", ctx, json={
             "title": "BaseVal2", "type": "expense", "value": "13.00",
             "date_due": today, "settled": True,
         })
@@ -386,17 +386,17 @@ class TestLineChartData:
         assert pytest.approx(sum(values), abs=0.01) == 20.0
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e2.json()['id']}/", ctx)
 
     def test_series_method_total_negates_income(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "NetTotal expense", "type": "expense", "value": "100.00",
             "date_due": today, "settled": True,
         })
-        inc = api_post("/api/v1/expenses/", ctx, json={
+        inc = api_post("/api/v2/expenses/", ctx, json={
             "title": "NetTotal income", "type": "income", "value": "60.00",
             "date_due": today, "settled": True,
         })
@@ -418,19 +418,19 @@ class TestLineChartData:
         assert pytest.approx(values[-1], abs=0.01) == 40.0
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{exp.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{inc.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{exp.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{inc.json()['id']}/", ctx)
 
     def test_card_level_query_applied_to_all_series(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
         # This expense has the title "CardQFilter" but NOT "type=income"
-        e_exp = api_post("/api/v1/expenses/", ctx, json={
+        e_exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "CardQFilter", "type": "expense", "value": "50.00",
             "date_due": today, "settled": True,
         })
         # This expense also has "CardQFilter" in title but is filtered out by card query
-        e_inc = api_post("/api/v1/expenses/", ctx, json={
+        e_inc = api_post("/api/v2/expenses/", ctx, json={
             "title": "CardQFilterInc", "type": "income", "value": "999.00",
             "date_due": today, "settled": True,
         })
@@ -454,13 +454,13 @@ class TestLineChartData:
         assert pytest.approx(values[-1], abs=0.01) == 50.0
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e_exp.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e_inc.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e_exp.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e_inc.json()['id']}/", ctx)
 
     def test_flip_signs_per_series_negates_that_series(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e = api_post("/api/v1/expenses/", ctx, json={
+        e = api_post("/api/v2/expenses/", ctx, json={
             "title": "FlipLine", "type": "expense", "value": "45.00",
             "date_due": today, "settled": True,
         })
@@ -486,7 +486,7 @@ class TestLineChartData:
         assert pytest.approx(normal[-1],  abs=0.01) ==  45.0
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e.json()['id']}/", ctx)
 
     def test_empty_period_returns_empty_labels(self, driver, w, ctx, sess):
         # Use a far-future year where no expenses exist
@@ -509,7 +509,7 @@ class TestLineChartBrowser:
 
     def test_line_chart_canvas_renders(self, driver, w, ctx, sess):
         today = server_today()
-        e = api_post("/api/v1/expenses/", ctx, json={
+        e = api_post("/api/v2/expenses/", ctx, json={
             "title": "LineChartBrowser", "type": "expense", "value": "33.00",
             "date_due": today, "settled": True,
         })
@@ -532,7 +532,7 @@ class TestLineChartBrowser:
         assert f"chart-{card_id}" in canvases, f"canvas#chart-{card_id} not found; canvases={canvases}"
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e.json()['id']}/", ctx)
 
     def test_cleanup_all_cards(self, driver, w, ctx, sess):
         csrf = _csrf(sess)

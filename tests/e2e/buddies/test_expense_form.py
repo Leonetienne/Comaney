@@ -135,7 +135,7 @@ class TestExpenseWithDummyParticipant:
         assert "/budget/expenses/" in driver.current_url
 
     def test_expense_in_api_list(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "Buddy Participant Expense"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "Buddy Participant Expense"})
         assert resp.status_code == 200
         assert any(e["title"] == "Buddy Participant Expense" for e in resp.json()["expenses"]), \
             "Expense with dummy participant (I pay) must appear in the expense API"
@@ -207,7 +207,7 @@ class TestExpenseWithDummyAsPayer:
         assert "won't appear in your regular expense list" in driver.page_source
 
     def test_expense_not_in_api(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "Dummy Payer Expense"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "Dummy Payer Expense"})
         assert resp.status_code == 200
         assert not any(e["title"] == "Dummy Payer Expense" for e in resp.json()["expenses"]), \
             "Dummy-payer expense must not appear in the expense API (is_dummy=True)"
@@ -249,7 +249,7 @@ class TestBuddyExpenseReEdit:
         cleanup_user(c["email"])
 
     def test_edit_form_has_buddy_cb_prechecked(self, driver, w, ctx):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": "Re-Edit Expense"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "Re-Edit Expense"})
         exp_id = resp.json()["expenses"][0]["id"]
         ctx["exp_id"] = exp_id
         driver.get(_url(f"/budget/expenses/{exp_id}/edit/"))

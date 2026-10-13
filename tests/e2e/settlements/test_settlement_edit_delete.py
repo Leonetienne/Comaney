@@ -125,7 +125,7 @@ def _mk_group_dummy(group_pk: int, name: str = "Offline Member") -> int:
 
 
 def _expense_exists(ctx_user: dict, pk: int) -> bool:
-    resp = api_get("/api/v1/expenses/", ctx_user)
+    resp = api_get("/api/v2/expenses/", ctx_user)
     return any(e["id"] == pk for e in resp.json().get("expenses", []))
 
 

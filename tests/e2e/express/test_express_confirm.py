@@ -123,7 +123,7 @@ def _expense_in_api(title_prefix: str, ctx: dict) -> bool:
     )
     if eid == "None":
         return False
-    expenses = api_get("/api/v1/expenses/", ctx, params={"q": title_prefix}).json().get("expenses", [])
+    expenses = api_get("/api/v2/expenses/", ctx, params={"q": title_prefix}).json().get("expenses", [])
     return any(e["id"] == int(eid) for e in expenses)
 
 

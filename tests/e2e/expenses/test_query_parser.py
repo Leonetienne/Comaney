@@ -1,7 +1,7 @@
 """
 Query parser feature tests via the REST API expense list endpoint.
 
-Uses GET /api/v1/expenses/?q=QUERY&view=year&year=2025 to verify
+Uses GET /api/v2/expenses/?q=QUERY&view=year&year=2025 to verify
 date comparisons (all three formats), the 'today' keyword, value
 comparisons, the NOT operator, multi-constraint tag filters, and
 the deactivated= flag.  No browser interaction required.
@@ -25,7 +25,7 @@ FUTURE_ISO = "2025-09-01"
 
 def _api_titles(ctx, q, year=2025):
     params = {"q": q, "view": "year", "year": year}
-    resp = api_get("/api/v1/expenses/", ctx, params=params)
+    resp = api_get("/api/v2/expenses/", ctx, params=params)
     return [e["title"] for e in resp.json()["expenses"]]
 
 
@@ -33,48 +33,48 @@ def _api_titles(ctx, q, year=2025):
 def ctx(driver, w):
     c = setup_user(driver, w)
 
-    past = api_post("/api/v1/expenses/", c, json={
+    past = api_post("/api/v2/expenses/", c, json={
         "title": "QP Past", "type": "expense", "value": "10.00",
         "date_due": PAST_ISO, "settled": False,
     })
     assert past.status_code == 201
     c["qp_past"] = past.json()["id"]
 
-    mid = api_post("/api/v1/expenses/", c, json={
+    mid = api_post("/api/v2/expenses/", c, json={
         "title": "QP Mid", "type": "expense", "value": "20.00",
         "date_due": MID_ISO, "settled": False,
     })
     assert mid.status_code == 201
     c["qp_mid"] = mid.json()["id"]
 
-    future = api_post("/api/v1/expenses/", c, json={
+    future = api_post("/api/v2/expenses/", c, json={
         "title": "QP Future", "type": "expense", "value": "30.00",
         "date_due": FUTURE_ISO, "settled": False,
     })
     assert future.status_code == 201
     c["qp_future"] = future.json()["id"]
 
-    income = api_post("/api/v1/expenses/", c, json={
+    income = api_post("/api/v2/expenses/", c, json={
         "title": "QP Income", "type": "income", "value": "500.00",
         "date_due": MID_ISO, "settled": False,
     })
     assert income.status_code == 201
     c["qp_income"] = income.json()["id"]
 
-    deact = api_post("/api/v1/expenses/", c, json={
+    deact = api_post("/api/v2/expenses/", c, json={
         "title": "QP Deact", "type": "expense", "value": "99.00",
         "date_due": MID_ISO, "settled": False,
     })
     assert deact.status_code == 201
     c["qp_deact"] = deact.json()["id"]
-    r = api_patch(f"/api/v1/expenses/{c['qp_deact']}/", c, json={"deactivated": True})
+    r = api_patch(f"/api/v2/expenses/{c['qp_deact']}/", c, json={"deactivated": True})
     assert r.status_code == 200
 
     yield c
 
     for key in ("qp_past", "qp_mid", "qp_future", "qp_income", "qp_deact"):
         if key in c:
-            api_delete(f"/api/v1/expenses/{c[key]}/", c)
+            api_delete(f"/api/v2/expenses/{c[key]}/", c)
     cleanup_user(c["email"])
 
 
@@ -164,7 +164,7 @@ class TestTodayKeyword:
     def test_setup_today(self, driver, w, ctx):
         today_iso = server_today()
         ctx["qp_today_iso"] = today_iso
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "QP Today", "type": "expense", "value": "5.00",
             "date_due": today_iso, "settled": False,
         })
@@ -172,7 +172,7 @@ class TestTodayKeyword:
         ctx["qp_today_dyn"] = exp.json()["id"]
 
     def _titles_today(self, ctx, q):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": q, "view": "year"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": q, "view": "year"})
         return [e["title"] for e in resp.json()["expenses"]]
 
     def test_today_eq(self, driver, w, ctx):
@@ -201,7 +201,7 @@ class TestTodayKeyword:
 
     def test_cleanup_today(self, driver, w, ctx):
         if "qp_today_dyn" in ctx:
-            api_delete(f"/api/v1/expenses/{ctx.pop('qp_today_dyn')}/", ctx)
+            api_delete(f"/api/v2/expenses/{ctx.pop('qp_today_dyn')}/", ctx)
         ctx.pop("qp_today_iso", None)
 
 
@@ -245,29 +245,29 @@ class TestNotOperator:
 class TestMultipleConstraints:
 
     def test_setup_tags(self, driver, w, ctx):
-        ta = api_post("/api/v1/tags/", ctx, json={"title": "qptaga"})
+        ta = api_post("/api/v2/tags/", ctx, json={"title": "qptaga"})
         assert ta.status_code == 201
         ctx["qp_tag_a"] = ta.json()["id"]
 
-        tb = api_post("/api/v1/tags/", ctx, json={"title": "qptagb"})
+        tb = api_post("/api/v2/tags/", ctx, json={"title": "qptagb"})
         assert tb.status_code == 201
         ctx["qp_tag_b"] = tb.json()["id"]
 
-        only_a = api_post("/api/v1/expenses/", ctx, json={
+        only_a = api_post("/api/v2/expenses/", ctx, json={
             "title": "QP TagA", "type": "expense", "value": "1.00",
             "date_due": MID_ISO, "tag_ids": [ctx["qp_tag_a"]],
         })
         assert only_a.status_code == 201
         ctx["qp_only_a"] = only_a.json()["id"]
 
-        only_b = api_post("/api/v1/expenses/", ctx, json={
+        only_b = api_post("/api/v2/expenses/", ctx, json={
             "title": "QP TagB", "type": "expense", "value": "2.00",
             "date_due": MID_ISO, "tag_ids": [ctx["qp_tag_b"]],
         })
         assert only_b.status_code == 201
         ctx["qp_only_b"] = only_b.json()["id"]
 
-        both = api_post("/api/v1/expenses/", ctx, json={
+        both = api_post("/api/v2/expenses/", ctx, json={
             "title": "QP TagBoth", "type": "expense", "value": "3.00",
             "date_due": MID_ISO, "tag_ids": [ctx["qp_tag_a"], ctx["qp_tag_b"]],
         })
@@ -287,10 +287,10 @@ class TestMultipleConstraints:
     def test_cleanup_tags(self, driver, w, ctx):
         for key in ("qp_only_a", "qp_only_b", "qp_both"):
             if key in ctx:
-                api_delete(f"/api/v1/expenses/{ctx.pop(key)}/", ctx)
+                api_delete(f"/api/v2/expenses/{ctx.pop(key)}/", ctx)
         for key in ("qp_tag_a", "qp_tag_b"):
             if key in ctx:
-                api_delete(f"/api/v1/tags/{ctx.pop(key)}/", ctx)
+                api_delete(f"/api/v2/tags/{ctx.pop(key)}/", ctx)
 
 
 class TestDeactivated:
@@ -312,14 +312,14 @@ class TestRecurring:
         today = server_today()
         ctx["qp_recurring_year"] = today[:4]
 
-        r = api_post("/api/v1/expenses/", ctx, json={
+        r = api_post("/api/v2/expenses/", ctx, json={
             "title": "QP NotRecurring", "type": "expense", "value": "15.00",
             "date_due": today,
         })
         assert r.status_code == 201
         ctx["qp_not_recurring"] = r.json()["id"]
 
-        r = api_post("/api/v1/scheduled/", ctx, json={
+        r = api_post("/api/v2/scheduled/", ctx, json={
             "title": "QP Recurring", "type": "expense", "value": "25.00",
             "repeat_base_date": today, "repeat_every_factor": 1, "repeat_every_unit": "months",
         })
@@ -330,7 +330,7 @@ class TestRecurring:
 
     def _titles(self, ctx, q):
         year = ctx["qp_recurring_year"]
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": q, "view": "year", "year": year})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": q, "view": "year", "year": year})
         return [e["title"] for e in resp.json()["expenses"]]
 
     def test_recurring_yes_includes_recurring(self, driver, w, ctx):
@@ -352,25 +352,25 @@ class TestRecurring:
     def test_cleanup(self, driver, w, ctx):
         year = ctx.get("qp_recurring_year")
         if year:
-            resp = api_get("/api/v1/expenses/", ctx, params={"q": "QP Recurring", "view": "year", "year": year})
+            resp = api_get("/api/v2/expenses/", ctx, params={"q": "QP Recurring", "view": "year", "year": year})
             for e in resp.json()["expenses"]:
-                api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
+                api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
         if "qp_not_recurring" in ctx:
-            api_delete(f"/api/v1/expenses/{ctx.pop('qp_not_recurring')}/", ctx)
+            api_delete(f"/api/v2/expenses/{ctx.pop('qp_not_recurring')}/", ctx)
         if "qp_recurring_source_id" in ctx:
-            api_delete(f"/api/v1/scheduled/{ctx.pop('qp_recurring_source_id')}/", ctx)
+            api_delete(f"/api/v2/scheduled/{ctx.pop('qp_recurring_source_id')}/", ctx)
         ctx.pop("qp_recurring_year", None)
 
 
 class TestWeekKeywords:
 
     def _titles(self, ctx, q):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": q, "view": "year"})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": q, "view": "year"})
         return [e["title"] for e in resp.json()["expenses"]]
 
     def test_setup_week(self, driver, w, ctx):
         today_iso = server_today()
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "QP ThisWeek", "type": "expense", "value": "9.00",
             "date_due": today_iso, "settled": False,
         })
@@ -408,7 +408,7 @@ class TestWeekKeywords:
 
     def test_cleanup_week(self, driver, w, ctx):
         if "qp_this_week" in ctx:
-            api_delete(f"/api/v1/expenses/{ctx.pop('qp_this_week')}/", ctx)
+            api_delete(f"/api/v2/expenses/{ctx.pop('qp_this_week')}/", ctx)
 
 
 def _exp_url():
@@ -516,7 +516,7 @@ class TestBuddyFilter:
         ctx["qp_buddy_year"] = year
 
         # Regular non-buddy expense for contrast
-        r = api_post("/api/v1/expenses/", ctx, json={
+        r = api_post("/api/v2/expenses/", ctx, json={
             "title": "QP NoBuddy", "type": "expense", "value": "10.00",
             "date_due": today,
         })
@@ -555,7 +555,7 @@ class TestBuddyFilter:
         ctx["qp_buddy_expense_pk"] = expense_pk.strip()
 
     def _titles(self, ctx, q):
-        resp = api_get("/api/v1/expenses/", ctx, params={
+        resp = api_get("/api/v2/expenses/", ctx, params={
             "q": q, "view": "year", "year": ctx["qp_buddy_year"],
         })
         return [e["title"] for e in resp.json()["expenses"]]
@@ -596,7 +596,7 @@ class TestBuddyFilter:
 
     def test_cleanup(self, driver, w, ctx):
         if "qp_no_buddy_uid" in ctx:
-            api_delete(f"/api/v1/expenses/{ctx.pop('qp_no_buddy_uid')}/", ctx)
+            api_delete(f"/api/v2/expenses/{ctx.pop('qp_no_buddy_uid')}/", ctx)
         if "qp_buddy_expense_pk" in ctx:
             _shell(
                 f"from budget.models import Expense; "
@@ -617,18 +617,18 @@ class TestPayerFilter:
     @pytest.fixture(scope="class")
     def payer_ctx(self, driver, w):
         c = setup_user(driver, w, first_name="Payer", last_name="Fullname")
-        exp = api_post("/api/v1/expenses/", c, json={
+        exp = api_post("/api/v2/expenses/", c, json={
             "title": "QP PayerFull", "type": "expense", "value": "12.00",
             "date_due": MID_ISO, "settled": False,
         })
         assert exp.status_code == 201
         c["qp_payer_exp"] = exp.json()["id"]
         yield c
-        api_delete(f"/api/v1/expenses/{c.pop('qp_payer_exp')}/", c)
+        api_delete(f"/api/v2/expenses/{c.pop('qp_payer_exp')}/", c)
         cleanup_user(c["email"])
 
     def _titles(self, ctx, q):
-        resp = api_get("/api/v1/expenses/", ctx, params={"q": q, "view": "year", "year": YEAR})
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": q, "view": "year", "year": YEAR})
         return [e["title"] for e in resp.json()["expenses"]]
 
     def test_payer_matches_full_name(self, driver, w, payer_ctx):

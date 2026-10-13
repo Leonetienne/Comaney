@@ -1,5 +1,4 @@
 import csv
-import json
 import secrets
 import urllib.parse
 from datetime import date
@@ -10,7 +9,7 @@ from comaney.json_utils import safe_json
 from django.contrib import messages
 from django.utils.html import escape as html_escape
 from django.utils.safestring import mark_safe
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -20,7 +19,11 @@ from ..date_utils import financial_month_range, financial_year_range
 from ..decorators import feuser_required
 from ..forms import ExpenseForm, ExpenseOverlayForm
 from ..models import Category, Expense, ExpenseDataOverlay, Tag
-from ..notifications import send_settled_notification, set_initial_notification_class
+from ..expense_service import (
+    BUDDY_TYPE_CONFLICT_MSG, ExpenseActionError, bulk_action, clone_expense, delete_expense,
+    editable_expense, parse_assignment_post, participant_expense, save_new_expense, set_overlay,
+    settle_expense, update_expense,
+)
 from ._period import _get_month, _get_period_mode, _get_year, _date_range_presets_context
 from ._sharing import has_contact_or_multiuser_project
 
@@ -28,22 +31,6 @@ from ._sharing import has_contact_or_multiuser_project
 # ---------------------------------------------------------------------------
 # Buddy payment helpers
 # ---------------------------------------------------------------------------
-
-def _apply_solo_spendings(expense, buddy, creator_feuser):
-    """For solo projects, if buddy spendings are empty, auto-create a 100% row for the creator."""
-    if buddy and buddy["mode"] == "group" and not buddy["spendings"] and buddy.get("group"):
-        project = buddy["group"]
-        feuser_count = project.members.filter(feuser__isnull=False).count()
-        dummy_count = project.members.filter(dummy__isnull=False).count()
-        if feuser_count == 1 and dummy_count == 0:
-            from buddies.models import BuddySpending
-            BuddySpending.objects.filter(expense=expense).delete()
-            BuddySpending.objects.create(
-                expense=expense,
-                participant_feuser=creator_feuser,
-                share_percent=100,
-            )
-
 
 def _buddy_context(feuser) -> dict:
     """
@@ -78,104 +65,6 @@ def _buddy_context(feuser) -> dict:
         "projects_data_json": safe_json(projects_data),
         "contacts_json": safe_json(contacts),
     }
-
-
-def _parse_buddy_post(post, feuser):
-    """
-    Parse buddy payment fields from a POST request.
-    Returns None if buddy_payment is not set, else a dict with keys:
-      mode ('single'|'group'), upfront_type ('me'|'feuser'|'dummy'),
-      upfront_feuser, upfront_dummy, group, spendings, valid.
-    Single mode: max 1 participant enforced.
-    """
-    if not post.get("buddy_payment"):
-        return None
-
-    from buddies.models import Project, DummyUser
-    from feusers.models import FeUser as FU
-    from ..models import TransactionType
-
-    mode = post.get("buddy_mode", "single")
-    upfront_type = post.get("buddy_upfront_type", "me")
-    result = {
-        "mode": mode,
-        "upfront_type": upfront_type,
-        "upfront_feuser": None,
-        "upfront_dummy": None,
-        "group": None,
-        "valid": True,
-        "type_conflict": False,
-    }
-
-    # Buddy/project expenses participate in the shared debt graph, which only
-    # makes sense for type=EXPENSE (income/savings would invert who owes whom).
-    if post.get("type") != TransactionType.EXPENSE:
-        result["valid"] = False
-        result["type_conflict"] = True
-
-    if upfront_type == "feuser":
-        try:
-            uid = int(post.get("buddy_upfront_id", 0))
-            result["upfront_feuser"] = FU.objects.get(pk=uid, is_active=True)
-        except (ValueError, FU.DoesNotExist):
-            result["valid"] = False
-    elif upfront_type == "dummy":
-        try:
-            uid = int(post.get("buddy_upfront_id", 0))
-            result["upfront_dummy"] = DummyUser.objects.get(pk=uid)
-        except (ValueError, DummyUser.DoesNotExist):
-            result["valid"] = False
-
-    if mode == "group":
-        try:
-            group_id = int(post.get("project_id", 0))
-            result["group"] = Project.objects.get(
-                uid=group_id,
-                members__feuser=feuser,
-                archived=False,
-            )
-        except (ValueError, Project.DoesNotExist):
-            result["valid"] = False
-
-    try:
-        result["spendings"] = json.loads(post.get("buddy_spendings_json", "[]"))
-    except (json.JSONDecodeError, ValueError):
-        result["spendings"] = []
-
-    # Solo project: allow empty spendings (will be auto-filled with 100% for creator)
-    is_solo_project = (mode == "group" and result["group"] and
-                       result["group"].members.filter(feuser__isnull=False).count() == 1 and
-                       not result["group"].members.filter(dummy__isnull=False).exists())
-    # Any project expense may have zero participants (payer covers the cost alone).
-    is_project_expense = mode == "group" and bool(result.get("group"))
-    if not result["spendings"] and not is_solo_project and not is_project_expense:
-        result["valid"] = False
-
-    # Contact mode: enforce max 1 participant
-    if mode == "single" and len(result["spendings"]) > 1:
-        result["valid"] = False
-
-    # Authorization: every referenced upfront payer / participant must be within
-    # the acting user's connected set (buddy, project member, or owned/project
-    # dummy). Reject the whole submission otherwise (never trust POST-supplied ids).
-    if result["valid"]:
-        from buddies.services import BuddyExpenseService
-        if not BuddyExpenseService.validate_buddy_identities(
-            feuser,
-            group=result["group"],
-            upfront_feuser=result["upfront_feuser"],
-            upfront_dummy=result["upfront_dummy"],
-            spendings=result["spendings"],
-        ):
-            result["valid"] = False
-
-    return result
-
-
-BUDDY_TYPE_CONFLICT_MSG = (
-    'Contact and project expenses must be type "Expense". '
-    "Change the type back to Expense, or remove the assignment, then save again."
-)
 
 
 def _buddy_render_context_from_post(buddy, feuser) -> dict:
@@ -330,60 +219,9 @@ def expense_create(request):
             return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
 
         form = ExpenseForm(request.POST, feuser=feuser)
-        buddy = _parse_buddy_post(request.POST, feuser)
+        buddy = parse_assignment_post(request.POST, feuser)
         if form.is_valid() and (buddy is None or buddy["valid"]):
-            expense = form.save(commit=False)
-            if buddy and buddy["upfront_type"] == "feuser" and buddy["upfront_feuser"]:
-                # Expense belongs to the other user; feuser initiated it
-                other = buddy["upfront_feuser"]
-                expense.owning_feuser = other
-                expense.buddy_approved = False
-                expense.project = buddy.get("group")
-                expense.save()
-                form.save_m2m()
-                # At this point expense.category/tags belong to feuser (creating user).
-                # Save an overlay for the creating feuser, then reconcile the expense
-                # to the owning feuser's matching tags/categories.
-                from budget.services import upsert_overlay, create_participant_overlays
-                from buddies.services import BuddyEmailService, BuddyExpenseService, BuddyTrustService
-                creating_category = expense.category
-                creating_tags = list(expense.tags.all())
-                upsert_overlay(expense, feuser, creating_category, creating_tags)
-                BuddyExpenseService.reconcile_categories_tags(expense, other)
-                expense.save(update_fields=["category"])
-                _apply_solo_spendings(expense, buddy, feuser)
-                BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"], acting_feuser=feuser)
-                create_participant_overlays(expense)
-                BuddyTrustService.record_action(expense, feuser)
-                if not expense.buddy_approved:
-                    BuddyEmailService.send_expense_approval_request(expense, feuser)
-                BuddyEmailService.notify_expense_created(expense, feuser)
-                if expense.project:
-                    expense.project.update_lastmod()
-            else:
-                expense.owning_feuser = feuser
-                if buddy:
-                    expense.is_dummy = (buddy["upfront_type"] == "dummy")
-                    expense.upfront_payee_dummy = buddy.get("upfront_dummy")
-                    expense.project = buddy.get("group")
-                    # Dummy upfront payer in a project requires admin approval unless creator is admin
-                    if (buddy["upfront_type"] == "dummy"
-                            and expense.project
-                            and expense.project.admin_feuser_id != feuser.pk):
-                        expense.buddy_approved = False
-                expense.save()
-                form.save_m2m()
-                if buddy:
-                    from buddies.services import BuddyExpenseService, BuddyEmailService, BuddyTrustService
-                    from budget.services import create_participant_overlays
-                    _apply_solo_spendings(expense, buddy, feuser)
-                    BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"], acting_feuser=feuser)
-                    create_participant_overlays(expense)
-                    BuddyTrustService.record_action(expense, feuser)
-                    BuddyEmailService.notify_expense_created(expense, feuser)
-                    if expense.project:
-                        expense.project.update_lastmod()
-            set_initial_notification_class(expense)
+            expense = save_new_expense(feuser, form.save(commit=False), form.cleaned_data["tags"], buddy)
             if buddy and buddy["upfront_type"] == "dummy" and buddy.get("upfront_dummy"):
                 back = _safe_back_url(request.POST.get("back", ""))
                 if not back:
@@ -441,166 +279,18 @@ def expense_create(request):
 @feuser_required
 def expense_edit(request, uid):
     feuser = request.feuser
-    expense = Expense.objects.filter(uid=uid, owning_feuser=feuser).first()
-    is_admin_edit = False
-    if expense is None:
-        # Group admins may edit dummy-upfront expenses in their group.
-        expense = get_object_or_404(
-            Expense,
-            uid=uid,
-            is_dummy=True,
-            project__admin_feuser=feuser,
-        )
-        is_admin_edit = True
-    form_feuser = expense.owning_feuser if is_admin_edit else feuser
-    if expense.is_buddies_settlement and not expense.settlement_can_edit:
+    try:
+        expense, is_admin_edit = editable_expense(feuser, uid)
+    except Expense.DoesNotExist:
+        raise Http404
+    except ExpenseActionError:
         return redirect("budget:expenses_list")
-    # Non-admin group members cannot edit an approved group settlement: only the
-    # group admin may do so. (The is_admin_edit path already bypasses this for
-    # dummy-upfront expenses; here we catch dummy-creditor group settlements.)
-    if (not is_admin_edit
-            and expense.is_buddies_settlement
-            and expense.buddy_approved
-            and expense.project_id):
-        from buddies.models import Project
-        admin_pk = Project.objects.filter(uid=expense.project_id) \
-            .values_list("admin_feuser_id", flat=True).first()
-        if admin_pk != feuser.pk:
-            return redirect("budget:expenses_list")
+    form_feuser = expense.owning_feuser if is_admin_edit else feuser
     if request.method == "POST":
-        was_settled = expense.settled
-        # Snapshot old buddy state before any changes are applied
-        _old_title = expense.title
-        _old_value = expense.value
-        _old_participants = {
-            bs.participant_feuser_id: (bs.participant_feuser, bs.share_percent)
-            for bs in expense.buddy_spendings
-            .select_related("participant_feuser")
-            .filter(participant_feuser__isnull=False)
-        }
-        # Signature (participants + shares) and approval decisions before editing,
-        # so we can tell whether this edit invalidates participants' approvals.
-        from buddies.services import BuddyExpenseService as _BES
-        from buddies.models import BuddySpending as _BS
-        _old_spend_sig = _BES.spend_signature(expense)
-        _old_approvals = _BES.snapshot_approvals(expense)
-        # Participants who had actually approved (state APPROVED) before this edit.
-        # Only these are told their approval was reset; a neutral participant had
-        # nothing to reset.
-        _prev_approved_pks = {
-            pid for (ptype, pid), (state, _c) in _old_approvals.items()
-            if ptype == "feuser" and state == _BS.APPROVAL_APPROVED
-        }
         form = ExpenseForm(request.POST, instance=expense, feuser=form_feuser)
-        buddy = _parse_buddy_post(request.POST, feuser)
+        buddy = parse_assignment_post(request.POST, feuser)
         if form.is_valid() and (buddy is None or buddy["valid"]):
-            _pre_edit_project = expense.project
-            form.save()
-            if buddy:
-                new_type = buddy["upfront_type"]
-                new_feuser = buddy.get("upfront_feuser")
-                new_dummy = buddy.get("upfront_dummy")
-                expense.project = buddy.get("group")
-                expense.save(update_fields=["project"])
-                # Detect payer change and apply service logic
-                payer_changed = (
-                    (new_type == "feuser" and new_feuser and new_feuser.pk != feuser.pk) or
-                    (new_type == "dummy" and new_dummy and new_dummy != expense.upfront_payee_dummy) or
-                    (new_type == "me" and expense.is_dummy)
-                )
-                from buddies.services import BuddyExpenseService, BuddyEmailService, BuddyTrustService
-                if payer_changed:
-                    expense = BuddyExpenseService.change_upfront_payer(
-                        expense,
-                        new_payer_feuser=(new_feuser if new_type == "feuser" else None),
-                        new_payer_dummy=(new_dummy if new_type == "dummy" else None),
-                    )
-                    # Non-admin changing payer to a project dummy needs admin approval
-                    if new_type == "dummy" and new_dummy:
-                        proj = buddy.get("group")
-                        if proj and proj.admin_feuser_id != feuser.pk:
-                            expense.buddy_approved = False
-                            expense.save(update_fields=["buddy_approved"])
-                    if new_type == "feuser" and new_feuser:
-                        # Ownership changed hands: every remaining participant's
-                        # approval no longer applies.
-                        BuddyExpenseService.reset_participant_approvals(expense)
-                        BuddyTrustService.record_action(expense, feuser)
-                        if not expense.buddy_approved:
-                            BuddyEmailService.send_expense_approval_request(expense, feuser)
-                        BuddyEmailService.notify_expense_updated(
-                            expense, feuser, _old_title, _old_value, _old_participants,
-                            extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
-                            reset_participant_pks=_prev_approved_pks,
-                        )
-                        # Expense now belongs to other user; redirect without further editing
-                        return redirect("budget:expenses_list")
-                # Skip for settlements: creditor share must not change
-                approval_reset = False
-                if not expense.is_buddies_settlement:
-                    _apply_solo_spendings(expense, buddy, feuser)
-                    BuddyExpenseService.set_buddy_spendings(expense, buddy["spendings"], acting_feuser=feuser)
-                    # Editing the title, value, participants or shares invalidates
-                    # every participant's approval; anything else keeps them.
-                    approval_reset = (
-                        payer_changed
-                        or _old_title != expense.title
-                        or _old_value != expense.value
-                        or _old_spend_sig != BuddyExpenseService.spend_signature(expense)
-                    )
-                    if approval_reset:
-                        BuddyExpenseService.reset_participant_approvals(expense)
-                        BuddyTrustService.record_action(expense, feuser)
-                    else:
-                        BuddyExpenseService.restore_approvals(expense, _old_approvals)
-                BuddyEmailService.notify_expense_updated(
-                    expense, feuser, _old_title, _old_value, _old_participants,
-                    extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
-                    reset_participant_pks=(_prev_approved_pks if approval_reset else set()),
-                )
-                if expense.project:
-                    expense.project.update_lastmod()
-                if _pre_edit_project and _pre_edit_project != expense.project:
-                    _pre_edit_project.update_lastmod()
-            else:
-                # Buddy payment removed: clear all buddy data
-                expense.buddy_spendings.all().delete()
-                expense.is_dummy = False
-                expense.buddy_approved = True
-                expense.upfront_payee_dummy = None
-                expense.project = None
-                expense.save(update_fields=["is_dummy", "buddy_approved", "upfront_payee_dummy", "project"])
-                if _pre_edit_project:
-                    _pre_edit_project.update_lastmod()
-                if _old_participants:
-                    from buddies.services import BuddyEmailService
-                    BuddyEmailService.notify_expense_updated(
-                        expense, feuser, _old_title, _old_value, _old_participants,
-                        extra_notify_feuser=(expense.owning_feuser if is_admin_edit else None),
-                    )
-
-            if expense.is_buddies_settlement and not expense.buddy_approved:
-                from buddies.services import BuddyTrustService
-                BuddyTrustService.record_action(expense, feuser)
-            if expense.is_buddies_settlement and not expense.buddy_approved:
-                # Notify the creditor using the pre-edit participant snapshot.
-                # We cannot rely on the post-edit spendings because the JS
-                # auto-adds ME as a participant when the upfront payer is a
-                # dummy, which would incorrectly pick the admin as the creditor.
-                from buddies.services import BuddyEmailService
-                _creditor = next(
-                    (fu for (fu, _) in _old_participants.values()
-                     if fu.pk != expense.owning_feuser_id),
-                    None,
-                )
-                if _creditor:
-                    BuddyEmailService.send_settlement_updated_notification(
-                        expense, _creditor
-                    )
-            if not was_settled and expense.settled:
-                send_settled_notification(expense)
-            else:
-                set_initial_notification_class(expense)
+            update_expense(feuser, expense, form.save, buddy, is_admin_edit=is_admin_edit)
             back = _safe_back_url(request.POST.get("back", ""))
             return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
         elif buddy and buddy.get("type_conflict"):
@@ -644,76 +334,13 @@ def expense_edit(request, uid):
 @require_POST
 def expense_delete(request, uid):
     expense = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
-    if expense.is_buddies_settlement:
-        if not expense.settlement_can_delete:
-            return redirect("budget:expenses_list")
-        # Non-admin group members cannot delete an approved group settlement via
-        # this endpoint; the group-specific delete view handles permissions there.
-        if expense.buddy_approved and expense.project_id:
-            from buddies.models import Project
-            admin_pk = Project.objects.filter(uid=expense.project_id) \
-                .values_list("admin_feuser_id", flat=True).first()
-            if admin_pk != request.feuser.pk:
-                return redirect("budget:expenses_list")
-        # Notify real-user creditor when an unapproved settlement is cancelled
-        if not expense.buddy_approved:
-            from buddies.services import BuddyEmailService
-            bs = expense.buddy_spendings.select_related("participant_feuser").filter(
-                participant_feuser__isnull=False
-            ).first()
-            if bs:
-                BuddyEmailService.send_settlement_cancelled_notification(
-                    expense, bs.participant_feuser
-                )
-    _proj = expense.project
-    expense.delete()
-    if _proj:
-        _proj.update_lastmod()
+    try:
+        delete_expense(request.feuser, expense)
+    except ExpenseActionError:
+        return redirect("budget:expenses_list")
     messages.success(request, "Expense deleted.")
     back = _safe_back_url(request.POST.get("back", ""))
     return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
-
-
-def _bulk_overlay_add_tag(expense, feuser, tag):
-    """Add tag to feuser's personal overlay on a foreign expense."""
-    from ..services import upsert_overlay
-    overlay = ExpenseDataOverlay.objects.filter(expense=expense, feuser=feuser).first()
-    current_tags = list(overlay.tags.all()) if overlay else []
-    current_category = overlay.category if overlay else None
-    current_note = overlay.note if overlay else None
-    if tag not in current_tags:
-        current_tags.append(tag)
-    upsert_overlay(expense, feuser, current_category, current_tags, note=current_note)
-
-
-def _bulk_overlay_remove_tag(expense, feuser, tag):
-    """Remove tag from feuser's personal overlay on a foreign expense."""
-    from ..services import upsert_overlay
-    overlay = ExpenseDataOverlay.objects.filter(expense=expense, feuser=feuser).first()
-    if not overlay:
-        return
-    current_tags = [t for t in overlay.tags.all() if t.pk != tag.pk]
-    upsert_overlay(expense, feuser, overlay.category, current_tags, note=overlay.note)
-
-
-def _bulk_overlay_set_category(expense, feuser, category):
-    """Set (or clear) category on feuser's personal overlay for a foreign expense."""
-    from ..services import upsert_overlay
-    overlay = ExpenseDataOverlay.objects.filter(expense=expense, feuser=feuser).first()
-    current_tags = list(overlay.tags.all()) if overlay else []
-    current_note = overlay.note if overlay else None
-    upsert_overlay(expense, feuser, category, current_tags, note=current_note)
-
-
-def _accessible_foreign_expenses(foreign_uids, feuser):
-    """Return expenses from foreign_uids where feuser is a BuddySpending participant."""
-    return list(
-        Expense.objects.filter(
-            uid__in=foreign_uids,
-            is_dummy=False,
-            buddy_spendings__participant_feuser=feuser,
-        ).distinct()
-    )
 
 
 @feuser_required
@@ -727,93 +354,31 @@ def expense_bulk_action(request):
     except (ValueError, TypeError):
         uids = []
 
-    valid_actions = ("settle", "unsettle", "delete", "add-tag", "remove-tag", "set-category")
-    if uids and action in valid_actions:
-        qs = Expense.objects.filter(owning_feuser=feuser, uid__in=uids, is_dummy=False)
-
-        own_ids = set(qs.values_list("uid", flat=True))
-        foreign_uids = [u for u in uids if u not in own_ids]
-        n_via_overlay = 0
-
-        if action == "settle":
-            if len(uids) == 1:
-                single = qs.filter(settled=False).select_related("owning_feuser").first()
-                qs.update(settled=True)
-                if single:
-                    single.settled = True
-                    send_settled_notification(single)
-            else:
-                qs.update(settled=True)
-        elif action == "unsettle":
-            qs.update(settled=False)
-        elif action == "delete":
-            qs_del = qs.exclude(is_buddies_settlement=True)
-            from buddies.models import Project as _Project
-            affected_project_pks = set(
-                qs_del.filter(project__isnull=False).values_list("project_id", flat=True)
+    result = None
+    if uids:
+        try:
+            result = bulk_action(
+                feuser, action, uids,
+                tag_uid=request.POST.get("tag_uid", ""),
+                category_uid=request.POST.get("category_uid", ""),
             )
-            qs_del.delete()
-            for _pk in affected_project_pks:
-                try:
-                    _Project.objects.get(pk=_pk).update_lastmod()
-                except _Project.DoesNotExist:
-                    pass
-        elif action in ("add-tag", "remove-tag"):
-            tag_uid = request.POST.get("tag_uid", "")
-            try:
-                tag = Tag.objects.get(uid=int(tag_uid), owning_feuser=feuser)
-            except (Tag.DoesNotExist, ValueError, TypeError):
-                tag = None
-            if tag:
-                expense_ids = list(own_ids)
-                if action == "add-tag":
-                    Expense.tags.through.objects.bulk_create(
-                        [Expense.tags.through(expense_id=eid, tag_id=tag.pk) for eid in expense_ids],
-                        ignore_conflicts=True,
-                    )
-                else:
-                    Expense.tags.through.objects.filter(
-                        expense_id__in=expense_ids, tag_id=tag.pk
-                    ).delete()
-                if foreign_uids:
-                    accessible = _accessible_foreign_expenses(foreign_uids, feuser)
-                    for exp in accessible:
-                        if action == "add-tag":
-                            _bulk_overlay_add_tag(exp, feuser, tag)
-                        else:
-                            _bulk_overlay_remove_tag(exp, feuser, tag)
-                    n_via_overlay = len(accessible)
-        elif action == "set-category":
-            category_uid = request.POST.get("category_uid", "")
-            category = None
-            skip = False
-            if category_uid:
-                try:
-                    category = Category.objects.get(uid=int(category_uid), owning_feuser=feuser)
-                except (Category.DoesNotExist, ValueError, TypeError):
-                    skip = True
-            if not skip:
-                qs.update(category=category)
-                if foreign_uids:
-                    accessible = _accessible_foreign_expenses(foreign_uids, feuser)
-                    for exp in accessible:
-                        _bulk_overlay_set_category(exp, feuser, category)
-                    n_via_overlay = len(accessible)
+        except ExpenseActionError:
+            pass
 
-        if foreign_uids:
-            n = len(foreign_uids)
-            s = "s" if n != 1 else ""
-            if action in ("settle", "unsettle", "delete"):
-                messages.warning(
-                    request,
-                    f"{n} expense{s} could not be updated — they do not belong to you.",
-                )
-            elif n_via_overlay:
-                s = "s" if n_via_overlay != 1 else ""
-                messages.info(
-                    request,
-                    f"{n_via_overlay} expense{s} were updated in your personal view only — they do not belong to you.",
-                )
+    if result and result.foreign:
+        n = result.foreign
+        s = "s" if n != 1 else ""
+        if action in ("settle", "unsettle", "delete"):
+            messages.warning(
+                request,
+                f"{n} expense{s} could not be updated — they do not belong to you.",
+            )
+        elif result.via_overlay:
+            s = "s" if result.via_overlay != 1 else ""
+            messages.info(
+                request,
+                f"{result.via_overlay} expense{s} were updated in your personal view only — they do not belong to you.",
+            )
 
     referer = request.META.get("HTTP_REFERER")
     if referer:
@@ -824,11 +389,7 @@ def expense_bulk_action(request):
 @feuser_required
 def expense_settle_via_email(request, uid):
     """Settle an expense via a link in a notification email (GET, session-protected)."""
-    expense = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
-    if not expense.settled:
-        expense.settled = True
-        expense.save(update_fields=["settled"])
-        send_settled_notification(expense)
+    settle_expense(get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser))
     return redirect("budget:expenses_list")
 
 
@@ -855,33 +416,10 @@ def mute_all_notifications(request):
 @require_POST
 def expense_clone(request, uid):
     original = get_object_or_404(Expense, uid=uid, owning_feuser=request.feuser)
-    if original.is_buddies_settlement:
+    try:
+        original = clone_expense(request.feuser, original)
+    except ExpenseActionError:
         return redirect("budget:expenses_list")
-    tags = list(original.tags.all())
-    spendings = list(original.buddy_spendings.all())
-    project = original.project
-    original.pk = None
-    original.title = f"CLONE - {original.title}"
-    original.initiated_by_feuser = request.feuser
-    original.save()
-    original.tags.set(tags)
-    if spendings:
-        from buddies.models import BuddySpending
-        from buddies.services import BuddyEmailService
-        BuddySpending.objects.bulk_create([
-            BuddySpending(
-                expense=original,
-                participant_feuser=bs.participant_feuser,
-                participant_dummy=bs.participant_dummy,
-                share_percent=bs.share_percent,
-            )
-            for bs in spendings
-        ])
-        from buddies.services import BuddyTrustService
-        BuddyTrustService.record_action(original, request.feuser)
-        BuddyEmailService.notify_expense_created(original, request.feuser)
-        if project:
-            project.update_lastmod()
     return redirect("budget:expense_edit", uid=original.pk)
 
 
@@ -889,20 +427,20 @@ def expense_clone(request, uid):
 def expense_edit_overlay(request, uid):
     """Lite editor: participants set their own category/tags for a buddy expense."""
     feuser = request.feuser
-    from buddies.models import BuddySpending
-    spending = get_object_or_404(BuddySpending, expense__uid=uid, participant_feuser=feuser)
-    expense = spending.expense
+    try:
+        expense = participant_expense(feuser, uid)
+    except Expense.DoesNotExist:
+        raise Http404
 
     overlay = ExpenseDataOverlay.objects.filter(expense=expense, feuser=feuser).first()
 
     if request.method == "POST":
         form = ExpenseOverlayForm(request.POST, feuser=feuser)
         if form.is_valid():
-            category = form.cleaned_data["category"]
-            tags = list(form.cleaned_data["tags"])
-            note = form.cleaned_data["note"]
-            from ..services import upsert_overlay
-            upsert_overlay(expense, feuser, category, tags, note=note)
+            set_overlay(
+                feuser, expense, form.cleaned_data["category"], form.cleaned_data["tags"],
+                note=form.cleaned_data["note"],
+            )
             back = _safe_back_url(request.POST.get("back", ""))
             return HttpResponseRedirect(back) if back else redirect("buddies:contact_summary")
     else:

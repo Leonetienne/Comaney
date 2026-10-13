@@ -31,13 +31,13 @@ def _create_scheduled(ctx, **kwargs):
     body = {"type": "expense", "value": "10.00",
             "repeat_every_factor": 1, "repeat_every_unit": "months"}
     body.update(kwargs)
-    resp = api_post("/api/v1/scheduled/", ctx, json=body)
+    resp = api_post("/api/v2/scheduled/", ctx, json=body)
     assert resp.status_code == 201, resp.text
     return resp.json()["id"]
 
 
 def _expenses_for(ctx, title):
-    resp = api_get("/api/v1/expenses/", ctx, params={"view": "year"})
+    resp = api_get("/api/v2/expenses/", ctx, params={"view": "year"})
     assert resp.status_code == 200
     return [e for e in resp.json()["expenses"] if e["title"] == title]
 
@@ -69,7 +69,7 @@ class TestOccurrenceIdentityRegression:
         eid = hits[0]["id"]
 
         new_due = (date.fromisoformat(today) + timedelta(days=1)).isoformat()
-        resp = api_patch(f"/api/v1/expenses/{eid}/", ctx, json={"date_due": new_due})
+        resp = api_patch(f"/api/v2/expenses/{eid}/", ctx, json={"date_due": new_due})
         assert resp.status_code == 200
 
         # Force a regeneration pass for this schedule, as a Gate B edit would.
@@ -80,8 +80,8 @@ class TestOccurrenceIdentityRegression:
         assert len(hits_after) == 1, "hand-edited date_due must not cause a duplicate on regeneration"
         assert hits_after[0]["id"] == eid
 
-        api_delete(f"/api/v1/expenses/{eid}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
 
 class TestLastRunGate:
@@ -102,8 +102,8 @@ class TestLastRunGate:
         assert hits_after[0]["id"] == hits[0]["id"]
         assert _last_run(sid) == run1
 
-        api_delete(f"/api/v1/expenses/{hits[0]['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+        api_delete(f"/api/v2/expenses/{hits[0]['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
 
 class TestGateA:
@@ -117,7 +117,7 @@ class TestGateA:
         assert len(hits) == 1
         eid_before = hits[0]["id"]
 
-        resp = api_patch(f"/api/v1/scheduled/{sid}/", ctx, json={
+        resp = api_patch(f"/api/v2/scheduled/{sid}/", ctx, json={
             "repeat_every_factor": 2, "repeat_every_unit": "weeks",
         })
         assert resp.status_code == 200
@@ -128,8 +128,8 @@ class TestGateA:
         assert len(hits_after) == 1
         assert hits_after[0]["id"] == eid_before
 
-        api_delete(f"/api/v1/expenses/{eid_before}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid_before}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
     def test_confirmed_change_wipes_and_regenerates_including_settled(self, driver, w, ctx):
         today = server_today()
@@ -138,9 +138,9 @@ class TestGateA:
         hits = _expenses_for(ctx, "GateA Confirmed")
         assert len(hits) == 1
         old_eid = hits[0]["id"]
-        api_patch(f"/api/v1/expenses/{old_eid}/", ctx, json={"settled": True})
+        api_patch(f"/api/v2/expenses/{old_eid}/", ctx, json={"settled": True})
 
-        resp = api_patch(f"/api/v1/scheduled/{sid}/", ctx, json={
+        resp = api_patch(f"/api/v2/scheduled/{sid}/", ctx, json={
             "repeat_every_factor": 2, "repeat_every_unit": "weeks",
             "confirm_modify_schedule": True,
         })
@@ -149,15 +149,15 @@ class TestGateA:
         assert resp.json()["repeat_every_unit"] == "weeks"
 
         # Wiped unconditionally, even though it was settled.
-        assert api_get(f"/api/v1/expenses/{old_eid}/", ctx).status_code == 404
+        assert api_get(f"/api/v2/expenses/{old_eid}/", ctx).status_code == 404
 
         hits_after = _expenses_for(ctx, "GateA Confirmed")
         assert len(hits_after) == 1
         assert hits_after[0]["id"] != old_eid
         assert hits_after[0]["date_due"] == today
 
-        api_delete(f"/api/v1/expenses/{hits_after[0]['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+        api_delete(f"/api/v2/expenses/{hits_after[0]['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
     def test_confirmed_but_unchanged_is_noop(self, driver, w, ctx):
         today = server_today()
@@ -167,7 +167,7 @@ class TestGateA:
         assert len(hits) == 1
         eid_before = hits[0]["id"]
 
-        resp = api_patch(f"/api/v1/scheduled/{sid}/", ctx, json={
+        resp = api_patch(f"/api/v2/scheduled/{sid}/", ctx, json={
             "repeat_every_factor": 1, "repeat_every_unit": "months",
             "confirm_modify_schedule": True,
         })
@@ -177,8 +177,8 @@ class TestGateA:
         assert len(hits_after) == 1
         assert hits_after[0]["id"] == eid_before, "no-op guard must not delete/recreate the row"
 
-        api_delete(f"/api/v1/expenses/{eid_before}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+        api_delete(f"/api/v2/expenses/{eid_before}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
 
 class TestGateB:
@@ -195,10 +195,10 @@ class TestGateB:
         assert len(hits) == 6  # today .. today+5 inclusive
 
         stale = sorted(hits, key=lambda e: e["date_due"])[-1]  # today+5
-        api_patch(f"/api/v1/expenses/{stale['id']}/", ctx, json={"settled": True})
+        api_patch(f"/api/v2/expenses/{stale['id']}/", ctx, json={"settled": True})
 
         end2 = (today + timedelta(days=2)).isoformat()
-        resp = api_patch(f"/api/v1/scheduled/{sid}/", ctx, json={
+        resp = api_patch(f"/api/v2/scheduled/{sid}/", ctx, json={
             "end_on": end2, "confirm_modify_schedule_window": True,
         })
         assert resp.status_code == 200
@@ -210,11 +210,11 @@ class TestGateB:
         kept_ids = {e["id"] for e in hits if e["date_due"] <= end2}
         assert remaining_ids == kept_ids
         assert stale["id"] not in remaining_ids
-        assert api_get(f"/api/v1/expenses/{stale['id']}/", ctx).status_code == 404
+        assert api_get(f"/api/v2/expenses/{stale['id']}/", ctx).status_code == 404
 
         for e in hits_after:
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
     def test_confirmed_grow_adds_new_without_duplicating(self, driver, w, ctx):
         today = date.fromisoformat(server_today())
@@ -228,7 +228,7 @@ class TestGateB:
         original_ids = {e["id"] for e in hits}
 
         end5 = (today + timedelta(days=5)).isoformat()
-        resp = api_patch(f"/api/v1/scheduled/{sid}/", ctx, json={
+        resp = api_patch(f"/api/v2/scheduled/{sid}/", ctx, json={
             "end_on": end5, "confirm_modify_schedule_window": True,
         })
         assert resp.status_code == 200
@@ -239,8 +239,8 @@ class TestGateB:
         assert original_ids <= after_ids, "growing the window must not recreate existing occurrences"
 
         for e in hits_after:
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
     def test_unconfirmed_window_change_is_discarded(self, driver, w, ctx):
         today = date.fromisoformat(server_today())
@@ -254,7 +254,7 @@ class TestGateB:
         ids_before = {e["id"] for e in hits}
 
         end5 = (today + timedelta(days=5)).isoformat()
-        resp = api_patch(f"/api/v1/scheduled/{sid}/", ctx, json={"end_on": end5})
+        resp = api_patch(f"/api/v2/scheduled/{sid}/", ctx, json={"end_on": end5})
         assert resp.status_code == 200
         assert resp.json()["end_on"] == end2
 
@@ -262,8 +262,8 @@ class TestGateB:
         assert {e["id"] for e in hits_after} == ids_before
 
         for e in hits_after:
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
 
 class TestAutoSettleOnCreate:
@@ -284,8 +284,8 @@ class TestAutoSettleOnCreate:
             assert e["settled"] is expected_settled, f"{d}: settled={e['settled']}, expected {expected_settled}"
 
         for e in hits.values():
-            api_delete(f"/api/v1/expenses/{e['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+            api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)
 
 
 class TestLockedFieldsUI:
@@ -339,4 +339,4 @@ class TestLockedFieldsUI:
         assert factor_el.get_attribute("value") == "1"
         assert factor_el.get_attribute("disabled")
 
-        api_delete(f"/api/v1/scheduled/{sid}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sid}/", ctx)

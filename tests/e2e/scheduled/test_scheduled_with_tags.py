@@ -59,38 +59,38 @@ def ctx(driver, w):
 
 @pytest.fixture(scope="module")
 def cat_id(ctx):
-    r = api_post("/api/v1/categories/", ctx, json={"title": "SchedCat"})
+    r = api_post("/api/v2/categories/", ctx, json={"title": "SchedCat"})
     assert r.status_code == 201
     cid = r.json()["id"]
     yield cid
-    api_delete(f"/api/v1/categories/{cid}/", ctx)
+    api_delete(f"/api/v2/categories/{cid}/", ctx)
 
 
 @pytest.fixture(scope="module")
 def cat2_id(ctx):
-    r = api_post("/api/v1/categories/", ctx, json={"title": "SchedCatAlt"})
+    r = api_post("/api/v2/categories/", ctx, json={"title": "SchedCatAlt"})
     assert r.status_code == 201
     cid = r.json()["id"]
     yield cid
-    api_delete(f"/api/v1/categories/{cid}/", ctx)
+    api_delete(f"/api/v2/categories/{cid}/", ctx)
 
 
 @pytest.fixture(scope="module")
 def tag_a_id(ctx):
-    r = api_post("/api/v1/tags/", ctx, json={"title": "SchedTagA"})
+    r = api_post("/api/v2/tags/", ctx, json={"title": "SchedTagA"})
     assert r.status_code == 201
     tid = r.json()["id"]
     yield tid
-    api_delete(f"/api/v1/tags/{tid}/", ctx)
+    api_delete(f"/api/v2/tags/{tid}/", ctx)
 
 
 @pytest.fixture(scope="module")
 def tag_b_id(ctx):
-    r = api_post("/api/v1/tags/", ctx, json={"title": "SchedTagB"})
+    r = api_post("/api/v2/tags/", ctx, json={"title": "SchedTagB"})
     assert r.status_code == 201
     tid = r.json()["id"]
     yield tid
-    api_delete(f"/api/v1/tags/{tid}/", ctx)
+    api_delete(f"/api/v2/tags/{tid}/", ctx)
 
 
 class TestScheduledWithCategoryAndTags:
@@ -178,7 +178,7 @@ class TestScheduledWithCategoryAndTags:
     def test_cleanup(self, driver, w, ctx):
         uid = ctx.pop("sched_meta_uid", None)
         if uid:
-            api_delete(f"/api/v1/scheduled/{uid}/", ctx)
+            api_delete(f"/api/v2/scheduled/{uid}/", ctx)
 
 
 class TestGeneratedExpenseInheritsMetadata:
@@ -189,13 +189,13 @@ class TestGeneratedExpenseInheritsMetadata:
         The API is independently covered by test_api.py; generation is not a UI action.
         """
         today = server_today()
-        cat = api_post("/api/v1/categories/", ctx, json={"title": "InheritCat"})
-        tag = api_post("/api/v1/tags/",       ctx, json={"title": "InheritTag"})
+        cat = api_post("/api/v2/categories/", ctx, json={"title": "InheritCat"})
+        tag = api_post("/api/v2/tags/",       ctx, json={"title": "InheritTag"})
         assert cat.status_code == 201 and tag.status_code == 201
         cat_id = cat.json()["id"]
         tag_id = tag.json()["id"]
 
-        sched = api_post("/api/v1/scheduled/", ctx, json={
+        sched = api_post("/api/v2/scheduled/", ctx, json={
             "title": "InheritSched", "type": "expense", "value": "25.00",
             "repeat_every_factor": 1, "repeat_every_unit": "months",
             "repeat_base_date": today,
@@ -208,7 +208,7 @@ class TestGeneratedExpenseInheritsMetadata:
         run_cmd("generate_scheduled_expenses")
         time.sleep(2)
 
-        expenses = api_get("/api/v1/expenses/", ctx, params={"q": "InheritSched"})
+        expenses = api_get("/api/v2/expenses/", ctx, params={"q": "InheritSched"})
         assert expenses.status_code == 200
         matches = expenses.json().get("expenses", [])
         assert matches, "Cron must have generated an expense from the scheduled template"
@@ -218,7 +218,7 @@ class TestGeneratedExpenseInheritsMetadata:
         assert generated["category"]["id"] == cat_id
         assert any(t["id"] == tag_id for t in generated["tags"])
 
-        api_delete(f"/api/v1/expenses/{generated['id']}/", ctx)
-        api_delete(f"/api/v1/scheduled/{sched_id}/", ctx)
-        api_delete(f"/api/v1/categories/{cat_id}/", ctx)
-        api_delete(f"/api/v1/tags/{tag_id}/", ctx)
+        api_delete(f"/api/v2/expenses/{generated['id']}/", ctx)
+        api_delete(f"/api/v2/scheduled/{sched_id}/", ctx)
+        api_delete(f"/api/v2/categories/{cat_id}/", ctx)
+        api_delete(f"/api/v2/tags/{tag_id}/", ctx)

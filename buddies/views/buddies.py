@@ -8,8 +8,11 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from budget.decorators import feuser_required
-from ..models import ContactInvite, ContactLink, BuddySpending, DummyMergeInvite, DummyUser
+from ..models import ContactInvite, BuddySpending, DummyMergeInvite, DummyUser
 from ..services import BuddyArchiveService, BuddyLifecycleService, BuddyQueryService, _display_name
+from ..services import contact_actions
+from ..services.contact_actions import ContactError
+from ..services.project_actions import rename_offline_member
 
 
 @feuser_required
@@ -20,17 +23,10 @@ def rename_dummy(request, dummy_id):
         data = json.loads(request.body)
     except (json.JSONDecodeError, AttributeError):
         return JsonResponse({"error": "Invalid JSON."}, status=400)
-    name = data.get("display_name", "").strip()
-    if not name:
-        return JsonResponse({"error": "Name required."}, status=400)
-    if len(name) > 128:
-        return JsonResponse({"error": "Name must be 128 characters or fewer."}, status=400)
-    if dummy.is_archive:
-        return JsonResponse({"error": "Cannot rename the archive."}, status=400)
-    from django.utils import timezone as _tz
-    dummy.display_name = name
-    dummy.last_mod = _tz.now()
-    dummy.save(update_fields=["display_name", "last_mod"])
+    try:
+        rename_offline_member(dummy, data.get("display_name", ""))
+    except ContactError as exc:
+        return JsonResponse({"error": str(exc)}, status=exc.status)
     return JsonResponse({"display_name": dummy.display_name})
 
 
@@ -40,7 +36,7 @@ def add_dummy(request):
     name = request.POST.get("display_name", "").strip()
     if not name:
         return redirect("buddies:index")
-    BuddyLifecycleService.add_dummy(request.feuser, name)
+    contact_actions.add_offline_contact(request.feuser, name)
     return redirect("buddies:index")
 
 
@@ -57,7 +53,7 @@ def kick_dummy(request, dummy_id):
                 "Achim Archive still holds expenses. Delete all archived expenses first.",
             )
         elif request.method == "POST" and request.POST.get("confirmed") == "yes":
-            dummy.delete()
+            contact_actions.remove_offline_contact(feuser, dummy)
         return redirect("buddies:contacts")
 
     if request.method == "POST":
@@ -132,23 +128,14 @@ def personal_archive_wipe(request, dummy_id):
 @feuser_required
 @require_POST
 def invite_actual(request):
-    from django.conf import settings as django_settings
     email = request.POST.get("email", "").strip()
     if not email:
         return redirect("buddies:contacts")
-
-    outcome, obj = BuddyLifecycleService.invite_actual(request.feuser, email)
-    if outcome == "demo_restricted":
-        django_messages.error(request, "Demo accounts cannot invite contacts.")
-    elif outcome == "invitee_is_demo":
-        django_messages.error(request, "That email address is not available.")
-    elif outcome == "registration_disabled":
-        django_messages.error(request, "That email address is not registered and registration is not enabled on this instance.")
-    elif outcome == "onboarding_no_email":
-        site_url = getattr(django_settings, "SITE_URL", "")
-        django_messages.info(request, f"Emailing is deactivated for this instance. Give this link to your friend: {site_url}/register/")
-    elif outcome in ("invite", "onboarding"):
-        django_messages.success(request, f"An invitation has been sent to {email}.")
+    outcome, _obj = contact_actions.invite_by_email(request.feuser, email)
+    level, text = contact_actions.invite_message(outcome, email)
+    # no toast for yourself, an existing contact or an instant link
+    if outcome not in ("self", "already_contacts", "link"):
+        getattr(django_messages, level)(request, text)
     return redirect("buddies:contacts")
 
 
@@ -162,36 +149,19 @@ def send_contact_invite(request):
     """
     from feusers.models import FeUser
     feuser = request.feuser
-
     if feuser.is_demo:
         return JsonResponse({"error": "Demo accounts cannot invite contacts."}, status=403)
-
     try:
-        data = json.loads(request.body)
-        invitee_id = int(data["invitee_id"])
-    except (KeyError, ValueError, json.JSONDecodeError):
+        invitee_id = int(json.loads(request.body)["invitee_id"])
+    except (KeyError, ValueError, TypeError, json.JSONDecodeError):
         return JsonResponse({"error": "Invalid request."}, status=400)
-
-    try:
-        invitee = FeUser.objects.get(pk=invitee_id, is_active=True)
-    except FeUser.DoesNotExist:
+    invitee = FeUser.objects.filter(pk=invitee_id, is_active=True).first()
+    if invitee is None:
         return JsonResponse({"error": "User not found."}, status=404)
-
-    if invitee == feuser:
-        return JsonResponse({"error": "Cannot invite yourself."}, status=400)
-
-    if invitee.is_demo:
-        return JsonResponse({"error": "Cannot invite a demo account as a contact."}, status=403)
-
-    if BuddyQueryService.are_contacts(feuser, invitee):
-        return JsonResponse({"error": "This user is already one of your contacts."}, status=409)
-
-    if BuddyQueryService.has_pending_invite_to(feuser, invitee):
-        return JsonResponse({"error": "An invite is already pending for this user."}, status=409)
-
-    outcome, _obj = BuddyLifecycleService.invite_actual(feuser, invitee.email)
-    if outcome not in ("invite", "link", "onboarding", "onboarding_no_email"):
-        return JsonResponse({"error": "Could not send invite."}, status=400)
+    try:
+        contact_actions.invite_feuser(feuser, invitee)
+    except ContactError as exc:
+        return JsonResponse({"error": str(exc)}, status=exc.status)
     return JsonResponse({"ok": True})
 
 
@@ -261,12 +231,10 @@ def revoke_onboarding_invite(request, token):
 @feuser_required
 @require_POST
 def kick_actual(request, link_id):
-    link = get_object_or_404(ContactLink, uid=link_id)
-    if link.user_a_id != request.feuser.pk and link.user_b_id != request.feuser.pk:
-        return redirect("buddies:index")
-
-    other = link.other(request.feuser)
-    BuddyLifecycleService.kick_actual(request.feuser, other, has_debt_warning_accepted=True)
+    try:
+        contact_actions.remove_contact(request.feuser, contact_actions.own_link(request.feuser, link_id))
+    except ContactError:
+        pass
     return redirect("buddies:index")
 
 
@@ -279,24 +247,12 @@ def set_auto_accept(request, link_id):
     entries and project invitations retroactively (see
     BuddyTrustService.set_auto_accept).
     """
-    from ..services import BuddyTrustService
-
-    link = get_object_or_404(ContactLink, uid=link_id)
-    if request.feuser.pk not in (link.user_a_id, link.user_b_id):
+    try:
+        link = contact_actions.own_link(request.feuser, link_id)
+    except ContactError:
         raise Http404
     enabled = request.POST.get("enabled") == "1"
-    other = link.other(request.feuser)
-    result = BuddyTrustService.set_auto_accept(request.feuser, other, enabled)
-
-    name = _display_name(other)
-    if enabled:
-        msg = f"You now automatically accept entries from {name}."
-        if result.entries:
-            msg += f" {result.entries} pending entr{'y' if result.entries == 1 else 'ies'} accepted."
-        if result.projects:
-            msg += f" You joined {result.projects} project{'' if result.projects == 1 else 's'}."
-    else:
-        msg = f"You no longer automatically accept entries from {name}."
+    result, msg = contact_actions.set_auto_accept(request.feuser, link, enabled)
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return JsonResponse({

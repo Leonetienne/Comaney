@@ -17,9 +17,9 @@ Covers:
 Tags: Demo, Security
 
 ### No sabotage
-`req~demo.no-sabotage~1`
+`req~demo.no-sabotage~2`
 
-The system shall never let a demo user change their name, email address or password, delete the account, set up second factors, generate an API key or change own AI settings.
+The system shall never let a demo user change their name, email address or password, delete the account, set up second factors, generate an API key or agent key, or change own AI settings.
 
 Covers:
 - `feat~demo~1`

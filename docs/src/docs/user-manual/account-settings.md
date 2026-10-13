@@ -178,6 +178,12 @@ An API key lets other apps or scripts access your Comaney account without loggin
 
 ---
 
+## Agent keys (MCP)
+
+Agent keys let an AI assistant work with your account. Each assistant gets its own key, which you can restrict to certain areas or revoke at any time. See [AI Assistants (MCP)](ai-assistants.md).
+
+---
+
 ## Export data
 
 Click **Export as ZIP** to download a ZIP archive containing CSV files with all your expenses, recurring expenses, categories, and tags. This is useful as a backup or for analysis in a spreadsheet.

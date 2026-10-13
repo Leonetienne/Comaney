@@ -43,6 +43,10 @@ The **modular dashboard** lets you build your own overview from scratch: spend-b
 
 ![image](https://raw.githubusercontent.com/Leonetienne/Comaney/refs/heads/master/github-assets/teasers/expense-list.png)
 
+### Let AI assistants do the work
+
+Comaney runs an MCP (Model Context Protocol) server, so AI assistants can read and write your account directly. Each assistant gets its own agent key, which you can restrict per area to read-only or read/write. See [User manual: AI Assistants (MCP)](https://comaney.app/docs/user-manual/ai-assistants/).
+
 ---
 
 ## Projects: group and organize your expenses

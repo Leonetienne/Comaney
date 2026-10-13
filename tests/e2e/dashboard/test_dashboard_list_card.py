@@ -155,11 +155,11 @@ class TestListCardData:
     def test_items_returned(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e1 = api_post("/api/v1/expenses/", ctx, json={
+        e1 = api_post("/api/v2/expenses/", ctx, json={
             "title": "List Item A", "type": "expense", "value": "10.00",
             "date_due": today, "settled": True,
         })
-        e2 = api_post("/api/v1/expenses/", ctx, json={
+        e2 = api_post("/api/v2/expenses/", ctx, json={
             "title": "List Item B", "type": "expense", "value": "20.00",
             "date_due": today, "settled": True,
         })
@@ -180,13 +180,13 @@ class TestListCardData:
         assert "List Item B" in titles
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e2.json()['id']}/", ctx)
 
     def test_items_have_type_title_value(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e = api_post("/api/v1/expenses/", ctx, json={
+        e = api_post("/api/v2/expenses/", ctx, json={
             "title": "TypeCheck Expense", "type": "expense", "value": "77.00",
             "date_due": today, "settled": True,
         })
@@ -206,16 +206,16 @@ class TestListCardData:
         assert float(item["value"]) == pytest.approx(77.0)
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e.json()['id']}/", ctx)
 
     def test_order_by_value_desc(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e1 = api_post("/api/v1/expenses/", ctx, json={
+        e1 = api_post("/api/v2/expenses/", ctx, json={
             "title": "Ord Small", "type": "expense", "value": "5.00",
             "date_due": today, "settled": True,
         })
-        e2 = api_post("/api/v1/expenses/", ctx, json={
+        e2 = api_post("/api/v2/expenses/", ctx, json={
             "title": "Ord Large", "type": "expense", "value": "100.00",
             "date_due": today, "settled": True,
         })
@@ -240,17 +240,17 @@ class TestListCardData:
         assert relevant[1]["title"] == "Ord Small"
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e2.json()['id']}/", ctx)
 
     def test_order_by_value_asc(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e1 = api_post("/api/v1/expenses/", ctx, json={
+        e1 = api_post("/api/v2/expenses/", ctx, json={
             "title": "AscSmall", "type": "expense", "value": "3.00",
             "date_due": today, "settled": True,
         })
-        e2 = api_post("/api/v1/expenses/", ctx, json={
+        e2 = api_post("/api/v2/expenses/", ctx, json={
             "title": "AscLarge", "type": "expense", "value": "99.00",
             "date_due": today, "settled": True,
         })
@@ -275,13 +275,13 @@ class TestListCardData:
         assert relevant[1]["title"] == "AscLarge"
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e2.json()['id']}/", ctx)
 
     def test_show_sum_not_present_by_default(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e = api_post("/api/v1/expenses/", ctx, json={
+        e = api_post("/api/v2/expenses/", ctx, json={
             "title": "NoSum Expense", "type": "expense", "value": "40.00",
             "date_due": today, "settled": True,
         })
@@ -297,16 +297,16 @@ class TestListCardData:
         assert "sum_value" not in (card["data"] or {})
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e.json()['id']}/", ctx)
 
     def test_show_sum_method_sum(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e1 = api_post("/api/v1/expenses/", ctx, json={
+        e1 = api_post("/api/v2/expenses/", ctx, json={
             "title": "SumRow A", "type": "expense", "value": "30.00",
             "date_due": today, "settled": True,
         })
-        e2 = api_post("/api/v1/expenses/", ctx, json={
+        e2 = api_post("/api/v2/expenses/", ctx, json={
             "title": "SumRow B", "type": "expense", "value": "20.00",
             "date_due": today, "settled": True,
         })
@@ -324,17 +324,17 @@ class TestListCardData:
         assert float(card["data"]["sum_value"]) == pytest.approx(50.0)
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e2.json()['id']}/", ctx)
 
     def test_show_sum_method_count(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e1 = api_post("/api/v1/expenses/", ctx, json={
+        e1 = api_post("/api/v2/expenses/", ctx, json={
             "title": "CntRow X", "type": "expense", "value": "11.00",
             "date_due": today, "settled": True,
         })
-        e2 = api_post("/api/v1/expenses/", ctx, json={
+        e2 = api_post("/api/v2/expenses/", ctx, json={
             "title": "CntRow Y", "type": "expense", "value": "22.00",
             "date_due": today, "settled": True,
         })
@@ -351,17 +351,17 @@ class TestListCardData:
         assert float(card["data"]["sum_value"]) == pytest.approx(2.0)
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e2.json()['id']}/", ctx)
 
     def test_show_sum_method_total(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        exp = api_post("/api/v1/expenses/", ctx, json={
+        exp = api_post("/api/v2/expenses/", ctx, json={
             "title": "TotalRow Exp", "type": "expense", "value": "80.00",
             "date_due": today, "settled": True,
         })
-        inc = api_post("/api/v1/expenses/", ctx, json={
+        inc = api_post("/api/v2/expenses/", ctx, json={
             "title": "TotalRow Inc", "type": "income", "value": "50.00",
             "date_due": today, "settled": True,
         })
@@ -379,13 +379,13 @@ class TestListCardData:
         assert float(card["data"]["sum_value"]) == pytest.approx(30.0)
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{exp.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{inc.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{exp.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{inc.json()['id']}/", ctx)
 
     def test_flip_signs_inverts_sum(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e = api_post("/api/v1/expenses/", ctx, json={
+        e = api_post("/api/v2/expenses/", ctx, json={
             "title": "FlipList Exp", "type": "expense", "value": "60.00",
             "date_due": today, "settled": True,
         })
@@ -406,16 +406,16 @@ class TestListCardData:
         assert float(card["data"]["sum_value"]) == pytest.approx(-60.0)
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e.json()['id']}/", ctx)
 
     def test_duplicate_title_items_both_appear(self, driver, w, ctx, sess):
         today = server_today()
         year, month = today[:4], today[5:7]
-        e1 = api_post("/api/v1/expenses/", ctx, json={
+        e1 = api_post("/api/v2/expenses/", ctx, json={
             "title": "DupTitle", "type": "expense", "value": "11.00",
             "date_due": today, "settled": True,
         })
-        e2 = api_post("/api/v1/expenses/", ctx, json={
+        e2 = api_post("/api/v2/expenses/", ctx, json={
             "title": "DupTitle", "type": "expense", "value": "22.00",
             "date_due": today, "settled": True,
         })
@@ -436,8 +436,8 @@ class TestListCardData:
         assert values == pytest.approx([11.0, 22.0])
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e1.json()['id']}/", ctx)
-        api_delete(f"/api/v1/expenses/{e2.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e1.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e2.json()['id']}/", ctx)
 
     def test_empty_list_returns_empty_items(self, driver, w, ctx, sess):
         today = server_today()
@@ -458,7 +458,7 @@ class TestListCardBrowser:
     def test_list_card_renders_in_browser(self, driver, w, ctx, sess):
         """Create a list card with a known expense, verify rows appear in the UI."""
         today = server_today()
-        e = api_post("/api/v1/expenses/", ctx, json={
+        e = api_post("/api/v2/expenses/", ctx, json={
             "title": "BrowserListItem", "type": "expense", "value": "42.00",
             "date_due": today, "settled": True,
         })
@@ -476,12 +476,12 @@ class TestListCardBrowser:
         assert "BrowserListItem" in src
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e.json()['id']}/", ctx)
 
     def test_list_card_type_abbr_visible(self, driver, w, ctx, sess):
         """Type abbreviation EX should appear in the list row."""
         today = server_today()
-        e = api_post("/api/v1/expenses/", ctx, json={
+        e = api_post("/api/v2/expenses/", ctx, json={
             "title": "AbbrCheckItem", "type": "expense", "value": "15.00",
             "date_due": today, "settled": True,
         })
@@ -502,7 +502,7 @@ class TestListCardBrowser:
         assert "EX" in abbrs
 
         _delete_card(sess, csrf, card_id)
-        api_delete(f"/api/v1/expenses/{e.json()['id']}/", ctx)
+        api_delete(f"/api/v2/expenses/{e.json()['id']}/", ctx)
 
     def test_cleanup_all_cards(self, driver, w, ctx, sess):
         csrf = _csrf(sess)
