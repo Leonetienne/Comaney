@@ -80,7 +80,6 @@ covered by at least one requirement.
 | [requirements/](requirements/) | Functional requirements, one file per feature area |
 | [requirements/quality.md](requirements/quality.md) | Quality (non-functional) requirements |
 | [requirements/constraints.md](requirements/constraints.md) | Design constraints for maintainers |
-| [open-issues.md](open-issues.md) | Known gaps between docs, code and earlier specs, and undecided questions |
 
 ## Rules for maintainers
 
