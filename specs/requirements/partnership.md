@@ -137,9 +137,9 @@ Covers:
 - `feat~partnership~1`
 
 ### Apply
-`req~partnership.wizard.apply~1`
+`req~partnership.wizard.apply~2`
 
-When the invitee applies, the system shall rewrite the tags and categories of the invitee's own expenses with the mapped targets, remove dropped labels, replace the invitee's catalog with the partnership catalog, mark onboarding complete, and notify the inviter and the other partners.
+When the invitee applies, the system shall replace the invitee's catalog with the partnership catalog and remap the tags and category of every record carrying the invitee's labels (own expenses, own recurring expenses and own expense overlays) to the mapped targets, removing dropped and unmapped labels and deleting overlays left without category, tags and note; it shall then mark onboarding complete and notify the inviter and the other partners.
 
 Covers:
 - `feat~partnership~1`

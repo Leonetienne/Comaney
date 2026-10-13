@@ -165,3 +165,67 @@ def check_auto_remove(feuser) -> None:
     if not _has_connection_to_any_partner(feuser, membership.partnership):
         _log.info("Auto-removing %s from partnership: no connections remain", feuser)
         remove_member(feuser, reason="disconnected")
+
+
+# ---------------------------------------------------------------------------
+# Onboarding apply
+# ---------------------------------------------------------------------------
+
+def _mapped_title(title: str, master_titles: set, mapping: dict) -> str | None:
+    """Title in the partnership catalog that `title` ends up as; None means dropped."""
+    if title in master_titles:
+        return title
+    target = mapping.get(title)
+    return target if target in master_titles else None
+
+
+def apply_onboarding_catalog(feuser, master, tag_map: dict, cat_map: dict) -> None:
+    """
+    Replace feuser's catalog with a copy of master's and remap every record
+    carrying feuser's labels: own expenses, own recurring expenses and own
+    expense overlays. Maps are {source title: target title or None (drop)};
+    unmapped titles are dropped. Run inside a transaction.
+    """
+    from budget.models import Category, Expense, ExpenseDataOverlay, ScheduledExpense, Tag
+    from budget.services import upsert_overlay
+
+    master_tags = list(Tag.objects.filter(owning_feuser=master))
+    master_cats = list(Category.objects.filter(owning_feuser=master))
+    master_tag_titles = {t.title for t in master_tags}
+    master_cat_titles = {c.title for c in master_cats}
+
+    labelled = [
+        Expense.objects.filter(owning_feuser=feuser),
+        ScheduledExpense.objects.filter(owning_feuser=feuser),
+        ExpenseDataOverlay.objects.filter(feuser=feuser).select_related("expense"),
+    ]
+    plans = []
+    for qs in labelled:
+        for record in qs.select_related("category").prefetch_related("tags"):
+            tag_titles = {_mapped_title(t.title, master_tag_titles, tag_map) for t in record.tags.all()}
+            tag_titles.discard(None)
+            cat_title = (
+                _mapped_title(record.category.title, master_cat_titles, cat_map)
+                if record.category else None
+            )
+            plans.append((record, tag_titles, cat_title))
+
+    Tag.objects.filter(owning_feuser=feuser).delete()
+    Category.objects.filter(owning_feuser=feuser).delete()
+    new_tags, new_cats = {}, {}
+    for tag in master_tags:
+        new_tags.setdefault(tag.title, Tag.objects.create(owning_feuser=feuser, title=tag.title))
+    for cat in master_cats:
+        new_cats.setdefault(cat.title, Category.objects.create(owning_feuser=feuser, title=cat.title))
+
+    for record, tag_titles, cat_title in plans:
+        category = new_cats.get(cat_title)
+        tags = [new_tags[t] for t in sorted(tag_titles)]
+        if isinstance(record, ExpenseDataOverlay):
+            # upsert_overlay deletes an overlay left without category, tags and note
+            upsert_overlay(record.expense, feuser, category, tags, record.note)
+            continue
+        if category:
+            record.category = category
+            record.save(update_fields=["category"])
+        record.tags.set(tags)

@@ -248,10 +248,11 @@ def onboarding_apply(request, token):
       "cat_mappings":  [{"source": "Food", "target": "Groceries"}, ...]
     }
     source -> null means DROP.
-    After apply, the invitee's catalog is replaced with the master's catalog.
+    After apply, the invitee's catalog is replaced with the master's catalog and
+    their expenses, recurring expenses and overlays are remapped onto it.
     """
     from django.db import transaction
-    from budget.models import Tag, Category, Expense
+    from buddies.services.partnership import apply_onboarding_catalog
 
     feuser = request.feuser
     invite = get_object_or_404(
@@ -269,101 +270,12 @@ def onboarding_apply(request, token):
     master = invite.inviter
 
     with transaction.atomic():
-        # --- Rewrite expense tags ---
-        tag_map = {m["source"]: m["target"] for m in tag_mappings if m.get("source")}
-        master_tag_objs = {t.title: t for t in Tag.objects.filter(owning_feuser=master)}
-
-        # Fetch all my tags once
-        my_tag_objs = {t.title: t for t in Tag.objects.filter(owning_feuser=feuser)}
-
-        # For each expense, rewrite tags
-        my_expenses = list(
-            Expense.objects.filter(owning_feuser=feuser).prefetch_related("tags")
+        apply_onboarding_catalog(
+            feuser,
+            master,
+            tag_map={m["source"]: m["target"] for m in tag_mappings if m.get("source")},
+            cat_map={m["source"]: m["target"] for m in cat_mappings if m.get("source")},
         )
-        for expense in my_expenses:
-            current_tag_titles = [t.title for t in expense.tags.all()]
-            new_tags = []
-            changed = False
-            for title in current_tag_titles:
-                if title in master_tag_objs:
-                    # already matches master - keep as-is (we'll replace with master's obj later)
-                    new_tags.append(title)
-                elif title in tag_map:
-                    target = tag_map[title]
-                    if target and target in master_tag_objs:
-                        new_tags.append(target)
-                        changed = True
-                    else:
-                        changed = True  # drop it
-                # else: no mapping provided, drop it
-                else:
-                    changed = True
-
-            if changed:
-                tag_objs_new = [
-                    master_tag_objs[t] for t in new_tags if t in master_tag_objs
-                ]
-                expense.tags.set(tag_objs_new)
-
-        # --- Rewrite expense categories ---
-        cat_map = {m["source"]: m["target"] for m in cat_mappings if m.get("source")}
-        master_cat_objs = {c.title: c for c in Category.objects.filter(owning_feuser=master)}
-
-        for expense in my_expenses:
-            if expense.category_id:
-                # get current category title
-                try:
-                    cur_cat_title = Category.objects.get(pk=expense.category_id).title
-                except Category.DoesNotExist:
-                    cur_cat_title = None
-                if cur_cat_title:
-                    if cur_cat_title in master_cat_objs:
-                        pass  # already matches master title, we'll re-point below
-                    elif cur_cat_title in cat_map:
-                        target = cat_map[cur_cat_title]
-                        if target and target in master_cat_objs:
-                            expense.category = master_cat_objs[target]
-                        else:
-                            expense.category = None
-                        expense.save(update_fields=["category"])
-                    else:
-                        # no mapping - drop
-                        expense.category = None
-                        expense.save(update_fields=["category"])
-
-        # Delete all of the invitee's tags and categories
-        Tag.objects.filter(owning_feuser=feuser).delete()
-        Category.objects.filter(owning_feuser=feuser).delete()
-
-        # Copy master's full catalog to invitee
-        for tag in Tag.objects.filter(owning_feuser=master):
-            Tag.objects.create(owning_feuser=feuser, title=tag.title)
-        for cat in Category.objects.filter(owning_feuser=master):
-            Category.objects.create(owning_feuser=feuser, title=cat.title)
-
-        # Re-point expense tags to new tag objects (now owned by feuser)
-        new_my_tag_objs = {t.title: t for t in Tag.objects.filter(owning_feuser=feuser)}
-        new_my_cat_objs = {c.title: c for c in Category.objects.filter(owning_feuser=feuser)}
-
-        # Fix tag references on expenses (they were pointing to master's tag objects)
-        for expense in my_expenses:
-            current_tags = list(expense.tags.all())
-            if current_tags:
-                new_tag_list = [
-                    new_my_tag_objs[t.title]
-                    for t in current_tags
-                    if t.title in new_my_tag_objs
-                ]
-                expense.tags.set(new_tag_list)
-            # Fix category reference
-            if expense.category_id:
-                try:
-                    cur_cat = Category.objects.get(pk=expense.category_id)
-                    if cur_cat.owning_feuser_id == master.pk and cur_cat.title in new_my_cat_objs:
-                        expense.category = new_my_cat_objs[cur_cat.title]
-                        expense.save(update_fields=["category"])
-                except Category.DoesNotExist:
-                    pass
 
         # Mark invite as accepted and add membership
         invite.status = CatalogPartnershipInvite.STATUS_ACTIVE
