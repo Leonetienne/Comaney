@@ -263,9 +263,9 @@ Covers:
 Tags: Security
 
 ### Provider-neutral wording
-`req~ai.wording~1`
+`req~ai.wording~2`
 
-User-facing AI text shall not name a vendor except in the provider-specific settings and admin pages, and shall make no claim about where the model runs.
+User-facing AI text shall not name a vendor except in the provider-specific settings and admin pages and the landing page FAQ answer listing the AI services an instance can be configured with, and shall make no claim about where the model runs.
 
 Covers:
 - `feat~ai~1`

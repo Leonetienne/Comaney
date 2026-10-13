@@ -1,7 +1,7 @@
 """
 AI wording visible to users is provider-neutral:
-- the landing page is static: it names no AI vendor and claims nothing about
-  where data goes
+- the landing page is static: it names AI vendors only in the FAQ answer on
+  configurable AI services and claims nothing about where data goes
 - the profile AI card tip names the active provider (when it has user
   fields), so "Anthropic" appears only with the claude provider
 
@@ -42,8 +42,16 @@ class TestLandingPage:
         # textContent: FAQ answers sit in collapsed <details>
         text = " ".join(driver.execute_script("return document.body.textContent").split())
         lower = text.lower()
+        without_providers_faq = " ".join(driver.execute_script(
+            "const body = document.body.cloneNode(true);"
+            "body.querySelectorAll('.lp-faq-item').forEach(d => {"
+            "  if (d.querySelector('summary').textContent.includes('What AI services')) d.remove();"
+            "});"
+            "return body.textContent;"
+        ).split()).lower()
+        assert without_providers_faq != lower, "AI services FAQ item missing"
         for word in ("anthropic", "claude", "sonnet", "deepseek"):
-            assert word not in lower, word
+            assert word not in without_providers_faq, word
         assert "never leaves" not in lower
         assert "processed by the AI model this instance uses" in text
 
