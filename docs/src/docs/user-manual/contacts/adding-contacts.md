@@ -68,7 +68,7 @@ Anything this contact recorded earlier that is still waiting for you is accepted
 
 ## Removing a contact
 
-On **Contacts**, open the menu next to their name and click **Remove contact**. Each of you keeps an own copy of your shared expenses, with your own share, and the other person appears there as an offline contact. You can change your copies freely without affecting the other. Pending invitations between you expire.
+On **Contacts**, open the menu next to their name and click **Remove, keep offline**. Each of you keeps an own copy of your shared expenses, with your own share, and the other person appears there as an offline contact. You can change your copies freely without affecting the other. Pending invitations between you expire.
 
 If you connect again later and merge that offline contact into them, both copies are kept: remove the duplicates by hand afterwards (see below).
 

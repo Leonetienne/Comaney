@@ -79,7 +79,7 @@
                 <div class="ctx-menu-wrap">
                     <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
                     <div class="ctx-menu">
-                        <button type="submit" id="btn-kick-{{ info.link_uid }}" form="kick-form-{{ info.link_uid }}" class="ctx-menu-item ctx-menu-item--danger">Remove contact</button>
+                        <button type="submit" id="btn-kick-{{ info.link_uid }}" form="kick-form-{{ info.link_uid }}" class="ctx-menu-item ctx-menu-item--danger">Remove, keep offline</button>
                         {% if info.feuser and p_state == "invite" and not request.feuser.is_demo %}
                         <button class="ctx-menu-item partnership-invite-btn"
                                 data-feuser-id="{{ info.feuser.pk }}"
