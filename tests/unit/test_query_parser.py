@@ -48,7 +48,7 @@ def _tokenize(raw: str) -> list[dict]:
             val = m.group(8) if m.group(8) is not None else (m.group(9) or '')
             out.append({'t': 'kv', 'key': m.group(7), 'val': val})
         elif m.group(10) is not None:
-            out.append({'t': 'str', 'val': m.group(10)})
+            out.append({'t': 'str', 'val': m.group(10), 'quoted': True})
         else:
             out.append({'t': 'str', 'val': m.group(11) or ''})
     return out
@@ -68,7 +68,7 @@ class TestTokenizer:
         assert _tokenize('grocery') == [{'t': 'str', 'val': 'grocery'}]
 
     def test_quoted_phrase(self):
-        assert _tokenize('"hello world"') == [{'t': 'str', 'val': 'hello world'}]
+        assert _tokenize('"hello world"') == [{'t': 'str', 'val': 'hello world', 'quoted': True}]
 
     # ── Operators ──────────────────────────────────────────────────────────
 

@@ -33,6 +33,7 @@ A foreign expense is one the feuser participates in but does not own; they class
 Use date_from/date_to for other ranges, view=year for a whole financial year.
 - Use the query language in q (payee=, cat=, tag=, project=, value>, date>=, ||, !) to find expenses; expenses_totals sums them.
 - Shared expenses, invitations and settlements notify other people by email. Settlements only record that money moved.
+- Expenses and recurring expenses have a record id; use it to tell records apart in tool calls (q accepts uid=<id> or #<id>).
 
 How to behave:
 - Before explaining how a feature works, why it exists, or answering a support question, look it up in the user manual \
@@ -42,8 +43,21 @@ with docs_search and docs_read and link the page you used. Do not guess about fe
 user what will happen, and only repeat the call with the token after they agree.
 - Ask the user before deleting anything and before actions that contact other people.
 - Tools the key may not use are not listed. If the user wants something that needs one, tell them to widen this agent \
-key's permissions in Profile, Agent keys.
+key's permissions in Settings, Advanced, Agent keys.
 """
+
+
+RECORD_IDS_SHOWN = (
+    "- The feuser has record IDs switched on, so you may show them as #<id> (e.g. #123) and they can search for them."
+)
+RECORD_IDS_HIDDEN = (
+    "- The feuser has record IDs switched off: never show ids to the user, name records by title, date and amount. "
+    "They can switch IDs on in Settings, Advanced; account_get's show_record_ids tells the current state."
+)
+
+
+def instructions_for(feuser) -> str:
+    return INSTRUCTIONS + (RECORD_IDS_SHOWN if feuser.show_record_ids else RECORD_IDS_HIDDEN) + "\n"
 
 
 def _error(status, message):
@@ -157,13 +171,13 @@ def build_server(key: AgentKey) -> Server:
             return None
         return (
             f"This agent key may not use {name}: it lacks {permissions.missing(op.concern, op.access)}. "
-            "The user can change that in Profile, Agent keys."
+            "The user can change that in Settings, Advanced, Agent keys."
         )
 
     return Server(
         name=SERVER_NAME,
         version=getattr(settings, "APP_VERSION", "") or "dev",
-        instructions=INSTRUCTIONS,
+        instructions=instructions_for(key.feuser),
         tools=_DOCS_TOOLS + [_tool_for(op) for op in ops.values()],
         call_tool=call_tool,
         resources=resources,

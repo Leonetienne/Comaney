@@ -1,0 +1,9 @@
+{% include "partials/_record_id.html" with uid=uid %}
+<div class="bexp-breakdown-header-left">
+    <span class="bexp-title">{{ title }}{% if pill_text %} <span class="pill {{ pill_class }} pill--ml">{{ pill_text }}</span>{% endif %}</span>
+    <span class="bexp-breakdown-meta">
+        {% if date %}{{ date|date:"N j, Y" }} &middot; {% endif %}
+        Total: <strong>{{ currency }}{{ total|floatformat:2 }}</strong> &middot;
+        Paid by: <strong>{{ payer_name }}</strong>
+    </span>
+</div>

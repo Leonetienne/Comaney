@@ -16,6 +16,7 @@
 <div class="exp-list">
     {% for s in scheduled %}
     <div class="exp-card{% if s.deactivated %} exp-card--deactivated{% endif %}{% if not s.deactivated and s.end_on and s.end_on < today %} exp-card--deactivated{% endif %}">
+        {% include "partials/_record_id.html" with uid=s.uid %}
 
         {% if s.repeat_base_date or s.end_on %}
         <div class="exp-date-label">

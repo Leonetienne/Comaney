@@ -7,7 +7,7 @@ import pytest
 import requests
 
 from bhelpers import _shell
-from helpers import BASE_URL, api_get, cleanup_user, setup_user
+from helpers import BASE_URL, api_get, api_patch, cleanup_user, setup_user
 
 
 def _new_key(email, label="Test"):
@@ -55,6 +55,18 @@ class TestTransport:
         result = _rpc(ctx["key"], "initialize", {"protocolVersion": "2025-06-18", "capabilities": {}})["result"]
         assert result["protocolVersion"] == "2025-06-18"
         assert "docs_search" in result["instructions"]
+
+    def test_instructions_follow_the_record_id_opt_in(self, ctx):
+        def instructions():
+            return _rpc(ctx["key"], "initialize", {"protocolVersion": "2025-06-18", "capabilities": {}})["result"]["instructions"]
+
+        assert "never show ids to the user" in instructions()
+        assert api_patch("/api/v2/account/", ctx, {"show_record_ids": True}).status_code == 200
+        try:
+            text = instructions()
+            assert "you may show them as #<id>" in text and "never show ids" not in text
+        finally:
+            api_patch("/api/v2/account/", ctx, {"show_record_ids": False})
 
     def test_notification_is_accepted_without_body(self, ctx):
         resp = _post(ctx["key"], {"jsonrpc": "2.0", "method": "notifications/initialized"})

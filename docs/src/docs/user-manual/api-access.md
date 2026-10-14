@@ -8,7 +8,7 @@ Everything the API does behaves exactly like the website: sharing an expense not
 
 ## Generating an API key
 
-1. Go to **Settings → API key**.
+1. Go to **Settings → Advanced → API key**.
 2. Click **Generate API key**.
 3. Copy the key.
 

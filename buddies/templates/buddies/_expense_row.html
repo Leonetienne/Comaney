@@ -1,14 +1,6 @@
 <div id="expense-{{ exp.uid }}" class="bexp-breakdown-card {{ bexp_color_class }}{% if not exp.buddy_approved %} buddy-expense-pending{% endif %}">
     <div class="bexp-breakdown-header">
-        <div class="bexp-breakdown-header-left">
-            <span class="bexp-title">{{ exp.title }}</span>
-            {% if not exp.buddy_approved %}<span class="pill pill--warning">Needs approval</span>{% endif %}
-            <span class="bexp-breakdown-meta">
-                <strong>{{ exp.owning_feuser.currency }}{{ exp.value }}</strong>
-                &middot; Paid by: <strong>{% if exp.is_dummy %}{{ exp.upfront_payee_dummy.display_name }} (offline contact){% else %}{{ exp.owning_feuser.first_name }} {{ exp.owning_feuser.last_name }}{% endif %}</strong>
-                {% if exp.date_due %}&middot; {{ exp.date_due|date:"N j, Y" }}{% endif %}
-            </span>
-        </div>
+        {% include "buddies/_bexp_card_head_left.html" with uid=exp.uid title=exp.title date=exp.date_due currency=exp.owning_feuser.currency total=exp.value payer_name=e.payer_name pill_text=exp.buddy_approved|yesno:",Needs approval" pill_class="pill--warning" %}
         <div class="bexp-breakdown-header-right">
             {% if not exp.buddy_approved and exp.owning_feuser == request.feuser and not exp.is_buddies_settlement and not exp.is_dummy %}
             <a href="{% url 'buddies:review_expense_as_owner' exp.uid %}" id="btn-review-exp-{{ exp.uid }}" class="btn btn-sm btn-success">Review</a>

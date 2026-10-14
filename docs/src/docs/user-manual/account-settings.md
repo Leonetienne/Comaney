@@ -133,16 +133,6 @@ Group individual grocery items into a single expense unless they belong to diffe
 
 ---
 
-## Early access
-
-Turn on **Enable early access features** to try out new features before they are fully finished. They may change or have rough edges. It is off by default.
-
-Features currently gated behind this setting:
-
-- [Sankey Studio](sankey-studio.md)
-
----
-
 ## Two-factor authentication
 
 Your current status (on or off) is shown here, with a link to set it up or turn it off. See [Two-Factor Authentication](two-factor-auth.md) for the full guide.
@@ -167,7 +157,29 @@ To change your password, enter your current password and then your new password 
 
 ---
 
-## API key
+## Export data
+
+Click **Export as ZIP** to download a ZIP archive containing CSV files with all your expenses, recurring expenses, categories, and tags. This is useful as a backup or for analysis in a spreadsheet.
+
+---
+
+## Advanced
+
+Options for power users and developers, at the bottom of the settings page.
+
+### Early access
+
+Turn on **Enable early access features** to try out new features before they are fully finished. They may change or have rough edges. It is off by default.
+
+Features currently gated behind this setting:
+
+- [Sankey Studio](sankey-studio.md)
+
+### Record IDs
+
+Every expense and recurring expense has a unique ID. Turn on **Show record IDs** to see it as a small `#123` on each entry. Search for `#123` to find that exact expense, which helps when you talk to an AI assistant about a specific entry. It is off by default.
+
+### API key
 
 An API key lets other apps or scripts access your Comaney account without logging in. See [REST API Access](api-access.md) for full details.
 
@@ -176,17 +188,9 @@ An API key lets other apps or scripts access your Comaney account without loggin
 - **Restrict** chooses, per area, whether apps using the key may read or also write. See [Restricting the API key](api-access.md#restricting-the-api-key).
 - **Revoke** deletes the key entirely and disables API access.
 
----
-
-## Agent keys (MCP)
+### Agent keys (MCP)
 
 Agent keys let an AI assistant work with your account. Each assistant gets its own key, which you can restrict to certain areas or revoke at any time. See [AI Assistants (MCP)](ai-assistants.md).
-
----
-
-## Export data
-
-Click **Export as ZIP** to download a ZIP archive containing CSV files with all your expenses, recurring expenses, categories, and tags. This is useful as a backup or for analysis in a spreadsheet.
 
 ---
 

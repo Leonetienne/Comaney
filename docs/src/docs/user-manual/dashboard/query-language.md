@@ -139,6 +139,15 @@ payee=none
 
 Finds expenses with no payee set.
 
+## Find one expense by its ID
+
+```
+#123
+uid=123
+```
+
+Finds exactly the expense with this record ID. Turn on **Show record IDs** in [Account & Settings](../account-settings.md#record-ids) to see the IDs in your lists.
+
 ## Filter by amount
 
 You can compare the value of an expense:

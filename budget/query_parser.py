@@ -27,6 +27,7 @@ Filters:
     project=<yes|no|true|false|1|0|none|substring>
         yes/true/1 → has any project; no/false/0/none → has no project; substring → project name match
     payee=<none|substring>  none → no payee set
+    uid=<id>  #<id>   →  the expense with this record id
     <bare word or "quoted phrase">  →  free-text (title / payee / note / overlay note / buddy names / project names)
     !<atom>           →  NOT  (negates the next atom or parenthesised group)
 """
@@ -62,6 +63,9 @@ _TOKEN_RE = re.compile(
 )
 
 
+_UID_SHORTHAND_RE = re.compile(r'#\d+')
+
+
 def _tokenize(raw: str) -> list[dict]:
     out: list[dict] = []
     for m in _TOKEN_RE.finditer(raw):
@@ -82,7 +86,7 @@ def _tokenize(raw: str) -> list[dict]:
             val = m.group(8) if m.group(8) is not None else (m.group(9) or '')
             out.append({'t': 'kv', 'key': m.group(7), 'val': val})
         elif m.group(10) is not None:
-            out.append({'t': 'str', 'val': m.group(10)})
+            out.append({'t': 'str', 'val': m.group(10), 'quoted': True})
         else:
             out.append({'t': 'str', 'val': m.group(11) or ''})
     return out
@@ -283,6 +287,10 @@ def _cat_q(val: str, model=None, feuser=None) -> Q:
     return q
 
 
+def _uid_q(val: str) -> Q:
+    return Q(uid=int(val)) if val.isdigit() else Q(pk__in=[])
+
+
 def _term_q(val: str, model=None, feuser=None) -> Q:
     q = Q(title__icontains=val) | Q(payee__icontains=val) | Q(note__icontains=val)
     if model is not None:
@@ -310,6 +318,7 @@ _EQUALS: dict = {
     'date':        lambda v: _date_q('=', v),
     'project':     lambda v: _project_q(v),
     'payee':       lambda v: _payee_q(v),
+    'uid':         lambda v: _uid_q(v),
 }
 
 _CMP: dict = {
@@ -403,8 +412,11 @@ def _compile(tokens: list[dict], model=None, feuser=None) -> Q:
                 return h(val)
             # Unrecognised key → free-text
             return _term_q(key + '=' + val, model, feuser)
+        val = tok.get('val', '')
+        if not tok.get('quoted') and _UID_SHORTHAND_RE.fullmatch(val):
+            return _uid_q(val[1:])
         # str token → free-text search (includes buddy/group name matching)
-        return _term_q(tok.get('val', ''), model, feuser)
+        return _term_q(val, model, feuser)
 
     return parse_expr()
 

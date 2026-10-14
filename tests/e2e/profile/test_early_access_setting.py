@@ -3,7 +3,7 @@ Early access settings toggle (FeUser.enable_early_access, default False).
 
 Covers:
   - Sankey Studio's sidebar link and direct-URL access are gated on it
-  - the profile "Early access" checkbox turns it on/off
+  - the "Enable early access features" checkbox in the profile "Advanced" card turns it on/off
   - demo users cannot change it (server + UI)
 """
 import time
@@ -95,7 +95,7 @@ class TestToggleViaProfileForm:
         if not checkbox.is_selected():
             checkbox.click()
             time.sleep(0.2)
-        _submit_form(driver, "early_access")
+        _submit_form(driver, "advanced")
         time.sleep(2)
         assert "Saved." in driver.page_source
 
@@ -117,7 +117,7 @@ class TestToggleViaProfileForm:
         if checkbox.is_selected():
             checkbox.click()
             time.sleep(0.2)
-        _submit_form(driver, "early_access")
+        _submit_form(driver, "advanced")
         time.sleep(2)
         assert "Saved." in driver.page_source
 
@@ -190,7 +190,7 @@ class TestDemoUserCannotToggle:
         m = re.search(r'csrfmiddlewaretoken.*?value="([^"]+)"', r.text)
         s.post(_url("/profile/"), data={
             "csrfmiddlewaretoken": m.group(1),
-            "action": "early_access",
+            "action": "advanced",
             "enable_early_access": "on",
         }, allow_redirects=True, timeout=10)
         value = run_cmd(
@@ -212,5 +212,5 @@ class TestDemoUserCannotToggle:
             time.sleep(2)
         driver.get(_url("/profile/"))
         time.sleep(1)
-        fs = driver.find_elements(By.XPATH, "//div[@id='section-early-access']//fieldset[@disabled]")
-        assert fs, "Early access section does not have a disabled fieldset for demo user"
+        fs = driver.find_elements(By.XPATH, "//div[@id='section-advanced']//fieldset[@disabled]")
+        assert fs, "Advanced section does not have a disabled fieldset for demo user"

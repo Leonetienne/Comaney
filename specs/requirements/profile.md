@@ -140,10 +140,26 @@ The system shall offer an "Expense entry" setting that turns the missing categor
 Covers:
 - `feat~profile~1`
 
-### Early access
-`req~profile.prefs.early-access~1`
+### Advanced section
+`req~profile.advanced~1`
 
-The system shall offer "Enable early access features", off by default, which unlocks Sankey Studio and any future early access feature.
+The system shall group the options (early access, record ids), the API key and the agent keys in an "Advanced" section at the end of the settings page, before the danger zone.
+
+Covers:
+- `feat~profile~1`
+
+### Record ids
+`req~profile.prefs.record-ids~1`
+
+The system shall offer a "Show record IDs" setting in the "Advanced" section, off by default; while it is on, every expense and recurring expense card (expense list, recurring expense list, project and contact expense lists) shows its record id as a small muted `#<id>` tab in its top-left corner, inside the card's padding, so it neither covers content nor changes the card's height; demo users cannot change it.
+
+Covers:
+- `feat~profile~1`
+
+### Early access
+`req~profile.prefs.early-access~2`
+
+The system shall offer "Enable early access features" in the "Advanced" section, off by default, which unlocks Sankey Studio and any future early access feature; demo users cannot change it.
 
 Covers:
 - `feat~profile~1`

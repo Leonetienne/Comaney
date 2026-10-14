@@ -20,7 +20,7 @@ from api.registry import CONCERNS
 from mcp_server.views import profile_context as agent_keys_context
 
 from .. import ai_user_config
-from ..forms import AISettingsForm, ChangeEmailForm, ChangePasswordForm, EarlyAccessSettingsForm, ExpenseEntrySettingsForm, NotificationPreferencesForm, ProfileForm
+from ..forms import AISettingsForm, ChangeEmailForm, ChangePasswordForm, AdvancedSettingsForm, ExpenseEntrySettingsForm, NotificationPreferencesForm, ProfileForm
 from ..second_factor_registry import factor_type_for, get_all_factors, method_key_of
 from ..utils import _get_session_feuser
 from ..webauthn_helpers import rp_id_from_site_url
@@ -39,7 +39,7 @@ def profile(request):
     profile_form        = ProfileForm(instance=feuser)
     notifications_form  = NotificationPreferencesForm(instance=feuser)
     ai_form             = AISettingsForm(instance=feuser)
-    early_access_form   = EarlyAccessSettingsForm(instance=feuser)
+    advanced_form   = AdvancedSettingsForm(instance=feuser)
     expense_entry_form  = ExpenseEntrySettingsForm(instance=feuser)
     email_form          = ChangeEmailForm(feuser=feuser)
     password_form       = ChangePasswordForm(feuser=feuser)
@@ -171,14 +171,14 @@ def profile(request):
                 ai_form.save()
                 return redirect(f"{request.path}?success=ai")
 
-        elif action == "early_access":
+        elif action == "advanced":
             if feuser.is_demo:
-                return redirect(f"{request.path}?success=early_access")
-            early_access_form = EarlyAccessSettingsForm(request.POST, instance=feuser)
-            if early_access_form.is_valid():
+                return redirect(f"{request.path}?success=advanced")
+            advanced_form = AdvancedSettingsForm(request.POST, instance=feuser)
+            if advanced_form.is_valid():
                 feuser.last_mod = timezone.now()
-                early_access_form.save()
-                return redirect(f"{request.path}?success=early_access")
+                advanced_form.save()
+                return redirect(f"{request.path}?success=advanced")
 
         elif action == "expense_entry":
             if feuser.is_demo:
@@ -245,7 +245,7 @@ def profile(request):
         "profile_form": profile_form,
         "notifications_form": notifications_form,
         "ai_form": ai_form,
-        "early_access_form": early_access_form,
+        "advanced_form": advanced_form,
         "expense_entry_form": expense_entry_form,
         "email_form": email_form,
         "password_form": password_form,

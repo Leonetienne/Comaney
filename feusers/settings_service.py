@@ -2,9 +2,9 @@
 from django.forms.models import model_to_dict
 from django.utils import timezone
 
-from .forms import EarlyAccessSettingsForm, ExpenseEntrySettingsForm, NotificationPreferencesForm, ProfileForm
+from .forms import AdvancedSettingsForm, ExpenseEntrySettingsForm, NotificationPreferencesForm, ProfileForm
 
-SETTINGS_FORMS = (ProfileForm, NotificationPreferencesForm, EarlyAccessSettingsForm, ExpenseEntrySettingsForm)
+SETTINGS_FORMS = (ProfileForm, NotificationPreferencesForm, AdvancedSettingsForm, ExpenseEntrySettingsForm)
 
 # what the profile page lets a demo user change
 DEMO_FIELDS = {"currency", "month_start_day", "month_start_prev", "unspent_allowance_action"}

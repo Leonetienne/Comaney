@@ -2,7 +2,6 @@
 
 {% block title %}Comaney – Settings{% endblock %}
 
-
 {% block content %}
 {% load feuser_tags %}
 {% load second_factor_tags %}
@@ -169,30 +168,6 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="expense_entry">
             {% for field in expense_entry_form %}
-                <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
-                {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
-            {% endfor %}
-            <div class="form-actions">
-                <button type="submit" class="btn">Save changes</button>
-            </div>
-        </form>
-        {% if current_feuser.is_demo %}</fieldset>{% endif %}
-    </div>
-
-    <div class="settings-card" id="section-early-access">
-        <div class="settings-card-head">
-            <h2 class="settings-card-title">Early access</h2>
-        </div>
-        <p class="in-page-tip">Turn on early access to try new features before they are fully finished. They may change or have rough edges.</p>
-        {% if success == "early_access" %}<p class="success-msg">Saved.</p>{% endif %}
-        {% if current_feuser.is_demo %}
-        <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
-        <fieldset disabled style="border:none;padding:0;margin:0;">
-        {% endif %}
-        <form method="post" novalidate>
-            {% csrf_token %}
-            <input type="hidden" name="action" value="early_access">
-            {% for field in early_access_form %}
                 <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
                 {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
             {% endfor %}
@@ -425,6 +400,45 @@
         {% endif %}
     </div>
 
+    <div class="settings-card" id="section-export">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Export data</h2>
+        </div>
+        <p class="in-page-tip">Download all your data as a ZIP archive containing CSV files.</p>
+        <a href="{% url 'account_export' %}" class="btn btn-secondary btn-sm">Export as ZIP</a>
+    </div>
+
+    </div>
+    </div>
+
+    <h2 class="settings-section-title" id="section-advanced-settings">Advanced</h2>
+    <div class="settings-grid">
+    <div class="settings-col">
+
+    <div class="settings-card" id="section-advanced">
+        <div class="settings-card-head">
+            <h2 class="settings-card-title">Options</h2>
+        </div>
+        <p class="in-page-tip">Early access unlocks new features before they are fully finished; they may change or have rough edges. Record IDs identify an entry exactly, e.g. in search with #123.</p>
+        {% if success == "advanced" %}<p class="success-msg">Saved.</p>{% endif %}
+        {% if current_feuser.is_demo %}
+        <p class="in-page-tip" style="opacity:.5;">Not available on demo accounts.</p>
+        <fieldset disabled style="border:none;padding:0;margin:0;">
+        {% endif %}
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="advanced">
+            {% for field in advanced_form %}
+                <label class="checkbox-inline">{{ field }} {{ field.label }}</label>
+                {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+            {% endfor %}
+            <div class="form-actions">
+                <button type="submit" class="btn">Save changes</button>
+            </div>
+        </form>
+        {% if current_feuser.is_demo %}</fieldset>{% endif %}
+    </div>
+
     <div class="settings-card" id="section-apikey">
         <div class="settings-card-head">
             <h2 class="settings-card-title">API key</h2>
@@ -456,6 +470,9 @@
         </form>
         {% endif %}
     </div>
+
+    </div>
+    <div class="settings-col">
 
     <div class="settings-card" id="section-agent-keys">
         <div class="settings-card-head">
@@ -509,14 +526,6 @@
             <button type="submit" class="btn btn-sm">Create agent key</button>
         </form>
         {% endif %}
-    </div>
-
-    <div class="settings-card" id="section-export">
-        <div class="settings-card-head">
-            <h2 class="settings-card-title">Export data</h2>
-        </div>
-        <p class="in-page-tip">Download all your data as a ZIP archive containing CSV files.</p>
-        <a href="{% url 'account_export' %}" class="btn btn-secondary btn-sm">Export as ZIP</a>
     </div>
 
     </div>

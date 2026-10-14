@@ -117,12 +117,13 @@ class AISettingsForm(forms.ModelForm):
         return super().save(commit=commit)
 
 
-class EarlyAccessSettingsForm(forms.ModelForm):
+class AdvancedSettingsForm(forms.ModelForm):
     class Meta:
         model = FeUser
-        fields = ["enable_early_access"]
+        fields = ["enable_early_access", "show_record_ids"]
         labels = {
             "enable_early_access": "Enable early access features",
+            "show_record_ids": "Show record IDs (#123) on expenses and recurring expenses",
         }
 
 

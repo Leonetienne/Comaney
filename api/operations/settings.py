@@ -15,6 +15,7 @@ SETTINGS_PARAMS = {
     **_NOTIFY,
     "enable_early_access":      {"type": "boolean"},
     "warn_unclassified_on_save": {"type": "boolean"},
+    "show_record_ids":          {"type": "boolean", "description": "Show expense and recurring expense ids as #<id> in the app."},
 }
 
 

@@ -61,6 +61,7 @@ class FeUser(models.Model):
     disable_ai_ui = models.BooleanField(default=False)
     enable_early_access = models.BooleanField(default=False)
     warn_unclassified_on_save = models.BooleanField(default=True)
+    show_record_ids = models.BooleanField(default=False)
     has_seen_achim_intro = models.BooleanField(default=False)
     intro_seen_at = models.DateTimeField(null=True, blank=True)
     last_upgrade_intro_v_seen = models.IntegerField(null=True, blank=True)

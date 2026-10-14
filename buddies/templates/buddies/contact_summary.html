@@ -36,6 +36,7 @@
         {% with exp=item.expense %}
         {% if item.kind == "expense_owner" %}
         <div class="bexp-breakdown-card bexp-card-i-paid">
+            {% include "partials/_record_id.html" with uid=exp.uid %}
             <div class="bexp-breakdown-header">
                 <div class="bexp-breakdown-header-left">
                     <span class="bexp-title">{{ exp.title }}</span>
@@ -51,6 +52,7 @@
         </div>
         {% elif item.kind == "feuser_creditor" %}
         <div class="bexp-breakdown-card bexp-card-other-paid">
+            {% include "partials/_record_id.html" with uid=exp.uid %}
             <div class="bexp-breakdown-header">
                 <div class="bexp-breakdown-header-left">
                     <span class="bexp-title">{{ exp.title }}</span>
@@ -67,6 +69,7 @@
         </div>
         {% elif item.kind == "dummy_payer" %}
         <div class="bexp-breakdown-card bexp-card-neutral">
+            {% include "partials/_record_id.html" with uid=exp.uid %}
             <div class="bexp-breakdown-header">
                 <div class="bexp-breakdown-header-left">
                     <span class="bexp-title">{{ exp.title }}</span>
@@ -86,6 +89,7 @@
         </div>
         {% elif item.kind == "dummy_creditor" %}
         <div class="bexp-breakdown-card bexp-card-other-paid">
+            {% include "partials/_record_id.html" with uid=exp.uid %}
             <div class="bexp-breakdown-header">
                 <div class="bexp-breakdown-header-left">
                     <span class="bexp-title">{{ exp.title }}</span>

@@ -36,7 +36,7 @@ _RENAMES = {"category_id": "category", "tag_ids": "tags"}
 _FORM_FIELDS = ExpenseForm._meta.fields
 _QUERY = {"type": "string", "description": (
     "Query language: free text, type=, settled=, deactivated=, value>12, date>=2025-01-01, "
-    "cat=, tag=, payee=, project=, || for OR, () grouping, ! for NOT."
+    "cat=, tag=, payee=, project=, uid=<id> or #<id>, || for OR, () grouping, ! for NOT."
 )}
 
 LIST_PARAMS = {

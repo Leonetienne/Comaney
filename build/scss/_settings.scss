@@ -21,6 +21,14 @@
   }
 }
 
+.settings-section-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  margin: 32px 0 12px;
+  color: var(--text);
+}
+
 .settings-col {
   flex: 1 1 0;
   min-width: 0;

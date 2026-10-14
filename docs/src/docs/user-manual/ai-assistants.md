@@ -17,7 +17,7 @@ The assistant can also look things up in this manual, so you can ask it how Coma
 
 Each assistant gets its own agent key, so you can restrict or revoke one without affecting the others.
 
-1. Go to **Settings → Agent keys (MCP)**.
+1. Go to **Settings → Advanced → Agent keys (MCP)**.
 2. Enter a name, for example "Claude Desktop", and click **Create agent key**.
 3. Copy the key right away. It is shown only once.
 

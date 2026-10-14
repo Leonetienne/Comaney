@@ -6,6 +6,7 @@
 }
 
 .exp-card {
+  position: relative;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--border);
@@ -35,6 +36,22 @@
 .exp-date-label {
   font-size: 0.78rem;
   color: var(--text-muted);
+}
+
+// sits in the card's top-left padding corner so it never shifts or covers content
+.record-id {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0 5px 1px;
+  // top-left follows the card's inner corner (radius minus border widths)
+  border-radius: 7px 0 4px 0 / 9px 0 4px 0;
+  background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+  font-size: 0.6rem;
+  line-height: 1.15;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 
 .exp-row1 {
@@ -127,4 +144,8 @@
       }
     }
   }
+}
+
+.bexp-breakdown-card .record-id {
+  border-radius: 5px 0 4px 0 / 7px 0 4px 0;
 }

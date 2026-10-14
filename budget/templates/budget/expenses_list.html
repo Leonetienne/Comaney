@@ -145,6 +145,7 @@ window.EXPENSE_CONFIG = {
                  :data-payee="exp.payee ? exp.payee.toLowerCase() : ''"
                  :data-cat="catStr(exp)"
                  :data-tags="tagStr(exp)">
+                {% if current_feuser.show_record_ids %}<span class="record-id" x-text="'#' + exp.id"></span>{% endif %}
 
                 <div class="exp-date-row">
                     <label class="exp-checkbox-wrap" title="Select">

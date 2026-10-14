@@ -85,6 +85,14 @@ The system shall support `payee=<text>` (contains) and `payee=none` (empty payee
 Covers:
 - `feat~query~1`
 
+### Record id filter
+`req~query.uid~1`
+
+The system shall support `uid=<id>` and the bare shorthand `#<id>`, both matching exactly the expense with that record id; a quoted `"#<id>"` stays free text.
+
+Covers:
+- `feat~query~1`
+
 ### Value comparisons
 `req~query.value~1`
 

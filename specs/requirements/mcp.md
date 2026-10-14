@@ -22,9 +22,9 @@ Covers:
 - `feat~mcp~1`
 
 ### Server instructions
-`req~mcp.instructions~1`
+`req~mcp.instructions~2`
 
-When a client sends `initialize`, the system shall return instructions explaining the domain (owners, participants and overlays, transaction types, currency, financial periods, the query language, notifications to other people), telling the agent to look features up in the user manual before explaining them or answering support questions, to preview two-step operations and ask the user before deleting or contacting others, and that missing tools mean a restricted key.
+When a client sends `initialize`, the system shall return instructions explaining the domain (owners, participants and overlays, transaction types, currency, financial periods, the query language, record ids, notifications to other people), telling the agent to look features up in the user manual before explaining them or answering support questions, to preview two-step operations and ask the user before deleting or contacting others, that missing tools mean a restricted key, and, following the feuser's "Show record IDs" setting, that it may show record ids as `#<id>` or must not show them to the user.
 
 Covers:
 - `feat~mcp~1`
