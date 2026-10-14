@@ -45,9 +45,10 @@ Covers:
 - `feat~ui~1`
 
 ### Add button menu
-`req~ui.fab~1`
+`req~ui.fab~2`
 
 The add button on the expense list and project pages shall open a small menu with "Manual" and, where AI is available, "AI".
+While the menu is closed, it shall let clicks through to the page content beneath it.
 
 Covers:
 - `feat~ui~1`

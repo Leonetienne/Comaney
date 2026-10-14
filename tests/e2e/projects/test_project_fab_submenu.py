@@ -58,6 +58,16 @@ class TestProjectFabSubmenu:
         assert driver.find_elements(By.CSS_SELECTOR, ".fab-wrap .fab-toggle"), \
             f"New expense FAB must be present on /projects/<id>/{path}"
 
+    def test_closed_menu_lets_clicks_through(self, driver, w, ctx):
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+        time.sleep(1)
+        hit_menu = driver.execute_script(
+            "var r = document.querySelector('.fab-menu').getBoundingClientRect();"
+            "var el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);"
+            "return !!(el && el.closest('.fab-menu'));"
+        )
+        assert not hit_menu, "The closed FAB menu must not catch clicks meant for the page below"
+
     def test_create_manually_link_preserves_project_and_back(self, driver, w, ctx):
         self._open(driver, w, ctx)
         manual = self._item_by_title(driver, "Create manually")

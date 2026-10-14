@@ -1712,6 +1712,13 @@
   bottom: 100%;
   padding-bottom: 0.9rem;
   right: 0.05rem;
+  pointer-events: none;
+
+  .fab-wrap--open & { pointer-events: auto; }
+
+  @media (hover: hover) and (pointer: fine) {
+    .fab-wrap:hover & { pointer-events: auto; }
+  }
 }
 
 .fab-menu-item {
