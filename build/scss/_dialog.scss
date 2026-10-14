@@ -31,6 +31,22 @@
   max-width: 440px;
 }
 
+.cdialog-detail {
+  margin: -8px 0 20px;
+}
+
+.merge-overlap-list {
+  max-height: 180px;
+  overflow-y: auto;
+  margin: 0 0 10px;
+  padding: 8px 8px 8px 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
 .cdialog-actions {
   display: flex;
   gap: 10px;

@@ -1,15 +1,46 @@
 <script>
 (function () {
+    var OVERLAP_WARNING = 'You both have expenses with the same title and amount, so after the merge they exist twice. '
+        + 'Make sure your shared history does not include records you both created independently.';
+
+    function overlapDetail(listId) {
+        var template = listId && document.getElementById(listId);
+        if (!template) return null;
+        var detail = document.createElement('div');
+        detail.appendChild(template.content.cloneNode(true));
+        return detail;
+    }
+
+    document.addEventListener('click', function (e) {
+        var copyBtn = e.target.closest('.merge-overlap-copy');
+        if (!copyBtn) return;
+        var lines = Array.prototype.map.call(
+            copyBtn.parentNode.querySelectorAll('.merge-overlap-list li'),
+            function (li) { return li.textContent.trim(); }
+        );
+        navigator.clipboard.writeText(lines.join('\n'))
+            .then(function () { window.showToast('List copied'); })
+            .catch(function () { window.showToast('Copying failed', 'error'); });
+    });
+
     document.addEventListener('submit', function (e) {
         var form = e.target;
-        if (!form.classList || !form.classList.contains('merge-dummy-form')) return;
+        if (!form.classList) return;
+        if (form.classList.contains('merge-accept-form')) {
+            e.preventDefault();
+            window.confirmDialog(OVERLAP_WARNING, 'Accept and merge', null, overlapDetail(form.dataset.overlapList))
+                .then(function () { form.submit(); })
+                .catch(function () {});
+            return;
+        }
+        if (!form.classList.contains('merge-dummy-form')) return;
         var select = form.querySelector('select[name="target_key"]');
         var option = select ? select.options[select.selectedIndex] : null;
         if (!option) return;
         e.preventDefault();
         var sourceName = form.dataset.sourceName;
         var targetName = option.textContent.trim();
-        var message, okLabel;
+        var message, okLabel, detail = null;
         if (option.dataset.kind === 'dummy') {
             message = 'Merge "' + sourceName + '" into "' + targetName + '"? Their shared history will be combined into one entry. This cannot be undone.';
             okLabel = 'Merge';
@@ -18,9 +49,11 @@
             okLabel = 'Merge';
         } else {
             message = 'Send a merge request to ' + targetName + '? If they approve, "' + sourceName + '"\'s history will be linked to their account.';
+            detail = overlapDetail(option.dataset.overlapList);
+            if (detail) message += ' ' + OVERLAP_WARNING;
             okLabel = 'Send request';
         }
-        window.confirmDialog(message, okLabel).then(function () {
+        window.confirmDialog(message, okLabel, null, detail).then(function () {
             form.submit();
         }).catch(function () {});
     });

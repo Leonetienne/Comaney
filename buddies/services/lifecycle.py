@@ -232,6 +232,39 @@ class BuddyLifecycleService:
         return "ok"
 
     @staticmethod
+    def _copy_contact_history(keeper, leaver) -> DummyUser:
+        """
+        Creates keeper's offline contact for leaver and copies every approved
+        expense leaver paid with keeper's share into keeper's account, paid by it,
+        so the two share no expense afterwards. Runs for both sides before either
+        side's rows are replaced.
+        """
+        from budget.models import Expense
+
+        ghost = DummyUser.objects.create(owning_feuser=keeper, display_name=_display_name(leaver))
+        paid_by_leaver = Expense.objects.filter(
+            owning_feuser=leaver,
+            is_dummy=False,
+            project__isnull=True,
+            buddy_approved=True,
+            buddy_spendings__participant_feuser=keeper,
+        ).distinct()
+        for expense in paid_by_leaver:
+            BuddyExpenseService.clone_expense_for_feuser(expense, keeper, ghost)
+        return ghost
+
+    @staticmethod
+    def _replace_contact(keeper, leaver, ghost: DummyUser) -> None:
+        """Puts ghost in leaver's place in keeper's own contact expenses and recurring expenses."""
+        from budget.models import Expense
+        from budget.scheduled_assignment import replace_feuser_with_dummy_in_scheduled
+
+        BuddyExpenseService.replace_feuser_with_dummy(
+            Expense.objects.filter(owning_feuser=keeper, project__isnull=True), leaver, ghost
+        )
+        replace_feuser_with_dummy_in_scheduled(keeper, leaver, ghost)
+
+    @staticmethod
     def _expire_invites_between(a, b) -> None:
         """Deletes pending project, partnership and offline contact merge invites between a and b."""
         from django.db.models import Q
@@ -253,8 +286,6 @@ class BuddyLifecycleService:
     @staticmethod
     @transaction.atomic
     def kick_actual(feuser, other_feuser, has_debt_warning_accepted: bool = False) -> dict:
-        from budget.models import Expense
-
         net = BuddyQueryService.get_net_debt(feuser, contact_feuser=other_feuser)
         if abs(net) > Decimal("0.05") and not has_debt_warning_accepted:
             return {"debt_warning": net}
@@ -263,41 +294,10 @@ class BuddyLifecycleService:
         if not link:
             return {"kicked": True}
 
-        feuser_expenses_with_other = Expense.objects.filter(
-            owning_feuser=feuser,
-            is_dummy=False,
-            project__isnull=True,
-            buddy_spendings__participant_feuser=other_feuser,
-        ).distinct()
-        for exp in feuser_expenses_with_other:
-            new_dummy = DummyUser.objects.create(
-                owning_feuser=other_feuser,
-                display_name=_display_name(feuser),
-            )
-            BuddyExpenseService.clone_expense_for_feuser(exp, other_feuser, new_dummy)
-            exp.buddy_spendings.filter(participant_feuser=other_feuser).delete()
-
-        kicker_dummy_for_other = DummyUser.objects.create(
-            owning_feuser=other_feuser,
-            display_name=_display_name(feuser),
-        )
-        BuddySpending.objects.filter(
-            participant_feuser=feuser,
-            expense__owning_feuser=other_feuser,
-            expense__project__isnull=True,
-        ).update(participant_feuser=None, participant_dummy=kicker_dummy_for_other)
-
-        # Clear feuser's scheduled expense assignments that reference other_feuser
-        from django.db.models import Q
-        from budget.models import ScheduledExpense
-        from budget.scheduled_assignment import clear_scheduled_assignments
-        clear_scheduled_assignments(
-            ScheduledExpense.objects.filter(owning_feuser=feuser).filter(
-                Q(assign_upfront_feuser=other_feuser) |
-                Q(assign_buddy_mode__in=['single', 'group'],
-                  assign_spendings_json__contains=f'"id": {other_feuser.pk}')
-            )
-        )
+        ghost_of_other = BuddyLifecycleService._copy_contact_history(feuser, other_feuser)
+        ghost_of_feuser = BuddyLifecycleService._copy_contact_history(other_feuser, feuser)
+        BuddyLifecycleService._replace_contact(feuser, other_feuser, ghost_of_other)
+        BuddyLifecycleService._replace_contact(other_feuser, feuser, ghost_of_feuser)
 
         BuddyLifecycleService._expire_invites_between(feuser, other_feuser)
         link.delete()
@@ -315,34 +315,10 @@ class BuddyLifecycleService:
         Converts all actual buddy relationships to dummy relationships.
         Also handles group memberships.
         """
-        from budget.models import Expense
-
         for link in ContactLink.for_user(feuser):
             other = link.other(feuser)
-
-            ghost_dummy = DummyUser.objects.create(
-                owning_feuser=other,
-                display_name=_display_name(feuser),
-            )
-
-            BuddySpending.objects.filter(
-                participant_feuser=feuser,
-                expense__owning_feuser=other,
-                expense__project__isnull=True,
-            ).update(participant_feuser=None, participant_dummy=ghost_dummy)
-
-            feuser_exps = Expense.objects.filter(
-                owning_feuser=feuser,
-                is_dummy=False,
-                project__isnull=True,
-                buddy_spendings__participant_feuser=other,
-            ).distinct()
-            for exp in feuser_exps:
-                BuddyExpenseService.clone_expense_for_feuser(exp, other, ghost_dummy)
-
-            # Update other's scheduled expenses that reference the deleting feuser
-            from budget.scheduled_assignment import replace_feuser_with_dummy_in_scheduled
-            replace_feuser_with_dummy_in_scheduled(other, feuser, ghost_dummy)
+            ghost_dummy = BuddyLifecycleService._copy_contact_history(other, feuser)
+            BuddyLifecycleService._replace_contact(other, feuser, ghost_dummy)
 
         ContactLink.for_user(feuser).delete()
 
@@ -456,8 +432,7 @@ class BuddyLifecycleService:
 
         from .archive import BuddyArchiveService
         from budget.scheduled_assignment import replace_dummy_in_scheduled
-        BuddyArchiveService.transfer_upfront_payer_to_feuser(dummy, accepting_feuser)
-        BuddyArchiveService.transfer_dummy_participation_to_feuser(dummy, accepting_feuser)
+        BuddyArchiveService.merge_dummy_into_feuser(dummy, accepting_feuser)
         replace_dummy_in_scheduled(inviting_feuser, dummy, accepting_feuser)
 
         _create_link(inviting_feuser, accepting_feuser)

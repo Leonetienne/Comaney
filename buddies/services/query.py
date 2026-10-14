@@ -549,6 +549,43 @@ class BuddyQueryService:
         return result
 
     @staticmethod
+    def offline_record_overlaps(feuser, contacts) -> dict:
+        """
+        {offline contact pk: {contact pk: [(title, value), ...]}}: contact expenses of
+        each of feuser's offline contacts whose title and amount match a contact expense
+        one of contacts recorded with their own offline contacts. Merging such a pair keeps both.
+        """
+        from collections import defaultdict
+        from django.db.models import F
+        from budget.models import Expense
+
+        def records(owners):
+            own = Expense.objects.filter(owning_feuser__in=owners, project__isnull=True)
+            fields = ("owning_feuser_id", "title", "value")
+            paid = own.filter(upfront_payee_dummy__owning_feuser=F("owning_feuser")).values_list(
+                "upfront_payee_dummy_id", *fields)
+            shared = own.filter(buddy_spendings__participant_dummy__owning_feuser=F("owning_feuser")).values_list(
+                "buddy_spendings__participant_dummy_id", *fields)
+            return set(paid) | set(shared)
+
+        contacts_by_record = defaultdict(set)
+        for _, owner_pk, title, value in records(contacts):
+            contacts_by_record[(title, value)].add(owner_pk)
+        overlaps = defaultdict(lambda: defaultdict(set))
+        for dummy_pk, _, title, value in records([feuser]):
+            for contact_pk in contacts_by_record[(title, value)]:
+                overlaps[dummy_pk][contact_pk].add((title, value))
+        return {d: {c: sorted(r) for c, r in by_contact.items()} for d, by_contact in overlaps.items()}
+
+    @staticmethod
+    def merge_invite_overlaps(invite) -> list:
+        """offline_record_overlaps for the invited feuser of a contact merge request, [] for a project one."""
+        if not invite.dummy.owning_feuser_id:
+            return []
+        overlaps = BuddyQueryService.offline_record_overlaps(invite.inviting_feuser, [invite.invited_feuser])
+        return overlaps.get(invite.dummy_id, {}).get(invite.invited_feuser_id, [])
+
+    @staticmethod
     def get_all_debts(feuser) -> dict:
         """Legacy method kept for existing code. Returns {'actual': {...}, 'dummy': {...}}."""
         result = {"actual": {}, "dummy": {}}

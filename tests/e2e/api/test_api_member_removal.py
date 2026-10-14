@@ -142,19 +142,21 @@ def test_rest_remove_offline_member_moves_history_to_achim(people):
     assert [d[1] for d in _state(eid, users["Admin"]["email"])["dummies"]] == [True]
 
 
-def test_rest_remove_contact_copies_history_to_removed_contact(people):
+def test_rest_remove_contact_gives_each_side_an_own_copy(people):
     users = people("Owner", "Kicked")
     link = int(_create_contact_link(users["Owner"]["email"], users["Kicked"]["email"]))
     eid = _expense(users["Owner"]["email"], None, [(users["Kicked"]["email"], "50")], "REST contact")
     resp = api("DELETE", f"/api/v2/contacts/{link}/", users["Owner"])
     assert resp.status_code in (200, 204), resp.text
-    assert _state(eid, users["Kicked"]["email"])["references"] == 0
+    state = _state(eid, users["Kicked"]["email"])
+    assert state["references"] == 0
+    assert state["dummies"] == [["Kicked Removal", False]]
     copy = _shell(
         f"from budget.models import Expense; "
         f"e = Expense.objects.get(owning_feuser__email='{users['Kicked']['email']}', title='REST contact'); "
-        f"print(e.upfront_payee_dummy.display_name)"
+        f"print(e.upfront_payee_dummy.display_name, [str(bs.share_percent) for bs in e.buddy_spendings.all()])"
     )
-    assert copy == "Owner Removal"
+    assert copy == "Owner Removal ['50.000']"
 
 
 def test_rest_remove_offline_contact_moves_history_to_achim(people):

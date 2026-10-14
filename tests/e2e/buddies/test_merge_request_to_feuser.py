@@ -379,6 +379,8 @@ class TestMergeRequestSumsConflictingCoParticipantShares:
             f"print(BuddySpending.objects.filter(participant_dummy_id={ctx['mario_uid']}).count())"
         )
         assert stale == "0", "No BuddySpending row may still reference the deleted dummy"
+        note = _shell(f"from budget.models import Expense; print(repr(Expense.objects.get(pk={ctx['expense_pk']}).note))")
+        assert note == "''", "Merging into a real user leaves the note untouched"
 
     def test_recurring_schedule_sums_shares_no_stale_reference(self, driver, w, ctx):
         sched_json = _shell(

@@ -20,19 +20,19 @@ def clear_scheduled_assignments(queryset) -> None:
 
 def replace_feuser_with_dummy_in_scheduled(owner_feuser, old_feuser, new_dummy) -> None:
     """
-    In owner_feuser's scheduled expenses: replace old_feuser with new_dummy.
+    In owner_feuser's contact (non-project) scheduled expenses: replace old_feuser with new_dummy.
 
     - If old_feuser is the upfront payer: switch to dummy upfront type.
     - If old_feuser appears in assign_spendings_json: replace with dummy entry.
 
-    Called when old_feuser's account is deleted and new_dummy is the ghost
-    created in owner_feuser's context.
+    Called when a contact link ends and new_dummy is owner_feuser's offline contact
+    for old_feuser. Project assignments follow the project roster.
     """
     from .models import ScheduledExpense
 
     qs = ScheduledExpense.objects.filter(
         owning_feuser=owner_feuser,
-        assign_buddy_mode__in=['single', 'group'],
+        assign_buddy_mode='single',
     )
 
     for sched in qs.filter(assign_upfront_feuser=old_feuser):

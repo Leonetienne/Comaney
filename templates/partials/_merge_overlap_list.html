@@ -1,0 +1,6 @@
+<template id="overlap-{{ list_scope }}-{{ list_key }}">
+    <ul class="merge-overlap-list">
+        {% for title, value in records %}<li>{{ title }}, {{ request.feuser.currency }}{{ value|floatformat:2 }}</li>{% endfor %}
+    </ul>
+    <button type="button" class="btn btn-sm btn-secondary merge-overlap-copy">Copy list</button>
+</template>

@@ -135,9 +135,9 @@ Covers:
 - `feat~contacts~1`
 
 ### History preservation on removal
-`req~contacts.kick.history~1`
+`req~contacts.kick.history~2`
 
-When a real contact link is removed, the system shall replace each side by a new offline contact in the other's shared non-project expenses, copy the remover's shared expenses into the removed contact's account, clear recurring assignments that reference the other side, notify the removed contact, and delete the link with its auto-accept settings.
+When a real contact link is removed, the system shall, for each side, create an offline contact of the other side's name, copy every approved expense the other paid with that side's share into that side's account (paid by the offline contact, holding only that side's share, classified with that side's overlay), and put the offline contact in the other's place in that side's own shared non-project expenses and contact recurring assignments, dropping the other's overlays and initiated-by marks there; then expire pending invitations, notify the removed contact and delete the link with its auto-accept settings. Afterwards the two share no expense, each side's shares and amounts stay unchanged, and other participants see no change.
 
 Covers:
 - `feat~contacts~1`
@@ -268,10 +268,18 @@ When the target is a real user, the system shall send a merge request (email and
 Covers:
 - `feat~contacts~1`
 
-### Merge acceptance
-`req~contacts.merge.accept~1`
+### Duplicate warning on merge into a real contact
+`req~contacts.merge.overlap-warning~1`
 
-When the target accepts a merge request, the system shall transfer the offline entry's upfront payments (making the target the owner) and shares to the target, migrate personal recurring assignments, delete the offline entry and the request, and land the target on the project page for project-scope merges.
+When a feuser sends or accepts a request to merge an offline contact into a real contact, and the offline contact's contact expenses and the real contact's own contact expenses with their offline contacts include expenses of equal title and amount, the system shall show an OK/Cancel warning listing those expenses in a scrollable list with a button that copies the list as text to the clipboard.
+
+Covers:
+- `feat~contacts~1`
+
+### Merge acceptance
+`req~contacts.merge.accept~2`
+
+When the target accepts a merge request, the system shall put the target in the offline entry's place in every reference, the same way for contacts and projects: expenses the offline entry paid become the target's own (a previous owner with a share keeps it and gets their category and tags as overlay), its shares become the target's (summed into an existing share of the target), and personal recurring assignments are migrated; expense notes stay unchanged. The system shall then delete the offline entry and the request, and land the target on the project page for project-scope merges.
 
 Covers:
 - `feat~contacts~1`
@@ -285,9 +293,9 @@ Covers:
 - `feat~contacts~1`
 
 ### Merge integrity
-`req~contacts.merge.integrity~1`
+`req~contacts.merge.integrity~2`
 
-After any merge, every affected expense shall still exist, no share or template shall reference the deleted offline entry, no participant shall hold two rows on the same expense, and no expense owner shall hold an explicit share on their own expense.
+After any merge, every affected expense shall still exist, no share or template shall reference the deleted offline entry, no participant shall hold two rows on the same expense, and no payer shall hold an explicit share on an expense they paid.
 
 Covers:
 - `feat~contacts~1`

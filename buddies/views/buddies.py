@@ -345,6 +345,7 @@ def view_merge_invite(request, token):
         "invite": invite,
         "inviting_name": _display_name(invite.inviting_feuser),
         "group": invite.dummy.owning_group,
+        "overlaps": BuddyQueryService.merge_invite_overlaps(invite),
     })
 
 

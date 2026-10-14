@@ -22,7 +22,7 @@
     </div>
 
     <div class="form-actions">
-        <form method="post" action="{% url 'buddies:accept_merge' invite.token %}">
+        <form method="post" action="{% url 'buddies:accept_merge' invite.token %}"{% if overlaps %} class="merge-accept-form" data-overlap-list="overlap-invite-{{ invite.token }}"{% endif %}>
             {% csrf_token %}
             <button type="submit" id="btn-accept-merge" class="btn">Accept and merge</button>
         </form>
@@ -32,4 +32,8 @@
         </form>
     </div>
 </div>
+{% if overlaps %}
+{% include "partials/_merge_overlap_list.html" with list_scope="invite" list_key=invite.token records=overlaps %}
+{% include "partials/merge_dummy_js.html" %}
+{% endif %}
 {% endblock %}

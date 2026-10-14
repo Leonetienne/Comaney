@@ -43,7 +43,13 @@ class TestProjectMergeRequestAcceptFlow:
             f"d = DummyUser.objects.get(uid={dummy_uid}); "
             f"e = Expense.objects.create(owning_feuser=u, title='Project Request Expense', "
             f"  type='expense', value=Decimal('55.00'), settled=False, buddy_approved=True, project=g); "
-            f"BuddySpending.objects.create(expense=e, participant_dummy=d, share_percent=Decimal('50'))"
+            f"BuddySpending.objects.create(expense=e, participant_dummy=d, share_percent=Decimal('50')); "
+            f"from budget.models import Category; "
+            f"cat = Category.objects.create(owning_feuser=u, title='Jonas Travel'); "
+            f"p = Expense.objects.create(owning_feuser=u, title='Project Dummy Paid', type='expense', "
+            f"  value=Decimal('80.00'), settled=False, buddy_approved=True, project=g, "
+            f"  is_dummy=True, upfront_payee_dummy=d, category=cat); "
+            f"BuddySpending.objects.create(expense=p, participant_feuser=u, share_percent=Decimal('40'))"
         )
         ctx = {
             "admin": admin, "member": member, "group_id": int(group_id),
@@ -113,6 +119,24 @@ class TestProjectMergeRequestAcceptFlow:
         time.sleep(1)
         assert "Project Request Expense" in driver.page_source
 
+    def test_member_takes_over_dummy_payments_completely(self, driver, w, ctx):
+        """The payer becomes the owner; the admin keeps their 40% share and their own category."""
+        state = _shell(
+            f"from budget.models import Expense, ExpenseDataOverlay; "
+            f"e = Expense.objects.get(project_id={ctx['group_id']}, title='Project Dummy Paid'); "
+            f"o = ExpenseDataOverlay.objects.get(expense=e, feuser__email='{ctx['admin']['email']}'); "
+            f"rows = sorted((bs.participant_feuser.email, str(bs.share_percent)) for bs in e.buddy_spendings.all()); "
+            f"print(e.owning_feuser.email, e.is_dummy, rows == [('{ctx['admin']['email']}', '40.000')], o.category.title)"
+        )
+        assert state == f"{ctx['member']['email']} False True Jonas Travel"
+
+    def test_merge_leaves_notes_untouched(self, driver, w, ctx):
+        notes = _shell(
+            f"from budget.models import Expense; "
+            f"print(sorted(set(Expense.objects.filter(project_id={ctx['group_id']}).values_list('note', flat=True))))"
+        )
+        assert notes == "['']"
+
 
 # ---------------------------------------------------------------------------
 # Regression: merge target already owns one of the dummy's expenses
@@ -124,7 +148,7 @@ class TestProjectMergeRequestTargetIsExpenseOwner:
     participated in (e.g. admin sends the merge request, but the expense
     itself was paid by the member being merged into). The expense owner
     must never end up as an explicit BuddySpending participant on their
-    own expense - transfer_dummy_participation_to_feuser must drop that
+    own expense, so merge_dummy_into_feuser drops that
     row instead of reassigning it.
     """
 

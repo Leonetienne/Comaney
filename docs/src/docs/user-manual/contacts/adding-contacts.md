@@ -66,6 +66,12 @@ Anything this contact recorded earlier that is still waiting for you is accepted
 - You can switch it off at any time. Entries that were already accepted stay accepted.
 - If you remove the contact, the setting is removed as well.
 
+## Removing a contact
+
+On **Contacts**, open the menu next to their name and click **Remove contact**. Each of you keeps an own copy of your shared expenses, with your own share, and the other person appears there as an offline contact. You can change your copies freely without affecting the other. Pending invitations between you expire.
+
+If you connect again later and merge that offline contact into them, both copies are kept: remove the duplicates by hand afterwards (see below).
+
 ## Merging an offline contact into another connection
 
 You can combine an offline contact's history with another entry, either because they turn out to be the same person as someone else, or because they now have a real Comaney account.
@@ -83,6 +89,8 @@ This only works once the person is already connected to you, either as a contact
 1. On **Contacts**, click **···** next to the offline contact and choose **Merge into...**.
 2. Pick the connected person from the list and click **Merge**.
 3. Confirm. They receive an email and a notification asking them to approve the merge. Once they accept, the offline contact's expense history moves to their real account and the offline entry disappears.
+
+If you both have expenses with the same title and amount, for example because you removed each other as contacts and both kept a copy, sending and accepting the request shows a list of them. Both copies are kept after the merge, so delete the ones you don't need afterwards. **Copy list** puts the list on your clipboard.
 
 **Merging an offline contact into yourself:**
 

@@ -206,9 +206,9 @@ Covers:
 - `feat~projects~1`
 
 ### Removed member as payer
-`req~projects.removed-payer~1`
+`req~projects.removed-payer~2`
 
-When a real member is removed or leaves, the system shall make their offline member the upfront payer of every project expense they paid, transfer ownership of every project expense they owned to the admin with the admin's own category and tags, remove every other project reference to them, and keep all expenses, shares, amounts, approval states and debts between members unchanged.
+When a real member is removed or leaves, the system shall make their offline member the upfront payer of every project expense they paid, transfer ownership of every project expense they owned to the admin with the admin's own category and tags and a 0% share for the admin where they had none, remove every other project reference to them, and keep all expenses, shares, amounts, approval states and debts between members unchanged.
 
 Covers:
 - `feat~projects~1`

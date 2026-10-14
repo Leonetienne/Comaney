@@ -75,7 +75,7 @@
             </div>
             <div class="bbl-actions">
                 {% if info.type == 'feuser' and info.link_uid %}
-                <form id="kick-form-{{ info.link_uid }}" method="post" action="{% url 'buddies:kick_actual' info.link_uid %}" class="confirm-form" data-confirm="Remove {{ info.display_name|escapejs }} as a contact?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Your shared expenses will stay in your history." data-ok="Remove" style="display:none">{% csrf_token %}</form>
+                <form id="kick-form-{{ info.link_uid }}" method="post" action="{% url 'buddies:kick_actual' info.link_uid %}" class="confirm-form" data-confirm="Remove {{ info.display_name|escapejs }} as a contact?{% if info.net_abs > 0 %} {% if info.net > 0 %}They owe you {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% else %}You owe them {{ request.feuser.currency }}{{ info.net_abs|floatformat:2 }}.{% endif %}{% endif %} Each of you keeps your own copy of your shared expenses, with the other as an offline contact." data-ok="Remove" style="display:none">{% csrf_token %}</form>
                 <div class="ctx-menu-wrap">
                     <button type="button" class="ctx-menu-btn" aria-label="Actions">···</button>
                     <div class="ctx-menu">
@@ -111,11 +111,12 @@
                         </optgroup>
                         <optgroup label="Contacts">
                             {% for other in unified_debts %}{% if other.type == 'feuser' and other.feuser %}
-                            <option value="f{{ other.feuser.pk }}" data-kind="feuser">{{ other.display_name }}</option>
+                            <option value="f{{ other.feuser.pk }}" data-kind="feuser"{% if other.feuser.pk in info.overlaps %} data-overlap-list="overlap-{{ info.dummy.uid }}-{{ other.feuser.pk }}"{% endif %}>{{ other.display_name }}</option>
                             {% endif %}{% endfor %}
                         </optgroup>
                     </select>
                     <button type="submit" class="btn btn-sm">Merge</button>
+                    {% for contact_pk, records in info.overlaps.items %}{% include "partials/_merge_overlap_list.html" with list_scope=info.dummy.uid list_key=contact_pk %}{% endfor %}
                     <button type="button" class="btn btn-sm btn-secondary"
                             onclick="document.getElementById('merge-form-{{ info.dummy.uid }}').style.display='none';document.getElementById('ctx-wrap-{{ info.dummy.uid }}').style.display='inline-flex'">
                         Cancel
@@ -190,10 +191,11 @@
     <div class="invite-card">
         <p><strong>{{ invite.inviting_feuser.first_name }} {{ invite.inviting_feuser.last_name }}</strong> has you listed as an offline contact under the name "<strong>{{ invite.dummy.display_name }}</strong>". You're already contacts. If you accept, all expense history under that entry will be linked to your real account.</p>
         <div class="invite-actions">
-            <form method="post" action="{% url 'buddies:accept_merge' invite.token %}">
+            <form method="post" action="{% url 'buddies:accept_merge' invite.token %}"{% if invite.overlaps %} class="merge-accept-form" data-overlap-list="overlap-invite-{{ invite.token }}"{% endif %}>
                 {% csrf_token %}
                 <button type="submit" id="btn-accept-merge-{{ invite.token }}" class="btn btn-sm">Accept</button>
             </form>
+            {% if invite.overlaps %}{% include "partials/_merge_overlap_list.html" with list_scope="invite" list_key=invite.token records=invite.overlaps %}{% endif %}
             <form method="post" action="{% url 'buddies:decline_merge' invite.token %}">
                 {% csrf_token %}
                 <button type="submit" id="btn-decline-merge-{{ invite.token }}" class="btn btn-sm btn-secondary">Decline</button>

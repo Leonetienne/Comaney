@@ -466,9 +466,9 @@ class TestScheduledAssignmentGroupMemberRemoved:
 
 
 class TestScheduledAssignmentContactRemoved:
-    """Removing a contact (kick_actual) resets single-mode assignment to none."""
+    """Removing a contact (kick_actual) puts the new offline contact in the assignment."""
 
-    def test_kick_actual_resets_contact_assignment(self, driver, w, ctx):
+    def test_kick_actual_assigns_offline_contact(self, driver, w, ctx):
         ctx2 = setup_user(driver, w)
         _create_contact_link(ctx["email"], ctx2["email"])
         buddy_pk = _feuser_pk(ctx2["email"])
@@ -481,6 +481,13 @@ class TestScheduledAssignmentContactRemoved:
 
         _kick_actual_via_service(ctx["email"], ctx2["email"])
 
-        assert _scheduled_assign_mode(sched_uid) == ""
+        assert _scheduled_assign_mode(sched_uid) == "single"
+        spendings = _scheduled_spendings(sched_uid)
+        assert [s["type"] for s in spendings] == ["dummy"]
+        ghost_owner = _shell(
+            f"from buddies.models import DummyUser; "
+            f"print(DummyUser.objects.get(uid={spendings[0]['id']}).owning_feuser.email)"
+        )
+        assert ghost_owner == ctx["email"]
 
         cleanup_user(ctx2["email"])

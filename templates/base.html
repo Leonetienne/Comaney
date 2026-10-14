@@ -87,6 +87,7 @@
     <div class="cdialog-backdrop" id="cdialog-backdrop" aria-hidden="true">
         <div class="cdialog" role="dialog" aria-modal="true">
             <p class="cdialog-msg" id="cdialog-msg"></p>
+            <div class="cdialog-detail" id="cdialog-detail" hidden></div>
             <div class="cdialog-actions">
                 <button class="btn btn-danger" id="cdialog-ok">Delete</button>
                 <button class="btn btn-secondary" id="cdialog-extra" style="display:none;"></button>
@@ -246,16 +247,19 @@
 
     // Resolves with 'ok', or with 'extra' when the optional third button
     // (shown only when extraLabel is given) was clicked; rejects on cancel.
-    window.confirmDialog = function(message, okLabel, extraLabel) {
+    window.confirmDialog = function(message, okLabel, extraLabel, detail) {
         return new Promise(function(resolve, reject) {
             const backdrop = document.getElementById('cdialog-backdrop');
             const msg      = document.getElementById('cdialog-msg');
+            const detailBox = document.getElementById('cdialog-detail');
             const okBtn    = document.getElementById('cdialog-ok');
             const extraBtn = document.getElementById('cdialog-extra');
             const cancelBtn = document.getElementById('cdialog-cancel');
             const defaultOkLabel = 'Delete';
 
             msg.textContent = message;
+            detailBox.replaceChildren(...(detail ? [detail] : []));
+            detailBox.hidden = !detail;
             okBtn.textContent = okLabel || defaultOkLabel;
             extraBtn.textContent = extraLabel || '';
             extraBtn.style.display = extraLabel ? '' : 'none';
@@ -264,6 +268,8 @@
 
             function cleanup() {
                 backdrop.classList.remove('cdialog-visible');
+                detailBox.replaceChildren();
+                detailBox.hidden = true;
                 okBtn.textContent = defaultOkLabel;
                 extraBtn.style.display = 'none';
                 okBtn.removeEventListener('click', onOk);

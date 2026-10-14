@@ -197,27 +197,51 @@ class BuddyExpenseService:
     @transaction.atomic
     def clone_expense_for_feuser(source_expense, target_feuser, dummy_payer: DummyUser):
         """
-        Clone source_expense for target_feuser.
-        Result: owning_feuser=target_feuser, is_dummy=True, upfront_payee_dummy=dummy_payer.
+        Copy source_expense into target_feuser's account with dummy_payer as payer.
+        Only target_feuser's own share row is kept, so their amount and balance
+        match the source; their overlay, if any, becomes the copy's category, tags and note.
         """
+        from budget.models import ExpenseDataOverlay
+
         clone = _clone_expense_object(source_expense, target_feuser)
         clone.is_dummy = True
         clone.upfront_payee_dummy = dummy_payer
+        clone.is_buddies_settlement = source_expense.is_buddies_settlement
         clone.buddy_approved = True
+        tags = list(clone._reconciled_tags)
+        overlay = ExpenseDataOverlay.objects.filter(expense=source_expense, feuser=target_feuser).first()
+        if overlay:
+            clone.category = overlay.category
+            tags = list(overlay.tags.all())
+            if overlay.note is not None:
+                clone.note = overlay.note
         clone.save()
-        clone.tags.set(list(clone._reconciled_tags) if hasattr(clone, "_reconciled_tags") else [])
+        clone.tags.set(tags)
 
-        for bs in source_expense.buddy_spendings.all():
-            if bs.participant_feuser_id == target_feuser.pk:
-                continue
+        own_row = source_expense.buddy_spendings.filter(participant_feuser=target_feuser).first()
+        if own_row:
             BuddySpending.objects.create(
                 expense=clone,
-                participant_feuser=bs.participant_feuser,
-                participant_dummy=bs.participant_dummy,
-                share_percent=bs.share_percent,
+                participant_feuser=target_feuser,
+                share_percent=own_row.share_percent,
+                approval_state=own_row.approval_state,
+                consent_set_at=own_row.consent_set_at,
             )
-
         return clone
+
+    @staticmethod
+    def replace_feuser_with_dummy(expenses, feuser, dummy) -> None:
+        """
+        Puts dummy in feuser's place as participant in expenses and drops
+        feuser's overlays and initiated_by marks there.
+        """
+        from budget.models import ExpenseDataOverlay
+
+        BuddySpending.objects.filter(expense__in=expenses, participant_feuser=feuser).update(
+            participant_feuser=None, participant_dummy=dummy
+        )
+        ExpenseDataOverlay.objects.filter(expense__in=expenses, feuser=feuser).delete()
+        expenses.filter(initiated_by_feuser=feuser).update(initiated_by_feuser=None)
 
     @staticmethod
     @transaction.atomic

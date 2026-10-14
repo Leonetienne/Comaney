@@ -242,9 +242,9 @@ Covers:
 - `feat~accounts~1`
 
 ### Account deletion keeps contacts' history
-`req~accounts.delete.contacts~1`
+`req~accounts.delete.contacts~2`
 
-When an account is deleted, the system shall, for each contact, replace the deleted feuser by a new offline contact of that contact in all shared non-project expenses and recurring assignments, and copy the deleted feuser's shared expenses into the contact's account, so the contact's balances and history stay intact.
+When an account is deleted, the system shall treat each contact as the keeping side of a contact removal (`req~contacts.kick.history~2`), so the contact's balances and history stay intact.
 
 Covers:
 - `feat~accounts~1`

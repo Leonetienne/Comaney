@@ -195,10 +195,6 @@ class ProjectService:
             display_name=_display_name(removed_feuser),
         )
 
-        BuddySpending.objects.filter(
-            participant_feuser=removed_feuser,
-            expense__project=group,
-        ).update(participant_feuser=None, participant_dummy=ghost_dummy)
         ProjectService._replace_member_traces(group, removed_feuser, ghost_dummy, admin_feuser)
 
         target_member.delete()
@@ -234,15 +230,17 @@ class ProjectService:
     @staticmethod
     def _replace_member_traces(group, removed_feuser, ghost_dummy, admin_feuser) -> None:
         """
-        Removes every project reference to removed_feuser outside BuddySpending.
+        Puts ghost_dummy in removed_feuser's place in every project expense.
         Their expenses go to the admin with ghost_dummy as payer where they paid;
-        the admin gets a 0% row if missing, so all shares and balances stay as they were.
+        the admin as owner always holds a row, 0% if missing, so all shares and
+        balances stay as they were.
         """
         from budget.models import Expense, ExpenseDataOverlay
         from budget.services import apply_overlay
         from .expense import BuddyExpenseService
 
         project_expenses = Expense.objects.filter(project=group)
+        BuddyExpenseService.replace_feuser_with_dummy(project_expenses, removed_feuser, ghost_dummy)
         for expense in project_expenses.filter(owning_feuser=removed_feuser):
             if not expense.is_dummy:
                 expense.is_dummy = True
@@ -260,8 +258,6 @@ class ProjectService:
                 defaults={"share_percent": 0},
             )
 
-        project_expenses.filter(initiated_by_feuser=removed_feuser).update(initiated_by_feuser=None)
-        ExpenseDataOverlay.objects.filter(expense__project=group, feuser=removed_feuser).delete()
         ProjectInvite.objects.filter(group=group, inviting_feuser=removed_feuser).update(inviting_feuser=admin_feuser)
         DummyMergeInvite.objects.filter(dummy__owning_group=group).filter(
             Q(inviting_feuser=removed_feuser) | Q(invited_feuser=removed_feuser)
@@ -367,8 +363,7 @@ class ProjectService:
 
         from .archive import BuddyArchiveService
 
-        BuddyArchiveService.transfer_upfront_payer_to_feuser(dummy, admin_feuser)
-        BuddyArchiveService.transfer_dummy_participation_to_feuser(dummy, admin_feuser)
+        BuddyArchiveService.merge_dummy_into_feuser(dummy, admin_feuser)
 
         dummy_member = BuddyGroupMember.objects.filter(group=group, dummy=dummy).first()
         if dummy_member:
@@ -461,8 +456,7 @@ class ProjectService:
             return False
 
         from .archive import BuddyArchiveService
-        BuddyArchiveService.transfer_upfront_payer_to_feuser(dummy, accepting_feuser)
-        BuddyArchiveService.transfer_dummy_participation_to_feuser(dummy, accepting_feuser)
+        BuddyArchiveService.merge_dummy_into_feuser(dummy, accepting_feuser)
 
         if group:
             dummy_member = BuddyGroupMember.objects.filter(group=group, dummy=dummy).first()

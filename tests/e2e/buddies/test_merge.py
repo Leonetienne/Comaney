@@ -263,8 +263,8 @@ class TestGroupDummyMergeAccept:
 
 class TestPersonalMergeAcceptAfterUnbuddy:
     """A request is sent while A and B are buddies; they un-buddy before B
-    accepts. Accepting must fail cleanly rather than silently re-creating the
-    ContactLink A and B deliberately removed."""
+    accepts. The removal expires the request, so the link shows it as invalid
+    and the ContactLink A and B deliberately removed stays gone."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -309,10 +309,8 @@ class TestPersonalMergeAcceptAfterUnbuddy:
         _login_as(driver, ctx["b"])
         driver.get(ctx["merge_link"])
         time.sleep(1)
-        driver.find_element(By.ID, "btn-accept-merge").click()
-        time.sleep(1)
         assert "invalid or has expired" in driver.page_source, \
-            "Accepting after un-buddying must fail cleanly, not re-link them"
+            "Removing the contact expires the request, so it can no longer re-link them"
 
     def test_no_contact_link_recreated(self, driver, w, ctx):
         count = _shell(
@@ -339,8 +337,8 @@ class TestPersonalMergeAcceptAfterUnbuddy:
 
 class TestProjectMergeAcceptAfterLeave:
     """Admin sends a merge request for a group dummy to member M; M leaves the
-    project before accepting. Accepting must fail cleanly rather than
-    re-adding M as a member of a project they left."""
+    project before accepting. Leaving expires the request, so the link shows it
+    as invalid and M is never re-added to a project they left."""
 
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
@@ -390,10 +388,8 @@ class TestProjectMergeAcceptAfterLeave:
         _login_as(driver, ctx["m"])
         driver.get(ctx["merge_link"])
         time.sleep(1)
-        driver.find_element(By.ID, "btn-accept-merge").click()
-        time.sleep(1)
         assert "invalid or has expired" in driver.page_source, \
-            "Accepting after leaving the project must fail cleanly, not re-add M"
+            "Leaving the project expires the request, so it can no longer re-add M"
 
     def test_m_not_readded_as_member(self, driver, w, ctx):
         count = _shell(

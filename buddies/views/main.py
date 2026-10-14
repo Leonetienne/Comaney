@@ -46,10 +46,18 @@ def index(request):
 def contacts_page(request):
     feuser = request.feuser
     unified_debts = BuddyQueryService.get_all_debts_unified(feuser)
+    overlaps = BuddyQueryService.offline_record_overlaps(
+        feuser, [info["feuser"] for info in unified_debts if info["feuser"]]
+    )
+    for info in unified_debts:
+        if info["dummy"]:
+            info["overlaps"] = overlaps.get(info["dummy"].pk, {})
     pending_in = BuddyQueryService.pending_invites_incoming(feuser)
     pending_out = BuddyQueryService.pending_invites_outgoing(feuser)
     pending_onboarding_out = BuddyQueryService.pending_onboarding_invites_outgoing(feuser)
-    merge_in = BuddyQueryService.pending_merge_invites_incoming(feuser)
+    merge_in = list(BuddyQueryService.pending_merge_invites_incoming(feuser))
+    for invite in merge_in:
+        invite.overlaps = BuddyQueryService.merge_invite_overlaps(invite)
     merge_out = BuddyQueryService.pending_merge_invites_outgoing(feuser)
     group_invites_in = BuddyQueryService.pending_group_invites_incoming(feuser)
 
