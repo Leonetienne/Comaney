@@ -155,6 +155,7 @@ Changing how often a template repeats (`repeat_every_factor`, `repeat_every_unit
 |---|---|---|
 | Everything waiting for your decision | GET | `/api/v2/pending/` |
 | Approve or reject a pending item | POST | `/api/v2/pending/decide/` |
+| List recorded settlements | GET | `/api/v2/settlements/` |
 | Record a settlement | POST | `/api/v2/settlements/` |
 
 ## Catalog Partnership

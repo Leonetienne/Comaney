@@ -6,6 +6,7 @@ from django.forms.models import model_to_dict
 
 from budget.date_utils import current_financial_month, financial_month_range, financial_year_range, year_in_range
 from budget.expense_service import parse_assignment
+from buddies.models import DummyUser
 from feusers.templatetags.feuser_tags import avatar_color
 
 from ..registry import OpError
@@ -196,6 +197,15 @@ def feuser_json(fu) -> dict:
 
 def dummy_json(du) -> dict:
     return {"type": "offline", "id": du.pk, "name": du.display_name}
+
+
+def person_ref(person) -> dict | None:
+    """A FeUser or DummyUser as {type, id, name}, the shape person arguments take."""
+    if person is None:
+        return None
+    if isinstance(person, DummyUser):
+        return dummy_json(person)
+    return {"type": "feuser", "id": person.pk, "name": person_name(person)}
 
 
 def ref_json(obj):

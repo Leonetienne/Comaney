@@ -276,9 +276,9 @@ Covers:
 - `feat~api~1`
 
 ### Settlements
-`req~api.settlements~1`
+`req~api.settlements~2`
 
-The system shall record a settlement with a contact or between two project members, and let a project admin clear all open debts of a project at once, with the same checks and notifications as the settle-up forms.
+The system shall list recorded settlements (amount, date, payer, recipient, project, pending or confirmed) of a project, or those the feuser paid or received, optionally filtered by person and status, record a settlement with a contact or between two project members, and let a project admin clear all open debts of a project at once, with the same checks and notifications as the settle-up forms.
 
 Covers:
 - `feat~api~1`

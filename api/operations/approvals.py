@@ -1,13 +1,13 @@
 from django.utils import timezone
 
 from budget.models import Expense
-from buddies.models import BuddySpending, CatalogPartnershipInvite, Project
+from buddies.models import BuddySpending, CatalogPartnershipInvite, DummyUser, Project
 from buddies.services import BuddyQueryService, approvals, settlement_actions
 from buddies.services.approvals import ApprovalError
 from buddies.services.partnership_actions import OPEN_STATUSES
 from buddies.services.settlement_actions import SettlementError
 
-from .common import ID, MONEY, person_name
+from .common import ID, MONEY, person_name, person_ref
 from .contacts import _PERSON, person_key
 from .projects import member_project
 from ..registry import READ, WRITE, OpError, operation
@@ -125,6 +125,50 @@ def approvals_decide(ctx, args):
             raise OpError("'project_id' is required for kind=admin.")
         _run(lambda: (approvals.admin_confirm if approve else approvals.admin_reject)(feuser, args["project_id"], eid))
     return {"kind": kind, "expense_id": eid, "approved": approve}
+
+
+def _person_key_of(person) -> str | None:
+    if person is None:
+        return None
+    return ("d" if isinstance(person, DummyUser) else "f") + str(person.pk)
+
+
+@operation(
+    "settlements_list", concern="approvals", access=READ, method="GET", path="settlements/",
+    description=(
+        "Recorded settlements, newest first. With project_id: every settlement in that project. Without: "
+        "every settlement the feuser paid or received, with contacts and in projects. payer paid recipient; "
+        "status pending means the recipient has not confirmed receipt yet and the debt still stands."
+    ),
+    params={
+        "project_id": ID,
+        "person_type": {"type": "string", "enum": ["feuser", "offline"], "description": "With person_id: only settlements this person paid or received."},
+        "person_id": ID,
+        "status": {"type": "string", "enum": ["pending", "confirmed"]},
+    },
+)
+def settlements_list(ctx, args):
+    feuser = ctx.feuser
+    project = member_project(feuser, args["project_id"]) if args.get("project_id") else None
+    wanted = None
+    if args.get("person_type") or args.get("person_id"):
+        wanted = person_key({"type": args.get("person_type"), "id": args.get("person_id")})
+    status = args.get("status")
+    rows = []
+    for e in BuddyQueryService.settlements_visible_to(feuser, project):
+        payer, recipient = BuddyQueryService.settlement_parties(e)
+        if wanted and wanted not in (_person_key_of(payer), _person_key_of(recipient)):
+            continue
+        row_status = "confirmed" if e.buddy_approved else "pending"
+        if status and status != row_status:
+            continue
+        rows.append({
+            "id": e.uid, "amount": str(e.value),
+            "date": e.date_due.isoformat() if e.date_due else None,
+            "payer": person_ref(payer), "recipient": person_ref(recipient), "status": row_status,
+            "project": {"id": e.project.uid, "name": e.project.name} if e.project_id else None,
+        })
+    return {"currency": feuser.currency, "settlements": rows}
 
 
 @operation(

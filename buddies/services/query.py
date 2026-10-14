@@ -473,6 +473,38 @@ class BuddyQueryService:
         }
 
     @staticmethod
+    def settlements_visible_to(feuser, project=None):
+        """
+        Settlement expenses feuser may read: every settlement of `project` (feuser
+        must be a member), or without a project every settlement feuser paid,
+        received, or recorded with an own offline contact. Newest first.
+        """
+        from budget.models import Expense
+
+        qs = Expense.objects.filter(is_buddies_settlement=True)
+        if project is not None:
+            qs = qs.filter(project=project)
+        else:
+            qs = qs.filter(
+                Q(owning_feuser=feuser, is_dummy=False)
+                | Q(owning_feuser=feuser, project__isnull=True)
+                | Q(buddy_spendings__participant_feuser=feuser)
+            ).distinct()
+        return (
+            qs.select_related("owning_feuser", "upfront_payee_dummy", "project")
+            .prefetch_related("buddy_spendings__participant_feuser", "buddy_spendings__participant_dummy")
+            .order_by("-date_due", "-date_created")
+        )
+
+    @staticmethod
+    def settlement_parties(settlement) -> tuple:
+        """(payer, recipient) of a settlement expense, each a FeUser or DummyUser."""
+        payer = settlement.upfront_payee_dummy if settlement.is_dummy and settlement.upfront_payee_dummy_id else settlement.owning_feuser
+        share = next(iter(settlement.buddy_spendings.all()), None)
+        recipient = (share.participant_feuser or share.participant_dummy) if share else None
+        return payer, recipient
+
+    @staticmethod
     def get_all_debts_unified(feuser) -> list:
         """
         Unified debt list across contacts and groups.
