@@ -182,9 +182,9 @@ Covers:
 - `feat~projects~1`
 
 ### Remove real member
-`req~projects.remove-member~1`
+`req~projects.remove-member~2`
 
-When the admin removes a real member, the system shall revoke their access and replace them with an offline member of the same name in all project expenses.
+When the admin removes a real member via "Remove, keep offline" in the member's menu, the system shall revoke their access and replace them with an offline member of the same name in all project expenses.
 
 Covers:
 - `feat~projects~1`

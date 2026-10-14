@@ -126,6 +126,14 @@ Tags: Security
 
 ## Removing a real contact
 
+### Remove action
+`req~contacts.kick.action~1`
+
+The menu of a real contact shall offer removing the contact as "Remove, keep offline".
+
+Covers:
+- `feat~contacts~1`
+
 ### Debt warning
 `req~contacts.kick.debt-warning~1`
 
