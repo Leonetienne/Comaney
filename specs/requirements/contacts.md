@@ -142,6 +142,14 @@ When a real contact link is removed, the system shall replace each side by a new
 Covers:
 - `feat~contacts~1`
 
+### Invitations on removal
+`req~contacts.kick.invites~1`
+
+When a real contact link is removed, the system shall delete every pending project invitation, pending partnership invitation and offline contact merge request between the two feusers, in both directions.
+
+Covers:
+- `feat~contacts~1`
+
 ## Auto-accept trust
 
 ### Trust toggle

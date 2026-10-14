@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 
 from ..models import (
     Project,
@@ -198,6 +199,7 @@ class ProjectService:
             participant_feuser=removed_feuser,
             expense__project=group,
         ).update(participant_feuser=None, participant_dummy=ghost_dummy)
+        ProjectService._replace_member_traces(group, removed_feuser, ghost_dummy, admin_feuser)
 
         target_member.delete()
         group.update_lastmod()
@@ -228,6 +230,42 @@ class ProjectService:
             )
 
         return ghost_dummy
+
+    @staticmethod
+    def _replace_member_traces(group, removed_feuser, ghost_dummy, admin_feuser) -> None:
+        """
+        Removes every project reference to removed_feuser outside BuddySpending.
+        Their expenses go to the admin with ghost_dummy as payer where they paid;
+        the admin gets a 0% row if missing, so all shares and balances stay as they were.
+        """
+        from budget.models import Expense, ExpenseDataOverlay
+        from budget.services import apply_overlay
+        from .expense import BuddyExpenseService
+
+        project_expenses = Expense.objects.filter(project=group)
+        for expense in project_expenses.filter(owning_feuser=removed_feuser):
+            if not expense.is_dummy:
+                expense.is_dummy = True
+                expense.upfront_payee_dummy = ghost_dummy
+            expense.owning_feuser = admin_feuser
+            expense.source_scheduled = None
+            overlay = ExpenseDataOverlay.objects.filter(expense=expense, feuser=admin_feuser).first()
+            if overlay:
+                apply_overlay(overlay, expense)
+            else:
+                BuddyExpenseService.reconcile_categories_tags(expense, admin_feuser)
+            expense.save()
+            BuddySpending.objects.get_or_create(
+                expense=expense, participant_feuser=admin_feuser,
+                defaults={"share_percent": 0},
+            )
+
+        project_expenses.filter(initiated_by_feuser=removed_feuser).update(initiated_by_feuser=None)
+        ExpenseDataOverlay.objects.filter(expense__project=group, feuser=removed_feuser).delete()
+        ProjectInvite.objects.filter(group=group, inviting_feuser=removed_feuser).update(inviting_feuser=admin_feuser)
+        DummyMergeInvite.objects.filter(dummy__owning_group=group).filter(
+            Q(inviting_feuser=removed_feuser) | Q(invited_feuser=removed_feuser)
+        ).delete()
 
     @staticmethod
     @transaction.atomic

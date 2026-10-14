@@ -137,7 +137,7 @@ Each option only appears when it applies. For example, **Invite as contact** dis
 
 Admin only. On the project page, click **Remove** next to the member's name.
 
-- When you remove a real user, they lose access to the project. A read-only offline entry with their name is kept so that past expenses still reference them correctly.
+- When you remove a real user, they lose access to the project. A read-only offline entry with their name is kept so that past expenses still reference them correctly. Expenses they paid show the offline entry as payer and move to the admin, so the admin can still edit them.
 - When you remove an offline member, their shared expense history moves to **Achim Archive** rather than being deleted. See [Achim Archive](contacts/achim-archive.md) for details.
 
 !!! note

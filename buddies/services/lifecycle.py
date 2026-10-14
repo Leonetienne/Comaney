@@ -232,6 +232,25 @@ class BuddyLifecycleService:
         return "ok"
 
     @staticmethod
+    def _expire_invites_between(a, b) -> None:
+        """Deletes pending project, partnership and offline contact merge invites between a and b."""
+        from django.db.models import Q
+        from ..models import CatalogPartnershipInvite, ProjectInvite
+
+        sent_to_other = Q(inviting_feuser=a, invitee_email__iexact=b.email) | Q(
+            inviting_feuser=b, invitee_email__iexact=a.email
+        )
+        ProjectInvite.objects.filter(sent_to_other).delete()
+        CatalogPartnershipInvite.objects.filter(
+            Q(inviter=a, invitee_email__iexact=b.email) | Q(inviter=b, invitee_email__iexact=a.email),
+            status=CatalogPartnershipInvite.STATUS_PENDING,
+        ).delete()
+        DummyMergeInvite.objects.filter(
+            Q(inviting_feuser=a, invited_feuser=b) | Q(inviting_feuser=b, invited_feuser=a),
+            dummy__owning_group__isnull=True,
+        ).delete()
+
+    @staticmethod
     @transaction.atomic
     def kick_actual(feuser, other_feuser, has_debt_warning_accepted: bool = False) -> dict:
         from budget.models import Expense
@@ -280,6 +299,7 @@ class BuddyLifecycleService:
             )
         )
 
+        BuddyLifecycleService._expire_invites_between(feuser, other_feuser)
         link.delete()
         BuddyEmailService.send_kicked_notification(
             kicked_feuser=other_feuser,
