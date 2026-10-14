@@ -14,9 +14,9 @@ Covers:
 - `feat~api~1`
 
 ### Bearer authentication
-`req~api.auth~1`
+`req~api.auth~2`
 
-The system shall authenticate API requests by `Authorization: Bearer <api key>` and answer 401 with an error message if the key is missing or unknown.
+The system shall authenticate API requests by `Authorization: Bearer <api key>` and answer 401 with an error message if the key is missing or unknown, or belongs to an inactive or demo account.
 
 Covers:
 - `feat~api~1`

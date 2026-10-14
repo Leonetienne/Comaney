@@ -122,9 +122,9 @@ Covers:
 Tags: Security
 
 ### Demo restriction
-`req~mcp.keys.demo~1`
+`req~mcp.keys.demo~2`
 
-If a demo user requests an agent key, then the system shall refuse it; the card shows the create button disabled.
+If a demo user creates, restricts or revokes an agent key, then the system shall refuse it; the card shows the create button disabled.
 
 Covers:
 - `feat~mcp~1`

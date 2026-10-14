@@ -60,6 +60,13 @@ class TestEnforcement:
         assert "Expenses write" in r.json()["error"]
         assert len(api_get("/api/v2/expenses/", ctx).json()["expenses"]) == before
 
+    def test_demo_account_key_is_refused(self, ctx):
+        _shell(f"from feusers.models import FeUser; FeUser.objects.filter(email='{ctx['email']}').update(is_demo=True)")
+        try:
+            assert api_get("/api/v2/expenses/", ctx).status_code == 401
+        finally:
+            _shell(f"from feusers.models import FeUser; FeUser.objects.filter(email='{ctx['email']}').update(is_demo=False)")
+
     def test_browser_session_keeps_full_access(self, driver, ctx):
         r = requests.get(f"{BASE_URL}/api/v2/projects/", cookies=session_cookies(driver), timeout=10)
         assert r.status_code == 200

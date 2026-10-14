@@ -14,6 +14,9 @@ Everything the API does behaves exactly like the website: sharing an expense not
 
 To revoke a key, click **Revoke**. Any app using the old key stops working immediately.
 
+!!! note
+    API keys are not available on demo accounts.
+
 ## Restricting the API key
 
 A new key may do everything. Click **Restrict** next to the key to choose, per area, whether apps using it may only **read** or also **write** (change, create, delete). Write always includes read. The areas are the same as for [AI assistants](ai-assistants.md#restricting-what-an-assistant-may-do) and match the sections below. A request the key may not make is answered with `403` and changes nothing. Revoking the key and generating a new one keeps its permissions.

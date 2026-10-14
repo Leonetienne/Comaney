@@ -622,6 +622,8 @@ def api_key_revoke(request):
     user = _get_session_feuser(request)
     if not user:
         return redirect("login")
+    if user.is_demo:
+        return redirect("profile")
     user.revoke_api_key()
     user.last_mod = timezone.now()
     user.save(update_fields=["api_key", "last_mod"])

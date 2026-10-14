@@ -13,7 +13,7 @@ def get_api_user(request):
         token = auth[7:].strip()
         if token:
             try:
-                return FeUser.objects.get(api_key=token, is_active=True)
+                return FeUser.objects.get(api_key=token, is_active=True, is_demo=False)
             except FeUser.DoesNotExist:
                 return None
 

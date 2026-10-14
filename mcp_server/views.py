@@ -1,4 +1,6 @@
 """Agent key management on the profile page."""
+from functools import wraps
+
 from django.conf import settings
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
@@ -18,6 +20,15 @@ def _back():
     return redirect(reverse("profile") + "#section-agent-keys")
 
 
+def _no_demo(view):
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if request.feuser.is_demo:
+            return _back()
+        return view(request, *args, **kwargs)
+    return wrapped
+
+
 def profile_context(request, feuser) -> dict:
     """Template context for the profile's agent key card; the fresh secret shows exactly once."""
     keys = list(AgentKey.objects.filter(feuser=feuser))
@@ -34,10 +45,9 @@ def profile_context(request, feuser) -> dict:
 
 @feuser_required
 @require_POST
+@_no_demo
 def agent_key_create(request):
     feuser = request.feuser
-    if feuser.is_demo:
-        return _back()
     label = request.POST.get("label", "").strip()[:LABEL_MAX_LENGTH] or "Agent"
     key, raw = AgentKey.create(feuser, label)
     request.session[_FLASH_KEY] = {"id": key.pk, "secret": raw}
@@ -46,6 +56,7 @@ def agent_key_create(request):
 
 @feuser_required
 @require_POST
+@_no_demo
 def agent_key_permissions(request, uid):
     key = get_object_or_404(AgentKey, uid=uid, feuser=request.feuser)
     key.permissions = permissions.from_form(request.POST, CONCERNS)
@@ -56,6 +67,7 @@ def agent_key_permissions(request, uid):
 
 @feuser_required
 @require_POST
+@_no_demo
 def agent_key_revoke(request, uid):
     key = get_object_or_404(AgentKey, uid=uid, feuser=request.feuser)
     label = key.label

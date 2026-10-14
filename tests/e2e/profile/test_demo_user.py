@@ -284,6 +284,14 @@ class TestDemoUserUIRestrictions:
         btns = driver.find_elements(By.XPATH, "//button[@disabled and contains(., 'Generate API key')]")
         assert btns, "Expected disabled 'Generate API key' button for demo user"
 
+    def test_profile_agent_key_section_disabled(self, driver, w, demo_ctx):
+        driver.get(_url("/profile/"))
+        time.sleep(1)
+        card = driver.find_element(By.ID, "section-agent-keys")
+        btns = card.find_elements(By.XPATH, ".//button[@disabled and contains(., 'Create agent key')]")
+        assert btns, "Expected disabled 'Create agent key' button for demo user"
+        assert "Not available on demo accounts." in card.text
+
     def test_profile_ai_section_disabled(self, driver, w, demo_ctx):
         driver.get(_url("/profile/"))
         time.sleep(1)
@@ -355,6 +363,18 @@ class TestDemoUserServerEnforcement:
             f"print(FeUser.objects.get(email='{demo_ctx['email']}').api_key)"
         )
         assert api_key in ("None", ""), f"Demo user got a REST API key: {api_key}"
+
+    def test_cannot_create_agent_key(self, demo_ctx):
+        s = _http_session(demo_ctx["email"], demo_ctx["password"])
+        csrf = _get_csrf(s, "/profile/")
+        s.post(_url("/agent-keys/"), data={
+            "csrfmiddlewaretoken": csrf, "label": "Demo",
+        }, allow_redirects=True, timeout=10)
+        count = _shell(
+            f"from mcp_server.models import AgentKey; "
+            f"print(AgentKey.objects.filter(feuser__email='{demo_ctx['email']}').count())"
+        )
+        assert count == "0", f"Demo user got an agent key: {count}"
 
     def test_cannot_invite_buddy(self, demo_ctx):
         s = _http_session(demo_ctx["email"], demo_ctx["password"])
