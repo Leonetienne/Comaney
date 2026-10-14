@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "budget",
     "buddies",
     "mcp_server",
+    "api",
 ]
 
 MIDDLEWARE = [
