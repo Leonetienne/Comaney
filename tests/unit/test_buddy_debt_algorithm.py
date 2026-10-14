@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pytest
 
-from buddies.debt_utils import simplify_balances
+from buddies.debt_utils import net_expense_flows, simplify_balances
 
 D = Decimal
 
@@ -193,3 +193,21 @@ class TestSimplifyBalancesConservation:
             "C": D("-45"),
             "D": D("-35"),
         })
+
+
+class TestNetExpenseFlows:
+
+    def test_opposite_flows_cancel_and_payer_own_share_is_ignored(self):
+        expenses = [
+            {"payer_key": "a", "participant_shares": [{"key": "b", "amount": D("30")}, {"key": "a", "amount": D("5")}]},
+            {"payer_key": "b", "participant_shares": [{"key": "a", "amount": D("10")}]},
+            {"payer_key": "c", "participant_shares": [{"key": "a", "amount": D("4")}]},
+        ]
+        assert sorted(net_expense_flows(expenses)) == [("a", "c", D("4")), ("b", "a", D("20"))]
+
+    def test_fully_cancelled_pair_disappears(self):
+        expenses = [
+            {"payer_key": "a", "participant_shares": [{"key": "b", "amount": D("7")}]},
+            {"payer_key": "b", "participant_shares": [{"key": "a", "amount": D("7")}]},
+        ]
+        assert net_expense_flows(expenses) == []

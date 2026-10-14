@@ -252,9 +252,9 @@ Covers:
 - `feat~api~1`
 
 ### Projects
-`req~api.projects~1`
+`req~api.projects~2`
 
-The system shall offer listing projects with the feuser's balance, project details with members and simplified debts, creating, editing, archiving and deleting (with the project name as confirmation), inviting by email or contact, withdrawing and answering invitations, adding, renaming and removing members, transferring admin rights, leaving, and unlinking or deleting project expenses, with the same permission checks as the project pages.
+The system shall offer listing projects with the feuser's balance, project details with members and simplified debts, a project overview with all members including offline ones, every expense and settlement with payer and each member's share, every member's balance, the netted expense flows and the fewest settling payments, independent of period and sharing mode, creating, editing, archiving and deleting (with the project name as confirmation), inviting by email or contact, withdrawing and answering invitations, adding, renaming and removing members, transferring admin rights, leaving, and unlinking or deleting project expenses, with the same permission checks as the project pages.
 
 Covers:
 - `feat~api~1`

@@ -371,31 +371,7 @@ def project_insights(request, project_id):
     ctx = _project_common_context(feuser, project, active_tab="insights")
     breakdown = ctx["breakdown"]
 
-    raw_flows: dict = {}
-    for exp_data in breakdown["expenses"]:
-        if not exp_data["expense"].buddy_approved:
-            continue
-        pk = exp_data["payer_key"]
-        for share in exp_data["participant_shares"]:
-            edge = (share["key"], pk)
-            raw_flows[edge] = raw_flows.get(edge, Decimal("0")) + share["amount"]
-
-    netted_flows: dict = {}
-    for (frm, to), amount in raw_flows.items():
-        if frm == to:
-            continue
-        if (to, frm) in netted_flows:
-            opposite = netted_flows[(to, frm)]
-            if amount > opposite:
-                del netted_flows[(to, frm)]
-                netted_flows[(frm, to)] = amount - opposite
-            elif amount < opposite:
-                netted_flows[(to, frm)] = opposite - amount
-            else:
-                del netted_flows[(to, frm)]
-        else:
-            netted_flows[(frm, to)] = amount
-    raw_flows = netted_flows
+    raw_flows = BuddyQueryService.project_expense_flows(breakdown)
 
     graph_nodes = []
     for k, v in breakdown["member_map"].items():
@@ -412,11 +388,7 @@ def project_insights(request, project_id):
 
     raw_graph_json = safe_json({
         "nodes": graph_nodes,
-        "links": [
-            {"from": f, "to": t, "amount": float(a)}
-            for (f, t), a in raw_flows.items()
-            if a > Decimal("0.005") and f != t
-        ],
+        "links": [{"from": f, "to": t, "amount": float(a)} for f, t, a in raw_flows],
     })
 
     simplified_graph_json = safe_json({

@@ -64,3 +64,30 @@ def compute_net_member_spending(expenses: list) -> dict:
             pk = exp["payer_key"]
             spending[pk] = spending.get(pk, Decimal("0")) + exp["total"]
     return spending
+
+
+def net_expense_flows(expenses: list) -> list:
+    """
+    Pairwise expense flows behind the project's "Expense flows" graph: every
+    participant share points from the participant to the payer, and opposite
+    flows between the same two people cancel out.
+
+    expenses: list of dicts with payer_key and participant_shares
+              ([{"key": str, "amount": Decimal-compatible}]), approved ones only.
+
+    Returns a list of (from_key, to_key, Decimal amount) with amount > 0.005.
+    """
+    flows: dict = {}
+    for exp in expenses:
+        to = exp["payer_key"]
+        for share in exp["participant_shares"]:
+            frm = share["key"]
+            if frm == to:
+                continue
+            amount = Decimal(str(share["amount"]))
+            opposite = flows.pop((to, frm), Decimal("0"))
+            if opposite > amount:
+                flows[(to, frm)] = opposite - amount
+            else:
+                flows[(frm, to)] = flows.get((frm, to), Decimal("0")) + amount - opposite
+    return [(f, t, a) for (f, t), a in flows.items() if a > Decimal("0.005")]

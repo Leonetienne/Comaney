@@ -6,7 +6,7 @@ from django.db.models import Q
 
 from feusers.templatetags.feuser_tags import avatar_color as _avatar_color
 
-from ..debt_utils import simplify_balances
+from ..debt_utils import net_expense_flows, simplify_balances
 from ..models import (
     Project,
     ProjectInvite,
@@ -471,6 +471,11 @@ class BuddyQueryService:
             "simplified": simplified,
             "member_map": member_map,
         }
+
+    @staticmethod
+    def project_expense_flows(breakdown) -> list:
+        """Netted (from_key, to_key, amount) flows of the approved expenses in a full breakdown."""
+        return net_expense_flows([e for e in breakdown["expenses"] if e["expense"].buddy_approved])
 
     @staticmethod
     def settlements_visible_to(feuser, project=None):

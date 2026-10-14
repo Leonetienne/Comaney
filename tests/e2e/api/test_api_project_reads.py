@@ -1,4 +1,5 @@
 """
+projects_overview returns the whole project as the project pages show it, and
 settlements_list reads back recorded settlements with their status.
 Run with: pytest -v tests/e2e/api/test_api_project_reads.py | tee logfile.log
 """
@@ -34,6 +35,29 @@ print(d.pk)
     cleanup_user(bea["email"])
 
 
+def _pairs(rows):
+    return sorted((r["from"]["name"], r["to"]["name"], r["amount"]) for r in rows)
+
+
+def test_overview_has_every_member_share_and_balance(project):
+    resp = api("GET", f"/api/v2/projects/{project['gid']}/overview/", project["admin"])
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+
+    balances = {m["name"]: m["balance"] for m in data["members"]}
+    assert balances == {"Admin Overview": "-20.00", "Bea Overview": "70.00", "Gernot": "-50.00"}
+
+    [expense] = data["expenses"]
+    assert expense["payer"]["name"] == "Bea Overview"
+    assert expense["payer_share"] == {"amount": "30.00", "percent": 30.0}
+    assert sorted((s["person"]["name"], s["amount"]) for s in expense["shares"]) == [
+        ("Admin Overview", "20.00"), ("Gernot", "50.00"),
+    ]
+    assert data["total_spending"] == "100.00"
+    assert _pairs(data["settle_up"]) == [("Admin Overview", "Bea Overview", "20.00"), ("Gernot", "Bea Overview", "50.00")]
+    assert _pairs(data["expense_flows"]) == _pairs(data["settle_up"])
+
+
 def test_settlements_list_shows_pending_then_confirmed(project):
     resp = api_post("/api/v2/settlements/", project["admin"], {
         "project_id": project["gid"], "creditor": {"type": "feuser", "id": project["bea_id"]}, "amount": "20",
@@ -59,3 +83,6 @@ def test_settlements_list_shows_pending_then_confirmed(project):
         "person_type": "offline", "person_id": project["gernot_id"],
     }).json()["settlements"]
     assert from_gernot == []
+
+    overview = api("GET", f"/api/v2/projects/{project['gid']}/overview/", project["admin"]).json()
+    assert _pairs(overview["settle_up"]) == [("Gernot", "Bea Overview", "50.00")]

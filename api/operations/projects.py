@@ -1,13 +1,13 @@
 from decimal import Decimal
 
-from buddies.models import DummyUser, Project, ProjectInvite, ProjectMember
+from buddies.models import BuddySpending, DummyUser, Project, ProjectInvite, ProjectMember
 from buddies.models.project import PERMISSION_LAXITY_ADMIN_ONLY, PERMISSION_LAXITY_MEMBERS
 from buddies.services import BuddyQueryService, ProjectService, approvals, project_actions
 from buddies.services.approvals import ApprovalError
 from buddies.services.project_actions import ProjectError
 from feusers.models import FeUser
 
-from .common import ID, person_name
+from .common import ID, person_name, person_ref
 from ..registry import READ, WRITE, NotFound, OpError, operation
 
 _LAXITY = {"admin_only": PERMISSION_LAXITY_ADMIN_ONLY, "members": PERMISSION_LAXITY_MEMBERS}
@@ -89,7 +89,8 @@ def projects_list(ctx, args):
     "projects_get", concern="projects", access=READ, method="GET", path="projects/<int:id>/",
     description=(
         "A project with members, settings, the feuser's simplified debts in it (positive: that person owes "
-        "the feuser) and, for the admin, open invitations. Its expenses: expenses_list with q=project=<name>."
+        "the feuser) and, for the admin, open invitations. All expenses, shares and balances between all "
+        "members: projects_overview."
     ),
     params={"id": ID}, required=["id"],
 )
@@ -117,6 +118,89 @@ def projects_get(ctx, args):
             {"id": inv.pk, "email": inv.invitee_email} for inv in BuddyQueryService.pending_group_invites_for_group(project)
         ]
     return data
+
+
+_APPROVAL_NAMES = {
+    BuddySpending.APPROVAL_NEUTRAL: "pending",
+    BuddySpending.APPROVAL_APPROVED: "approved",
+    BuddySpending.APPROVAL_REJECTED: "rejected",
+}
+
+
+def _key_person(key, member_map):
+    """A breakdown key ("f<id>"/"d<id>") as {type, id, name}."""
+    obj = member_map.get(key, {}).get("user_obj")
+    if obj is not None:
+        return person_ref(obj)
+    return {"type": "feuser" if key[0] == "f" else "offline", "id": int(key[1:]), "name": "Unknown"}
+
+
+def _overview_expense(row, member_map):
+    e = row["expense"]
+    return {
+        "id": e.uid, "title": e.title, "value": _money(e.value),
+        "date_due": e.date_due.isoformat() if e.date_due else None,
+        "is_settlement": e.is_buddies_settlement,
+        "approved": e.buddy_approved,
+        "payer": _key_person(row["payer_key"], member_map),
+        "payer_share": {"amount": _money(row["payer_amount"]), "percent": float(row["payer_percent"])},
+        "shares": [
+            {
+                "person": _key_person(share["key"], member_map),
+                "amount": _money(share["amount"]), "percent": float(share["percent"]),
+                "approval": None if e.is_buddies_settlement else _APPROVAL_NAMES.get(share["approval_state"]),
+            }
+            for share in row["participant_shares"]
+        ],
+    }
+
+
+@operation(
+    "projects_overview", concern="projects", access=READ, method="GET", path="projects/<int:id>/overview/",
+    description=(
+        "Everything the project pages show, independent of period and sharing mode: all members including "
+        "offline ones with their balance (positive: others owe them), every expense and settlement with payer "
+        "and each member's share, the expense flows between members (opposite flows cancelled) and the fewest "
+        "payments that settle everyone. Only approved entries count towards balances, flows and total_spending. "
+        "approval is a participant's consent; a settlement's status is its approved flag."
+    ),
+    params={"id": ID}, required=["id"],
+)
+def projects_overview(ctx, args):
+    feuser = ctx.feuser
+    project = member_project(feuser, args["id"])
+    breakdown = BuddyQueryService.get_group_full_breakdown(feuser, project)
+    member_map = breakdown["member_map"]
+    balances = {b["key"]: b["net"] for b in breakdown["balances"]}
+    members = []
+    for m in project.members.select_related("feuser", "dummy").all():
+        key = f"f{m.feuser_id}" if m.feuser_id else f"d{m.dummy_id}"
+        members.append({
+            **_member_json(m, project),
+            "is_me": m.feuser_id == feuser.pk,
+            "balance": _money(balances.get(key, 0)),
+        })
+    approved_spending = sum(
+        (r["expense"].value for r in breakdown["expenses"]
+         if r["expense"].buddy_approved and not r["expense"].is_buddies_settlement),
+        Decimal("0"),
+    )
+    return {
+        **_project_json(feuser, project),
+        "currency": feuser.currency,
+        "total_spending": _money(approved_spending),
+        "members": members,
+        "expenses": [_overview_expense(r, member_map) for r in breakdown["expenses"]],
+        "expense_flows": [
+            {"from": _key_person(f, member_map), "to": _key_person(t, member_map), "amount": _money(a)}
+            for f, t, a in BuddyQueryService.project_expense_flows(breakdown)
+        ],
+        "settle_up": [
+            {"from": _key_person(t["from_key"], member_map), "to": _key_person(t["to_key"], member_map),
+             "amount": _money(t["amount"])}
+            for t in breakdown["simplified"]
+        ],
+    }
 
 
 @operation(

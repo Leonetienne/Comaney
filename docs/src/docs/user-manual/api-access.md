@@ -120,6 +120,7 @@ Changing how often a template repeats (`repeat_every_factor`, `repeat_every_unit
 |---|---|---|
 | List projects | GET | `/api/v2/projects/` |
 | Get a project with members and balances | GET | `/api/v2/projects/<id>/` |
+| Whole project: every expense with shares, balances between all members | GET | `/api/v2/projects/<id>/overview/` |
 | Create a project | POST | `/api/v2/projects/` |
 | Change a project | PATCH | `/api/v2/projects/<id>/` |
 | Delete a project (send `confirm_name`) | DELETE | `/api/v2/projects/<id>/` |

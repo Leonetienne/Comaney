@@ -1300,7 +1300,29 @@
                 ""
               ]
             },
-            "description": "A project with members, settings, the feuser's simplified debts in it (positive: that person owes the feuser) and, for the admin, open invitations. Its expenses: expenses_list with q=project=<name>."
+            "description": "A project with members, settings, the feuser's simplified debts in it (positive: that person owes the feuser) and, for the admin, open invitations. All expenses, shares and balances between all members: projects_overview."
+          }
+        },
+        {
+          "name": "Projects overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v2/projects/{{id}}/overview/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "projects",
+                "{{id}}",
+                "overview",
+                ""
+              ]
+            },
+            "description": "Everything the project pages show, independent of period and sharing mode: all members including offline ones with their balance (positive: others owe them), every expense and settlement with payer and each member's share, the expense flows between members (opposite flows cancelled) and the fewest payments that settle everyone. Only approved entries count towards balances, flows and total_spending. approval is a participant's consent; a settlement's status is its approved flag."
           }
         },
         {
