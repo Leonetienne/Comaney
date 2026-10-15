@@ -43,6 +43,12 @@ The **modular dashboard** lets you build your own overview from scratch: spend-b
 
 ![image](https://raw.githubusercontent.com/Leonetienne/Comaney/refs/heads/master/github-assets/teasers/expense-list.png)
 
+### Know what something really cost
+
+How much did the bathroom renovation cost in the end? Put every expense that belongs to it (tiles, plumber, paint, the rented tile cutter) into a **project** and Comaney adds it all up for you, no matter how many months it took. Projects don't need anyone else: they're a place to collect everything that belongs to one undertaking, alongside your normal monthly budget. See [Projects](#projects-group-and-organize-your-expenses) below.
+
+![image](https://raw.githubusercontent.com/Leonetienne/Comaney/refs/heads/master/github-assets/teasers/project-list.png)
+
 ### Let AI assistants do the work
 
 Comaney runs an MCP (Model Context Protocol) server, so AI assistants can read and write your account directly. Each assistant gets its own agent key. See [User manual: AI Assistants (MCP)](https://comaney.app/docs/user-manual/ai-assistants/).
