@@ -2,7 +2,7 @@
 
 Sources: `buddies/services/expense.py`, `buddies/services/lifecycle.py`,
 `buddies/services/settlement.py`, `buddies/services/query.py`, `buddies/debt_utils.py`,
-`buddies/models/buddy_spending.py`, `build/js/buddy_expense.js`,
+`buddies/models/buddy_spending.py`, `buddies/card_tone.py`, `build/js/buddy_expense.js`,
 docs `user-manual/contacts/shared-expenses.md`, `settling-up.md`, AGENTS.md.
 
 ## Assignment
@@ -59,6 +59,14 @@ Covers:
 `req~sharing.assign.payer-offline~1`
 
 When a feuser records a shared expense with an offline contact or member as upfront payer, the system shall keep it out of the feuser's own expense list and show it on the Contact Expenses page; inside a project it shall require the admin's confirmation on behalf of the offline member.
+
+Covers:
+- `feat~sharing~1`
+
+### Expense card color
+`req~sharing.card-tone~1`
+
+On the Contact Expenses page and a project's expense list, the system shall show a shared expense red when the viewer paid it upfront, green when someone else paid and the viewer holds a share above 0%, and gray otherwise.
 
 Covers:
 - `feat~sharing~1`

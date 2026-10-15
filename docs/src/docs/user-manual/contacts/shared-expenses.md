@@ -30,6 +30,12 @@ Any expense can be turned into a shared expense. You decide who is involved, how
 - **Contact Expenses** shows the current balance (who owes who) across all shared expenses.
 - **Project pages** show the breakdown for that project specifically, covering its entire history, with search controls.
 
+In both lists, the color of an expense tells you your part in it:
+
+- **Red**: you paid it.
+- **Green**: someone else paid it and you have a share.
+- **Gray**: someone else paid it and you have no share.
+
 ## Approving or rejecting an expense someone created for you
 
 If a connected contact creates a shared expense and marks you as the one who paid upfront,

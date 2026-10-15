@@ -12,6 +12,7 @@ from django.shortcuts import redirect, render
 from budget.decorators import feuser_required
 from budget.query_parser import apply_query
 from budget.views._period import _date_range_presets_context, resolve_date_range
+from ..card_tone import card_tone
 from ..services import BuddyExportService, BuddyQueryService
 
 
@@ -129,6 +130,7 @@ def _compute_direct_expenses(feuser, start_date, end_date):
             "expense": exp,
             "payer_name": payer_name,
             "payer_is_me": payer_is_me,
+            "tone": card_tone(payer_is_me, participant_shares),
             "payer_amount": exp.value * payer_pct / 100,
             "payer_percent": payer_pct,
             "participant_shares": participant_shares,

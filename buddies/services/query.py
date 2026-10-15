@@ -6,6 +6,7 @@ from django.db.models import Q
 
 from feusers.templatetags.feuser_tags import avatar_color as _avatar_color
 
+from ..card_tone import card_tone
 from ..debt_utils import net_expense_flows, simplify_balances
 from ..models import (
     Project,
@@ -440,6 +441,7 @@ class BuddyQueryService:
                 "payer_obj": payer_info.get("user_obj"),
                 "payer_is_me": payer_info["is_me"],
                 "i_am_participant": i_am_participant,
+                "tone": card_tone(payer_info["is_me"], participant_shares),
                 "total": exp.value,
                 "payer_amount": exp.value * payer_pct / 100,
                 "payer_percent": payer_pct,
