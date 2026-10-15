@@ -107,6 +107,8 @@ services:
       - /srv/comaney/mariadb:/var/lib/mysql
 ```
 
+Both examples use Claude for the AI features. Other services (DeepSeek, a self-hosted model) and all their options: see [AI Providers](ai-providers.md).
+
 ## Transport security behind a reverse proxy
 
 Comaney is built to run behind a reverse proxy (nginx, Traefik, Caddy, etc.) that terminates HTTPS and forwards plain HTTP to the app on port 8000. The app speaks HTTP and never tries to enforce HTTPS on its own: it does not redirect HTTP to HTTPS, and it does not send HSTS. Those two jobs belong to your proxy, which is the only part of the stack that actually sees the TLS connection.
@@ -200,7 +202,7 @@ See [Console Commands](console-commands.md) for the full reference.
 
 ## Creating a superuser
 
-A superuser account is purely optional but required to access the Django admin at `/admin/` and to re-enable the AI trial at `/admin/ai-trial/`. The AI trial deactivates itself if your trial API key runs out of funds.
+A superuser account is purely optional but required to access the Django admin at `/admin/` and to re-enable the AI trial at `/admin/ai-trial/`. The AI trial deactivates itself if your trial API key runs out of funds (see [Shared AI Access](shared-ai-access.md)).
 
 ```bash
 docker exec -it <container_name> python manage.py createsuperuser
