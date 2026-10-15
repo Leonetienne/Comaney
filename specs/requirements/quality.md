@@ -1,6 +1,6 @@
 # Quality Requirements
 
-Sources: AGENTS.md (Rules, Transport / TLS), `security-audit-tickets/`, `comaney/settings.py`,
+Sources: AGENTS.md (Rules, Transport / TLS), `comaney/settings.py`,
 `comaney/json_utils.py`, docs `admin-manual/deployment.md`, `dev-manual/testing.md`.
 
 ## Security

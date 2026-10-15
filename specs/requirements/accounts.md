@@ -2,7 +2,7 @@
 
 Sources: `feusers/views/auth.py`, `feusers/views/account.py`, `feusers/rate_limit.py`,
 `budget/decorators.py`, `comaney/middleware.py`, docs `admin-manual/registration.md`,
-`user-manual/account-settings.md`, `security-audit-tickets/`.
+`user-manual/account-settings.md`.
 
 ## Registration
 
