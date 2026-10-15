@@ -270,8 +270,10 @@ class TestExpressCreation:
         all_text = " ".join(_card_title(c) + " " + _card_note(c) for c in cards)
         all_payees = " ".join(_card_payee(c) for c in cards)
         cat_labels = [_card_category_label(c) for c in cards]
-        for keyword in ("Cola", "Odol", "Klarsp"):
-            assert keyword.lower() in all_text.lower(), f"'{keyword}' not in titles/notes: {all_text!r}"
+        # the AI may keep the receipt's German wording or translate it
+        for variants in (("Cola",), ("Odol",), ("Klarsp", "rinse aid")):
+            assert any(v.lower() in all_text.lower() for v in variants), \
+                f"none of {variants} in titles/notes: {all_text!r}"
         assert "edeka" in all_payees.lower()
         grocery_cats = {"Groceries", "Personal Care", "Health"}
         assert any(any(g in lbl for g in grocery_cats) for lbl in cat_labels)
