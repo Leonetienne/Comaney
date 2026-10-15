@@ -415,33 +415,40 @@ class TestUnclassifiedExpensesAI:
         assert len(driver.find_elements(By.ID, f"unclassified-row-{uid}")) == 0
 
     def test_ai_resolve_all_and_save_all(self, driver, w, ctx):
-        if not _ai_gate_ok(driver):
-            ai_unavailable("AI not available for this account")
+        # own account: resolve all makes one AI call per open row, so only these two rows exist
+        solo = setup_user(driver, w)
+        try:
+            if not _ai_gate_ok(driver):
+                ai_unavailable("AI not available for this account")
 
-        uid_a = _create_expense(ctx["email"], "Spotify subscription", payee="Spotify")
-        uid_b = _create_expense(ctx["email"], "Gas station fill-up", payee="Shell")
-        driver.get(_url("/budget/unclassified/"))
-        time.sleep(1.5)
+            uid_a = _create_expense(solo["email"], "Spotify subscription", payee="Spotify")
+            uid_b = _create_expense(solo["email"], "Gas station fill-up", payee="Shell")
+            driver.get(_url("/budget/unclassified/"))
+            time.sleep(1.5)
+            assert len(driver.find_elements(By.CSS_SELECTOR, "[id^='unclassified-row-']")) == 2
 
-        assert not driver.find_elements(By.XPATH, "//button[text()='Save all']") or \
-            not driver.find_element(By.XPATH, "//button[text()='Save all']").is_displayed()
+            assert not driver.find_elements(By.XPATH, "//button[text()='Save all']") or \
+                not driver.find_element(By.XPATH, "//button[text()='Save all']").is_displayed()
 
-        driver.find_element(By.XPATH, "//button[contains(text(),'Let AI resolve all')]").click()
-        # resolves every open row of the account, one AI call each; Save all stays disabled meanwhile
-        panel = driver.find_element(By.CSS_SELECTOR, ".unclassified-progress-panel")
-        deadline = time.time() + 300
-        time.sleep(5)
-        while panel.is_displayed() and time.time() < deadline:
+            driver.find_element(By.XPATH, "//button[contains(text(),'Let AI resolve all')]").click()
+            # Save all stays disabled while the loop runs
+            panel = driver.find_element(By.CSS_SELECTOR, ".unclassified-progress-panel")
+            deadline = time.time() + 300
+            time.sleep(5)
+            while panel.is_displayed() and time.time() < deadline:
+                time.sleep(2)
+            assert not panel.is_displayed(), "Let AI resolve all did not finish"
+
+            save_all = driver.find_element(By.XPATH, "//button[text()='Save all']")
+            assert save_all.is_displayed()
+            save_all.click()
             time.sleep(2)
-        assert not panel.is_displayed(), "Let AI resolve all did not finish"
 
-        save_all = driver.find_element(By.XPATH, "//button[text()='Save all']")
-        assert save_all.is_displayed()
-        save_all.click()
-        time.sleep(2)
-
-        assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_a}")) == 0
-        assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_b}")) == 0
+            assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_a}")) == 0
+            assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_b}")) == 0
+        finally:
+            _relogin(driver, w, ctx)
+            cleanup_user(solo["email"])
 
     def test_ai_solve_bills_trial_usage(self, driver, w, ctx):
         """The hard requirement: AI usage through this feature must count

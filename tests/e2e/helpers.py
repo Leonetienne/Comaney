@@ -24,6 +24,8 @@ PASSWORD    = "S3l3n!umTest"
 TIMEOUT     = 60
 CLICK_PACE  = 0.15
 DOCKER_WEB  = "comaney-web-1"
+# docker exec of manage.py slows down a lot under parallel workers plus a local model
+DOCKER_EXEC_TIMEOUT = 60
 SUBMIT_BTN  = "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)"
 
 # Dedicated AI key for e2e test accounts, so AI spend during test runs is
@@ -322,14 +324,14 @@ def create_confirmed_user(first_name: str = "", last_name: str = "") -> dict:
     if last_name:
         cmd += ["--last-name", last_name]
     cmd += ai_test_api_key_args()
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=DOCKER_EXEC_TIMEOUT)
     assert result.returncode == 0, f"create_user failed:\n{result.stderr}"
     return {"email": email, "password": PASSWORD}
 
 
 # ── Docker / management command helpers ───────────────────────────────────────
 
-def run_cmd(*args, timeout: int = 30) -> str:
+def run_cmd(*args, timeout: int = DOCKER_EXEC_TIMEOUT) -> str:
     result = subprocess.run(
         ["docker", "exec", DOCKER_WEB, "python", "manage.py", *args],
         capture_output=True, text=True, timeout=timeout,
@@ -413,7 +415,7 @@ def setup_user(driver, w, first_name: str = "", last_name: str = "",
     if last_name:
         cmd += ["--last-name", last_name]
     cmd += ai_test_api_key_args()
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=DOCKER_EXEC_TIMEOUT)
     assert result.returncode == 0, f"create_user failed:\n{result.stderr}"
 
     key_result = subprocess.run(
@@ -421,7 +423,7 @@ def setup_user(driver, w, first_name: str = "", last_name: str = "",
          f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}');"
          f" u.warn_unclassified_on_save = {unclassified_warning};"
          f" u.generate_api_key(); u.save(); print(u.api_key)"],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True, text=True, timeout=DOCKER_EXEC_TIMEOUT,
     )
     assert key_result.returncode == 0, f"API key generation failed:\n{key_result.stderr}"
 
@@ -436,7 +438,7 @@ def cleanup_user(email: str):
     """Delete a test user via the delete_user management command."""
     subprocess.run(
         ["docker", "exec", DOCKER_WEB, "python", "manage.py", "delete_user", email, "--yes"],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True, text=True, timeout=DOCKER_EXEC_TIMEOUT,
     )
 
 
