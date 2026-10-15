@@ -79,6 +79,13 @@ class TestVision:
     def test_per_model(self, model, vision):
         assert _provider(MODEL=model).supports_vision() is vision
 
+    @pytest.mark.parametrize("model, setting, vision", [
+        ("deepseek-v4-pro", "true", True),
+        ("deepseek-flash", "false", False),
+    ])
+    def test_override(self, model, setting, vision):
+        assert _provider(MODEL=model, SUPPORTS_VISION=setting).supports_vision() is vision
+
 
 class TestCall:
 

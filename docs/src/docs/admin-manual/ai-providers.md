@@ -75,6 +75,7 @@ DeepSeek's hosted API at `https://api.deepseek.com` (OpenAI-compatible).
 | `AI_PROVIDER_DEEPSEEK_MAX_TOKENS` | no | `8192` | Upper limit for the length of one answer (whole number). |
 | `AI_PROVIDER_DEEPSEEK_PRICE_INPUT` | no | *(built in)* | Input price in USD per million tokens. Set together with `_PRICE_OUTPUT` or not at all. |
 | `AI_PROVIDER_DEEPSEEK_PRICE_OUTPUT` | no | *(built in)* | Output price in USD per million tokens. |
+| `AI_PROVIDER_DEEPSEEK_SUPPORTS_VISION` | no | *(by model)* | `true` or `false`: whether the model reads images. Empty: Comaney decides by the model name. |
 
 ### Authentication
 
@@ -84,7 +85,7 @@ DeepSeek's hosted API at `https://api.deepseek.com` (OpenAI-compatible).
 
 ### Images
 
-Receipt photos work with `deepseek-flash` only; with any other model the photo upload is hidden.
+Receipt photos work with `deepseek-flash` only; with any other model the photo upload is hidden. `AI_PROVIDER_DEEPSEEK_SUPPORTS_VISION` overrides this, e.g. for a newer vision model.
 
 ### Cost
 

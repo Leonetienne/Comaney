@@ -56,6 +56,8 @@ class DeepSeekProvider(OpenAICompatibleProvider):
             ConfigField("max_tokens", "Max tokens", pattern=r"[1-9][0-9]*", default="8192"),
             ConfigField("price_input", "Input price (USD per million tokens)", pattern=_PRICE_PATTERN),
             ConfigField("price_output", "Output price (USD per million tokens)", pattern=_PRICE_PATTERN),
+            ConfigField("supports_vision", "Model reads images", choices=("true", "false"),
+                        help_text="Empty: decided by the model name."),
         ]
 
     def get_user_fields(self) -> list[ConfigField]:
@@ -78,6 +80,8 @@ class DeepSeekProvider(OpenAICompatibleProvider):
         return bool(self.config("api_key"))
 
     def supports_vision(self) -> bool:
+        if self.config("supports_vision"):
+            return self.config("supports_vision") == "true"
         return self.config("model") in VISION_MODELS
 
     def prices(self) -> tuple[float, float, float]:

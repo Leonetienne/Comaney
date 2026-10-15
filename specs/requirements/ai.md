@@ -61,9 +61,9 @@ Covers:
 - `feat~ai~1`
 
 ### DeepSeek provider
-`req~ai.provider.deepseek~1`
+`req~ai.provider.deepseek~2`
 
-The `deepseek` provider shall call `https://api.deepseek.com` with Bearer authentication, bill cached and uncached input separately at peak prices, and support images only for vision-capable models.
+The `deepseek` provider shall call `https://api.deepseek.com` with Bearer authentication, bill cached and uncached input separately at peak prices, and support images only for vision-capable models, unless `AI_PROVIDER_DEEPSEEK_SUPPORTS_VISION` sets it explicitly.
 
 Covers:
 - `feat~ai~1`
