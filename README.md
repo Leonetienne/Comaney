@@ -206,6 +206,8 @@ services:
       - ./comaney/mariadb:/var/lib/mysql
 ```
 
+All options and production setup: [Admin Manual: Deployment](https://comaney.app/docs/admin-manual/deployment/).
+
 > **Important:** the `/app/data` mount is required. Comaney stores every uploaded image (avatars, backgrounds, project pictures) under `/app/data` inside the container; without a persistent mount there, they are lost whenever the container is recreated, and the app shows a configuration error page instead of starting normally. Point the left side at any host directory you back up.
 
 ### First-run steps
