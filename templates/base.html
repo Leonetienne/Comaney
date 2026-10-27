@@ -45,28 +45,44 @@
         form._saveChecks[options && options.blocking ? 'blocking' : 'warnings'].push(check);
     };
 
+    // Checks run synchronously, so a save without warnings goes through on the
+    // original submit event. Only a warning dialog holds it and resubmits.
     function runSaveChecks(e) {
         const form = e.currentTarget;
-        if (form._saveChecksPassed) { form._saveChecksPassed = false; return; }
-        if (e.defaultPrevented) return;
+        if (form._saveChecksPassed || e.defaultPrevented) return;
+        const checks = form._saveChecks.blocking.concat(form._saveChecks.warnings);
+        for (let i = 0; i < checks.length; i++) {
+            const result = checks[i](form);
+            if (result === false) { cancel(e); return; }
+            if (!result) continue;
+            cancel(e);
+            askThenSubmit(form, e.submitter, result, checks.slice(i + 1));
+            return;
+        }
+    }
+
+    function cancel(e) {
         e.preventDefault();
         e.stopImmediatePropagation();
-        const submitter = e.submitter;
-        const checks = form._saveChecks.blocking.concat(form._saveChecks.warnings);
-        checks.reduce(function(chain, check) {
-            return chain.then(function() {
-                const warning = check(form);
-                if (warning === false) return Promise.reject();
-                if (!warning) return;
-                return window.confirmDialog(warning.message, warning.okLabel, warning.extraLabel)
-                    .then(function(choice) {
-                        if (choice === 'extra' && warning.onExtra) return warning.onExtra(form);
-                    });
-            });
-        }, Promise.resolve()).then(function() {
+    }
+
+    function askThenSubmit(form, submitter, warning, remaining) {
+        remaining.reduce(function(chain, check) {
+            return chain.then(function() { return ask(form, check(form)); });
+        }, ask(form, warning)).then(function() {
             form._saveChecksPassed = true;
-            form.requestSubmit(submitter);
+            try { form.requestSubmit(submitter); }
+            finally { form._saveChecksPassed = false; }
         }).catch(function() {});
+    }
+
+    function ask(form, warning) {
+        if (warning === false) return Promise.reject();
+        if (!warning) return Promise.resolve();
+        return window.confirmDialog(warning.message, warning.okLabel, warning.extraLabel)
+            .then(function(choice) {
+                if (choice === 'extra' && warning.onExtra) return warning.onExtra(form);
+            });
     }
     })();
     </script>

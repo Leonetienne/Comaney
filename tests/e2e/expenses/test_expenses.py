@@ -347,3 +347,39 @@ class TestDoubleSubmitGuard:
         originals = [e for e in matches if e["title"] == title]
         assert len(originals) == 1, f"Expected 1 original, found {len(originals)}"
         api_delete(f"/api/v2/expenses/{originals[0]['id']}/", ctx)
+
+
+class TestSaveChecks:
+
+    def test_single_click_saves_when_no_check_warns(self, driver, w, ctx):
+        driver.delete_all_cookies()
+        browser_login(driver, w, ctx["email"], ctx["password"])
+        today = server_today()
+        driver.get(_url("/budget/expenses/new/"))
+        fill(w, By.ID, "id_title", "E2E SingleClickSave")
+        fill(w, By.ID, "id_value", "2.34")
+        Select(driver.find_element(By.ID, "id_type")).select_by_value("expense")
+        # Real clicks drop a resubmit fired during the original submit event,
+        # Selenium clicks do not, so count submit events instead.
+        driver.execute_script(
+            f"document.getElementById('id_date_due').value = '{today}';"
+            "document.getElementById('id_settled').checked = true;"
+            "sessionStorage.removeItem('e2eSubmitEvents');"
+            "var seen = 0;"
+            "document.addEventListener('submit', function() { seen++; }, true);"
+            "document.addEventListener('submit', function() {"
+            "  sessionStorage.setItem('e2eSubmitEvents', String(seen));"
+            "});"
+        )
+        assert driver.execute_script(
+            "return !!document.getElementById('id_title').closest('form')._saveChecks;"
+        ), "Expense form has no save checks registered"
+        driver.find_element(By.CSS_SELECTOR, SUBMIT_BTN).click()
+        time.sleep(2)
+        assert "/new/" not in driver.current_url, "One click on Save did not submit the form"
+        events = driver.execute_script("return sessionStorage.getItem('e2eSubmitEvents');")
+        assert events == "1", f"Save went through a resubmit (submit events: {events!r})"
+        resp = api_get("/api/v2/expenses/", ctx, params={"q": "E2E SingleClickSave"})
+        expenses = resp.json()["expenses"]
+        assert len(expenses) == 1, f"Expected exactly one expense, found {len(expenses)}"
+        api_delete(f"/api/v2/expenses/{expenses[0]['id']}/", ctx)
