@@ -76,6 +76,8 @@ def scheduled_create(request):
             return redirect("budget:scheduled_list")
         elif buddy and buddy.get("type_conflict"):
             messages.error(request, BUDDY_TYPE_CONFLICT_MSG)
+        elif buddy and buddy.get("share_error"):
+            messages.error(request, buddy["share_error"])
     else:
         form = ScheduledExpenseForm(
             feuser=feuser,
@@ -133,6 +135,8 @@ def scheduled_edit(request, uid):
             return redirect("budget:scheduled_list")
         elif buddy and buddy.get("type_conflict"):
             messages.error(request, BUDDY_TYPE_CONFLICT_MSG)
+        elif buddy and buddy.get("share_error"):
+            messages.error(request, buddy["share_error"])
     else:
         form = ScheduledExpenseForm(instance=obj, feuser=feuser)
 

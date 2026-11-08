@@ -110,3 +110,104 @@
   color: var(--text-muted);
   line-height: 1.5;
 }
+
+.share-dialog {
+  // --bg-surface is translucent; layered over --bg so the form below stays hidden
+  background: linear-gradient(var(--bg-surface), var(--bg-surface)), var(--bg);
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.share-dialog-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.share-dialog-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 110px 28px 28px;
+  align-items: center;
+  gap: 8px;
+
+  // phones: name on its own line above the inputs
+  @media (max-width: 560px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 28px 28px;
+
+    .share-dialog-name { grid-column: 1 / -1; }
+  }
+}
+
+.share-dialog-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text);
+
+  .share-dialog-name-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.share-dialog-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+
+  input {
+    width: 100%;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    text-align: right;
+    background: var(--bg-input);
+    color: var(--text);
+
+    &:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    &:disabled { opacity: 0.5; }
+  }
+}
+
+.share-dialog-row--invalid .share-dialog-pct {
+  border-color: var(--error);
+}
+
+.share-dialog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  cursor: pointer;
+
+  &:hover { color: var(--text); }
+}
+
+.share-dialog-remove:hover { color: var(--error); }
+
+.share-dialog-reason {
+  min-height: 1.5em;
+  margin: 8px 0 12px;
+  font-size: 0.85rem;
+  color: var(--error);
+}

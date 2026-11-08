@@ -2,7 +2,8 @@
 
 Sources: `buddies/services/expense.py`, `buddies/services/lifecycle.py`,
 `buddies/services/settlement.py`, `buddies/services/query.py`, `buddies/debt_utils.py`,
-`buddies/models/buddy_spending.py`, `buddies/card_tone.py`, `build/js/buddy_expense.js`,
+`buddies/models/buddy_spending.py`, `buddies/card_tone.py`, `buddies/share_bounds.py`,
+`build/js/buddy_expense.js`, `build/js/share_dialog.js`,
 docs `user-manual/contacts/shared-expenses.md`, `settling-up.md`, AGENTS.md.
 
 ## Assignment
@@ -16,12 +17,99 @@ Covers:
 - `feat~sharing~1`
 
 ### Participants and shares
-`req~sharing.assign.shares~1`
+`req~sharing.assign.shares~2`
 
-For a shared expense the feuser shall choose the participants (project members may be excluded individually) and their percentage shares via sliders or "Equal shares"; the owner holds the remainder implicitly.
+For a shared expense the feuser shall choose the participants (project members may be excluded individually) and their percentage shares via sliders, "Equal shares" or "Enter manually"; the upfront payer holds the remainder implicitly.
 
 Covers:
 - `feat~sharing~1`
+
+### Share bounds check
+`req~sharing.assign.share-bounds~1`
+
+If a shared expense is submitted with a participant share below 0 % or above 100 %, or with participant shares summing to more than 100 % (beyond a tolerance of 0.001 percentage points), then the system shall reject saving with an explanation, on the expense form, the recurring expense form, AI Express, the REST API and MCP alike.
+
+Rationale:
+Only participant shares are stored; the upfront payer holds 100 % minus their sum, so a sum above 100 % is the only way the total can miss 100 %.
+
+Covers:
+- `feat~sharing~1`
+
+### Manual share entry
+`req~sharing.manual.open~1`
+
+Wherever share sliders are shown (expense form, recurring expense form, each AI Express item), the system shall offer an "Enter manually" button next to "Equal shares" that opens a dialog with one row per person sharing the cost: the upfront payer first, then every participant, each row showing avatar, name, a percentage field, an amount field and a reset icon button, prefilled with the current shares and amounts.
+
+Covers:
+- `feat~sharing~1`
+
+Tags: UI
+
+### Manual share entry: percentage and amount
+`req~sharing.manual.convert~1`
+
+When the feuser edits a row's percentage or amount in the manual share dialog, the system shall recompute the other field of that row from the expense value (percentages with up to 3 decimals, amounts with 2) and leave every other row unchanged; while the expense value is empty or 0, the amount fields shall be disabled.
+
+Covers:
+- `feat~sharing~1`
+
+Tags: UI
+
+### Manual share entry: reset row
+`req~sharing.manual.reset~1`
+
+When the feuser clicks a row's reset icon in the manual share dialog, the system shall empty that row's percentage and amount fields.
+
+Covers:
+- `feat~sharing~1`
+
+Tags: UI
+
+### Manual share entry: remove participant
+`req~sharing.manual.remove~2`
+
+While a project expense is assigned, the manual share dialog shall show a remove (X) icon button on every participant row except the upfront payer's; clicking it removes the row from the dialog, sets the remaining row to 100 % when only one row is left, and the participant is excluded from the expense only when the dialog is saved.
+
+Rationale:
+A contact expense has exactly one participant, and the upfront payer is chosen in the payer field, so neither gets a remove button.
+
+Covers:
+- `feat~sharing~1`
+
+Tags: UI
+
+### Manual share entry: fill remaining shares
+`req~sharing.manual.fill~1`
+
+When the feuser clicks "Fill remaining shares equally" in the manual share dialog, the system shall split the percentage not yet assigned by the filled rows equally over all rows with an empty field, so that the percentages sum to exactly 100 %; the button shall be disabled while no row is empty or the filled rows already exceed 100 %.
+
+Covers:
+- `feat~sharing~1`
+
+Tags: UI
+
+### Manual share entry: save gate
+`req~sharing.manual.save-gate~1`
+
+While any row of the manual share dialog has an empty field, or the percentages do not sum to 100 % within 0.001 percentage points, the system shall disable the dialog's Save button and state the reason, updated on every input, in a line below it whose space is always reserved: the percentage (and amount, while the expense value is set) still to assign or assigned too much, and the number of empty rows.
+
+Comment:
+Example texts: "25 % (2.00 €) left to assign", "5 % (0.40 €) over 100 %", "2 rows empty".
+
+Covers:
+- `feat~sharing~1`
+
+Tags: UI
+
+### Manual share entry: save and cancel
+`req~sharing.manual.apply~1`
+
+When the feuser saves the manual share dialog, the system shall set the shares and sliders to the dialog's percentages and exclude removed participants, without submitting the expense form; when the feuser cancels it (Cancel, Escape or a click outside), the system shall close it and keep the shares and participants as they were before opening.
+
+Covers:
+- `feat~sharing~1`
+
+Tags: UI
 
 ### No participants check
 `req~sharing.assign.no-participants~1`

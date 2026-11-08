@@ -140,3 +140,51 @@ def _create_personal_expense_with_buddy(
         f"  share_percent=Decimal('{share}')); "
         f"print(e.pk)"
     )
+
+
+# ---------------------------------------------------------------------------
+# "Enter manually" share dialog (build/js/share_dialog.js)
+# ---------------------------------------------------------------------------
+
+def share_dialog_open(driver, button) -> None:
+    driver.execute_script("arguments[0].click();", button)
+    time.sleep(0.4)
+    assert driver.find_element(By.CSS_SELECTOR, ".share-dialog-backdrop.cdialog-visible").is_displayed()
+
+
+def share_dialog_rows(driver) -> list:
+    return driver.find_elements(By.CSS_SELECTOR, ".share-dialog-backdrop.cdialog-visible .share-dialog-row")
+
+
+def share_dialog_type(driver, row_idx: int, field: str, value: str) -> None:
+    """field: 'pct' or 'amt'."""
+    inp = share_dialog_rows(driver)[row_idx].find_element(By.CSS_SELECTOR, f".share-dialog-{field}")
+    driver.execute_script(
+        "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
+        inp, value,
+    )
+    time.sleep(0.2)
+
+
+def share_dialog_value(driver, row_idx: int, field: str) -> str:
+    return share_dialog_rows(driver)[row_idx].find_element(
+        By.CSS_SELECTOR, f".share-dialog-{field}").get_property("value")
+
+
+def share_dialog_click(driver, css: str) -> None:
+    """Click an element inside the open dialog (e.g. '.share-dialog-save')."""
+    el = driver.find_element(By.CSS_SELECTOR, ".share-dialog-backdrop.cdialog-visible " + css)
+    driver.execute_script("arguments[0].click();", el)
+    time.sleep(0.3)
+
+
+def share_dialog_reason(driver) -> str:
+    return driver.find_element(By.CSS_SELECTOR, ".share-dialog-reason").text
+
+
+def share_dialog_save_enabled(driver) -> bool:
+    return driver.find_element(By.CSS_SELECTOR, ".share-dialog-save").is_enabled()
+
+
+def share_dialog_is_open(driver) -> bool:
+    return bool(driver.find_elements(By.CSS_SELECTOR, ".share-dialog-backdrop.cdialog-visible"))

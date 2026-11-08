@@ -42,6 +42,7 @@ def parse_assignment(feuser, *, mode, upfront_type, upfront_id, project_id, spen
         "group": None,
         "valid": True,
         "type_conflict": False,
+        "share_error": None,
     }
 
     # shared expenses feed the debt graph, where income/savings would invert who owes whom
@@ -76,6 +77,11 @@ def parse_assignment(feuser, *, mode, upfront_type, upfront_id, project_id, spen
         result["valid"] = False
 
     if mode == "single" and len(result["spendings"]) > 1:
+        result["valid"] = False
+
+    from buddies.share_bounds import share_bounds_error
+    result["share_error"] = share_bounds_error(result["spendings"])
+    if result["share_error"]:
         result["valid"] = False
 
     # every referenced payer/participant must be within the acting user's connected set
@@ -131,6 +137,7 @@ def current_assignment(expense, feuser):
         "spendings": spendings,
         "valid": True,
         "type_conflict": False,
+        "share_error": None,
     }
 
 

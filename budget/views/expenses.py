@@ -241,6 +241,8 @@ def expense_create(request):
             return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
         elif buddy and buddy.get("type_conflict"):
             messages.error(request, BUDDY_TYPE_CONFLICT_MSG)
+        elif buddy and buddy.get("share_error"):
+            messages.error(request, buddy["share_error"])
     else:
         form = ExpenseForm(feuser=feuser, initial={"type": "expense", "settled": True, "notify": True})
 
@@ -295,6 +297,8 @@ def expense_edit(request, uid):
             return HttpResponseRedirect(back) if back else redirect("budget:expenses_list")
         elif buddy and buddy.get("type_conflict"):
             messages.error(request, BUDDY_TYPE_CONFLICT_MSG)
+        elif buddy and buddy.get("share_error"):
+            messages.error(request, buddy["share_error"])
     else:
         form = ExpenseForm(instance=expense, feuser=form_feuser)
 

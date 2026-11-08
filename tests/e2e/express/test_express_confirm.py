@@ -17,7 +17,7 @@ Cases covered:
   1. Keep None tab -> expense saved without project
   2. Select Project tab -> expense saved with project "Schanzenfest 2026"
   3. Keep None tab (explicit, after AI suggested project) -> no project
-  4. Contact: me pays, Volker gets 35%
+  4. Contact: me pays, Volker gets 35% (slider) and 75% (Enter manually)
   5. Contact: Volker pays, me gets 40%
   6. Project: Volker pays, Andreas deselected, me gets 55%
   7. Project: me pays, Andreas deselected, Volker gets 45%
@@ -37,6 +37,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, ai_unavailable, api_get, setup_user, cleanup_user
+from bhelpers import share_dialog_click, share_dialog_open, share_dialog_type
 
 DOCKER_WEB = "comaney-web-1"
 ASSET = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "projectpic.jpg")
@@ -443,6 +444,26 @@ class TestExpressContact:
         s = spendings[0]
         assert s["type"] == "dummy" and s["id"] == ctx["personal_dummy1_pk"]
         assert abs(s["share"] - 35.0) < 0.01, f"Expected 35%, got {s['share']}"
+
+    def test_me_payer_volker_manual_75pct(self, driver, w, ctx):
+        """Enter manually: Volker's share typed as 45.00 of 60.00."""
+        if not _ui_parse(driver, "Grillkohle 60 Euro"):
+            ai_unavailable("AI unavailable or timed out")
+        card = _first_card(driver)
+        title = _card_title(card)
+        _set_value(driver, card, "60.00")
+        _click_tab(driver, card, ".pcard-assign-contact")
+        _set_payer(driver, card, "Me (")
+        _select_contact(driver, card, "Volker")
+        share_dialog_open(driver, card.find_element(By.CSS_SELECTOR, ".buddy-manual-btn"))
+        share_dialog_type(driver, 1, "amt", "45")
+        share_dialog_type(driver, 0, "pct", "25")
+        share_dialog_click(driver, ".share-dialog-save")
+        _confirm(driver)
+
+        spendings = _expense_spendings(title, ctx["email"])
+        assert len(spendings) == 1
+        assert abs(spendings[0]["share"] - 75.0) < 0.001, f"Expected 75%, got {spendings[0]['share']}"
 
     def test_volker_payer_me_40pct(self, driver, w, ctx):
         """Case 5: Volker pays (is_dummy expense), me gets 40%."""

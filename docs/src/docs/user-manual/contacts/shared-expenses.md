@@ -14,6 +14,8 @@ Any expense can be turned into a shared expense. You decide who is involved, how
 
 **How much each person owes** — use the sliders to modify percentages directly or click **Equal shares** to split the cost evenly among everyone selected.
 
+To type exact numbers instead, click **Enter manually**. Enter each person's share as a percentage or as an amount; the other value is calculated for you. **Fill remaining shares equally** splits whatever is left among the empty rows. You can save once the shares add up to exactly 100 %.
+
 **Who paid upfront** — by default this is you. If someone else paid the full amount (for example a friend covered the whole dinner), select their name from the list.
 
 4. Fill in the rest of the expense as normal and click **Save**.

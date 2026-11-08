@@ -1,5 +1,5 @@
 {% extends "budget_base.html" %}
-{% load feuser_tags unclassified_warning %}
+{% load static feuser_tags unclassified_warning %}
 
 {% block title %}Comaney – Express Creation{% endblock %}
 
@@ -7,6 +7,7 @@
 {% include "partials/_date_range_warning_js.html" %}
 {% unclassified_save_warning_js current_feuser %}
 {% if real_contacts or offline_contacts or buddy_groups %}
+<script src="{% static 'dist/share_dialog.js' %}" defer></script>
 <script>
 window.BUDDY_EXPENSE_CONFIG = {
     mePk:            {{ current_feuser.pk }},
@@ -264,7 +265,10 @@ window.BUDDY_EXPENSE_CONFIG = {
                                         </div>
 
                                         <div class="buddy-sliders-wrap buddy-sliders" style="display:none;"></div>
-                                        <button type="button" class="btn btn-secondary btn-sm buddy-equal-btn">Equal shares</button>
+                                        <div class="buddy-share-buttons">
+                                            <button type="button" class="btn btn-secondary btn-sm buddy-equal-btn">Equal shares</button>
+                                            <button type="button" class="btn btn-secondary btn-sm buddy-manual-btn">Enter manually</button>
+                                        </div>
                                         <p class="buddy-no-participants-error error-msg" style="display:none;">A shared expense requires at least one participant.</p>
                                     </div>
                                 </div>
@@ -401,6 +405,7 @@ function initCardBuddy(cardEl) {
     var partLbl     = q('.buddy-participants-label');
     var slidersEl   = q('.buddy-sliders-wrap');
     var equalBtn    = q('.buddy-equal-btn');
+    var manualBtn   = q('.buddy-manual-btn');
     var payerNotice = q('.buddy-payer-notice');
     var noPartErr   = q('.buddy-no-participants-error');
     var grpSelRow   = q('.buddy-project-select-row');
@@ -453,6 +458,7 @@ function initCardBuddy(cardEl) {
         if (payerRow) payerRow.style.display = show ? '' : 'none';
         if (partRow)  partRow.style.display  = show ? '' : 'none';
         if (equalBtn) equalBtn.style.display  = show ? '' : 'none';
+        if (manualBtn) manualBtn.style.display = show ? '' : 'none';
         if (!show && slidersEl) slidersEl.style.display = 'none';
     }
     function checkSolo() {
@@ -735,6 +741,41 @@ function initCardBuddy(cardEl) {
     }
     if (equalBtn) equalBtn.addEventListener('click', function() {
         var per=+(100/(parts.length+1)).toFixed(3); parts.forEach(function(p){p.share=per;}); refreshSliders();
+    });
+    if (manualBtn) manualBtn.addEventListener('click', function() {
+        function key(type, id) { return type + ':' + id; }
+        var pp = payerSel ? payerSel.value.split(':') : ['me', ME_PK];
+        var pav = getPersonAvatar(pp[0], parseInt(pp[1]));
+        var rows = [{
+            key: 'payer',
+            name: payerSel && payerSel.options.length ? payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim() : 'Me',
+            avatarHtml: avatarHtml(pav.ppicUrl, pav.initials, pav.avatarColor),
+            share: implicitShare(),
+            removable: false,
+        }].concat(parts.map(function(p) {
+            return {
+                key: key(p.type, p.id),
+                name: p.name,
+                avatarHtml: avatarHtml(p.ppicUrl||'', p.initials||'', p.avatarColor||''),
+                share: p.share,
+                // Me joins automatically when someone else pays, so it has no checkbox to clear
+                removable: mode === 'group' && !(p.type === 'feuser' && p.id === ME_PK),
+            };
+        }));
+        window.openShareDialog({rows: rows, value: getExpenseValue(), currency: cfg.currencySymbol || ''}).then(function(result) {
+            if (!result) return;
+            result.removed.forEach(function(k) {
+                partEl.querySelectorAll('.buddy-participant-cb').forEach(function(lbl) {
+                    if (key(lbl.dataset.type, lbl.dataset.id) === k) lbl.querySelector('input').checked = false;
+                });
+            });
+            if (result.removed.length) syncParts();
+            parts.forEach(function(p) {
+                var share = result.shares[key(p.type, p.id)];
+                if (share !== undefined) p.share = share;
+            });
+            rebuildSliders();
+        });
     });
 
     // ── Apply AI-suggested participation overrides (project expenses) ─────────

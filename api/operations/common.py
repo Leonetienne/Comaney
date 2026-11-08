@@ -96,10 +96,12 @@ def parse_assignment_arg(feuser, value, expense_type):
     )
     if buddy["type_conflict"]:
         raise OpError(BUDDY_TYPE_CONFLICT_MSG)
+    if buddy["share_error"]:
+        raise OpError(buddy["share_error"])
     if not buddy["valid"]:
         raise OpError(
             "Invalid assignment: unknown or unconnected project, payer or participant, "
-            "a contact expense without exactly one participant, or shares out of range."
+            "or a contact expense without exactly one participant."
         )
     return buddy
 

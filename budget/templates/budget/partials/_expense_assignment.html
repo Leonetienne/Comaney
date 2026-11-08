@@ -21,6 +21,7 @@ window.BUDDY_EXPENSE_CONFIG = {
     currencySymbol:    "{{ request.feuser.currency|escapejs }}",
 };
 </script>
+<script src="{% static 'dist/share_dialog.js' %}" defer></script>
 <script src="{% static 'dist/buddy_expense.js' %}" defer></script>
 
 {# ── Assignment tab group ──────────────────────────────────────────── #}
@@ -83,7 +84,10 @@ window.BUDDY_EXPENSE_CONFIG = {
     </div>
 
     <div id="buddy-sliders" class="buddy-sliders" style="display:none;"></div>
-    <button type="button" id="buddy-equal-btn" class="btn btn-secondary btn-sm buddy-equal-btn">Equal shares</button>
+    <div class="buddy-share-buttons">
+        <button type="button" id="buddy-equal-btn" class="btn btn-secondary btn-sm buddy-equal-btn">Equal shares</button>
+        <button type="button" id="buddy-manual-btn" class="btn btn-secondary btn-sm buddy-manual-btn">Enter manually</button>
+    </div>
 
     <input type="hidden" name="buddy_mode" id="buddy-mode-input" value="single">
     <input type="hidden" name="project_id" id="buddy-group-id-input" value="">

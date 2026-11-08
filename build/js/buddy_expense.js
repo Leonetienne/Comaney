@@ -18,6 +18,7 @@
     var participantsLbl  = participantsRow ? participantsRow.querySelector('label') : null;
     var slidersEl       = document.getElementById('buddy-sliders');
     var equalBtn        = document.getElementById('buddy-equal-btn');
+    var manualBtn       = document.getElementById('buddy-manual-btn');
     var typeIn          = document.getElementById('buddy-upfront-type-input');
     var idIn            = document.getElementById('buddy-upfront-id-input');
     var jsonIn          = document.getElementById('buddy-spendings-json');
@@ -529,6 +530,44 @@
         refreshSliderDisplays();
         updatePayerRow();
         serializeJSON();
+    });
+
+    // ── Enter manually ─────────────────────────────────────────────────────
+
+    function personKey(type, id) { return type + ':' + id; }
+
+    manualBtn.addEventListener('click', function () {
+        var payerParts = payerSel.value.split(':');
+        var payerAv = getPersonAvatar(payerParts[0], parseInt(payerParts[1]));
+        var rows = [{
+            key: 'payer',
+            name: payerSel.options[payerSel.selectedIndex].text.split('(')[0].trim(),
+            avatarHtml: avatarHtml(payerAv.ppicUrl, payerAv.initials, payerAv.avatarColor),
+            share: implicitPayerShare(),
+            removable: false,
+        }].concat(participants.map(function (p) {
+            return {
+                key: personKey(p.type, p.id),
+                name: p.name,
+                avatarHtml: avatarHtml(p.ppicUrl || '', p.initials || '', p.avatarColor || ''),
+                share: p.share,
+                removable: currentMode === 'group',
+            };
+        }));
+        window.openShareDialog({rows: rows, value: getExpenseValue(), currency: cfg.currencySymbol || ''}).then(function (result) {
+            if (!result) return;
+            result.removed.forEach(function (key) {
+                participantsEl.querySelectorAll('.buddy-participant-cb').forEach(function (lbl) {
+                    if (personKey(lbl.dataset.type, lbl.dataset.id) === key) lbl.querySelector('input').checked = false;
+                });
+            });
+            if (result.removed.length) syncParticipantsFromCheckboxes();
+            participants.forEach(function (p) {
+                var share = result.shares[personKey(p.type, p.id)];
+                if (share !== undefined) p.share = share;
+            });
+            rebuildSliders();
+        });
     });
 
     // ── Serialize ──────────────────────────────────────────────────────────

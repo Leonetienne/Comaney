@@ -23,6 +23,7 @@ from ..ai_service import (
 from ..decorators import feuser_required
 from ..express_service import (
     _build_catalog,
+    _first_share_error,
     _parse_buddy_item,
     _prepare_image,
     _select_smart_create_blocks,
@@ -168,6 +169,9 @@ def express_creation(request):
                 all_items = json.loads(preview_json)
                 if not selected_indices:
                     selected_indices = set(range(len(all_items)))
+                share_error = _first_share_error(all_items, selected_indices)
+                if share_error:
+                    raise ValueError(share_error)
                 category_cache: dict[int, Category] = {}
                 tag_cache: dict[int, Tag] = {}
                 count = 0

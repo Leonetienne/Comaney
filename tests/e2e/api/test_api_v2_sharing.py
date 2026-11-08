@@ -110,6 +110,14 @@ class TestSharedExpense:
         finally:
             cleanup_user(stranger["email"])
 
+    def test_shares_over_100_are_rejected(self, ctx):
+        resp = api_post("/api/v2/expenses/", ctx["a"], {
+            "title": "Overshared", "type": "expense", "value": "10",
+            "assignment": {"mode": "project", "project_id": ctx["pid"],
+                           "participants": [{"type": "feuser", "id": ctx["b_pk"], "share_percent": 120}]},
+        })
+        assert resp.status_code == 400 and "at most 100 %" in resp.json()["error"]
+
     def test_participant_approves(self, ctx):
         resp = api_post("/api/v2/pending/decide/", ctx["b"], {"kind": "consent", "expense_id": ctx["eid"], "approve": True})
         assert resp.status_code == 200

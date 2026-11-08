@@ -478,6 +478,18 @@ def _validate_items(raw_items: list, feuser, projects_data: list, contacts: list
     return items, errors
 
 
+def _first_share_error(items: list, selected: set) -> str | None:
+    """'"<title>": <reason>' for the first selected shared item whose shares are out of bounds, else None."""
+    from buddies.share_bounds import share_bounds_error
+    for idx, item in enumerate(items):
+        if idx not in selected or not item.get("buddy_payment"):
+            continue
+        error = share_bounds_error(item.get("buddy_spendings"))
+        if error:
+            return f'"{item.get("title", "")}": {error}'
+    return None
+
+
 def _parse_buddy_item(item: dict, feuser) -> dict | None:
     """Parse buddy payment fields from a preview item dict. Returns None if not a buddy payment."""
     if not item.get("buddy_payment") or not item.get("buddy_spendings"):
