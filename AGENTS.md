@@ -13,13 +13,13 @@
 - All assets (fonts, images, scripts, libraries, etc.) must be served locally: either a plain JS file under `build/js/`/`static/` or a package installed with yarn (preferred) and bundled via esbuild; never a `<script src="https://...">`/CDN reference
 
 ## Requirements (specs/)
-`specs/` is the single requirements database for the whole system and must always describe the code as it is. Format and conventions: `specs/README.md` (ISO/IEC/IEEE 29148 structure, EARS sentences, OpenFastTrack item IDs).
-- Every change that adds, changes, or removes observable behaviour updates the affected requirements in `specs/requirements/` in the same change. No feature or fix is done until its requirements match the code.
+`specs/` is the single requirements database for the whole system. Requirements come first: they are written or revised before the code, and the code is then built to satisfy them. Format and conventions: `specs/README.md` (ISO/IEC/IEEE 29148 structure, EARS sentences, OpenFastTrack item IDs).
+- Every change that adds, changes, or removes observable behaviour starts in `specs/requirements/`: agree the affected requirements first, then implement them. A feature or fix is done when the code satisfies every requirement it touched.
+- A requirement the code does not satisfy yet carries `Status: proposed`. The change that implements it removes that line. Every item without a status line holds for the current code.
 - New feature area: add a `feat~...~1` item to `specs/features.md` (with `Needs: req`) plus its requirements file.
-- Changed meaning of a requirement: bump its revision (`~1` -> `~2`). Removed behaviour: delete the item. Never reuse an ID for something else.
+- Changed meaning of a requirement: bump its revision (`~1` -> `~2`). Removed behaviour: delete the item in the change that removes the code. Never reuse an ID for something else.
 - Every `req` item covers exactly one `feat` item via `Covers:`.
-- `specs/` is a long-term archive of how the app is supposed to behave, not a plan for implementing a feature. Never write requirements for unbuilt behaviour there; they go in together with the code.
-- Plans for unbuilt features live in an untracked `<feature>-plan.md` in the repo root (e.g. `mcp-plan.md`). Once built, their decisions move into `specs/` and the plan file is deleted. Never create loose `*-spec.md` files.
+- Requirements state what the system does, never how to build it. Implementation steps, affected files and test lists go in an untracked `<feature>-plan.md` in the repo root (e.g. `mcp-plan.md`), which references the requirement IDs it implements and is deleted once the feature is built. Never create loose `*-spec.md` files.
 
 ## Stack
 - Python 3.12, Django, Gunicorn, WhiteNoise, mysqlclient, MariaDB

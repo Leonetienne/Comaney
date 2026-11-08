@@ -1,9 +1,9 @@
 # Comaney Requirements Database
 
-This directory is the single source of requirements for Comaney. It describes the
-system as built: every requirement here is meant to hold for the current code. It
-replaces the former loose `*-spec.md` design documents, whose still-valid content
-has been folded in.
+This directory is the single source of requirements for Comaney. Requirements are
+written first: a change in behaviour starts here, and the code is then built to
+satisfy it. An item without a `Status:` line holds for the current code; an item
+marked `Status: proposed` is agreed but not implemented yet.
 
 ## Format
 
@@ -26,7 +26,8 @@ Three established standards, each doing one job:
 | Optional feature | **Where** *feature is configured*, the system shall *response*. |
 
 Patterns may be combined ("While ..., when ..., the system shall ...").
-"Shall" marks a binding requirement. "Should" is not used: everything here is as-built.
+"Shall" marks a binding requirement. "Should" is not used: every item is binding,
+proposed ones included.
 
 ### Item syntax (OpenFastTrack)
 
@@ -46,6 +47,8 @@ Covers:
 - `feat~accounts~1`
 
 Tags: Security
+
+Status: proposed
 ```
 
 - **ID**: `<type>~<name>~<revision>`. Types: `feat` (system feature, in
@@ -58,6 +61,8 @@ Tags: Security
 - **Tags** (optional): `Security`, `Privacy`, `Demo` (demo-account restriction),
   `UI`, `Performance`, `Operations`. Used for filtering.
 - **Rationale** only where the reason is not evident from the statement.
+- **Status** (OFT field): `proposed` while the code does not satisfy the item yet.
+  The change that implements it deletes the line. No other status values are used.
 
 ### Tracing
 
@@ -83,9 +88,11 @@ covered by at least one requirement.
 
 ## Rules for maintainers
 
-- A feature change updates the affected requirements in the same change, next to
-  `AGENTS.md` and `docs/src/`.
-- New features get a `feat` item plus their requirements before or with the code.
+- Requirements first: a new or changed behaviour is written here, marked
+  `Status: proposed`, before any code. The implementing change removes the
+  status line, next to updating `AGENTS.md` and `docs/src/`.
+- Removed behaviour: delete its items in the change that removes the code.
 - Write the requirement as observable behaviour. Code paths belong in `Comment:`
-  only when they help find the implementation.
+  only when they help find the implementation. Implementation steps belong in an
+  untracked `<feature>-plan.md` in the repo root, never here.
 - No em-dashes in this directory (project rule).
