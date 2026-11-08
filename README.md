@@ -315,10 +315,11 @@ docker buildx build \
 
 ## For contributors
 Comaney welcomes contributions as long as they don't introduce unfitting / off-topic features or features that needlessly bloat the projects scope.
-Bugfixes are always welcome.
-If you are planning a new Feature for Comaney, feel free to fork the repo and implement it there.
+Bugfixes are always welcome.  
+If you are planning a new feature for Comaney, feel free to fork the repo and implement it there.  
 However if you intend to have it merged,
-you should first create a feature request issue to properly plan and design it with the maintainers. Well thought-through feature requests are generally welcome.
+you should first create a feature request issue to properly plan and design it with the maintainers. Well thought-through feature requests are generally welcome.  
+
 Any PR must respect the repository rules:
 
 1. `./specs/` must always document the entire feature scope / the requirements of Comaney. Changing, adding or removing behaviour requires modifying `./specs/`!
