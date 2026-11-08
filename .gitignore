@@ -44,3 +44,6 @@ docs/build/site/
 
 # JavaShit doing what it does best (segfaulting)
 core
+
+# Temp agentic helper files
+/test-analysis/
