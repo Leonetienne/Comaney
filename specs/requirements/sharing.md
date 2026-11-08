@@ -66,12 +66,12 @@ Covers:
 Tags: UI
 
 ### Manual share entry: remove participant
-`req~sharing.manual.remove~2`
+`req~sharing.manual.remove~3`
 
-While a project expense is assigned, the manual share dialog shall show a remove (X) icon button on every participant row except the upfront payer's; clicking it removes the row from the dialog, sets the remaining row to 100 % when only one row is left, and the participant is excluded from the expense only when the dialog is saved.
+While a project expense is assigned, the manual share dialog shall show a remove (X) icon button on every participant row except the upfront payer's and, in AI Express, the feuser's own row added because someone else paid upfront; clicking it removes the row from the dialog, sets the remaining row to 100 % when only one row is left, and the participant is excluded from the expense only when the dialog is saved.
 
 Rationale:
-A contact expense has exactly one participant, and the upfront payer is chosen in the payer field, so neither gets a remove button.
+A contact expense has exactly one participant, the upfront payer is chosen in the payer field, and AI Express adds the feuser automatically when someone else paid, so none of these gets a remove button.
 
 Covers:
 - `feat~sharing~1`
