@@ -312,3 +312,18 @@ docker buildx build \
   --push \
   .
 ```
+
+## For contributors
+Comaney welcomes contributions as long as they don't introduce unfitting / off-topic features or features that needlessly bloat the projects scope.
+Bugfixes are always welcome.
+If you are planning a new Feature for Comaney, feel free to fork the repo and implement it there.
+However if you intend to have it merged,
+you should first create a feature request issue to properly plan and design it with the maintainers. Well thought-through feature requests are generally welcome.
+Any PR must respect the repository rules:
+
+1. `./specs/` must always document the entire feature scope / the requirements of Comaney. Changing, adding or removing behaviour requires modifying `./specs/`!
+2. `./docs/` Is the user manual for both humans and agentic users. It must be kept up-to-date with every feature modification, removal, or addition.
+3. Every feature must be covered by an e2e test. Unit tests where appropriate.
+4. Every bugfix must come with a regression test where appropriate.
+5. Every PR submitted must pass the entire test suite beforehand!
+
