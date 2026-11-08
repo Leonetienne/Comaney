@@ -19,6 +19,7 @@
     var slidersEl       = document.getElementById('buddy-sliders');
     var equalBtn        = document.getElementById('buddy-equal-btn');
     var manualBtn       = document.getElementById('buddy-manual-btn');
+    var shareButtons    = manualBtn.parentElement;
     var typeIn          = document.getElementById('buddy-upfront-type-input');
     var idIn            = document.getElementById('buddy-upfront-id-input');
     var jsonIn          = document.getElementById('buddy-spendings-json');
@@ -405,6 +406,7 @@
         // No participants (e.g. the last one was just unchecked): hide the sliders
         // and serialize the now-empty list so the hidden input reflects it. Without
         // this, the stale participant JSON would still be submitted.
+        shareButtons.style.display = participants.length ? '' : 'none';
         if (participants.length === 0) { slidersEl.style.display = 'none'; serializeJSON(); return; }
         slidersEl.style.display = 'block';
 

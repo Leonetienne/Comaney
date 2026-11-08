@@ -36,9 +36,9 @@ Covers:
 - `feat~sharing~1`
 
 ### Manual share entry
-`req~sharing.manual.open~1`
+`req~sharing.manual.open~2`
 
-Wherever share sliders are shown (expense form, recurring expense form, each AI Express item), the system shall offer an "Enter manually" button next to "Equal shares" that opens a dialog with one row per person sharing the cost: the upfront payer first, then every participant, each row showing avatar, name, a percentage field, an amount field and a reset icon button, prefilled with the current shares and amounts.
+Wherever share sliders are shown (expense form, recurring expense form, each AI Express item), the system shall offer an "Enter manually" button next to "Equal shares", both shown only while at least one participant is selected, that opens a dialog with one row per person sharing the cost: the upfront payer first, then every participant, each row showing avatar, name, a percentage field, an amount field and a reset icon button, prefilled with the current shares and amounts.
 
 Covers:
 - `feat~sharing~1`

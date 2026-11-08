@@ -265,7 +265,7 @@ window.BUDDY_EXPENSE_CONFIG = {
                                         </div>
 
                                         <div class="buddy-sliders-wrap buddy-sliders" style="display:none;"></div>
-                                        <div class="buddy-share-buttons">
+                                        <div class="buddy-share-buttons" style="display:none;">
                                             <button type="button" class="btn btn-secondary btn-sm buddy-equal-btn">Equal shares</button>
                                             <button type="button" class="btn btn-secondary btn-sm buddy-manual-btn">Enter manually</button>
                                         </div>
@@ -406,6 +406,7 @@ function initCardBuddy(cardEl) {
     var slidersEl   = q('.buddy-sliders-wrap');
     var equalBtn    = q('.buddy-equal-btn');
     var manualBtn   = q('.buddy-manual-btn');
+    var shareBtns   = q('.buddy-share-buttons');
     var payerNotice = q('.buddy-payer-notice');
     var noPartErr   = q('.buddy-no-participants-error');
     var grpSelRow   = q('.buddy-project-select-row');
@@ -457,9 +458,8 @@ function initCardBuddy(cardEl) {
     function showBuddyControls(show) {
         if (payerRow) payerRow.style.display = show ? '' : 'none';
         if (partRow)  partRow.style.display  = show ? '' : 'none';
-        if (equalBtn) equalBtn.style.display  = show ? '' : 'none';
-        if (manualBtn) manualBtn.style.display = show ? '' : 'none';
         if (!show && slidersEl) slidersEl.style.display = 'none';
+        if (!show && shareBtns) shareBtns.style.display = 'none';
     }
     function checkSolo() {
         isSolo = getCurrentIsSolo();
@@ -700,6 +700,7 @@ function initCardBuddy(cardEl) {
     function rebuildSliders() {
         if (!slidersEl) return;
         slidersEl.innerHTML = '';
+        if (shareBtns) shareBtns.style.display = parts.length ? '' : 'none';
         if (!parts.length) { slidersEl.style.display = 'none'; return; }
         slidersEl.style.display = 'block';
         var ps = implicitShare();

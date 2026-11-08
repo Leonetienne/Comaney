@@ -77,7 +77,10 @@ class TestManualSharesContact:
         _fill_expense(driver, "Manual Share Dinner", "8.00")
         driver.find_element(By.ID, "assign-contact").click()
         time.sleep(0.5)
+        assert not _manual_btn(driver).is_displayed(), "share buttons stay hidden until a participant is picked"
+        assert not driver.find_element(By.ID, "buddy-equal-btn").is_displayed()
         _pick_contact(driver, "Manual Contact")
+        assert _manual_btn(driver).is_displayed()
         share_dialog_open(driver, _manual_btn(driver))
         rows = share_dialog_rows(driver)
         assert len(rows) == 2, "payer row plus one contact row expected"
