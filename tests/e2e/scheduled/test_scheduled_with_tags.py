@@ -5,7 +5,6 @@ Scheduled expenses with categories and tags:
 - Generated expense inherits category and tags from the scheduled template (API check)
 """
 import re
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -207,7 +206,6 @@ class TestGeneratedExpenseInheritsMetadata:
         sched_id = sched.json()["id"]
 
         run_cmd("generate_scheduled_expenses")
-        time.sleep(2)
 
         expenses = api_get("/api/v2/expenses/", ctx, params={"q": "InheritSched"})
         assert expenses.status_code == 200

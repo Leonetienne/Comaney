@@ -14,7 +14,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import (
     _url, fill, click, run_cmd, session_cookies,
-    setup_user, cleanup_user, DOCKER_WEB,
+    setup_user, cleanup_user,
 )
 from pacing import pause
 
@@ -141,14 +141,8 @@ def _demo_users_enabled() -> bool:
 
 
 def _create_demo_user(email: str) -> None:
-    import subprocess
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py",
-         "create_user", email, "-p", DEMO_PASSWORD, "--demo",
-         "--first-name", "Dean", "--last-name", "Demo"],
-        capture_output=True, text=True, timeout=15,
-    )
-    assert r.returncode == 0, f"create_user --demo failed:\n{r.stderr}"
+    run_cmd("create_user", email, "-p", DEMO_PASSWORD, "--demo",
+            "--first-name", "Dean", "--last-name", "Demo")
 
 
 def _http_session_for_demo(email: str, password: str) -> requests.Session:

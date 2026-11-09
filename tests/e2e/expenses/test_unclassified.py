@@ -7,7 +7,6 @@ AI-dependent tests skip gracefully (like tests/e2e/express/test_express.py)
 when no usable AI key is configured, rather than hard-failing on missing
 infrastructure.
 """
-import subprocess
 import time
 
 import pytest
@@ -15,17 +14,11 @@ import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
-from helpers import DOCKER_WEB, _url, ai_unavailable, cleanup_user, session_cookies, set_ai_user_config, setup_user
+from helpers import _url, ai_unavailable, cleanup_user, session_cookies, set_ai_user_config, setup_user
+from bhelpers import _shell
 from pacing import pause
 
 
-def _shell(code: str) -> str:
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=30,
-    )
-    assert r.returncode == 0, f"Shell failed:\n{r.stderr}"
-    return r.stdout.strip()
 
 
 def _set_disable_ai_ui(email: str, value: bool) -> None:

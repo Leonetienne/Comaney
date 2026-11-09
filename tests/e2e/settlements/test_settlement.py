@@ -16,7 +16,6 @@ Tests cover:
   - Bug regression: settlement expense must have date_due set (not null)
   - Group settlement form appears and works (custom amount, confirmation dialog)
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -505,7 +504,7 @@ class TestGroupSettlementReviewFlow:
     def test_settlement_appears_in_waiting_for_approval_not_breakdown(self, driver, w, ctx):
         # Still logged in as member (debtor): pending settlement must show in
         # "Waiting for approval", not in "Expense Breakdown"
-        time.sleep(0.5)
+        pause(0.5)
         src = driver.page_source
         assert "Waiting for approval" in src, \
             "Pending settlement must appear in the 'Waiting for approval' section"

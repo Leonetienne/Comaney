@@ -4,25 +4,18 @@ No browser or HTTP requests: all operations go through docker exec django shell.
 Run with: pytest tests/e2e/test_lastmod.py -v
 """
 import time
-import subprocess
 import uuid
 
 import pytest
 
-from helpers import DOCKER_WEB, ai_test_api_key_args, run_cmd
+from helpers import ai_test_api_key_args, run_cmd
+from bhelpers import _shell
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _shell(code: str) -> str:
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=20,
-    )
-    assert r.returncode == 0, f"Shell failed:\n{r.stderr}\nCode: {code}"
-    return r.stdout.strip()
 
 
 def _mk_email() -> str:

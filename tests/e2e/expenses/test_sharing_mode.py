@@ -47,7 +47,6 @@ shared= filter tests
 shared=true   -> sm_dummy_part, sm_dummy_payer, sm_foreign  (have BuddySpending rows)
 shared=false  -> sm_plain
 """
-import subprocess
 from decimal import Decimal
 
 import pytest
@@ -55,8 +54,8 @@ import pytest
 from helpers import (
     api_get, api_post, api_delete,
     setup_user, cleanup_user,
-    DOCKER_WEB,
 )
+from bhelpers import _shell
 
 FIXED_YEAR = 2024
 DATE = "2024-07-20"
@@ -67,13 +66,6 @@ DUMMY_NAME = "DummyShrMode"
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _shell(code: str) -> str:
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=20,
-    )
-    assert r.returncode == 0, f"Shell failed:\n{r.stderr}"
-    return r.stdout.strip()
 
 
 def _expenses(ctx, q, sharing="", year=FIXED_YEAR):

@@ -2,7 +2,6 @@
 Cron command tests: scheduled expense generation, duplicate prevention,
 auto-settle behaviour, and financial-year boundary interpretation.
 """
-import time
 from datetime import date, timedelta
 
 import pytest
@@ -183,7 +182,6 @@ class TestAutoSettle:
         eid = _create_expense(ctx, title="AutoSettle Past",
                               date_due=yesterday, auto_settle_on_due_date=True)
         run_cmd("auto_settle_expenses")
-        time.sleep(1)
         assert api_get(f"/api/v2/expenses/{eid}/", ctx).json()["settled"] is True
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
@@ -192,7 +190,6 @@ class TestAutoSettle:
         eid = _create_expense(ctx, title="AutoSettle Future",
                               date_due=tomorrow, auto_settle_on_due_date=True)
         run_cmd("auto_settle_expenses")
-        time.sleep(1)
         assert api_get(f"/api/v2/expenses/{eid}/", ctx).json()["settled"] is False
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
@@ -201,7 +198,6 @@ class TestAutoSettle:
         eid = _create_expense(ctx, title="AutoSettle NoFlag",
                               date_due=yesterday, auto_settle_on_due_date=False)
         run_cmd("auto_settle_expenses")
-        time.sleep(1)
         assert api_get(f"/api/v2/expenses/{eid}/", ctx).json()["settled"] is False
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
@@ -210,6 +206,5 @@ class TestAutoSettle:
         eid = _create_expense(ctx, title="AutoSettle Deact",
                               date_due=yesterday, auto_settle_on_due_date=True, deactivated=True)
         run_cmd("auto_settle_expenses")
-        time.sleep(1)
         assert api_get(f"/api/v2/expenses/{eid}/", ctx).json()["settled"] is False
         api_delete(f"/api/v2/expenses/{eid}/", ctx)

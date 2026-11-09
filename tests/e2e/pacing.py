@@ -14,8 +14,8 @@ import time
 
 from selenium.common.exceptions import WebDriverException
 
-QUIET_MS = 150
-POLL_SECONDS = 0.03
+QUIET_MS = 80
+POLL_SECONDS = 0.01
 
 # Appends "<waited> <cap> <last busy reason>" per pause, to tune the tracker.
 PAUSE_LOG = os.environ.get("E2E_PAUSE_LOG", "")
@@ -122,7 +122,8 @@ IDLE_TRACKER_JS = r"""
   window.addEventListener('beforeunload', function () { state.leaving = true; touch(); }, true);
   window.addEventListener('pagehide', function () { state.leaving = true; }, true);
 
-  // Returns '' when idle, else the reason. Timers due after remainingMs are ignored.
+  // Returns '' when idle, else the reason; 'active:<ms>' carries the quiet time left.
+  // Timers due after remainingMs are ignored.
   window.__e2eIdle = function (remainingMs, quietMs) {
     var t = now();
     if (document.readyState !== 'complete') return 'loading';
@@ -141,7 +142,7 @@ IDLE_TRACKER_JS = r"""
       return isFinite(a.effect.getComputedTiming().endTime);
     });
     if (animating) return 'animation';
-    if (t - state.last < quietMs) return 'active';
+    if (t - state.last < quietMs) return 'active:' + Math.ceil(quietMs - (t - state.last));
     return '';
   };
 })();
@@ -192,7 +193,11 @@ def pause(seconds: float) -> None:
                 reason = type(exc).__name__
             if reason == "":
                 break
-        time.sleep(max(0.0, min(POLL_SECONDS, deadline - time.monotonic())))
+        wait = POLL_SECONDS
+        if reason.startswith("active:"):
+            wait = int(reason[7:]) / 1000
+            reason = "active"
+        time.sleep(max(0.0, min(wait, deadline - time.monotonic())))
     if PAUSE_LOG:
         with open(PAUSE_LOG, "a") as log:
             log.write(f"{time.monotonic() - start:.3f} {seconds} {reason or 'idle'}\n")

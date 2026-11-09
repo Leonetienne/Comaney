@@ -10,7 +10,6 @@ Covers:
 
 Run: pytest tests/e2e/test_scheduled_update_expenses.py -sx
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -62,7 +61,6 @@ class TestUpdateExpensesModal:
             "repeat_every_unit": "months",
             "repeat_base_date": server_today(),
         }).json()["id"]
-        time.sleep(1)
 
         generated = _expenses_by_title(ctx, title)
         assert len(generated) >= 1, "Expected at least one generated expense"
@@ -99,7 +97,6 @@ class TestUpdateExpensesModal:
             "repeat_every_unit": "months",
             "repeat_base_date": server_today(),
         }).json()["id"]
-        time.sleep(1)
 
         generated = _expenses_by_title(ctx, title)
         assert len(generated) >= 1, "Expected at least one generated expense"
@@ -130,7 +127,6 @@ class TestUpdateExpensesModal:
             "repeat_every_unit": "months",
             "repeat_base_date": today,
         }).json()["id"]
-        time.sleep(1)
 
         generated_before = _expenses_by_title(ctx, old_title)
         assert len(generated_before) >= 1
@@ -147,7 +143,6 @@ class TestUpdateExpensesModal:
             "repeat_every_unit": "months",
             "repeat_base_date": today,
         })
-        time.sleep(0.5)
 
         # Existing expenses should still have old title (generation is idempotent)
         assert _expenses_by_title(ctx, old_title), "Expense should still have old title before update"
@@ -193,7 +188,6 @@ class TestUpdateExpensesModal:
             "repeat_every_unit": "months",
             "repeat_base_date": base_date,
         }).json()["id"]
-        time.sleep(1)
 
         generated = _expenses_by_title(ctx, title_before)
         assert len(generated) >= 2, f"Expected at least 2 generated expenses, got {len(generated)}"
@@ -211,7 +205,6 @@ class TestUpdateExpensesModal:
             "repeat_every_unit": "months",
             "repeat_base_date": base_date,
         })
-        time.sleep(0.5)
 
         _open_update_modal(driver, w, sched_id)
 
@@ -256,7 +249,6 @@ class TestUpdateExpensesModal:
             "repeat_every_unit": "months",
             "repeat_base_date": base_date,
         }).json()["id"]
-        time.sleep(1)
 
         generated = _expenses_by_title(ctx, title_before)
         assert len(generated) >= 2, f"Expected at least 2 generated expenses, got {len(generated)}"
@@ -267,7 +259,6 @@ class TestUpdateExpensesModal:
 
         api_patch(f"/api/v2/expenses/{settled_id}/", ctx, json={"settled": True})
         api_patch(f"/api/v2/expenses/{unsettled_id}/", ctx, json={"settled": False})
-        time.sleep(0.3)
 
         api_patch(f"/api/v2/scheduled/{sched_id}/", ctx, json={
             "title": title_after,
@@ -277,7 +268,6 @@ class TestUpdateExpensesModal:
             "repeat_every_unit": "months",
             "repeat_base_date": base_date,
         })
-        time.sleep(0.5)
 
         _open_update_modal(driver, w, sched_id)
 
@@ -323,7 +313,6 @@ class TestUpdateExpensesModal:
             "repeat_every_unit": "months",
             "repeat_base_date": "2099-01-01",
         }).json()["id"]
-        time.sleep(0.5)
 
         _open_update_modal(driver, w, sched_id)
 

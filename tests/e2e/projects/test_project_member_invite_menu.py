@@ -4,13 +4,12 @@ them invite a fellow member as a Catalog Partner or as a contact, with
 each option hidden once it no longer applies.
 Run with: pytest tests/e2e/projects/test_project_member_invite_menu.py -v -s
 """
-import subprocess
 import uuid
 
 import pytest
 from selenium.webdriver.common.by import By
 
-from helpers import _url, setup_user, cleanup_user, fill, click, DOCKER_WEB, PASSWORD
+from helpers import _url, setup_user, cleanup_user, fill, click, run_cmd, PASSWORD
 from bhelpers import (
     _shell, _login_as, _create_contact_link, _create_group, _add_group_member,
     _get_pk, _ctx_click,
@@ -186,13 +185,8 @@ def _demo_users_enabled() -> bool:
 
 def _create_demo_member(first_name: str, last_name: str) -> dict:
     email = f"sel.{uuid.uuid4().hex[:8]}@example.com"
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py",
-         "create_user", email, "-p", PASSWORD, "--demo",
-         "--first-name", first_name, "--last-name", last_name],
-        capture_output=True, text=True, timeout=15,
-    )
-    assert r.returncode == 0, f"create_user --demo failed:\n{r.stderr}"
+    run_cmd("create_user", email, "-p", PASSWORD, "--demo",
+            "--first-name", first_name, "--last-name", last_name)
     return {"email": email, "password": PASSWORD}
 
 

@@ -4,7 +4,6 @@ AI Express Creation tests.
 AI availability guards go through helpers.ai_unavailable.
 """
 import re
-import subprocess
 import time
 from pathlib import Path
 
@@ -17,9 +16,9 @@ from helpers import (
     ai_unavailable, stack_has_trial_key, get_ai_user_config, set_ai_user_config,
     stack_ai_is_free,
 )
+from bhelpers import _shell
 from pacing import pause
 
-DOCKER_WEB = "comaney-web-1"
 AI_TIMEOUT = 120
 ASSETS = Path(__file__).parent.parent / "assets"
 
@@ -109,7 +108,7 @@ def _parse(driver, description="", image_path=None, clear_image=False):
             "if (p) p.style.display = '';"
         )
     if description:
-        time.sleep(1)
+        pause(1)
         ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
         driver.execute_script("arguments[0].value = arguments[1];", ta, description)
     if image_path:
@@ -315,14 +314,6 @@ class TestExpressCreation:
             ai_unavailable("Trial not available")
         if not stack_has_trial_key():
             ai_unavailable("No shared AI trial key configured", trial_only=True)
-
-        def _shell(code, timeout=10):
-            r = subprocess.run(
-                ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-                capture_output=True, text=True, timeout=timeout,
-            )
-            assert r.returncode == 0, f"shell failed:\n{r.stderr}"
-            return r.stdout.strip()
 
         # Use a tiny special_ai_trial_budget so we control the limit without
         # touching AI_TRIAL_USAGE_LIMIT or the user's actual spent value.

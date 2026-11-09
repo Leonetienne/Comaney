@@ -10,7 +10,6 @@ Covers:
 - Respects email_notifications=False on the account
 """
 import re
-import time
 from datetime import date, timedelta
 
 import requests
@@ -128,7 +127,6 @@ class TestCronNotifications:
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
         seen = mailpit_seen_ids()
         _run_notify()
-        time.sleep(1)
         assert _get(ctx, eid)["last_notification_class_sent"] == "soon"
         fetch_email(ctx["email"], "Payment due in", timeout=30, ignore_ids=seen)
         ctx["cron_soon_eid"] = eid
@@ -136,7 +134,6 @@ class TestCronNotifications:
     def test_no_duplicate_on_second_run(self, driver, w, ctx):
         seen = mailpit_seen_ids()
         _run_notify()
-        time.sleep(1)
         assert _get(ctx, ctx["cron_soon_eid"])["last_notification_class_sent"] == "soon"
         new_msgs = {
             m["ID"] for m in
@@ -173,7 +170,6 @@ class TestSettledNotification:
         _move_due(eid, IN_3_DAYS)
         seen = mailpit_seen_ids()
         _run_notify()
-        time.sleep(2)
         new_msgs = {
             m["ID"] for m in
             requests.get("http://localhost:8030/api/v1/messages", timeout=5)
@@ -193,7 +189,6 @@ class TestEmailActions:
         _move_due(eid, IN_3_DAYS)
         seen = mailpit_seen_ids()
         _run_notify()
-        time.sleep(1)
         body = fetch_email(ctx["email"], "Payment due in", timeout=30, ignore_ids=seen)
         return eid, body
 
@@ -215,7 +210,6 @@ class TestEmailActions:
         if settle_link:
             s = _auth_session(driver)
             s.get(settle_link, timeout=10, allow_redirects=True)
-            time.sleep(1)
             assert _get(ctx, eid)["settled"] is True
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
@@ -228,7 +222,6 @@ class TestEmailActions:
             csrf = next((c.value for c in s.cookies if c.name == "csrftoken"), "")
             s.post(mute_link, data={"csrfmiddlewaretoken": csrf},
                    headers={"Referer": BASE_URL + "/"})
-            time.sleep(1)
             assert _get(ctx, eid)["notify"] is False
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
@@ -259,14 +252,12 @@ class TestCronSequence:
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
         seen = mailpit_seen_ids()
         _run_notify()
-        time.sleep(1)
         assert _get(ctx, eid)["last_notification_class_sent"] == "soon"
         fetch_email(ctx["email"], "Payment due in", timeout=30, ignore_ids=seen)
 
         _move_due(eid, TOMORROW)
         seen2 = mailpit_seen_ids()
         _run_notify()
-        time.sleep(1)
         assert _get(ctx, eid)["last_notification_class_sent"] == "tomorrow"
         fetch_email(ctx["email"], "Payment due tomorrow", timeout=30, ignore_ids=seen2)
         ctx["cron_seq_eid"] = eid
@@ -277,7 +268,6 @@ class TestCronSequence:
         _move_due(eid, TODAY)
         seen = mailpit_seen_ids()
         _run_notify()
-        time.sleep(1)
         assert _get(ctx, eid)["last_notification_class_sent"] == "today"
         fetch_email(ctx["email"], "Payment due today", timeout=30, ignore_ids=seen)
 
@@ -287,7 +277,6 @@ class TestCronSequence:
         _move_due(eid, YESTERDAY)
         seen = mailpit_seen_ids()
         _run_notify()
-        time.sleep(1)
         assert _get(ctx, eid)["last_notification_class_sent"] == "late"
         fetch_email(ctx["email"], "Payment overdue", timeout=30, ignore_ids=seen)
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
@@ -298,7 +287,6 @@ class TestCronSequence:
         eid = e["id"]
         _move_due(eid, IN_3_DAYS)
         _run_notify()
-        time.sleep(1)
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
@@ -316,7 +304,6 @@ class TestSettledNotifications:
         eid = resp.json()["id"]
         seen = mailpit_seen_ids()
         run_cmd("auto_settle_expenses")
-        time.sleep(1)
         exp = _get(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
@@ -332,7 +319,6 @@ class TestSettledNotifications:
         })
         assert resp.status_code == 201
         eid = resp.json()["id"]
-        time.sleep(2)
         msgs_after = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         new_settled = [m for m in msgs_after
                        if m.get("ID") not in {x.get("ID") for x in msgs_before}
@@ -416,7 +402,6 @@ class TestMuteAll:
         _move_due(eid, IN_3_DAYS)
         seen = mailpit_seen_ids()
         run_cmd("send_expense_notifications")
-        time.sleep(1)
         body = fetch_email(ctx["email"], "Payment due in", timeout=30, ignore_ids=seen)
         return eid, body
 
@@ -439,7 +424,6 @@ class TestMuteAll:
         if mute_all_link:
             s = _auth_session(driver)
             s.get(mute_all_link, timeout=10, allow_redirects=True)
-            time.sleep(1)
             account = api_get("/api/v2/account/", ctx).json()
             assert account["email_notifications"] is False
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
@@ -460,7 +444,6 @@ class TestAutoSettleAndApiSettled:
         _move_due(eid, IN_3_DAYS)
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
         run_cmd("send_expense_notifications")
-        time.sleep(1)
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
@@ -475,7 +458,6 @@ class TestAutoSettleAndApiSettled:
         eid = resp.json()["id"]
         seen = mailpit_seen_ids()
         run_cmd("auto_settle_expenses")
-        time.sleep(1)
         exp = _get(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
@@ -494,7 +476,6 @@ class TestAutoSettleAndApiSettled:
         eid = resp.json()["id"]
         msgs_before = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         run_cmd("auto_settle_expenses")
-        time.sleep(2)
         assert _get(ctx, eid)["settled"] is True
         msgs_after = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         new_settled = [m for m in msgs_after
@@ -510,7 +491,6 @@ class TestAutoSettleAndApiSettled:
         seen = mailpit_seen_ids()
         resp = api_patch(f"/api/v2/expenses/{eid}/", ctx, json={"settled": True})
         assert resp.status_code == 200
-        time.sleep(1)
         exp = _get(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
@@ -524,7 +504,6 @@ class TestAutoSettleAndApiSettled:
         eid = e["id"]
         msgs_before = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         api_patch(f"/api/v2/expenses/{eid}/", ctx, json={"settled": True})
-        time.sleep(2)
         msgs_after = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         new_msgs = [m for m in msgs_after
                     if m.get("ID") not in {x.get("ID") for x in msgs_before}
@@ -539,7 +518,6 @@ class TestAutoSettleAndApiSettled:
         eid = e["id"]
         msgs_before = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         api_patch(f"/api/v2/expenses/{eid}/", ctx, json={"settled": True})
-        time.sleep(2)
         msgs_after = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         new_msgs = [m for m in msgs_after
                     if m.get("ID") not in {x.get("ID") for x in msgs_before}
@@ -580,7 +558,6 @@ class TestNotificationClasses:
         _move_due(eid, IN_3_DAYS)
         seen = mailpit_seen_ids()
         _run_notify()
-        time.sleep(2)
         new_msgs = {
             m["ID"] for m in
             requests.get("http://localhost:8030/api/v1/messages", timeout=5)
@@ -597,7 +574,6 @@ class TestNotificationClasses:
         eid = e["id"]
         msgs_before = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         api_patch(f"/api/v2/expenses/{eid}/", ctx, json={"settled": True})
-        time.sleep(2)
         msgs_after = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         new_settled = [m for m in msgs_after
                        if m.get("ID") not in {x.get("ID") for x in msgs_before}

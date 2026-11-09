@@ -2,14 +2,13 @@
 Personal offline-buddy-into-offline-buddy merge: immediate, no approval needed.
 Replaces the old free-text-email "Invite as user" flow for this case.
 """
-import subprocess
 import uuid
 
 import pytest
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
-from helpers import _url, setup_user, cleanup_user, fill, click, DOCKER_WEB, PASSWORD
+from helpers import _url, setup_user, cleanup_user, fill, click, run_cmd, PASSWORD
 from bhelpers import _shell, _confirm, _create_contact_link, _create_group
 from pacing import pause
 
@@ -502,13 +501,8 @@ def _demo_users_enabled() -> bool:
 
 def _create_demo_member(first_name: str, last_name: str) -> dict:
     email = f"sel.{uuid.uuid4().hex[:8]}@example.com"
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py",
-         "create_user", email, "-p", PASSWORD, "--demo",
-         "--first-name", first_name, "--last-name", last_name],
-        capture_output=True, text=True, timeout=15,
-    )
-    assert r.returncode == 0, f"create_user --demo failed:\n{r.stderr}"
+    run_cmd("create_user", email, "-p", PASSWORD, "--demo",
+            "--first-name", first_name, "--last-name", last_name)
     return {"email": email, "password": PASSWORD}
 
 

@@ -8,7 +8,6 @@ One class covers the UI integration (buddy section visible in rendered cards),
 guarded by helpers.ai_unavailable.
 """
 import json
-import subprocess
 import time
 import warnings
 
@@ -20,19 +19,12 @@ from helpers import (
     _url, ai_unavailable, api_get, api_delete, setup_user, cleanup_user,
     session_cookies, fetch_email, mailpit_seen_ids, set_ai_user_config, reset_browser,
 )
+from bhelpers import _shell
 from pacing import pause
 
-DOCKER_WEB = "comaney-web-1"
 AI_TIMEOUT = 120
 
 
-def _shell(code: str) -> str:
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=20,
-    )
-    assert r.returncode == 0, f"Shell failed:\n{r.stderr}"
-    return r.stdout.strip()
 
 
 def _set_fake_api_key(email: str) -> None:

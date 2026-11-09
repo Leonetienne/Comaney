@@ -39,8 +39,6 @@ Account data export (ZIP):
 import csv
 import io
 import json
-import subprocess
-import time
 import zipfile
 
 import pytest
@@ -54,19 +52,11 @@ from helpers import (
     run_cmd, ai_test_api_key_args, get_ai_user_config, set_ai_user_config,
     provider_takes_user_api_key,
 )
-from bhelpers import _get_pk, _create_group, _add_group_member, _create_group_expense
+from bhelpers import _get_pk, _create_group, _add_group_member, _create_group_expense, _shell
 from pacing import pause
 
-DOCKER_WEB = "comaney-web-1"
 
 
-def _shell(code: str) -> str:
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=30,
-    )
-    assert r.returncode == 0, r.stderr
-    return r.stdout.strip()
 
 
 def _get_export(driver):
@@ -291,7 +281,6 @@ class TestDataExport:
                 f"BuddySpending.objects.create(expense=exp, participant_feuser=part, share_percent='50.000')"
             )
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 buddies_csv = _read_csv(zf, "contact-expenses.csv")
@@ -335,7 +324,6 @@ class TestDataExport:
                 f"print(exp.pk)"
             ))
             try:
-                time.sleep(1)
                 resp = _get_export(driver)
                 with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                     buddies_csv = _read_csv(zf, "contact-expenses.csv")
@@ -374,7 +362,6 @@ class TestDataExport:
             f"print(exp.pk)"
         ))
         try:
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 buddies_csv = _read_csv(zf, "contact-expenses.csv")
@@ -421,7 +408,6 @@ class TestDataExport:
                 f"print(exp.pk)"
             ))
             try:
-                time.sleep(1)
                 resp = _get_export(driver)
                 with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                     matrix_csv = _read_csv(zf, "contact-expense-participation.csv")
@@ -471,7 +457,6 @@ class TestDataExport:
                 f"print(exp.pk)"
             ))
             try:
-                time.sleep(1)
                 resp = _get_export(driver)
                 with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                     state_csv = _read_csv(zf, "contact-expense-approval-matrix.csv")
@@ -510,7 +495,6 @@ class TestDataExport:
                 title="ProjectComboExpense", value="40.00", share="50.0",
             )
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 buddies_csv = _read_csv(zf, "contact-expenses.csv")
@@ -546,7 +530,6 @@ class TestDataExport:
             f"print(exp.pk)"
         ))
         try:
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 expenses_csv = _read_csv(zf, "contact-expenses.csv")
@@ -582,7 +565,6 @@ class TestDataExport:
         api_patch(f"/api/v2/expenses/{eid}/", ctx, json={"tag_ids": [int(tag_id)]})
 
         try:
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 expenses_csv = _read_csv(zf, "expenses.csv")
@@ -608,7 +590,6 @@ class TestDataExport:
         eid = r.json()["id"]
 
         try:
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 expenses_csv = _read_csv(zf, "expenses.csv")
@@ -654,7 +635,6 @@ class TestDataExport:
                 f"  share_percent='50.000')"
             )
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 buddies_csv = _read_csv(zf, "contact-expenses.csv")
@@ -702,7 +682,6 @@ class TestDataExport:
                 f"ov.tags.set([Tag.objects.get(pk={tag_id})])"
             )
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 overlays_csv = _read_csv(zf, "expense_overlays.csv")
@@ -733,7 +712,6 @@ class TestDataExport:
                 f"print(bl.pk)"
             ))
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 csv_text = _read_csv(zf, "contacts.csv")
@@ -763,7 +741,6 @@ class TestDataExport:
                 f"print(p.pk)"
             ))
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 names = zf.namelist()
@@ -831,7 +808,6 @@ class TestDataExport:
                 f"print(exp.pk)"
             ))
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 nested_expenses_csv = _read_csv(zf, f"projects/{proj_pk}/expenses.csv")
@@ -864,7 +840,6 @@ class TestDataExport:
         ).split()
         proj_pk, dummy_pk = int(ids[0]), int(ids[1])
         try:
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 members_csv = _read_csv(zf, f"projects/{proj_pk}/members.csv")
@@ -884,7 +859,6 @@ class TestDataExport:
             f"print(d.pk)"
         ))
         try:
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 csv_text = _read_csv(zf, "contacts.csv")
@@ -921,7 +895,6 @@ class TestDataExport:
                 f"print(p.pk)"
             ))
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 csv_text = _read_csv(zf, "pending_project_invites.csv")
@@ -959,7 +932,6 @@ class TestDataExport:
                 f"ContactInvite.objects.create(inviter=other, invitee_email='{ctx['email']}')"
             )
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 csv_text = _read_csv(zf, "pending_contact_invites.csv")
@@ -999,7 +971,6 @@ class TestDataExport:
                 f"CatalogPartnershipInvite.objects.create(partnership=partnership, inviter=other, invitee_email='{ctx['email']}')"
             )
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 csv_text = _read_csv(zf, "pending_partnership_invites.csv")
@@ -1063,7 +1034,6 @@ class TestDataExport:
                 f"print(exp.pk)"
             ))
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 csv_text = _read_csv(zf, "pending_expense_approvals.csv")
@@ -1108,7 +1078,6 @@ class TestDataExport:
                 f"print(exp.pk)"
             ))
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 csv_text = _read_csv(zf, "pending_expense_approvals.csv")
@@ -1156,7 +1125,6 @@ class TestDataExport:
                 f"print(exp.pk)"
             ))
 
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 root_csv = _read_csv(zf, "pending_expense_approvals.csv")

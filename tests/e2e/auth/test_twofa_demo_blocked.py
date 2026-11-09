@@ -1,14 +1,13 @@
 """Demo accounts must never be able to set up, remove, or regenerate a
 second factor: 2FA setup is on the hard-blocked list for is_demo=True users
 (see CLAUDE.md), both server-side and in the UI."""
-import subprocess
 import uuid
 
 import pytest
 import requests
 from selenium.webdriver.common.by import By
 
-from helpers import _url, fill, click, wait_text, cleanup_user, reset_browser, DOCKER_WEB, PASSWORD
+from helpers import _url, fill, click, wait_text, cleanup_user, reset_browser, run_cmd, PASSWORD
 from bhelpers import _shell
 from pacing import pause
 
@@ -23,12 +22,7 @@ def demo_ctx(driver, w):
         pytest.skip("ENABLE_DEMO_USERS is not set on this server")
 
     email = f"sel.demo.{uuid.uuid4().hex[:8]}@example.com"
-    result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py",
-         "create_user", email, "-p", PASSWORD, "--demo"],
-        capture_output=True, text=True, timeout=15,
-    )
-    assert result.returncode == 0, f"create_user --demo failed:\n{result.stderr}"
+    run_cmd("create_user", email, "-p", PASSWORD, "--demo")
 
     reset_browser(driver)
     driver.get(_url("/login/"))

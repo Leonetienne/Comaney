@@ -15,24 +15,16 @@ interferes. Uses the REST API (Bearer token) exclusively; no browser needed.
 
 Run with: venv/bin/pytest tests/e2e/expenses/test_search_tag_cat_isolation.py -v
 """
-import subprocess
 
 import pytest
 
-from helpers import api_get, setup_user, cleanup_user, DOCKER_WEB
-from bhelpers import _create_group, _add_group_member
+from helpers import api_get, setup_user, cleanup_user
+from bhelpers import _create_group, _add_group_member, _shell
 
 FIXED_YEAR = 2025
 DATE_2025 = "2025-06-15"
 
 
-def _shell(code: str) -> str:
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=20,
-    )
-    assert r.returncode == 0, f"Shell failed:\n{r.stderr}"
-    return r.stdout.strip()
 
 
 def _api_titles(ctx, q, sharing="shared"):

@@ -12,15 +12,14 @@ All test expenses carry the unique keyword "BuddySrch" so other data never
 interferes.  Setup is done via django shell commands (docker exec) because
 buddy spendings are not exposed through the public REST API.
 """
-import subprocess
 
 import pytest
 
 from helpers import (
     _url, api_get, api_post, api_delete,
     setup_user, cleanup_user,
-    DOCKER_WEB,
 )
+from bhelpers import _shell
 
 FIXED_YEAR = 2025
 DATE_2025 = "2025-06-15"
@@ -29,13 +28,6 @@ GROUP_NAME = "BuddySrchGroup"
 MEMBER_NAME = "BuddySrchMember"
 
 
-def _shell(code: str) -> str:
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=20,
-    )
-    assert r.returncode == 0, f"Shell failed:\n{r.stderr}"
-    return r.stdout.strip()
 
 
 def _api_titles(ctx, q, year=FIXED_YEAR):

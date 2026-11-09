@@ -114,15 +114,6 @@ class TestTouchDragReorder:
     @pytest.fixture(scope="class")
     def ctx(self, driver, w):
         a = setup_user(driver, w, first_name="Touch", last_name="Dragger")
-        # A brand-new user gets the getting-started intro modal on first page
-        # load (see tests/e2e/profile/test_intros.py); its full-screen backdrop
-        # would otherwise absorb every touch point in this test's coordinate-
-        # based dispatch, so mark it seen up front like an already-onboarded user.
-        _shell(
-            f"from django.utils import timezone; from feusers.models import FeUser; "
-            f"u = FeUser.objects.get(email='{a['email']}'); "
-            f"u.intro_seen_at = timezone.now(); u.save(update_fields=['intro_seen_at'])"
-        )
         g1 = _create_group(a["email"], "Touch Project 1")
         g2 = _create_group(a["email"], "Touch Project 2")
         # Pin a known starting order (g1 before g2) so the drag direction below

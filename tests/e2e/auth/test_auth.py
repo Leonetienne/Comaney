@@ -1,26 +1,21 @@
 """Auth: registration, email confirmation, login, last_login/last_seen tracking."""
-import subprocess
-
-
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import (
     _url, fill, click, wait_url, wait_text,
     fetch_email, extract_link, cleanup_user,
-    register_user, PASSWORD, DOCKER_WEB,
+    register_user, PASSWORD,
 )
+from bhelpers import _shell
 from pacing import pause
 
 
 def _get_feuser_field(email, field):
-    result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c",
-         f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}');"
-         f" print(getattr(u, '{field}'))"],
-        capture_output=True, text=True, timeout=10,
+    return _shell(
+        f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}');"
+        f" print(getattr(u, '{field}'))"
     )
-    return result.stdout.strip()
 
 
 @pytest.fixture(scope="module")

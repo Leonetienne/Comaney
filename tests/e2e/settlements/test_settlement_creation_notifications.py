@@ -13,7 +13,6 @@ Scenarios:
   CN3: Group settlement (dummy debtor to feuser creditor) sends confirmation email,
        naming the offline member as the debtor, not the admin who submitted the form
 """
-import time
 
 import pytest
 
@@ -234,7 +233,6 @@ class TestSettlementNotificationSuppressed:
             f"exp = Expense.objects.get(pk={ctx['exp_pk']}); "
             f"BuddyEmailService.send_direct_settlement_confirmation_request(exp, a, b)"
         )
-        time.sleep(2)
         import requests
         from helpers import MAILPIT_API
         msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])

@@ -27,7 +27,6 @@ per-project export:
 """
 import csv
 import io
-import time
 import zipfile
 
 import requests
@@ -157,7 +156,6 @@ class TestContactSummaryExport:
                 share="50.0",
                 approved=True,
             )
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 expenses_csv = _read_csv(zf, "contact-expenses.csv")
@@ -221,7 +219,6 @@ class TestContactSummaryExport:
                 f"  value='25.00', owning_feuser=owner, settled=True, "
                 f"  is_dummy=True, upfront_payee_dummy=dummy)"
             )
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 expenses_csv = _read_csv(zf, "contact-expenses.csv")
@@ -336,7 +333,6 @@ class TestContactSummaryExport:
                 admin_email, a["email"], proj_pk,
                 title="SummaryExportProjectExpense", value="40.00", share="50.0",
             )
-            time.sleep(1)
             resp = _get_export(driver)
             with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
                 expenses_csv = _read_csv(zf, "contact-expenses.csv")

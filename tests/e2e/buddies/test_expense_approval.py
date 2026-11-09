@@ -5,7 +5,6 @@ Setup is done via shell (creates an unapproved expense owned by B with A as
 participant, mirroring what happens when A sets B as upfront payer in the form).
 UI tests verify the approve/reject actions and their email side-effects.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -225,7 +224,6 @@ class TestExpenseAssignmentNotificationSuppressed:
             f"a = FeUser.objects.get(email='{ctx['a']['email']}'); "
             f"BuddyEmailService.send_expense_approval_request(exp, a)"
         )
-        time.sleep(2)
         import requests
         from helpers import MAILPIT_API
         msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])
@@ -284,7 +282,6 @@ class TestParticipantDecisionNotificationSuppressed:
             f"BuddyEmailService.send_participant_approval_notification("
             f"  exp, b, BuddySpending.APPROVAL_APPROVED)"
         )
-        time.sleep(2)
         import requests
         from helpers import MAILPIT_API
         msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])

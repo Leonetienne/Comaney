@@ -5,7 +5,6 @@ Setup: 1000 income + 600 expense in the previous financial month = 400 unspent.
 Each test configures one action, runs the cron, and checks what was (or was not) created.
 Uses month_start_day=1, prev_month=False throughout.
 """
-import time
 from datetime import date
 
 import pytest
@@ -80,37 +79,28 @@ class TestAllowanceTransition:
     def test_do_nothing(self, driver, w, ctx):
         """do_nothing: no savings_dep entry is created for the previous month."""
         inc_id, exp_id = _setup_prev_month(ctx)
-        time.sleep(1)
         _reset_action(ctx, "do_nothing")
         run_cmd("apply_allowance_transitions")
-        time.sleep(1)
         assert _by_type(_expenses_in(ctx, PREV_YEAR, PREV_MONTH), "savings_dep") == []
         _teardown_prev_month(ctx, inc_id, exp_id)
-        time.sleep(1)
 
     def test_deposit_savings(self, driver, w, ctx):
         """deposit_savings: 400 appears as savings_dep in the previous month."""
         inc_id, exp_id = _setup_prev_month(ctx)
-        time.sleep(1)
         _reset_action(ctx, "deposit_savings")
         run_cmd("apply_allowance_transitions")
-        time.sleep(1)
         savings = _by_type(_expenses_in(ctx, PREV_YEAR, PREV_MONTH), "savings_dep")
         assert len(savings) == 1
         assert savings[0]["value"] == UNSPENT
         api_delete(f"/api/v2/expenses/{savings[0]['id']}/", ctx)
         _teardown_prev_month(ctx, inc_id, exp_id)
-        time.sleep(1)
 
     def test_no_duplicate_on_second_run(self, driver, w, ctx):
         """Running the transition twice in the same month must not create a second entry."""
         inc_id, exp_id = _setup_prev_month(ctx)
-        time.sleep(1)
         _reset_action(ctx, "deposit_savings")
         run_cmd("apply_allowance_transitions")
-        time.sleep(1)
         run_cmd("apply_allowance_transitions")
-        time.sleep(1)
         savings = _by_type(_expenses_in(ctx, PREV_YEAR, PREV_MONTH), "savings_dep")
         assert len(savings) == 1, f"Expected 1 savings_dep, got {len(savings)}"
         api_delete(f"/api/v2/expenses/{savings[0]['id']}/", ctx)
@@ -129,13 +119,10 @@ class TestAllowanceTransition:
         })
         assert inc.status_code == 201
         assert exp.status_code == 201
-        time.sleep(1)
         _reset_action(ctx, "deposit_savings")
         run_cmd("apply_allowance_transitions")
-        time.sleep(1)
         savings = _by_type(_expenses_in(ctx, PREV_YEAR, PREV_MONTH), "savings_dep")
         assert savings == [], f"Expected no savings_dep for zero left, got {savings}"
         api_delete(f"/api/v2/expenses/{inc.json()['id']}/", ctx)
         api_delete(f"/api/v2/expenses/{exp.json()['id']}/", ctx)
         api_patch("/api/v2/account/", ctx, json={"unspent_allowance_action": "do_nothing"})
-        time.sleep(1)

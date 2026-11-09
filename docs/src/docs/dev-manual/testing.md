@@ -67,8 +67,8 @@ run_cmd("generate_scheduled_expenses", "--year", "2026")
 
 All helpers live in `tests_new/helpers.py`:
 
-- `setup_user(driver, w)` / `cleanup_user(email)`: full user lifecycle (register, confirm email, log in, generate API key).
+- `setup_user(driver, w)` / `cleanup_user(email)`: full user lifecycle (create a confirmed user with an API key, log the browser in by session cookie). The intro modal is marked seen unless `intro=True`.
 - `api_get` / `api_post` / `api_patch` / `api_delete`: Bearer-authenticated API calls.
 - `fill`, `click`, `submit`, `wait_url`, `wait_text`: browser interaction shortcuts.
 - `server_today()`: reads the current date from inside the container (avoids timezone drift).
-- `run_cmd(*args)`: runs a Django management command in the container.
+- `run_cmd(*args)` / `run_code(snippet)`: run a Django management command or a Python snippet in one persistent Django process in the container (`django_shell.py`), so Django boots once per test run.

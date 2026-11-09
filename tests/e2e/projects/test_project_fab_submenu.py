@@ -35,7 +35,7 @@ def _set_disable_ai_ui(email: str, value: bool) -> None:
 
 @pytest.fixture(scope="module")
 def ctx(driver, w):
-    c = setup_user(driver, w, first_name="Frida", last_name="Fabber")
+    c = setup_user(driver, w, first_name="Frida", last_name="Fabber", intro=True)
     group_id = int(_create_group(c["email"], "Fab Menu Project"))
     yield {**c, "group_id": group_id}
     cleanup_user(c["email"])
@@ -101,12 +101,11 @@ class TestProjectFabSubmenu:
         """Continues on the AI Express page opened by the previous test."""
         if "/budget/ai/express-creation/" not in driver.current_url:
             ai_unavailable("AI Express not available for this test user")
-        # A brand-new test user sees the one-time welcome modal; dismissing it
-        # must hand focus back to the textarea.
-        dismiss = driver.find_elements(By.ID, "intro-modal-dismiss")
-        if dismiss and dismiss[0].is_displayed():
-            dismiss[0].click()
-            pause(0.5)
+        # dismissing the welcome modal hands focus back to the textarea
+        dismiss = driver.find_element(By.ID, "intro-modal-dismiss")
+        assert dismiss.is_displayed(), "A new user sees the welcome modal on AI Express"
+        dismiss.click()
+        pause(0.5)
         textarea = driver.find_element(By.CSS_SELECTOR, ".smart-input")
         state = driver.execute_script(
             "var t = arguments[0];"

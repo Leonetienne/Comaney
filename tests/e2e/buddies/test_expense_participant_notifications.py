@@ -10,7 +10,6 @@ Tests that the correct notification emails are sent when:
 Settlement expenses must NOT trigger these notifications (they have their own flow).
 """
 import json
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -415,7 +414,6 @@ class TestSettlementNoNotification:
             f"  is_buddies_settlement=True, "
             f"  buddy_spendings=[{{'type': 'feuser', 'id': {b_pk}, 'share_percent': 100}}])"
         )
-        time.sleep(1)
 
         import requests
         from helpers import MAILPIT_API
@@ -469,7 +467,6 @@ class TestParticipationNotificationSuppressed:
             f"BuddyEmailService.notify_expense_created(e, a); "
             f"print(e.pk)"
         )
-        time.sleep(2)
         import requests
         from helpers import MAILPIT_API
         msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])

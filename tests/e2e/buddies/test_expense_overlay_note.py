@@ -86,7 +86,7 @@ class TestOverlayNoteStored:
     def test_note_saved_via_form(self, driver, w, ctx):
         _login_as(driver, ctx["part"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit-overlay/"))
-        import time; time.sleep(1)
+        pause(1)
         driver.execute_script(
             f"document.getElementById('id_category').value = '{ctx['cat_pk']}';"
         )
@@ -134,7 +134,7 @@ class TestEmptyNoteIsNull:
     def test_empty_note_submit_stores_none(self, driver, w, ctx):
         _login_as(driver, ctx["part"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit-overlay/"))
-        import time; time.sleep(1)
+        pause(1)
         from selenium.webdriver.common.by import By
         # Keep category, clear note
         driver.execute_script(
@@ -182,7 +182,7 @@ class TestClearNoteDeletesOverlayWhenAllEmpty:
     def test_empty_submit_deletes_overlay(self, driver, w, ctx):
         _login_as(driver, ctx["part"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit-overlay/"))
-        import time; time.sleep(1)
+        pause(1)
         from selenium.webdriver.common.by import By
         driver.execute_script("document.getElementById('id_note').value = '';")
         driver.execute_script("document.getElementById('id_category').value = '';")

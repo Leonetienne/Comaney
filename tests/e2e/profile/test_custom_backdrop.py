@@ -1,25 +1,22 @@
 """Custom backdrop: upload, render, delete (file removed), user delete (file removed)."""
 import os
 import re
-import subprocess
 
 import requests
 from selenium.webdriver.common.by import By
 
-from helpers import BASE_URL, DOCKER_WEB, _url, cleanup_user, setup_user
+from helpers import BASE_URL, _url, cleanup_user, setup_user
+from bhelpers import _shell
 from pacing import pause
 
 BACKDROP_ASSET = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "backdrop.png")
 
 
 def _file_exists_on_server(pk) -> bool:
-    result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c",
-         f"from django.conf import settings;"
-         f" print((settings.MEDIA_ROOT / 'backdrops' / '{pk}.png').exists())"],
-        capture_output=True, text=True, timeout=15,
-    )
-    return result.stdout.strip() == "True"
+    return _shell(
+        f"from django.conf import settings;"
+        f" print((settings.MEDIA_ROOT / 'backdrops' / '{pk}.png').exists())"
+    ) == "True"
 
 
 def _upload_backdrop(driver):

@@ -204,8 +204,6 @@ class TestGroupMemberRemovedNotification:
             f"m = ProjectMember.objects.get(group=g, feuser=c); "
             f"BuddyGroupService.remove_member(g, g.admin_feuser, m, notify=False)"
         )
-        import time as _time
-        _time.sleep(3)
         try:
             fetch_email(c["email"], "removed from the group", timeout=5, ignore_ids=seen_before)
             assert False, "Voluntary leave must not send a removal email"

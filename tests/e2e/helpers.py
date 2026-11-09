@@ -3,13 +3,12 @@ Shared helpers for tests_new.
 All test files import from here; conftest.py provides the driver/w fixtures.
 
 User lifecycle: each test file creates its own user via setup_user(), and
-cleans up via cleanup_user().  cleanup_user() uses docker exec so it is
-safe regardless of browser state (TOTP enabled, logged out, etc.).
+cleans up via cleanup_user().  cleanup_user() runs in the container's Django
+process, so it is safe regardless of browser state (TOTP enabled, logged out, etc.).
 """
 import json
 import os
 import re
-import subprocess
 import time
 import uuid
 
@@ -17,6 +16,7 @@ import pytest
 import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from django_shell import DjangoShell
 from pacing import pause
 
 BASE_URL    = "http://localhost:8080"
@@ -24,8 +24,9 @@ MAILPIT_API = "http://localhost:8030/api/v1"
 PASSWORD    = "S3l3n!umTest"
 TIMEOUT     = 60
 CLICK_PACE  = 0.15
+MAILPIT_POLL = 0.2
 DOCKER_WEB  = "comaney-web-1"
-# docker exec of manage.py slows down a lot under parallel workers plus a local model
+# manage.py calls slow down a lot under parallel workers plus a local model
 DOCKER_EXEC_TIMEOUT = 60
 SUBMIT_BTN  = "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)"
 
@@ -177,7 +178,7 @@ def fill(w, by, locator, value):
         "e.dispatchEvent(new Event('change', {bubbles:true}));",
         el,
     )
-    time.sleep(CLICK_PACE)
+    pause(CLICK_PACE)
 
 
 def click(w, by, locator):
@@ -233,7 +234,7 @@ def fetch_email(to_email: str, subject_fragment: str, timeout: int = 60,
                     return body.get("HTML", "") or body.get("Text", "") or ""
         except Exception:
             pass
-        time.sleep(1)
+        time.sleep(MAILPIT_POLL)
     raise TimeoutError(f"Email '{subject_fragment}' for {to_email} never arrived")
 
 
@@ -322,40 +323,62 @@ def form_post(session: requests.Session, path: str, data: dict,
     return post_resp, get_resp
 
 
-def create_confirmed_user(first_name: str = "", last_name: str = "") -> dict:
+def create_confirmed_user(first_name: str = "", last_name: str = "", intro: bool = False) -> dict:
     """Create an active, confirmed user via the create_user command (no browser,
-    no API key). Returns {"email", "password"}. Caller must cleanup_user()."""
+    no API key). Returns {"email", "password"}. Caller must cleanup_user().
+    intro: see setup_user()."""
     email = f"sel.{uuid.uuid4().hex[:8]}@example.com"
-    cmd = ["docker", "exec", DOCKER_WEB, "python", "manage.py",
-           "create_user", email, "-p", PASSWORD]
-    if first_name:
-        cmd += ["--first-name", first_name]
-    if last_name:
-        cmd += ["--last-name", last_name]
-    cmd += ai_test_api_key_args()
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=DOCKER_EXEC_TIMEOUT)
-    assert result.returncode == 0, f"create_user failed:\n{result.stderr}"
+    run_code(_create_user_code(email, first_name, last_name, intro))
     return {"email": email, "password": PASSWORD}
 
 
-# ── Docker / management command helpers ───────────────────────────────────────
+def _create_user_code(email: str, first_name: str, last_name: str, intro: bool) -> str:
+    """Snippet running create_user; binds the new account to `u`."""
+    argv = ["create_user", email, "-p", PASSWORD]
+    if first_name:
+        argv += ["--first-name", first_name]
+    if last_name:
+        argv += ["--last-name", last_name]
+    argv += ai_test_api_key_args()
+    code = (
+        "from django.core.management import call_command\n"
+        "from django.utils import timezone\n"
+        "from feusers.models import FeUser\n"
+        f"call_command(*{argv!r})\n"
+        f"u = FeUser.objects.get(email={email!r})\n"
+    )
+    if not intro:
+        code += "u.intro_seen_at = timezone.now()\nu.save(update_fields=['intro_seen_at'])\n"
+    return code
+
+
+# ── Django process helpers ────────────────────────────────────────────────────
+
+_django = DjangoShell(DOCKER_WEB)
+
 
 def run_cmd(*args, timeout: int = DOCKER_EXEC_TIMEOUT) -> str:
-    result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", *args],
-        capture_output=True, text=True, timeout=timeout,
-    )
+    """Run a management command like `manage.py <args>` and return its stdout.
+
+    Goes through the persistent Django process, so it does not see a fresh
+    process environment; tests about the CLI itself use a real docker exec.
+    """
+    result = _django.request(argv=args, timeout=timeout)
     assert result.returncode == 0, f"Management command failed:\n{result.stderr}"
     return result.stdout
 
 
+def run_code(code: str, timeout: int = DOCKER_EXEC_TIMEOUT) -> str:
+    """Run a Python snippet with Django set up, in a fresh namespace; returns its stdout."""
+    result = _django.request(code=code, timeout=timeout)
+    assert result.returncode == 0, f"Django code failed:\n{result.stderr}\nCode: {code}"
+    return result.stdout
+
+
 def server_today() -> str:
-    result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "-c",
-         "from datetime import date; print(date.today().isoformat())"],
-        capture_output=True, text=True, timeout=5,
-    )
-    return result.stdout.strip()
+    return _django.request(
+        code="from datetime import date; print(date.today().isoformat())", timeout=5,
+    ).stdout.strip()
 
 
 # ── User lifecycle ────────────────────────────────────────────────────────────
@@ -405,50 +428,95 @@ def get_api_key(driver, w) -> str:
 
 
 def setup_user(driver, w, first_name: str = "", last_name: str = "",
-               unclassified_warning: bool = False) -> dict:
-    """Create a confirmed user via management commands and generate an API key via shell.
+               unclassified_warning: bool = False, intro: bool = False) -> dict:
+    """Create a confirmed user with an API key and log the browser in as it.
 
-    Bypasses the UI registration flow for speed. driver and w are accepted for
-    call-site compatibility but are not used. Use register_user() + confirm_email()
-    in tests that specifically exercise the registration UI.
+    Bypasses the UI registration and login flows for speed (one request to the
+    persistent Django process, then a session cookie). Pass driver=None, w=None
+    to skip the browser login. Use register_user() + confirm_email() or
+    browser_login() in tests that exercise those forms.
     Pass first_name / last_name to give the user a visible display name.
     The missing category/tags warning before saving an expense is off unless
     unclassified_warning=True: every account owns default categories and tags,
     so it would otherwise stop every unrelated test that saves an expense form.
+    The getting-started intro modal is marked seen unless intro=True, so it
+    does not cover the page under test.
     """
     email = f"sel.{uuid.uuid4().hex[:8]}@example.com"
-    cmd = ["docker", "exec", DOCKER_WEB, "python", "manage.py",
-           "create_user", email, "-p", PASSWORD]
-    if first_name:
-        cmd += ["--first-name", first_name]
-    if last_name:
-        cmd += ["--last-name", last_name]
-    cmd += ai_test_api_key_args()
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=DOCKER_EXEC_TIMEOUT)
-    assert result.returncode == 0, f"create_user failed:\n{result.stderr}"
-
-    key_result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c",
-         f"from feusers.models import FeUser; u = FeUser.objects.get(email='{email}');"
-         f" u.warn_unclassified_on_save = {unclassified_warning};"
-         f" u.generate_api_key(); u.save(); print(u.api_key)"],
-        capture_output=True, text=True, timeout=DOCKER_EXEC_TIMEOUT,
+    login = driver is not None and w is not None
+    out = run_code(
+        _create_user_code(email, first_name, last_name, intro)
+        + f"u.warn_unclassified_on_save = {unclassified_warning!r}\n"
+        "u.generate_api_key()\n"
+        "u.save()\n"
+        "print(u.api_key)\n"
+        + (_LOGIN_SESSION_CODE.format(email=email) if login else "")
     )
-    assert key_result.returncode == 0, f"API key generation failed:\n{key_result.stderr}"
-
-    ctx = {"email": email, "password": PASSWORD, "api_key": key_result.stdout.strip()}
-    if driver is not None and w is not None:
+    lines = out.strip().splitlines()
+    ctx = {"email": email, "password": PASSWORD}
+    if login:
+        ctx["api_key"] = lines[-2]
         reset_browser(driver)
-        browser_login(driver, w, email, PASSWORD)
+        _land_with_session(driver, json.loads(lines[-1]))
+    else:
+        ctx["api_key"] = lines[-1]
     return ctx
+
+
+# Prints one JSON line: the session key plus the cookie as Django sets it, or a
+# null key when the login form would stop the account (second factor, demo banner, inactive).
+_LOGIN_SESSION_CODE = """
+import json, time
+from importlib import import_module
+from django.conf import settings
+from feusers.models import FeUser
+from feusers.utils import _record_login
+u = FeUser.objects.filter(email={email!r}, is_active=True, is_confirmed=True).first()
+key = None
+if u is not None and not u.is_demo and not u.has_2fa_enabled:
+    session = import_module(settings.SESSION_ENGINE).SessionStore()
+    session["feuser_id"] = u.pk
+    session.create()
+    _record_login(u)
+    key = session.session_key
+cookie = {{"name": settings.SESSION_COOKIE_NAME, "value": key, "path": settings.SESSION_COOKIE_PATH,
+    "httpOnly": settings.SESSION_COOKIE_HTTPONLY, "secure": settings.SESSION_COOKIE_SECURE}}
+if settings.SESSION_COOKIE_SAMESITE:
+    cookie["sameSite"] = settings.SESSION_COOKIE_SAMESITE
+if not settings.SESSION_EXPIRE_AT_BROWSER_CLOSE:
+    cookie["expiry"] = int(time.time()) + settings.SESSION_COOKIE_AGE
+print(json.dumps(cookie))
+"""
+
+
+def _land_with_session(driver, cookie: dict) -> None:
+    """Set the session cookie, then open the dashboard the login form redirects to."""
+    driver.add_cookie(cookie)
+    driver.get(_url("/"))
+    pause(2)
+    assert "/budget/" in driver.current_url, \
+        f"Session login failed; landed at {driver.current_url}"
+
+
+def session_login(driver, email: str) -> bool:
+    """Log the browser in as email through a fresh session cookie and land on the dashboard.
+
+    Call reset_browser() first.
+    @param email account to log in as
+    @return False, with the browser untouched, when the login form would stop
+            the account (second factor, demo banner, not active); the caller then
+            uses the form
+    """
+    cookie = json.loads(run_code(_LOGIN_SESSION_CODE.format(email=email)).strip().splitlines()[-1])
+    if cookie["value"] is None:
+        return False
+    _land_with_session(driver, cookie)
+    return True
 
 
 def cleanup_user(email: str):
     """Delete a test user via the delete_user management command."""
-    subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "delete_user", email, "--yes"],
-        capture_output=True, text=True, timeout=DOCKER_EXEC_TIMEOUT,
-    )
+    _django.request(argv=["delete_user", email, "--yes"], timeout=DOCKER_EXEC_TIMEOUT)
 
 
 def user_fixture(driver, w):

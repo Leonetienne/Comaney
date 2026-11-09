@@ -26,6 +26,7 @@ from helpers import (
     fill, click, browser_login,
     DOCKER_WEB, PASSWORD,
 )
+from bhelpers import _shell
 from pacing import pause
 
 DEMO_PASSWORD = "D3m0Test1ng!"
@@ -39,28 +40,17 @@ def _fresh_email():
     return f"demo.{uuid.uuid4().hex[:8]}@example.com"
 
 
-def _shell(code: str, timeout: int = 15) -> str:
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=timeout,
-    )
-    assert r.returncode == 0, f"shell failed:\n{r.stderr}"
-    return r.stdout.strip()
-
-
 def _demo_users_enabled() -> bool:
     """Return True if the target server has ENABLE_DEMO_USERS=TRUE."""
     return _shell("from django.conf import settings; print(settings.ENABLE_DEMO_USERS)") == "True"
 
 
 def _create_demo_user(email: str, *, ai_trial_budget: int | None = None) -> None:
-    cmd = ["docker", "exec", DOCKER_WEB, "python", "manage.py",
-           "create_user", email, "-p", DEMO_PASSWORD, "--demo",
-           "--first-name", "Dean", "--last-name", "Demo"]
+    args = ["create_user", email, "-p", DEMO_PASSWORD, "--demo",
+            "--first-name", "Dean", "--last-name", "Demo"]
     if ai_trial_budget is not None:
-        cmd += ["--ai-trial-budget", str(ai_trial_budget)]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-    assert r.returncode == 0, f"create_user --demo failed:\n{r.stderr}"
+        args += ["--ai-trial-budget", str(ai_trial_budget)]
+    run_cmd(*args)
 
 
 def _http_session(email: str, password: str, accept_banner: bool = True) -> requests.Session:

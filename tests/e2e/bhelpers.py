@@ -2,28 +2,23 @@
 Shared helpers specific to the buddies e2e test suite.
 Import alongside the standard helpers.py from tests/e2e/.
 """
-import subprocess
-
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
-from helpers import _url, DOCKER_WEB, PASSWORD, reset_browser
+from helpers import _url, PASSWORD, reset_browser, run_cmd, session_login
 from pacing import pause
 
 
-def _shell(code: str) -> str:
-    """Run a Python snippet inside the container's Django shell."""
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=20,
-    )
-    assert r.returncode == 0, f"Shell command failed:\n{r.stderr}\nCode: {code}"
-    return r.stdout.strip()
+def _shell(code: str, timeout: int = 20) -> str:
+    """Run a Python snippet like `manage.py shell -c`; returns its stripped stdout."""
+    return run_cmd("shell", "-c", code, timeout=timeout).strip()
 
 
 def _login_as(driver, ctx_user: dict) -> None:
-    """Switch the browser session to ctx_user (clears cookies first)."""
+    """Switch the browser session to ctx_user (clears cookies first) and land on the dashboard."""
     reset_browser(driver)
+    if session_login(driver, ctx_user["email"]):
+        return
     driver.get(_url("/login/"))
     pause(1)
     email_el = driver.find_element(By.ID, "id_email")

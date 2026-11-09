@@ -1,12 +1,11 @@
 """Date range selector on expenses list, dashboard, and buddy summary.
 Project detail pages have no date-range selector; they always show all-time data.
 """
-import subprocess
 
 import pytest
 from selenium.webdriver.common.by import By
 
-from helpers import _url, setup_user, cleanup_user, api_post, server_today, DOCKER_WEB
+from helpers import _url, setup_user, cleanup_user, api_post, server_today, run_cmd
 from pacing import pause
 
 
@@ -438,11 +437,7 @@ def _create_project_expenses(feuser_email: str, project_uid: str, expenses: list
         )
     lines.append("print('ok')")
     code = " ".join(lines)
-    result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=30,
-    )
-    assert result.returncode == 0, f"create_project_expenses failed:\n{result.stderr}"
+    run_cmd("shell", "-c", code, timeout=30)
 
 
 def _project_uid_from_url(url: str) -> str:
@@ -576,11 +571,7 @@ def project_edge_url(driver, w, ctx):
         " settled=True, buddy_approved=True, project=p);"
         "print('ok')"
     )
-    result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=30,
-    )
-    assert result.returncode == 0, f"project_edge_url setup failed:\n{result.stderr}"
+    run_cmd("shell", "-c", code, timeout=30)
 
     yield url
 

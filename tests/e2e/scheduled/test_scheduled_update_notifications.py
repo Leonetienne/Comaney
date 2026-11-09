@@ -14,7 +14,6 @@ notification logic that fires during manual expense edits must also fire here:
 Run: pytest tests/e2e/test_scheduled_update_notifications.py -sx
 """
 import json
-import time
 
 import pytest
 import requests
@@ -153,7 +152,6 @@ class TestUpdateExpensesAddParticipantNotification:
         session = _authenticated_session(ctx["a"])
         result = _post_update_expenses(session, ctx["sched_id"], ctx["exp_ids"])
         assert result["updated"] >= 1
-        time.sleep(2)
 
     def test_b_receives_added_to_expense_email(self, ctx):
         body = fetch_email(
@@ -221,7 +219,6 @@ class TestUpdateExpensesRemoveParticipantNotification:
         session = _authenticated_session(ctx["a"])
         result = _post_update_expenses(session, ctx["sched_id"], ctx["exp_ids"])
         assert result["updated"] >= 1
-        time.sleep(2)
 
     def test_b_receives_removed_from_expense_email(self, ctx):
         body = fetch_email(
@@ -278,7 +275,6 @@ class TestUpdateExpensesValueChangeNotification:
         session = _authenticated_session(ctx["a"])
         result = _post_update_expenses(session, ctx["sched_id"], ctx["exp_ids"])
         assert result["updated"] >= 1
-        time.sleep(2)
 
     def test_b_receives_updated_expense_email(self, ctx):
         body = fetch_email(
@@ -347,7 +343,6 @@ class TestUpdateExpensesProjectParticipantNotification:
         session = _authenticated_session(ctx["a"])
         result = _post_update_expenses(session, ctx["sched_id"], ctx["exp_ids"])
         assert result["updated"] >= 1
-        time.sleep(2)
 
     def test_b_receives_added_to_project_expense_email(self, ctx):
         body = fetch_email(

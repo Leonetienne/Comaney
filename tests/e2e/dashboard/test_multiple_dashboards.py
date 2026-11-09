@@ -12,7 +12,6 @@ Test organisation:
     TestPenTests           - Cross-user isolation, auth guards
 """
 
-import subprocess
 
 import requests
 import pytest
@@ -21,14 +20,14 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from helpers import (
     _url, wait_text, session_cookies, BASE_URL,
-    setup_user, cleanup_user, ai_test_api_key_args,
+    setup_user, cleanup_user, ai_test_api_key_args, run_cmd,
 )
+from bhelpers import _shell
 from pacing import pause
 
 DASHBOARDS_URL = BASE_URL + "/budget/dashboards/"
 CARDS_URL      = BASE_URL + "/budget/dashboard/cards/"
 RESET_URL      = BASE_URL + "/budget/dashboard/cards/reset/"
-DOCKER_WEB     = "comaney-web-1"
 
 
 # ---------------------------------------------------------------------------
@@ -100,12 +99,7 @@ def _get_user_dash_id(email, order_clause=""):
         "d = Dashboard.objects.filter(owning_feuser=u)" + order_clause + ".first(); "
         "print(d.pk if d else 'NONE')"
     )
-    result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=15,
-    )
-    assert result.returncode == 0, result.stderr
-    val = result.stdout.strip()
+    val = _shell(code)
     assert val != "NONE", f"{email} has no dashboard although create_user makes defaults"
     return int(val)
 
@@ -115,11 +109,7 @@ def _dash_title_in_db(dash_id) -> str:
         "from budget.models import Dashboard; "
         "print(Dashboard.objects.get(pk=" + str(dash_id) + ").title)"
     )
-    result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=15,
-    )
-    return result.stdout.strip()
+    return _shell(code)
 
 
 def _dash_exists_in_db(dash_id) -> bool:
@@ -127,11 +117,7 @@ def _dash_exists_in_db(dash_id) -> bool:
         "from budget.models import Dashboard; "
         "print(Dashboard.objects.filter(pk=" + str(dash_id) + ").exists())"
     )
-    result = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=15,
-    )
-    return "True" in result.stdout
+    return "True" in _shell(code)
 
 
 # ---------------------------------------------------------------------------
@@ -153,11 +139,7 @@ def ctx2(driver, w):
     import uuid
     email = "sel.pt." + uuid.uuid4().hex[:8] + "@example.com"
     pw = "S3l3n!umTest"
-    subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "create_user", email, "-p", pw,
-         *ai_test_api_key_args()],
-        check=True, capture_output=True, timeout=15,
-    )
+    run_cmd("create_user", email, "-p", pw, *ai_test_api_key_args())
     yield {"email": email, "password": pw}
     cleanup_user(email)
 

@@ -1,5 +1,4 @@
 """Profile update, API key generation, and API key revocation."""
-import time
 
 import requests
 import pytest
@@ -43,7 +42,6 @@ class TestProfile:
         ctx["api_key"] = new_key
 
     def test_api_key_authenticates(self, driver, w, ctx):
-        time.sleep(1)
         resp = requests.get(
             f"{BASE_URL}/api/v2/account/",
             headers={"Authorization": f"Bearer {ctx['api_key']}"},

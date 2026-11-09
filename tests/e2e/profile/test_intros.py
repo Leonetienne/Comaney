@@ -8,30 +8,21 @@ Covers:
     and app_v_created_at differs from the current APP_VERSION
   - Upgrade intro is not shown a second time after dismissal
 """
-import subprocess
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import (
     _url, setup_user, cleanup_user, browser_login,
-    DOCKER_WEB, PASSWORD,
+    PASSWORD,
 )
+from bhelpers import _shell
 from pacing import pause
 
 INTRO_MODAL_ID        = "intro-modal"
 UPGRADE_MODAL_ID      = "upgrade-intro-modal"
 VISIBLE_CLASS         = "cdialog-visible"
 FAKE_OLD_VERSION      = "0.0.0"
-
-
-def _shell(code: str, timeout: int = 15) -> str:
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=timeout,
-    )
-    assert r.returncode == 0, f"shell failed:\n{r.stderr}"
-    return r.stdout.strip()
 
 
 def _modal_visible(driver, modal_id: str) -> bool:
@@ -71,7 +62,7 @@ def _clear_upgrade_intro_seen(email: str):
 
 @pytest.fixture(scope="module")
 def ctx(driver, w):
-    c = setup_user(driver, w)
+    c = setup_user(driver, w, intro=True)
     yield c
     cleanup_user(c["email"])
 

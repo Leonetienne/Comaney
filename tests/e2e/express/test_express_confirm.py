@@ -30,17 +30,15 @@ Cases covered:
 """
 import os
 import re
-import subprocess
 import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, ai_unavailable, api_get, setup_user, cleanup_user
-from bhelpers import share_dialog_click, share_dialog_open, share_dialog_type
+from bhelpers import _shell, share_dialog_click, share_dialog_open, share_dialog_type
 from pacing import pause
 
-DOCKER_WEB = "comaney-web-1"
 ASSET = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "projectpic.jpg")
 AI_TIMEOUT = 120
 
@@ -49,13 +47,6 @@ AI_TIMEOUT = 120
 # Shell helpers (verification only)
 # ---------------------------------------------------------------------------
 
-def _shell(code: str) -> str:
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=20,
-    )
-    assert r.returncode == 0, f"Shell failed:\n{r.stderr}"
-    return r.stdout.strip()
 
 
 def _get_pk(email: str) -> int:

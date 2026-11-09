@@ -2,7 +2,6 @@
 Expense list controls: live search, select-all/deselect, visible total,
 and bulk settle/unsettle/delete/add-tag/remove-tag/set-category actions.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -10,35 +9,17 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select as SeleniumSelect
 from selenium.webdriver.support.ui import WebDriverWait
 
-import subprocess
 
 from helpers import (
     _url, click, wait_text, server_today,
     api_get, api_post, api_patch, api_delete, CLICK_PACE,
-    setup_user, cleanup_user, reset_browser, DOCKER_WEB,
+    setup_user, cleanup_user,
 )
+from bhelpers import _login_as, _shell
 from pacing import pause
 
 
-def _shell(code: str) -> str:
-    r = subprocess.run(
-        ["docker", "exec", DOCKER_WEB, "python", "manage.py", "shell", "-c", code],
-        capture_output=True, text=True, timeout=20,
-    )
-    assert r.returncode == 0, f"Shell failed:\n{r.stderr}"
-    return r.stdout.strip()
 
-
-def _login_as(driver, ctx_user: dict) -> None:
-    reset_browser(driver)
-    driver.get(_url("/login/"))
-    pause(1)
-    email_el = driver.find_element(By.ID, "id_email")
-    driver.execute_script("arguments[0].value = arguments[1];", email_el, ctx_user["email"])
-    pass_el = driver.find_element(By.ID, "id_password")
-    driver.execute_script("arguments[0].value = arguments[1];", pass_el, ctx_user["password"])
-    driver.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
-    pause(2)
 
 # Titles scoped with a prefix so they are easy to isolate via the search box.
 PREFIX   = "BulkTest"
@@ -188,7 +169,7 @@ def _select_prefix(driver, w):
 def _bulk_action(driver, w, action_value, secondary_id=None, secondary_value=None):
     SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value(action_value)
     if secondary_id and secondary_value is not None:
-        time.sleep(0.3)
+        pause(0.3)
         SeleniumSelect(driver.find_element(By.ID, secondary_id)).select_by_value(str(secondary_value))
     driver.find_element(By.ID, "exp-bulk-go").click()
     pause(CLICK_PACE)
@@ -446,7 +427,7 @@ class TestBulkPentest:
     def _do_bulk(self, driver, w, action, secondary_id=None, secondary_value=None):
         SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value(action)
         if secondary_id and secondary_value is not None:
-            time.sleep(0.3)
+            pause(0.3)
             SeleniumSelect(driver.find_element(By.ID, secondary_id)).select_by_value(
                 str(secondary_value)
             )
