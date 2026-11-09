@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static feuser_tags %}
 
 {% block title %}Comaney - Know exactly where your money goes{% endblock %}
 {% block meta_description %}Comaney tracks your spending, recurring bills and shared costs, and shows how much you have left this month. Free, open source, and you can host it yourself.{% endblock %}
@@ -23,7 +23,23 @@
         <a class="lp-link" href="https://github.com/Leonetienne/Comaney" target="_blank" rel="noopener">View on GitHub</a>
       </div>
       {% if demo_users_enabled and demo_user_email %}
-      <p class="lp-facts">Live demo: email <strong>{{ demo_user_email }}</strong>, password <strong>{{ demo_user_password }}</strong></p>
+      <p class="lp-facts">Live demo:
+        <span id="lp-demo-creds" hidden>email <strong data-obf="{{ demo_user_email|scrape_obfuscate }}"></strong>, password <strong data-obf="{{ demo_user_password|scrape_obfuscate }}"></strong></span>
+        <span id="lp-demo-nojs">credentials in the <a href="https://github.com/Leonetienne/Comaney#try-it-without-signing-up" target="_blank" rel="noopener" style="white-space: nowrap">GitHub README</a>, or enable JavaScript</span>
+      </p>
+      <script>
+        (() => {
+          const rot13 = s => s.replace(/[a-z]/gi, c => {
+            const base = c <= 'Z' ? 65 : 97;
+            return String.fromCharCode((c.charCodeAt(0) - base + 13) % 26 + base);
+          });
+          document.querySelectorAll('[data-obf]').forEach(el => {
+            el.textContent = atob(rot13(el.dataset.obf));
+          });
+          document.getElementById('lp-demo-nojs').remove();
+          document.getElementById('lp-demo-creds').hidden = false;
+        })();
+      </script>
       {% endif %}
       <p class="lp-facts">Free · Open source · Self-hostable · Docker · CSV export · REST API · No subscription</p>
     </div>

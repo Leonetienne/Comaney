@@ -67,9 +67,9 @@ Covers:
 Tags: Demo
 
 ### Landing page advert
-`req~demo.advert~1`
+`req~demo.advert~2`
 
-Where demo users are enabled, the landing page shall advertise the live demo with its email address.
+Where demo users are enabled, the landing page shall advertise the live demo with its email address and password, which the page HTML carries only in encoded form and the browser decodes for display.
 
 Covers:
 - `feat~demo~1`

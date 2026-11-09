@@ -31,3 +31,11 @@ def avatar_color(initials: str) -> str:
 @register.simple_tag
 def avatar_colors_json() -> str:
     return mark_safe(json.dumps(AVATAR_COLORS))
+
+
+@register.filter
+def scrape_obfuscate(value):
+    # rot13 over base64, decoded client side so scrapers miss the plain text
+    import base64
+    import codecs
+    return codecs.encode(base64.b64encode(str(value).encode()).decode(), "rot13")
