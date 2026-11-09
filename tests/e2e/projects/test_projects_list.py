@@ -2,13 +2,13 @@
 Tests for the /projects/ list page: creating projects, listing, archiving badges,
 and correct sorting order.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _create_group
+from pacing import pause
 
 
 class TestProjectsListPage:
@@ -23,7 +23,7 @@ class TestProjectsListPage:
 
     def test_projects_page_reachable(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         assert driver.current_url.endswith("/projects/") or "/projects/" in driver.current_url
 
     def test_project_listed(self, driver, w, ctx):
@@ -46,11 +46,11 @@ class TestProjectCreationViaForm:
 
     def test_create_project_via_form(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element(By.ID, "project-name")
         driver.execute_script("arguments[0].value = arguments[1];", inp, "Form Created Project")
         driver.find_element(By.ID, "btn-create-project").click()
-        time.sleep(1)
+        pause(1)
         assert "/projects/" in driver.current_url
         url = driver.current_url
         # Should have redirected to the project detail page
@@ -63,7 +63,7 @@ class TestProjectCreationViaForm:
 
     def test_project_appears_in_list(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         assert "Form Created Project" in driver.page_source
 
 
@@ -85,7 +85,7 @@ class TestArchivedProjectBadge:
 
     def test_archived_badge_shown(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         archived_card = driver.find_element(By.CSS_SELECTOR,
             f".bgs-card[data-project-id='{ctx['archived_id']}']")
         assert "bgs-card--archived" in archived_card.get_attribute("class")

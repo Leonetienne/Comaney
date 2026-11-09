@@ -2,12 +2,12 @@
 Project detail pages have no date-range selector; they always show all-time data.
 """
 import subprocess
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user, api_post, server_today, DOCKER_WEB
+from pacing import pause
 
 
 @pytest.fixture(scope="module")
@@ -29,12 +29,12 @@ def ctx(driver, w):
 def project_url(driver, w, ctx):
     """Create a project via the UI and return its detail URL."""
     driver.get(_url("/projects/"))
-    time.sleep(2)
+    pause(2)
     driver.execute_script(
         "document.getElementById('project-name').value = 'DateRange Test Project';"
     )
     driver.find_element(By.ID, "btn-create-project").click()
-    time.sleep(2)
+    pause(2)
     url = driver.current_url
     yield url
 
@@ -85,7 +85,7 @@ class TestDateRangeNavExpenses:
     def test_nav_renders(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         _assert_nav_basics(driver)
 
     def test_preset_select_has_labeled_options(self, driver, w, ctx):
@@ -104,18 +104,18 @@ class TestDateRangeNavExpenses:
     def test_preset_select_updates_url(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         _select_preset(driver, "cur_year")
-        time.sleep(1)
+        pause(1)
         assert "date_from=" in driver.current_url
         assert "date_to=" in driver.current_url
 
     def test_preset_enables_arrow_buttons(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         _select_preset(driver, "cur_fin_month")
-        time.sleep(1)
+        pause(1)
         prev_disabled = driver.execute_script(
             "return document.getElementById('date-range-prev').disabled;"
         )
@@ -128,24 +128,24 @@ class TestDateRangeNavExpenses:
     def test_arrow_prev_navigates(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         _select_preset(driver, "cur_fin_month")
-        time.sleep(1)
+        pause(1)
         from_before = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         driver.find_element(By.ID, "date-range-prev").click()
-        time.sleep(1)
+        pause(1)
         from_after = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         assert from_after < from_before
 
     def test_arrow_next_navigates(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         _select_preset(driver, "cur_fin_month")
-        time.sleep(1)
+        pause(1)
         from_before = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         driver.find_element(By.ID, "date-range-next").click()
-        time.sleep(1)
+        pause(1)
         from_after = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         assert from_after > from_before
 
@@ -153,12 +153,12 @@ class TestDateRangeNavExpenses:
         """Mode persists after navigating past known presets; arrows stay enabled."""
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         _select_preset(driver, "cur_fin_month")
-        time.sleep(1)
+        pause(1)
         for _ in range(3):
             driver.find_element(By.ID, "date-range-prev").click()
-            time.sleep(0.5)
+            pause(0.5)
         # Dropdown shows Custom but arrows must still be enabled
         select_val = driver.execute_script(
             "return document.getElementById('date-range-preset').value;"
@@ -173,15 +173,15 @@ class TestDateRangeNavExpenses:
         """After navigating into custom territory, a reload must keep arrows enabled."""
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         _select_preset(driver, "cur_fin_month")
-        time.sleep(1)
+        pause(1)
         for _ in range(3):
             driver.find_element(By.ID, "date-range-prev").click()
-            time.sleep(0.5)
+            pause(0.5)
         # Reload the page
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         prev_disabled = driver.execute_script(
             "return document.getElementById('date-range-prev').disabled;"
         )
@@ -190,7 +190,7 @@ class TestDateRangeNavExpenses:
     def test_manual_date_input_updates_url(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         driver.execute_script(
             "var el = document.getElementById('date-range-from');"
             "el.value = '2025-01-01';"
@@ -201,7 +201,7 @@ class TestDateRangeNavExpenses:
             "el.value = '2025-01-31';"
             "el.dispatchEvent(new Event('change', {bubbles:true}));"
         )
-        time.sleep(1)
+        pause(1)
         assert "date_from=2025-01-01" in driver.current_url
         assert "date_to=2025-01-31" in driver.current_url
 
@@ -209,9 +209,9 @@ class TestDateRangeNavExpenses:
         """Manual date edit clears the mode; arrows must disable."""
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         _select_preset(driver, "cur_fin_month")
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             "var el = document.getElementById('date-range-from');"
             "el.value = '2025-03-01';"
@@ -222,7 +222,7 @@ class TestDateRangeNavExpenses:
             "el.value = '2025-03-31';"
             "el.dispatchEvent(new Event('change', {bubbles:true}));"
         )
-        time.sleep(1)
+        pause(1)
         prev_disabled = driver.execute_script(
             "return document.getElementById('date-range-prev').disabled;"
         )
@@ -231,7 +231,7 @@ class TestDateRangeNavExpenses:
     def test_clear_button_resets_to_default(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         driver.execute_script(
             "var el = document.getElementById('date-range-from');"
             "el.value = '2020-01-01';"
@@ -242,21 +242,21 @@ class TestDateRangeNavExpenses:
             "el.value = '2020-01-31';"
             "el.dispatchEvent(new Event('change', {bubbles:true}));"
         )
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "date-range-clear").click()
-        time.sleep(1)
+        pause(1)
         from_val = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         assert from_val != "2020-01-01"
 
     def test_localStorage_persists_range(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         _select_preset(driver, "cur_year")
-        time.sleep(1)
+        pause(1)
         from_val = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         from_val2 = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         assert from_val2 == from_val
 
@@ -266,14 +266,14 @@ class TestDateRangeNavExpenses:
             " JSON.stringify({from:'2023-01-01',to:'2023-12-31'}));"
         )
         driver.get(_url("/budget/expenses/?date_from=2025-06-01&date_to=2025-06-30"))
-        time.sleep(2)
+        pause(2)
         from_val = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         assert from_val == "2025-06-01"
 
     def test_export_link_has_date_params(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         export = driver.find_element(By.CSS_SELECTOR, ".expenses-export-link")
         href = export.get_attribute("href")
         assert "date_from=" in href
@@ -290,12 +290,12 @@ class TestDateRangeFiltering:
     def test_expense_in_range_is_visible(self, driver, w, ctx):
         today = server_today()
         driver.get(_url(f"/budget/expenses/?date_from={today}&date_to={today}"))
-        time.sleep(2)
+        pause(2)
         assert "DateRange Today Exp" in driver.page_source
 
     def test_expense_outside_range_is_hidden(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/?date_from=2000-01-01&date_to=2000-01-31"))
-        time.sleep(2)
+        pause(2)
         assert "DateRange Today Exp" not in driver.page_source
 
 
@@ -309,35 +309,35 @@ class TestDateRangeNavDashboard:
     def test_nav_renders(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/"))
-        time.sleep(2)
+        pause(2)
         _assert_nav_basics(driver)
 
     def test_preset_select_updates_url(self, driver, w, ctx):
         _select_preset(driver, "cur_year")
-        time.sleep(1)
+        pause(1)
         assert "date_from=" in driver.current_url
 
     def test_arrow_prev_navigates(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/"))
-        time.sleep(2)
+        pause(2)
         _select_preset(driver, "cur_fin_month")
-        time.sleep(1)
+        pause(1)
         from_before = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         driver.find_element(By.ID, "date-range-prev").click()
-        time.sleep(1)
+        pause(1)
         from_after = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         assert from_after < from_before
 
     def test_arrow_keeps_working_in_custom_territory(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/budget/"))
-        time.sleep(2)
+        pause(2)
         _select_preset(driver, "cur_year")
-        time.sleep(1)
+        pause(1)
         for _ in range(3):
             driver.find_element(By.ID, "date-range-prev").click()
-            time.sleep(0.5)
+            pause(0.5)
         select_val = driver.execute_script(
             "return document.getElementById('date-range-preset').value;"
         )
@@ -358,23 +358,23 @@ class TestDateRangeNavContactSummary:
     def test_nav_renders(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/buddies/summary/"))
-        time.sleep(2)
+        pause(2)
         _assert_nav_basics(driver)
 
     def test_preset_select_updates_url(self, driver, w, ctx):
         _select_preset(driver, "cur_year")
-        time.sleep(1)
+        pause(1)
         assert "date_from=" in driver.current_url
 
     def test_arrow_prev_navigates(self, driver, w, ctx):
         driver.execute_script("localStorage.clear();")
         driver.get(_url("/buddies/summary/"))
-        time.sleep(2)
+        pause(2)
         _select_preset(driver, "cur_fin_month")
-        time.sleep(1)
+        pause(1)
         from_before = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         driver.find_element(By.ID, "date-range-prev").click()
-        time.sleep(1)
+        pause(1)
         from_after = driver.find_element(By.ID, "date-range-from").get_attribute("value")
         assert from_after < from_before
 
@@ -389,7 +389,7 @@ class TestDateRangeNavAbsentOnProject:
     def test_nav_not_rendered(self, driver, w, ctx, project_url):
         driver.execute_script("localStorage.clear();")
         driver.get(project_url)
-        time.sleep(2)
+        pause(2)
         assert not driver.find_elements(By.ID, "date-range-nav")
         assert not driver.find_elements(By.ID, "date-range-preset")
 
@@ -464,7 +464,7 @@ def _assert_project_shows_all(driver, project_url: str, expect_titles: list,
     if date_from is not None and date_to is not None:
         url = f"{project_url}?date_from={date_from}&date_to={date_to}"
     driver.get(url)
-    time.sleep(3)  # allow fetchList XHR to complete
+    pause(3)  # allow fetchList XHR to complete
 
     src = driver.page_source
     missing = [title for title in expect_titles if title not in src]
@@ -479,12 +479,12 @@ def project_filter_url(driver, w, ctx):
     """
     driver.execute_script("localStorage.clear();")
     driver.get(_url("/projects/"))
-    time.sleep(2)
+    pause(2)
     driver.execute_script(
         "document.getElementById('project-name').value = 'DR Filter Project';"
     )
     driver.find_element(By.ID, "btn-create-project").click()
-    time.sleep(2)
+    pause(2)
     url = driver.current_url
 
     project_uid = _project_uid_from_url(url)
@@ -542,12 +542,12 @@ def project_edge_url(driver, w, ctx):
     """
     driver.execute_script("localStorage.clear();")
     driver.get(_url("/projects/"))
-    time.sleep(2)
+    pause(2)
     driver.execute_script(
         "document.getElementById('project-name').value = 'DR Edge Project';"
     )
     driver.find_element(By.ID, "btn-create-project").click()
-    time.sleep(2)
+    pause(2)
     url = driver.current_url
     project_uid = _project_uid_from_url(url)
 

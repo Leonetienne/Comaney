@@ -15,13 +15,13 @@ or an offline member/dummy), with no participant rows.
 Run just this file:
   pytest tests/e2e/projects/test_project_expense_no_participants.py -v | tee logfile.log
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user, api_get, server_today
 from bhelpers import _shell, _create_group, _add_group_member, _confirm
+from pacing import pause
 
 
 def _uncheck_all_participants(driver):
@@ -41,7 +41,7 @@ def _uncheck_all_participants(driver):
         "  }"
         "});"
     )
-    time.sleep(0.3)
+    pause(0.3)
 
 
 def _submit_form(driver):
@@ -49,7 +49,7 @@ def _submit_form(driver):
         By.CSS_SELECTOR,
         "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)",
     ).click()
-    time.sleep(2)
+    pause(2)
 
 
 def _participant_count(title):
@@ -79,7 +79,7 @@ def _select_payer(driver, value):
         f"sel.value = '{value}';"
         "sel.dispatchEvent(new Event('change', {bubbles: true}));"
     )
-    time.sleep(0.4)
+    pause(0.4)
 
 
 class TestCreateProjectExpenseNoParticipants:
@@ -106,7 +106,7 @@ class TestCreateProjectExpenseNoParticipants:
         gid = ctx["group_id"]
         today = server_today()
         driver.get(_url(f"/budget/expenses/new/?project={gid}&back=/projects/{gid}/"))
-        time.sleep(1.5)
+        pause(1.5)
         driver.find_element(By.ID, "id_title").clear()
         driver.find_element(By.ID, "id_title").send_keys("Just For Me")
         driver.find_element(By.ID, "id_value").clear()
@@ -179,7 +179,7 @@ class TestEditProjectExpenseRemoveLastParticipant:
 
     def test_edit_remove_last_participant(self, driver, w, ctx):
         driver.get(_url(f"/budget/expenses/{ctx['expense_uid']}/edit/"))
-        time.sleep(1.5)
+        pause(1.5)
         _uncheck_all_participants(driver)
         _submit_form(driver)
 
@@ -195,7 +195,7 @@ class TestEditProjectExpenseRemoveLastParticipant:
         # Regression: reopening the edit view of a zero-participant project
         # expense must NOT auto-check every project member again.
         driver.get(_url(f"/budget/expenses/{ctx['expense_uid']}/edit/"))
-        time.sleep(1.5)
+        pause(1.5)
         checked = driver.execute_script(
             "return Array.from(document.querySelectorAll("
             "'#buddy-participants-checkboxes .buddy-participant-cb input[type=checkbox]'))"
@@ -234,7 +234,7 @@ class TestNoParticipantsRealAccountPayer:
         gid = ctx["group_id"]
         today = server_today()
         driver.get(_url(f"/budget/expenses/new/?project={gid}&back=/projects/{gid}/"))
-        time.sleep(1.5)
+        pause(1.5)
         driver.find_element(By.ID, "id_title").clear()
         driver.find_element(By.ID, "id_title").send_keys("Ralf Paid Alone")
         driver.find_element(By.ID, "id_value").clear()
@@ -251,7 +251,7 @@ class TestNoParticipantsRealAccountPayer:
         ).click()
         # A real-account payer triggers a "recorded on their account" confirm.
         _confirm(driver)
-        time.sleep(1.5)
+        pause(1.5)
 
     def test_expense_attributed_to_payer(self, driver, w, ctx):
         assert _expense_attr("Ralf Paid Alone", "e.owning_feuser.email") == ctx["payer_email"], \
@@ -295,7 +295,7 @@ class TestNoParticipantsOfflineMemberPayer:
         gid = ctx["group_id"]
         today = server_today()
         driver.get(_url(f"/budget/expenses/new/?project={gid}&back=/projects/{gid}/"))
-        time.sleep(1.5)
+        pause(1.5)
         driver.find_element(By.ID, "id_title").clear()
         driver.find_element(By.ID, "id_title").send_keys("Olga Paid Alone")
         driver.find_element(By.ID, "id_value").clear()

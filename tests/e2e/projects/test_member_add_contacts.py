@@ -14,7 +14,6 @@ Project Settings "Add members": contact hints
 
 Run: pytest tests/e2e/projects/test_member_add_contacts.py -v | tee logfile.log
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -23,6 +22,7 @@ from helpers import _url, setup_user, cleanup_user
 from bhelpers import (
     _shell, _login_as, _create_contact_link, _create_group, _add_group_member,
 )
+from pacing import pause
 
 
 def _type(driver, input_id: str, text: str) -> None:
@@ -33,7 +33,7 @@ def _type(driver, input_id: str, text: str) -> None:
         "i.dispatchEvent(new Event('input', {bubbles: true}));",
         input_id, text,
     )
-    time.sleep(0.4)
+    pause(0.4)
 
 
 def _suggested_emails(driver) -> list:
@@ -84,7 +84,7 @@ class TestInviteSuggestions:
 
     def test_matches_first_name_case_insensitive(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         _type(driver, "project-invite-email", "LEON")
         emails = _suggested_emails(driver)
         assert ctx["leon"]["email"] in emails
@@ -114,7 +114,7 @@ class TestInviteSuggestions:
         _type(driver, "project-invite-email", "etien")
         driver.find_element(
             By.CSS_SELECTOR, f".contact-suggestion[data-email='{ctx['leon']['email']}']").click()
-        time.sleep(0.4)
+        pause(0.4)
         value = driver.find_element(By.ID, "project-invite-email").get_attribute("value")
         assert value == ctx["leon"]["email"]
         assert _suggested_emails(driver) == []
@@ -124,7 +124,7 @@ class TestInviteHint:
 
     def test_contact_email_shows_green_check(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         ctx["top_empty"] = _section_top(driver)
         _type(driver, "project-invite-email", ctx["leon"]["email"].upper())
         assert _hint(driver, "project-invite-hint") == "Already in your contacts"
@@ -154,7 +154,7 @@ class TestOfflineMemberNameCheck:
     @pytest.mark.parametrize("typed", ["leon", "ETIENNE", "leon.", "Etienne"])
     def test_warns_on_first_name_last_name_or_email(self, driver, w, ctx, typed):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         if typed == "leon.":
             typed = ctx["leon"]["email"].split("@")[0][:6]  # part of the email
         _type(driver, "project-add-dummy-name", typed)
@@ -171,27 +171,27 @@ class TestOfflineMemberNameCheck:
 
     def test_add_asks_for_confirmation_and_cancel_keeps_nothing(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-group-add-dummy").click()
-        time.sleep(0.5)
+        pause(0.5)
         msg = driver.find_element(By.ID, "cdialog-msg").text
         assert self.WARNING.format(name="Leon Etienne") in msg
         assert driver.find_element(By.ID, "cdialog-ok").text == "Add"
         driver.find_element(By.ID, "cdialog-cancel").click()
-        time.sleep(1)
+        pause(1)
         assert _offline_members(ctx["group_id"]) == "[]"
 
     def test_ok_creates_offline_member(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-group-add-dummy").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         assert _offline_members(ctx["group_id"]) == "['Etienne']"
 
     def test_unknown_name_adds_without_dialog(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         _type(driver, "project-add-dummy-name", "Zacharias")
         driver.find_element(By.ID, "btn-group-add-dummy").click()
-        time.sleep(2)
+        pause(2)
         assert _offline_members(ctx["group_id"]) == "['Etienne', 'Zacharias']"
 
 
@@ -202,7 +202,7 @@ class TestOfflineMemberEmailCheck:
 
     def test_email_shows_email_warning(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         _type(driver, "project-add-dummy-name", "someone@example.com")
         assert _hint(driver, "project-add-dummy-hint") == self.EMAIL_WARNING
 
@@ -227,11 +227,11 @@ class TestOfflineMemberEmailCheck:
         before = _offline_members(ctx["group_id"])
         _type(driver, "project-add-dummy-name", ctx["leon"]["email"])
         driver.find_element(By.ID, "btn-group-add-dummy").click()
-        time.sleep(0.5)
+        pause(0.5)
         msg = driver.find_element(By.ID, "cdialog-msg").text
         assert msg == self.EMAIL_WARNING + " Add the offline member anyway?"
         driver.find_element(By.ID, "cdialog-cancel").click()
-        time.sleep(1)
+        pause(1)
         assert not driver.find_element(By.ID, "cdialog-backdrop").is_displayed(), \
             "No second dialog may follow the first one"
         assert _offline_members(ctx["group_id"]) == before

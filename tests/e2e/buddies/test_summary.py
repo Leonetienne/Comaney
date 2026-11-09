@@ -2,7 +2,6 @@
 Contact summary page (/buddies/summary/): direct expense listing, D3 debt graph,
 and group saldo cards.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -13,6 +12,7 @@ from bhelpers import (
     _create_group, _add_group_member, _create_personal_expense_with_buddy,
     _create_group_expense,
 )
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ class TestSummaryDirectExpenses:
 
     def test_expense_title_on_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Summary Direct Expense" in driver.page_source, \
             "Approved shared expense must appear on the summary page"
 
@@ -79,7 +79,7 @@ class TestSummaryD3Graph:
 
     def test_d3_svg_rendered(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(2)
+        pause(2)
         svgs = driver.find_elements(By.CSS_SELECTOR, "#buddy-debt-graph svg")
         assert len(svgs) >= 1, "D3 must render an SVG element inside #buddy-debt-graph"
 
@@ -113,14 +113,14 @@ class TestSummaryNoGroupBlock:
 
     def test_no_group_block_on_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         # The groups section was removed from contact_summary; project is on /projects/
         assert "bgs-cards" not in driver.page_source, \
             "Groups/projects block must not appear on the contact summary page"
 
     def test_summary_still_shows_pending_approvals_heading(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         # Pending approvals section should still be present (admin has a dummy_payer expense)
         # Just verify the page loads correctly
         assert "Contact Expenses" in driver.page_source

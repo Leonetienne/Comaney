@@ -13,7 +13,6 @@ All tests are skipped automatically when ENABLE_DEMO_USERS is not set on the
 target server (dev/self-hosted systems without a demo user configured).
 """
 import subprocess
-import time
 import uuid
 import warnings
 
@@ -27,6 +26,7 @@ from helpers import (
     fill, click, browser_login,
     DOCKER_WEB, PASSWORD,
 )
+from pacing import pause
 
 DEMO_PASSWORD = "D3m0Test1ng!"
 
@@ -202,7 +202,7 @@ class TestDemoBanner:
         fill(w, By.ID, "id_email", demo_ctx["email"])
         fill(w, By.ID, "id_password", demo_ctx["password"])
         click(w, By.CSS_SELECTOR, "button[type=submit]")
-        time.sleep(2)
+        pause(2)
         assert "/demo-banner/" in driver.current_url, (
             f"Expected banner redirect, got: {driver.current_url}"
         )
@@ -215,31 +215,31 @@ class TestDemoBanner:
         fill(w, By.ID, "id_email", demo_ctx["email"])
         fill(w, By.ID, "id_password", demo_ctx["password"])
         click(w, By.CSS_SELECTOR, "button[type=submit]")
-        time.sleep(2)
+        pause(2)
         # Try to navigate directly to dashboard.
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert "/demo-banner/" in driver.current_url
 
     def test_banner_accept_proceeds_to_dashboard(self, driver, w, demo_ctx):
         # Accept the banner and verify we land on the dashboard.
         click(w, By.ID, "btn-demo-accept")
-        time.sleep(2)
+        pause(2)
         assert "/budget/" in driver.current_url
 
     def test_banner_shown_again_after_logout(self, driver, w, demo_ctx):
         # Click the real logout button so the server flushes the session.
         click(w, By.ID, "logout-button")
-        time.sleep(1)
+        pause(1)
         driver.get(_url("/login/"))
         fill(w, By.ID, "id_email", demo_ctx["email"])
         fill(w, By.ID, "id_password", demo_ctx["password"])
         click(w, By.CSS_SELECTOR, "button[type=submit]")
-        time.sleep(2)
+        pause(2)
         assert "/demo-banner/" in driver.current_url
         # Accept so other tests in this class can proceed.
         click(w, By.ID, "btn-demo-accept")
-        time.sleep(2)
+        pause(2)
 
     def test_banner_content_mentions_restrictions(self, driver, w, demo_ctx):
         driver.delete_all_cookies()
@@ -247,14 +247,14 @@ class TestDemoBanner:
         fill(w, By.ID, "id_email", demo_ctx["email"])
         fill(w, By.ID, "id_password", demo_ctx["password"])
         click(w, By.CSS_SELECTOR, "button[type=submit]")
-        time.sleep(2)
+        pause(2)
         src = driver.page_source
         assert "demo" in src.lower()
         assert "personal" in src.lower() or "sensitive" in src.lower()
         assert "deleted" in src.lower() or "reset" in src.lower()
         # Accept for cleanup.
         click(w, By.ID, "btn-demo-accept")
-        time.sleep(1)
+        pause(1)
 
 
 # ---------------------------------------------------------------------------
@@ -267,10 +267,10 @@ def _demo_login_and_accept(driver, w, demo_ctx):
     fill(w, By.ID, "id_email", demo_ctx["email"])
     fill(w, By.ID, "id_password", demo_ctx["password"])
     click(w, By.CSS_SELECTOR, "button[type=submit]")
-    time.sleep(2)
+    pause(2)
     if "/demo-banner/" in driver.current_url:
         click(w, By.ID, "btn-demo-accept")
-        time.sleep(2)
+        pause(2)
 
 
 class TestDemoUserUIRestrictions:
@@ -278,7 +278,7 @@ class TestDemoUserUIRestrictions:
     def test_profile_api_key_section_disabled(self, driver, w, demo_ctx):
         _demo_login_and_accept(driver, w, demo_ctx)
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         src = driver.page_source
         # The generate button must be present but disabled.
         btns = driver.find_elements(By.XPATH, "//button[@disabled and contains(., 'Generate API key')]")
@@ -286,7 +286,7 @@ class TestDemoUserUIRestrictions:
 
     def test_profile_agent_key_section_disabled(self, driver, w, demo_ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         card = driver.find_element(By.ID, "section-agent-keys")
         btns = card.find_elements(By.XPATH, ".//button[@disabled and contains(., 'Create agent key')]")
         assert btns, "Expected disabled 'Create agent key' button for demo user"
@@ -294,20 +294,20 @@ class TestDemoUserUIRestrictions:
 
     def test_profile_ai_section_disabled(self, driver, w, demo_ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         # The fieldset wrapping AI section should be disabled.
         fieldsets = driver.find_elements(By.CSS_SELECTOR, "fieldset[disabled]")
         assert fieldsets, "Expected disabled fieldset around AI section for demo user"
 
     def test_profile_delete_account_disabled(self, driver, w, demo_ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         btns = driver.find_elements(By.XPATH, "//button[@disabled and contains(., 'Delete account')]")
         assert btns, "Expected disabled 'Delete account' button for demo user"
 
     def test_buddies_invite_form_disabled(self, driver, w, demo_ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         # The invite input must be disabled.
         disabled_inputs = driver.find_elements(
             By.XPATH, "//input[@type='email' and @disabled]"
@@ -645,7 +645,7 @@ class TestSpecialAITrialBudget:
 
         _demo_login_and_accept(driver, w, budget_ctx)
         driver.get(_url("/budget/ai/express-creation/"))
-        time.sleep(1)
+        pause(1)
         # The page must NOT show "Monthly AI limit reached" yet (spent is 0).
         assert "Monthly AI limit reached" not in driver.page_source
 
@@ -670,7 +670,7 @@ class TestSpecialAITrialBudget:
         try:
             _demo_login_and_accept(driver, w, budget_ctx)
             driver.get(_url("/budget/ai/express-creation/"))
-            time.sleep(1)
+            pause(1)
             assert "Monthly AI limit reached" in driver.page_source
             assert driver.find_elements(By.CSS_SELECTOR, ".trial-blocked")
         finally:
@@ -835,7 +835,7 @@ class TestDemoProfileFieldRestrictions:
     def test_ui_currency_field_is_editable(self, driver, w, demo_ctx):
         _demo_login_and_accept(driver, w, demo_ctx)
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         # Currency input must not be disabled.
         currency_inputs = driver.find_elements(By.CSS_SELECTOR, "input[name='currency']:not([disabled])")
         assert currency_inputs, "Currency field is disabled for demo user but should be editable"
@@ -844,19 +844,19 @@ class TestDemoProfileFieldRestrictions:
 
     def test_ui_first_name_field_is_disabled(self, driver, w, demo_ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         disabled = driver.find_elements(By.CSS_SELECTOR, "input[name='first_name'][disabled]")
         assert disabled, "first_name field is not disabled for demo user"
 
     def test_ui_last_name_field_is_disabled(self, driver, w, demo_ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         disabled = driver.find_elements(By.CSS_SELECTOR, "input[name='last_name'][disabled]")
         assert disabled, "last_name field is not disabled for demo user"
 
     def test_ui_notifications_section_is_disabled(self, driver, w, demo_ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         # The notifications form should be inside a disabled fieldset.
         form = driver.find_element(By.ID, "notifications-form")
         # Walk up to find a disabled fieldset ancestor.
@@ -867,21 +867,21 @@ class TestDemoProfileFieldRestrictions:
 
     def test_ui_email_section_is_disabled(self, driver, w, demo_ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         fs = driver.find_elements(By.XPATH,
             "//div[@id='section-email']//fieldset[@disabled]")
         assert fs, "Email section does not have a disabled fieldset for demo user"
 
     def test_ui_password_section_is_disabled(self, driver, w, demo_ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         fs = driver.find_elements(By.XPATH,
             "//div[@id='section-password']//fieldset[@disabled]")
         assert fs, "Password section does not have a disabled fieldset for demo user"
 
     def test_ui_ai_section_is_disabled(self, driver, w, demo_ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         fs = driver.find_elements(By.XPATH,
             "//div[@id='section-ai']//fieldset[@disabled]")
         assert fs, "AI section does not have a disabled fieldset for demo user"

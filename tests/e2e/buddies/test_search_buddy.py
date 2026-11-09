@@ -13,7 +13,6 @@ interferes.  Setup is done via django shell commands (docker exec) because
 buddy spendings are not exposed through the public REST API.
 """
 import subprocess
-import time
 
 import pytest
 

@@ -14,6 +14,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, ai_unavailable, api_delete, api_get, cleanup_user, setup_user
+from pacing import pause
 
 AI_TIMEOUT = 120
 WARNING_TEXT = "You are missing a category or tags"
@@ -22,7 +23,7 @@ TITLE = "Express Warn Coffee"
 
 def _trial_available(driver):
     driver.get(_url("/budget/ai/express-creation/"))
-    time.sleep(1)
+    pause(1)
     if "/profile" in driver.current_url:
         return False
     src = driver.page_source
@@ -56,7 +57,7 @@ class TestExpressCreationUnclassifiedWarning:
             ai_unavailable("Trial not available")
         driver.execute_script("localStorage.removeItem('comaney_date_range');")
         driver.get(_url("/budget/ai/express-creation/"))
-        time.sleep(1)
+        pause(1)
         ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
         driver.execute_script("arguments[0].value = 'Coffee 3 euros today';", ta)
         driver.find_element(By.ID, "parse-btn").click()
@@ -82,7 +83,7 @@ class TestExpressCreationUnclassifiedWarning:
             "});"
         )
         driver.find_element(By.ID, "confirm-btn").click()
-        time.sleep(0.7)
+        pause(0.7)
         assert _dialog_visible(driver)
         assert WARNING_TEXT in driver.find_element(By.ID, "cdialog-msg").text
 
@@ -90,7 +91,7 @@ class TestExpressCreationUnclassifiedWarning:
         if not ctx.get("trial_ok"):
             ai_unavailable("Trial not available")
         driver.find_element(By.ID, "cdialog-cancel").click()
-        time.sleep(1)
+        pause(1)
         assert not driver.find_elements(By.CSS_SELECTOR, ".success-banner")
         resp = api_get("/api/v2/expenses/", ctx, params={"q": TITLE})
         assert not any(e["title"] == TITLE for e in resp.json()["expenses"])
@@ -99,9 +100,9 @@ class TestExpressCreationUnclassifiedWarning:
         if not ctx.get("trial_ok"):
             ai_unavailable("Trial not available")
         driver.find_element(By.ID, "confirm-btn").click()
-        time.sleep(0.7)
+        pause(0.7)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(5)
+        pause(5)
         assert driver.find_elements(By.CSS_SELECTOR, ".success-banner")
         resp = api_get("/api/v2/expenses/", ctx, params={"q": TITLE})
         matches = [e for e in resp.json()["expenses"] if e["title"] == TITLE]

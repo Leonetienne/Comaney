@@ -15,7 +15,6 @@ Extra coverage:
   - Clicking a linking notification and a non-linking notification both
     decrease the unread badge count.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -26,6 +25,7 @@ from bhelpers import (
     _create_group, _add_group_member,
     _create_group_expense, _create_personal_expense_with_buddy,
 )
+from pacing import pause
 
 # ---------------------------------------------------------------------------
 # Browser helpers
@@ -33,7 +33,7 @@ from bhelpers import (
 
 def _open_dropdown(driver):
     driver.find_element(By.ID, "notif-bell").click()
-    time.sleep(2)
+    pause(2)
 
 
 def _badge_count(driver) -> int:
@@ -57,7 +57,7 @@ def _find_unread(driver, fragment: str):
 
 def _click_notif(driver, item):
     item.click()
-    time.sleep(2)
+    pause(2)
 
 
 def _anchor_exists(driver, anchor_id: str) -> bool:
@@ -188,7 +188,7 @@ class TestExpenseParticipationProject:
         pid, eid = ctx["project_id"], ctx["proj_particip_eid"]
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         assert before > 0, "Expected at least one unread notification for bob"
         _open_dropdown(driver)
@@ -220,7 +220,7 @@ class TestExpenseParticipationDirect:
         eid = ctx["direct_particip_eid"]
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "NavDirectParticip")
@@ -252,7 +252,7 @@ class TestExpenseAssignmentsProject:
         pid, eid = ctx["project_id"], ctx["proj_assign_eid"]
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "NavProjAssign")
@@ -283,7 +283,7 @@ class TestExpenseAssignmentsDirect:
         eid = ctx["direct_assign_eid"]
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "NavDirectAssign")
@@ -315,7 +315,7 @@ class TestParticipantDecisionsProject:
         pid, eid = ctx["project_id"], ctx["proj_decision_eid"]
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "NavProjDecision")
@@ -346,7 +346,7 @@ class TestParticipantDecisionsDirect:
         eid = ctx["direct_decision_eid"]
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "NavDirectDecision")
@@ -377,7 +377,7 @@ class TestSettlementsProject:
         pid = ctx["project_id"]
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "settlement")
@@ -406,7 +406,7 @@ class TestSettlementsDirect:
     def test_navigates_and_anchor_exists(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "settlement")
@@ -441,7 +441,7 @@ class TestGroupActivityProjectInvite:
         pid = ctx["invite_pid"]
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "NavInviteProject")
@@ -469,7 +469,7 @@ class TestGroupActivityContactInvite:
     def test_navigates_and_anchor_exists(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "NavContactInvite")
@@ -500,7 +500,7 @@ class TestGroupActivityProjectKick:
     def test_no_navigation_on_click(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before_url = driver.current_url
         before_count = _badge_count(driver)
         assert before_count > 0
@@ -533,7 +533,7 @@ class TestGroupActivityBuddyKick:
     def test_navigates_to_contacts(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         assert before > 0
         _open_dropdown(driver)
@@ -561,7 +561,7 @@ class TestOwnPartnershipChanges:
     def test_navigates(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "NavOwnPartnership")
@@ -588,7 +588,7 @@ class TestSomeonesPartnershipChanges:
     def test_navigates(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "NavSomeonePartnership")
@@ -615,7 +615,7 @@ class TestExpenseReminders:
     def test_navigates(self, driver, w, ctx):
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "NavExpenseReminder")
@@ -642,7 +642,7 @@ class TestExpenseSettled:
     def test_navigates(self, driver, w, ctx):
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         _open_dropdown(driver)
         item = _find_unread(driver, "NavExpenseSettled")
@@ -671,7 +671,7 @@ class TestDeletedExpenseAndProjectNoLink:
     def test_no_navigation_on_click(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before_url = driver.current_url
         before_count = _badge_count(driver)
         assert before_count > 0
@@ -708,7 +708,7 @@ class TestBadgeCountDecreases:
     def test_linking_notification_decreases_badge(self, driver, w, ctx):
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         assert before > 0
         _open_dropdown(driver)
@@ -720,12 +720,12 @@ class TestBadgeCountDecreases:
     def test_non_linking_notification_decreases_badge(self, driver, w, ctx):
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         before = _badge_count(driver)
         assert before > 0
         _open_dropdown(driver)
         item = _find_unread(driver, "NavBadgeNoLink")
         assert item is not None
         item.click()   # no navigation — badge updates in-DOM
-        time.sleep(2)
+        pause(2)
         assert _badge_count(driver) < before or _badge_count(driver) == 0

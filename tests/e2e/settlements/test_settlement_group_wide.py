@@ -21,13 +21,13 @@ Testing covers:
   - Approved settlement moves to Expense Breakdown
   - Income expense created for Anna
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, run_cmd, fetch_email, mailpit_seen_ids
 from bhelpers import _shell, _login_as
+from pacing import pause
 
 
 ANNA  = {"email": "anna@test.local",  "password": "1234", "first": "Anna"}
@@ -70,7 +70,7 @@ class TestGroupWideSettlementCamping:
     def test_non_admin_cannot_see_settle_all_button(self, driver, w, camping):
         _login_as(driver, BEN)
         driver.get(_url(f"/projects/{camping['group_id']}/"))
-        time.sleep(2)
+        pause(2)
         assert f"/projects/{camping['group_id']}/" in driver.current_url, \
             f"Ben must land on the group page, got: {driver.current_url}"
         forms = driver.find_elements(By.ID, "settle-all-form")
@@ -82,7 +82,7 @@ class TestGroupWideSettlementCamping:
         assert "/login/" not in driver.current_url, \
             f"Anna login failed, landed on: {driver.current_url}"
         driver.get(_url(f"/projects/{camping['group_id']}/"))
-        time.sleep(2)
+        pause(2)
         assert f"/projects/{camping['group_id']}/" in driver.current_url, \
             f"Anna must land on the group page, got: {driver.current_url}"
         btn = driver.find_element(By.ID, "btn-settle-all")
@@ -99,21 +99,21 @@ class TestGroupWideSettlementCamping:
         camping["seen_before"] = seen_before
 
         driver.find_element(By.ID, "btn-settle-all").click()
-        time.sleep(0.5)
+        pause(0.5)
         msg = driver.find_element(By.ID, "cdialog-msg").text
         assert "payment records" in msg.lower() or "settle" in msg.lower(), \
             "Dialog must describe creating payment records"
         assert "email" in msg.lower(), \
             "Dialog must warn that everyone involved will receive an email"
         driver.find_element(By.ID, "cdialog-cancel").click()
-        time.sleep(0.5)
+        pause(0.5)
 
     def test_submit_settle_all_creates_records(self, driver, w, camping):
         existing = _settlement_count()
         driver.find_element(By.ID, "btn-settle-all").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         new_count = _settlement_count()
         assert new_count > existing, \
             "Settle entire group must create new settlement records"
@@ -147,7 +147,7 @@ class TestGroupWideSettlementCamping:
     def test_ben_sees_waiting_for_approval(self, driver, w, camping):
         _login_as(driver, BEN)
         driver.get(_url(f"/projects/{camping['group_id']}/"))
-        time.sleep(2)
+        pause(2)
         assert "Waiting for approval" in driver.page_source, \
             "Ben must see Waiting for approval section after group-wide settle"
 
@@ -156,14 +156,14 @@ class TestGroupWideSettlementCamping:
             "Settlements must exist (test_submit_settle_all_creates_records must run first)"
         _login_as(driver, CLARA)
         driver.get(_url(f"/projects/{camping['group_id']}/"))
-        time.sleep(2)
+        pause(2)
         assert "Waiting for approval" in driver.page_source, \
             "Clara must see Waiting for approval section after group-wide settle"
 
     def test_anna_sees_pending_settlement_receipts(self, driver, w, camping):
         _login_as(driver, ANNA)
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Waiting for your approval" in driver.page_source, \
             "Anna (creditor) must see the pending approvals section on buddy summary"
 
@@ -175,11 +175,11 @@ class TestGroupWideSettlementCamping:
 
     def test_anna_approves_one_settlement(self, driver, w, camping):
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(
             By.ID, "btn-approve-settlement"
         ).click()
-        time.sleep(1)
+        pause(1)
         assert "confirmed" in driver.page_source.lower(), \
             "Flash must confirm approval after Anna reviews a settlement"
 
@@ -217,7 +217,7 @@ class TestGroupWideSettlementCamping:
         # pending expense still exists but does not affect simplified debts.
         _login_as(driver, ANNA)
         driver.get(_url(f"/projects/{camping['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         forms = driver.find_elements(By.ID, "settle-all-form")
         assert not forms, \
             "Settle entire group button must disappear once all settlement debts are resolved"

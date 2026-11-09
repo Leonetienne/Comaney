@@ -5,13 +5,13 @@ Creates several dummy notifications directly in the DB, then verifies that
 clicking "Mark all read" clears the unread badge and removes the unread
 highlight from every item in the dropdown.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ def _inject_notifs(email: str, count: int) -> None:
 
 def _open_dropdown(driver):
     driver.find_element(By.ID, "notif-bell").click()
-    time.sleep(2)
+    pause(2)
 
 
 def _badge_count(driver) -> int:
@@ -75,18 +75,18 @@ class TestMarkAllRead:
     def test_badge_shows_before_mark_all(self, driver, w, ctx):
         _login_as(driver, ctx["user"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert _badge_count(driver) >= 5, \
             "Expected at least 5 unread before mark-all-read"
 
     def test_mark_all_read_clears_badge(self, driver, w, ctx):
         _login_as(driver, ctx["user"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         _open_dropdown(driver)
         assert len(_unread_items(driver)) > 0, "Dropdown has no unread items before marking"
         driver.find_element(By.ID, "notif-mark-all-read").click()
-        time.sleep(1)
+        pause(1)
         assert _badge_count(driver) == 0, \
             f"Badge should be gone after mark-all-read, got {_badge_count(driver)}"
 
@@ -99,6 +99,6 @@ class TestMarkAllRead:
 
     def test_badge_stays_gone_after_page_reload(self, driver, w, ctx):
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert _badge_count(driver) == 0, \
             "Badge reappeared after page reload – notifications were not persisted as read"

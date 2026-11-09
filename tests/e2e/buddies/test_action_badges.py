@@ -8,7 +8,6 @@ Each test class:
   3. Navigates to a page that contains the sidebar.
   4. Asserts the correct badge is visible with a positive count.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -19,6 +18,7 @@ from bhelpers import (
     _create_contact_link, _create_group, _add_group_member,
     _create_group_expense, _create_personal_expense_with_buddy,
 )
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -151,14 +151,14 @@ class TestContactsBadge:
     def test_contacts_badge_visible(self, driver, w, ctx):
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         count = _sidebar_badge(driver, "Contacts")
         assert count >= 1, f"Expected Contacts badge >= 1, got {count}"
 
     def test_no_contacts_badge_for_inviter(self, driver, w, ctx):
         _login_as(driver, ctx["carol"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         count = _sidebar_badge(driver, "Contacts")
         assert count == 0, f"Inviter should not see a badge, got {count}"
 
@@ -177,14 +177,14 @@ class TestContactExpensesBadge:
     def test_contact_expenses_badge_visible(self, driver, w, ctx):
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         count = _sidebar_badge(driver, "Contact Expenses")
         assert count >= 1, f"Expected Contact Expenses badge >= 1, got {count}"
 
     def test_no_contact_expenses_badge_for_participant(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         # Bob is participant, not the one who needs to approve
         count = _sidebar_badge(driver, "Contact Expenses")
         assert count == 0, f"Participant should not see a badge, got {count}"
@@ -204,7 +204,7 @@ class TestBuddyExpensesSettlementBadge:
     def test_contact_expenses_settlement_badge(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         count = _sidebar_badge(driver, "Contact Expenses")
         assert count >= 1, f"Expected Contact Expenses badge for creditor >= 1, got {count}"
 
@@ -226,7 +226,7 @@ class TestProjectsBadgeInvite:
     def test_projects_badge_for_invitee(self, driver, w, ctx):
         _login_as(driver, ctx["dave"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         count = _sidebar_badge(driver, "Projects")
         assert count >= 1, f"Expected Projects badge >= 1 for invitee, got {count}"
 
@@ -248,14 +248,14 @@ class TestProjectsBadgeApproval:
     def test_projects_badge_for_creditor(self, driver, w, ctx):
         _login_as(driver, ctx["bob"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         count = _sidebar_badge(driver, "Projects")
         assert count >= 1, f"Expected Projects badge >= 1, got {count}"
 
     def test_no_projects_badge_for_debtor(self, driver, w, ctx):
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         count = _sidebar_badge(driver, "Projects")
         # Alice initiated the settlement so she has no pending action
         assert count == 0, f"Debtor should not see a badge, got {count}"
@@ -292,14 +292,14 @@ class TestProjectListApprovalBubble:
     def test_project_card_shows_bubble(self, driver, w, ctx):
         _login_as(driver, ctx["alice"])
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         count = _project_card_badge(driver, "BubbleProject")
         assert count >= 1, f"Expected project card bubble >= 1, got {count}"
 
     def test_no_bubble_for_clean_project(self, driver, w, ctx):
         _login_as(driver, ctx["alice"])
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         # "BadgeProject" (created in the module fixture) has no feuser-level
         # approvals for alice (alice is admin/owner but all prior test expenses
         # only added approvals for bob as creditor)
@@ -370,12 +370,12 @@ class TestProjectsSidebarEqualsSumOfCards:
         _login_as(driver, ctx["eve"])
         # Read sidebar badge from any page that has the sidebar
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         sidebar_count = _sidebar_badge(driver, "Projects")
 
         # Read per-project card badges from the projects list
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         card_counts = _all_project_card_badges(driver)
         card_sum = sum(card_counts)
 

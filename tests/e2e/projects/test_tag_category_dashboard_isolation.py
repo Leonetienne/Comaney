@@ -15,7 +15,6 @@ queryset into own expenses (use direct tags/category) and foreign expenses
 
 Run with: venv/bin/pytest tests/e2e/buddies/test_tag_category_dashboard_isolation.py -v
 """
-import time
 
 import pytest
 import requests
@@ -24,6 +23,7 @@ from helpers import (
     _url, server_today, setup_user, cleanup_user, session_cookies, BASE_URL,
 )
 from bhelpers import _shell, _login_as, _create_group, _add_group_member
+from pacing import pause
 
 
 CARDS_URL = BASE_URL + "/budget/dashboard/cards/"
@@ -89,9 +89,9 @@ def _create_expense_with_tag_and_category(
 
 def _get_session(driver, user_ctx) -> requests.Session:
     _login_as(driver, user_ctx)
-    time.sleep(1)
+    pause(1)
     driver.get(_url("/budget/"))
-    time.sleep(1)
+    pause(1)
     s = requests.Session()
     s.cookies.update(session_cookies(driver))
     return s

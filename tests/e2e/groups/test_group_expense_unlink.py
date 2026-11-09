@@ -12,7 +12,6 @@ After unlink the expense has:
   - buddy_approved = True
   - is_dummy = False
 """
-import time
 
 import pytest
 import requests as req
@@ -23,6 +22,7 @@ from helpers import _url, setup_user, cleanup_user, fetch_email, mailpit_seen_id
 from bhelpers import (
     _shell, _login_as, _create_group, _add_group_member,
 )
+from pacing import pause
 
 
 def _create_approved_group_expense(owner_email: str, participant_email: str,
@@ -90,7 +90,7 @@ class TestOwnerUnlinksOwnExpense:
     def test_expense_visible_on_group_page(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Owner Unlink Expense" in driver.page_source
 
     def test_unlink_button_visible_for_owner(self, driver, w, ctx):
@@ -99,9 +99,9 @@ class TestOwnerUnlinksOwnExpense:
 
     def test_owner_unlinks_expense_and_flash_shown(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-unlink-']").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "unlinked" in driver.page_source.lower(), \
             "Flash message must confirm the expense was unlinked"
 
@@ -160,7 +160,7 @@ class TestAdminUnlinksMemberExpense:
     def test_admin_sees_unlink_button_for_members_expense(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Member Expense To Unlink" in driver.page_source
         unlink_forms = driver.find_elements(By.CSS_SELECTOR, "form[action*='/unlink/']")
         assert unlink_forms, "Admin must see an Unlink button even for another member's expense"
@@ -169,9 +169,9 @@ class TestAdminUnlinksMemberExpense:
         seen_before = mailpit_seen_ids()
         ctx["seen_before"] = seen_before
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-unlink-']").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "unlinked" in driver.page_source.lower(), \
             "Flash message must confirm the expense was unlinked"
 
@@ -231,7 +231,7 @@ class TestNonAdminCannotUnlinkOthersExpense:
     def test_member_sees_no_unlink_button_for_admins_expense(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Admin Expense No Unlink" in driver.page_source
         # Member owns no expense in this group, so no unlink button should appear
         unlink_forms = driver.find_elements(By.CSS_SELECTOR, "form[action*='/unlink/']")

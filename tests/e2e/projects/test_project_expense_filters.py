@@ -4,7 +4,6 @@ Project expense list filters: search bar, hide recurring, only show what I paid,
 Setup: two users (admin A and member B) share a project with several expenses.
 All expense titles use the prefix "PFilt" so existing data never interferes.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -14,6 +13,7 @@ from bhelpers import (
     _shell, _login_as,
     _create_group, _add_group_member, _create_group_expense,
 )
+from pacing import pause
 
 PREFIX = "PFilt"
 
@@ -77,7 +77,7 @@ def _search(driver, query):
         "arguments[0].dispatchEvent(new Event('input', {bubbles:true}));",
         el, query,
     )
-    time.sleep(1)
+    pause(1)
 
 
 def _visible_titles(driver):
@@ -89,7 +89,7 @@ def _visible_titles(driver):
 
 def _nav_to_project(driver, group_id):
     driver.get(_url(f"/projects/{group_id}/"))
-    time.sleep(2)
+    pause(2)
 
 
 @pytest.fixture(scope="module")
@@ -171,7 +171,7 @@ class TestHideRecurring:
         # Toggle checkbox
         cb = driver.find_element(By.ID, "proj-exp-hide-recurring")
         driver.execute_script("arguments[0].click();", cb)
-        time.sleep(1)
+        pause(1)
         titles = _visible_titles(driver)
         assert not any("Recurring" in t for t in titles)
         assert any("Groceries" in t for t in titles)
@@ -179,7 +179,7 @@ class TestHideRecurring:
     def test_uncheck_hide_recurring_restores_expense(self, driver, w, ctx):
         cb = driver.find_element(By.ID, "proj-exp-hide-recurring")
         driver.execute_script("arguments[0].click();", cb)
-        time.sleep(1)
+        pause(1)
         titles = _visible_titles(driver)
         assert any("Recurring" in t for t in titles)
 
@@ -191,7 +191,7 @@ class TestIPaid:
         _nav_to_project(driver, ctx["group_id"])
         cb = driver.find_element(By.ID, "proj-exp-i-paid")
         driver.execute_script("arguments[0].click();", cb)
-        time.sleep(1)
+        pause(1)
         titles = _visible_titles(driver)
         assert any("Groceries" in t for t in titles)
         assert any("Transport" in t for t in titles)
@@ -202,7 +202,7 @@ class TestIPaid:
         _nav_to_project(driver, ctx["group_id"])
         cb = driver.find_element(By.ID, "proj-exp-i-paid")
         driver.execute_script("arguments[0].click();", cb)
-        time.sleep(1)
+        pause(1)
         titles = _visible_titles(driver)
         assert any("Dinner by B" in t for t in titles)
         assert not any("Groceries" in t for t in titles)
@@ -214,7 +214,7 @@ class TestIPaid:
         driver.execute_script("window._pfilt_loaded = true;")
         cb = driver.find_element(By.ID, "proj-exp-i-paid")
         driver.execute_script("arguments[0].click();", cb)
-        time.sleep(1)
+        pause(1)
         still_set = driver.execute_script("return window._pfilt_loaded === true;")
         assert still_set, "Filter checkbox triggered a full page reload"
 
@@ -230,7 +230,7 @@ class TestSort:
             "arguments[0].dispatchEvent(new Event('change', {bubbles:true}));",
             sel,
         )
-        time.sleep(1)
+        pause(1)
         titles = _visible_titles(driver)
         pfilt = [t for t in titles if PREFIX in t]
         assert len(pfilt) >= 2
@@ -247,7 +247,7 @@ class TestSort:
             "arguments[0].dispatchEvent(new Event('change', {bubbles:true}));",
             sel_dir,
         )
-        time.sleep(1)
+        pause(1)
         titles = _visible_titles(driver)
         pfilt = [t for t in titles if PREFIX in t]
         transport_idx = next((i for i, t in enumerate(pfilt) if "Transport" in t), None)
@@ -265,7 +265,7 @@ class TestSort:
             "arguments[0].dispatchEvent(new Event('change', {bubbles:true}));",
             sel,
         )
-        time.sleep(1)
+        pause(1)
         still_set = driver.execute_script("return window._pfilt_loaded === true;")
         assert still_set, "Sort control triggered a full page reload"
 
@@ -278,7 +278,7 @@ class TestCombinedFilters:
         # "Only show what I paid" + search for PREFIX
         cb = driver.find_element(By.ID, "proj-exp-i-paid")
         driver.execute_script("arguments[0].click();", cb)
-        time.sleep(0.5)
+        pause(0.5)
         _search(driver, f"{PREFIX} Transport")
         titles = _visible_titles(driver)
         assert any("Transport" in t for t in titles)

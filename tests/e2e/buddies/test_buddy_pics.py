@@ -8,7 +8,6 @@ Covers:
 """
 import os
 import subprocess
-import time
 import uuid
 
 import pytest
@@ -17,6 +16,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user, BASE_URL, DOCKER_WEB
 from bhelpers import _shell, _create_group, _add_group_member, _get_pk
+from pacing import pause
 
 PPIC_ASSET = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "ppic.jpg")
 
@@ -28,7 +28,7 @@ def _open_dummy_pic_modal(driver, dummy_id):
     driver.execute_script(
         f'document.querySelector(\'[data-dummy-id="{dummy_id}"]\').click();'
     )
-    time.sleep(0.5)
+    pause(0.5)
 
 
 def _upload_via_cropper(driver):
@@ -38,9 +38,9 @@ def _upload_via_cropper(driver):
         "document.getElementById('dummy-pic-input').style.display = 'block';"
     )
     driver.find_element(By.ID, "dummy-pic-input").send_keys(PPIC_ASSET)
-    time.sleep(1)   # wait for cropper to open
+    pause(1)   # wait for cropper to open
     driver.find_element(By.ID, "img-cropper-done").click()
-    time.sleep(3)   # wait for fetch + DOM update
+    pause(3)   # wait for fetch + DOM update
 
 
 def _avatar_tag(driver, dummy_id):
@@ -88,7 +88,7 @@ class TestPersonalDummyPicture:
 
     def test_initials_shown_before_upload(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert _avatar_tag(driver, ctx["dummy_id"]) == "span", \
             "Before upload the dummy avatar should be an initials span"
 
@@ -111,21 +111,21 @@ class TestPersonalDummyPicture:
 
     def test_avatar_persists_after_page_reload(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert _avatar_tag(driver, ctx["dummy_id"]) == "img", \
             "After reload the dummy avatar should still be <img>"
 
     def test_remove_dummy_picture(self, driver, w, ctx):
         _open_dummy_pic_modal(driver, ctx["dummy_id"])
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "dummy-pic-delete").click()
-        time.sleep(2)
+        pause(2)
         assert _avatar_tag(driver, ctx["dummy_id"]) == "span", \
             "After removal the dummy avatar should revert to initials span"
 
     def test_initials_restored_after_reload(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert _avatar_tag(driver, ctx["dummy_id"]) == "span", \
             "After reload post-removal the dummy avatar should be initials span"
         assert "PD" in driver.page_source
@@ -154,7 +154,7 @@ class TestGroupDummyPicture:
 
     def test_initials_shown_for_group_dummy(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['a']['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert _avatar_tag(driver, ctx["a"]["dummy_id"]) == "span", \
             "Before upload the group dummy avatar should be an initials span"
 
@@ -177,21 +177,21 @@ class TestGroupDummyPicture:
 
     def test_group_dummy_pic_persists_after_reload(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['a']['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert _avatar_tag(driver, ctx["a"]["dummy_id"]) == "img", \
             "After reload the group dummy avatar should still be <img>"
 
     def test_remove_group_dummy_picture(self, driver, w, ctx):
         _open_dummy_pic_modal(driver, ctx["a"]["dummy_id"])
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "dummy-pic-delete").click()
-        time.sleep(2)
+        pause(2)
         assert _avatar_tag(driver, ctx["a"]["dummy_id"]) == "span", \
             "After removal the group dummy avatar should revert to initials span"
 
     def test_group_dummy_initials_restored_after_reload(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['a']['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert _avatar_tag(driver, ctx["a"]["dummy_id"]) == "span", \
             "After reload post-removal the group dummy avatar should be initials span"
         assert "GM" in driver.page_source
@@ -241,7 +241,7 @@ class TestFeuserPicInBuddyLists:
     def test_you_card_shows_initials_before_upload(self, driver, w, ctx):
         # The admin has no ppic yet; their "You" card should show initials.
         driver.get(_url(f"/projects/{ctx['admin']['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "user-avatar--initials" in driver.page_source
         # "Frank Admin" -> "FA"
         assert "FA" in driver.page_source
@@ -249,7 +249,7 @@ class TestFeuserPicInBuddyLists:
     def test_member_ppic_shown_in_group_member_card(self, driver, w, ctx):
         # Mary Member has a ppic; her card should contain an <img> with her ppic URL.
         driver.get(_url(f"/projects/{ctx['admin']['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert _ppic_url_in_page(
             driver, ctx["admin"]["member_pk"], subdir="ppics"
         ), "Group member card should contain an <img> with the member's ppic URL"
@@ -257,20 +257,20 @@ class TestFeuserPicInBuddyLists:
     def test_upload_admin_ppic_and_you_card_updates(self, driver, w, ctx):
         # Upload admin's own ppic via the profile page.
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             "document.getElementById('id_profile_picture').style.display = 'block';"
         )
         driver.find_element(By.ID, "id_profile_picture").send_keys(PPIC_ASSET)
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "img-cropper-done").click()
-        time.sleep(3)
+        pause(3)
         assert "Profile picture updated." in driver.page_source
 
     def test_you_card_shows_img_after_upload(self, driver, w, ctx):
         admin_pk = _get_pk(ctx["admin"]["email"])
         driver.get(_url(f"/projects/{ctx['admin']['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert _ppic_url_in_page(driver, admin_pk, subdir="ppics"), \
             "After upload the admin's You card should contain their ppic URL"
 
@@ -327,7 +327,7 @@ class TestGroupDummyPicWithExpense:
 
     def test_multiple_dummy_avatar_elements_exist(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['a']['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         tags = _all_dummy_avatar_tags(driver, ctx["a"]["dummy_id"])
         assert len(tags) >= 1, (
             "Expected at least 1 data-dummy-avatar element (member card)"
@@ -350,9 +350,9 @@ class TestGroupDummyPicWithExpense:
 
     def test_remove_member_card_avatar_updates_immediately(self, driver, w, ctx):
         _open_dummy_pic_modal(driver, ctx["a"]["dummy_id"])
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "dummy-pic-delete").click()
-        time.sleep(2)
+        pause(2)
         tag = _member_card_avatar_tag(driver, ctx["a"]["dummy_id"])
         assert tag == "span", \
             "After removal the member card avatar should revert to initials span without a reload"

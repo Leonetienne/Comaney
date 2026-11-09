@@ -2,12 +2,12 @@
 import os
 import re
 import subprocess
-import time
 
 import requests
 from selenium.webdriver.common.by import By
 
 from helpers import BASE_URL, DOCKER_WEB, _url, cleanup_user, setup_user
+from pacing import pause
 
 BACKDROP_ASSET = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "backdrop.png")
 
@@ -24,12 +24,12 @@ def _file_exists_on_server(pk) -> bool:
 
 def _upload_backdrop(driver):
     driver.get(_url("/profile/"))
-    time.sleep(1)
+    pause(1)
     driver.execute_script(
         "document.getElementById('id_custom_backdrop').style.display = 'block';"
     )
     driver.find_element(By.ID, "id_custom_backdrop").send_keys(BACKDROP_ASSET)
-    time.sleep(3)
+    pause(3)
 
 
 class TestCustomBackdrop:
@@ -47,7 +47,7 @@ class TestCustomBackdrop:
         try:
             _upload_backdrop(driver)
             driver.get(_url("/budget/"))
-            time.sleep(1)
+            pause(1)
             assert 'class="custom-backdrop"' in driver.page_source
             match = re.search(r'src="(/media/backdrops/\d+\.png[^"]*)"', driver.page_source)
             assert match, "custom-backdrop img src not found in page source"
@@ -70,7 +70,7 @@ class TestCustomBackdrop:
                 "document.querySelector(\"input[name='action'][value='backdrop_delete']\")"
                 ".closest('form').submit();"
             )
-            time.sleep(2)
+            pause(2)
             assert "Backdrop removed." in driver.page_source
             assert not _file_exists_on_server(pk), "File should be gone after delete"
         finally:
@@ -87,9 +87,9 @@ class TestCustomBackdrop:
                 "document.querySelector(\"input[name='action'][value='backdrop_settings']\")"
                 ".closest('form').submit();"
             )
-            time.sleep(2)
+            pause(2)
             driver.get(_url("/budget/"))
-            time.sleep(1)
+            pause(1)
             assert "opacity:0.42" in driver.page_source
         finally:
             cleanup_user(ctx["email"])
@@ -105,9 +105,9 @@ class TestCustomBackdrop:
                 "document.querySelector(\"input[name='action'][value='backdrop_settings']\")"
                 ".closest('form').submit();"
             )
-            time.sleep(2)
+            pause(2)
             driver.get(_url("/budget/"))
-            time.sleep(1)
+            pause(1)
             assert "object-fit:contain" in driver.page_source
         finally:
             cleanup_user(ctx["email"])

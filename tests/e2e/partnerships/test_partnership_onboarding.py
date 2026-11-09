@@ -3,13 +3,13 @@ Partnership onboarding wizard: stoerer banner, decline, and full happy path.
 All DB state is set up via shell; UI tests only verify rendering.
 Run with: pytest tests/e2e/buddies/test_partnership_onboarding.py -v -s
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_contact_link
+from pacing import pause
 
 
 def _create_invite_via_shell(inviter_email: str, invitee_email: str) -> str:
@@ -72,12 +72,12 @@ class TestStoererBannerVisible:
     def test_stoerer_contains_wizard_link(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["token"] in driver.page_source
 
     def test_stoerer_visible_on_expenses_page(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["token"] in driver.page_source
 
 
@@ -101,14 +101,14 @@ class TestDeclinePartnership:
     def test_wizard_page_renders(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/buddies/partnership/accept/{ctx['token']}/"))
-        time.sleep(1.5)
+        pause(1.5)
         assert driver.find_element(By.ID, "step1-decline").is_displayed()
 
     def test_decline_redirects_away(self, driver, w, ctx):
         driver.find_element(By.ID, "step1-decline").click()
-        time.sleep(0.8)
+        pause(0.8)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         assert "/buddies/partnership/accept/" not in driver.current_url
 
     def test_invite_marked_declined_in_db(self, driver, w, ctx):
@@ -153,25 +153,25 @@ class TestOnboardingHappyPathNoConflicts:
     def test_step1_next(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/buddies/partnership/accept/{ctx['token']}/"))
-        time.sleep(1.5)
+        pause(1.5)
         driver.find_element(By.ID, "step1-next").click()
-        time.sleep(0.8)
+        pause(0.8)
         assert driver.find_element(By.ID, "step-2").is_displayed()
 
     def test_step2_next(self, driver, w, ctx):
         # No unmatched tags → step is already valid
         driver.find_element(By.ID, "step2-next").click()
-        time.sleep(0.8)
+        pause(0.8)
         assert driver.find_element(By.ID, "step-3").is_displayed()
 
     def test_step3_next(self, driver, w, ctx):
         driver.find_element(By.ID, "step3-next").click()
-        time.sleep(0.8)
+        pause(0.8)
         assert driver.find_element(By.ID, "step-4").is_displayed()
 
     def test_apply_redirects_to_cats_page(self, driver, w, ctx):
         driver.find_element(By.ID, "step4-apply").click()
-        time.sleep(3)
+        pause(3)
         assert "/budget/categories" in driver.current_url
 
     def test_membership_marked_complete(self, driver, w, ctx):
@@ -209,16 +209,16 @@ class TestOnboardingWithUnmatchedTags:
     def test_step2_shows_mapping_row(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/buddies/partnership/accept/{ctx['token']}/"))
-        time.sleep(1.5)
+        pause(1.5)
         driver.find_element(By.ID, "step1-next").click()
-        time.sleep(0.8)
+        pause(0.8)
         rows = driver.find_elements(By.CSS_SELECTOR, "#step-2 .wizard-map-row")
         assert rows, "Expected at least one mapping row for unmatched tag"
 
     def test_step2_blocked_without_decision(self, driver, w, ctx):
         # Clicking Next without deciding should not advance
         driver.find_element(By.ID, "step2-next").click()
-        time.sleep(0.5)
+        pause(0.5)
         assert driver.find_element(By.ID, "step-2").is_displayed(), \
             "Step 2 should remain active when undecided rows exist"
 
@@ -229,7 +229,7 @@ class TestOnboardingWithUnmatchedTags:
             cb = row.find_element(By.CSS_SELECTOR, "input[type='checkbox']")
             if not cb.is_selected():
                 cb.click()
-                time.sleep(0.3)
+                pause(0.3)
         driver.find_element(By.ID, "step2-next").click()
-        time.sleep(0.8)
+        pause(0.8)
         assert driver.find_element(By.ID, "step-3").is_displayed()

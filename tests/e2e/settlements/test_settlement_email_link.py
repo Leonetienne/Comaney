@@ -5,12 +5,12 @@ Requirements: req 14.9a - the approval email contains a clickable link;
 following it lands on the approve-settlement confirmation page where
 the creditor can confirm or reject.
 """
-import time
 
 import pytest
 
 from helpers import _url, setup_user, cleanup_user, fetch_email, extract_link, mailpit_seen_ids
 from bhelpers import _shell, _login_as, _create_contact_link, _get_pk, _create_personal_expense_with_buddy
+from pacing import pause
 
 
 class TestSettlementEmailLinkApproval:
@@ -41,13 +41,13 @@ class TestSettlementEmailLinkApproval:
 
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" in driver.page_source, \
             "Settle Up section must appear before test can run"
         driver.find_element("id", "btn-direct-settle").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element("id", "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
 
     def test_email_arrives_for_creditor(self, driver, w, ctx):
         body = fetch_email(
@@ -73,7 +73,7 @@ class TestSettlementEmailLinkApproval:
         # Must be logged in as B (creditor) to access the link
         _login_as(driver, ctx["b"])
         driver.get(link)
-        time.sleep(1)
+        pause(1)
         assert "did not receive" in driver.page_source.lower() or \
                "confirm" in driver.page_source.lower(), \
             "Email link must lead to the settlement confirmation page"
@@ -81,14 +81,14 @@ class TestSettlementEmailLinkApproval:
     def test_creditor_approves_via_email_link(self, driver, w, ctx):
         from selenium.webdriver.common.by import By
         driver.find_element(By.ID, "btn-approve-settlement").click()
-        time.sleep(1)
+        pause(1)
         assert "confirmed" in driver.page_source.lower(), \
             "Approving via email link must show a confirmation flash"
 
     def test_debt_cleared_for_debtor(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element("id", "direct-settle-amount")
         assert inp.get_attribute("value") in ("", None), \
             "Amount input must be empty (debt cleared) once the creditor has confirmed via email link"

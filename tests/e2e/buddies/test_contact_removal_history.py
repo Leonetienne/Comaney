@@ -7,13 +7,13 @@ request and its acceptance warn with the list of expenses that exist on both sid
 Run with: pytest -v tests/e2e/buddies/test_contact_removal_history.py | tee logfile.log
 """
 import json
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from bhelpers import _create_contact_link, _login_as, _shell
 from helpers import _url, cleanup_user, setup_user
+from pacing import pause
 
 TITLES = ["CR Dinner", "CR Cinema", "CR Trip", "CR Pending Fuel", "CR Payback"]
 OVERLAPS = [["CR Cinema", "60.00"], ["CR Dinner", "100.00"], ["CR Payback", "20.00"], ["CR Trip", "90.00"]]
@@ -217,7 +217,7 @@ class TestContactRemovalHistory:
     def test_merge_request_dialog_lists_overlaps(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         uid, b_pk = ctx["ghost_uid"], _shell(
             f"from feusers.models import FeUser; print(FeUser.objects.get(email='{ctx['b']['email']}').pk)")
         driver.execute_script(
@@ -226,12 +226,12 @@ class TestContactRemovalHistory:
             "f.querySelector('button[type=submit]').click();",
             f"merge-form-{uid}", f"f{b_pk}",
         )
-        time.sleep(1)
+        pause(1)
         text = _dialog_text(driver)
         assert "same title and amount" in text
         assert "CR Dinner, €100.00" in text
         driver.find_element(By.ID, "cdialog-cancel").click()
-        time.sleep(1)
+        pause(1)
 
     def test_accept_dialog_lists_overlaps_and_copies_them(self, driver, w, ctx):
         token = _shell(
@@ -243,20 +243,20 @@ class TestContactRemovalHistory:
         )
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/buddies/merge/{token}/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             "window.__copied = null;"
             "Object.defineProperty(navigator, 'clipboard', {value: {writeText: function (t) {"
             "window.__copied = t; return Promise.resolve(); }}});"
         )
         driver.find_element(By.ID, "btn-accept-merge").click()
-        time.sleep(1)
+        pause(1)
         assert "same title and amount" in _dialog_text(driver)
         driver.find_element(By.CSS_SELECTOR, "#cdialog-detail .merge-overlap-copy").click()
-        time.sleep(1)
+        pause(1)
         assert driver.execute_script("return window.__copied;") == OVERLAP_LINES
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         kept = _shell(
             f"from budget.models import Expense; "
             f"print(Expense.objects.filter(owning_feuser__email='{ctx['b']['email']}', title='CR Cinema').count())"

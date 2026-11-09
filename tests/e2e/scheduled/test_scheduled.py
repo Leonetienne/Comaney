@@ -1,6 +1,5 @@
 """Scheduled expense CRUD via browser."""
 import re
-import time
 
 import pytest
 import requests
@@ -13,6 +12,7 @@ from helpers import (
     api_get, api_post, api_delete,
     setup_user, cleanup_user,
 )
+from pacing import pause
 
 
 @pytest.fixture(scope="module")
@@ -76,7 +76,7 @@ class TestScheduledAllFields:
     def test_all_fields_round_trip(self, driver, w, ctx):
         today = server_today()
         driver.get(_url("/budget/scheduled/new/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_title", "E2E Sched Full")
         fill(w, By.ID, "id_value", "123.45")
         Select(driver.find_element(By.ID, "id_type")).select_by_value("income")
@@ -89,7 +89,7 @@ class TestScheduledAllFields:
             "document.getElementById('id_default_auto_settle_on_due_date').checked = true;"
         )
         submit(w)
-        time.sleep(2)
+        pause(2)
         assert "E2E Sched Full" in driver.page_source
         # Find the edit link from the list and verify all fields round-trip
         link = driver.find_element(By.XPATH,
@@ -99,7 +99,7 @@ class TestScheduledAllFields:
         )
         sid = re.search(r"/scheduled/(\d+)/edit/", link.get_attribute("href")).group(1)
         driver.get(_url(f"/budget/scheduled/{sid}/edit/"))
-        time.sleep(1)
+        pause(1)
         assert driver.find_element(By.ID, "id_title").get_attribute("value") == "E2E Sched Full"
         assert driver.find_element(By.ID, "id_value").get_attribute("value") == "123.45"
         assert driver.find_element(By.ID, "id_payee").get_attribute("value") == "Sched Payee"
@@ -115,10 +115,10 @@ class TestScheduledAllFields:
         # Confirming both gates unlocks the fields so they can be filled and submitted
         click(w, By.ID, "id_confirm_modify_schedule")
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-        time.sleep(1)
+        pause(1)
         click(w, By.ID, "id_confirm_modify_schedule_window")
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-        time.sleep(1)
+        pause(1)
 
         new_base = "2020-01-01"
         fill(w, By.ID, "id_repeat_every_factor", "3")
@@ -126,10 +126,10 @@ class TestScheduledAllFields:
         driver.execute_script(f"document.getElementById('id_repeat_base_date').value = '{new_base}';")
 
         submit(w)
-        time.sleep(2)
+        pause(2)
 
         driver.get(_url(f"/budget/scheduled/{sid}/edit/"))
-        time.sleep(1)
+        pause(1)
         assert driver.find_element(By.ID, "id_repeat_every_factor").get_attribute("value") == "3"
         assert Select(driver.find_element(By.ID, "id_repeat_every_unit")).first_selected_option.get_attribute("value") == "days"
         assert driver.find_element(By.ID, "id_repeat_base_date").get_attribute("value") == new_base

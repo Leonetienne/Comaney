@@ -17,6 +17,7 @@ from helpers import (
     ai_unavailable, stack_has_trial_key, get_ai_user_config, set_ai_user_config,
     stack_ai_is_free,
 )
+from pacing import pause
 
 DOCKER_WEB = "comaney-web-1"
 AI_TIMEOUT = 120
@@ -74,7 +75,7 @@ def _lock_recorded_on_submit(driver, btn_id, storage_key, timeout=5):
 
 def _trial_status(driver):
     driver.get(_url("/budget/ai/express-creation/"))
-    time.sleep(1)
+    pause(1)
     if "/profile" in driver.current_url:
         return False, "No API key configured"
     src = driver.page_source
@@ -127,7 +128,7 @@ def _parse(driver, description="", image_path=None, clear_image=False):
 
 def _parse_await_outcome(driver, description):
     driver.get(_url("/budget/ai/express-creation/"))
-    time.sleep(1)
+    pause(1)
     ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
     driver.execute_script("arguments[0].value = arguments[1];", ta, description)
     driver.find_element(By.ID, "parse-btn").click()
@@ -224,7 +225,7 @@ class TestExpressCreation:
         if not ctx.get("express_trial_ok"):
             ai_unavailable("Trial not available")
         driver.get(_url("/budget/ai/express-creation/"))
-        time.sleep(1)
+        pause(1)
         ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
         driver.execute_script("arguments[0].value = arguments[1];", ta, "Coffee 3€")
         assert _lock_recorded_on_submit(driver, "parse-btn", "e2eParseBtnLocked"), \
@@ -282,7 +283,7 @@ class TestExpressCreation:
         if not ctx.get("express_trial_ok"):
             ai_unavailable("Trial not available")
         driver.get(_url("/budget/ai/express-creation/"))
-        time.sleep(0.5)
+        pause(0.5)
         spent_before = _trial_meter_value(driver)
         cards = _parse(driver, "Coffee 3.50€ and a croissant for 2€", clear_image=True)
         assert cards, "AI produced zero items"
@@ -299,7 +300,7 @@ class TestExpressCreation:
         # click can't re-fire "Save selected" and create duplicates.
         assert _lock_recorded_on_submit(driver, "confirm-btn", "e2eConfirmBtnLocked"), \
             "Confirm button was not locked on submit"
-        time.sleep(5)
+        pause(5)
         assert driver.find_elements(By.CSS_SELECTOR, ".success-banner"), "No success banner appeared"
         all_expenses = api_get("/api/v2/expenses/", ctx).json().get("expenses", [])
         created = [e for e in all_expenses if "XExpressTestEdited" in e.get("title", "")]
@@ -385,7 +386,7 @@ class TestExpressCreation:
                 if "coffee" in e.get("title", "").lower():
                     api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
             driver.get(_url("/budget/ai/express-creation/"))
-            time.sleep(1)
+            pause(1)
             src = driver.page_source
             assert "Monthly AI limit reached" in src
             assert driver.find_elements(By.CSS_SELECTOR, ".trial-blocked")

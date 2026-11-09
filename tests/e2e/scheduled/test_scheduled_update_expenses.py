@@ -20,6 +20,7 @@ from helpers import (
     _url, api_get, api_post, api_delete, api_patch,
     setup_user, cleanup_user, server_today, run_cmd,
 )
+from pacing import pause
 
 
 @pytest.fixture(scope="module")
@@ -40,12 +41,12 @@ def _expenses_by_title(ctx, title):
 def _open_update_modal(driver, w, sched_id):
     """Navigate to scheduled list and click Update expenses for sched_id."""
     driver.get(_url("/budget/scheduled/"))
-    time.sleep(1)
+    pause(1)
     btn = w.until(EC.element_to_be_clickable(
         (By.CSS_SELECTOR, f'[data-update-expenses-url*="/scheduled/{sched_id}/update-expenses/"]')
     ))
     btn.click()
-    time.sleep(1)
+    pause(1)
 
 
 class TestUpdateExpensesModal:
@@ -82,7 +83,7 @@ class TestUpdateExpensesModal:
         assert ok_btn.is_enabled()
 
         driver.find_element(By.ID, "update-exp-cancel").click()
-        time.sleep(0.3)
+        pause(0.3)
         for e in generated:
             api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
         api_delete(f"/api/v2/scheduled/{sched_id}/", ctx)
@@ -110,7 +111,7 @@ class TestUpdateExpensesModal:
         assert "\\u002D" not in title_el.text
 
         driver.find_element(By.ID, "update-exp-cancel").click()
-        time.sleep(0.3)
+        pause(0.3)
         for e in generated:
             api_delete(f"/api/v2/expenses/{e['id']}/", ctx)
         api_delete(f"/api/v2/scheduled/{sched_id}/", ctx)
@@ -156,7 +157,7 @@ class TestUpdateExpensesModal:
 
         ok_btn = w.until(EC.element_to_be_clickable((By.ID, "update-exp-ok")))
         ok_btn.click()
-        time.sleep(1.5)
+        pause(1.5)
 
         # Modal should show success message
         result_el = driver.find_element(By.ID, "update-exp-result")
@@ -164,7 +165,7 @@ class TestUpdateExpensesModal:
         assert "updated" in result_el.text.lower()
 
         driver.find_element(By.ID, "update-exp-cancel").click()
-        time.sleep(0.3)
+        pause(0.3)
 
         # Expense should now have new title and value
         updated = [e for e in _all_expenses(ctx) if e["id"] == exp_before["id"]]
@@ -221,14 +222,14 @@ class TestUpdateExpensesModal:
         # Uncheck the first row (earliest expense) via JS
         driver.execute_script("arguments[0].checked = false;", checkboxes[0])
         driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", checkboxes[0])
-        time.sleep(0.3)
+        pause(0.3)
 
         ok_btn = w.until(EC.element_to_be_clickable((By.ID, "update-exp-ok")))
         ok_btn.click()
-        time.sleep(1.5)
+        pause(1.5)
 
         driver.find_element(By.ID, "update-exp-cancel").click()
-        time.sleep(0.3)
+        pause(0.3)
 
         all_by_id = {e["id"]: e for e in _all_expenses(ctx)}
         assert all_by_id[first_id]["title"] == title_before, "Deselected expense must not be updated"
@@ -286,7 +287,7 @@ class TestUpdateExpensesModal:
 
         link = driver.find_element(By.ID, "update-exp-select-unsettled")
         link.click()
-        time.sleep(0.3)
+        pause(0.3)
 
         checked_ids = {
             int(cb.get_attribute("data-expense-id"))
@@ -298,10 +299,10 @@ class TestUpdateExpensesModal:
 
         ok_btn = w.until(EC.element_to_be_clickable((By.ID, "update-exp-ok")))
         ok_btn.click()
-        time.sleep(1.5)
+        pause(1.5)
 
         driver.find_element(By.ID, "update-exp-cancel").click()
-        time.sleep(0.3)
+        pause(0.3)
 
         all_by_id = {e["id"]: e for e in _all_expenses(ctx)}
         assert all_by_id[settled_id]["title"] == title_before, "Settled expense must not be updated"

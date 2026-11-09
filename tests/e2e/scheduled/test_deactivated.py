@@ -6,7 +6,6 @@ Deactivated/end_on behaviour.
 3. A deactivated expense is excluded from the API dashboard totals.
 """
 import re
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -18,6 +17,7 @@ from helpers import (
     api_get, api_post, api_delete, run_cmd,
     setup_user, cleanup_user,
 )
+from pacing import pause
 
 
 def _expenses_by_title_year(ctx, title):
@@ -113,7 +113,7 @@ class TestDeactivatedExpense:
         )
         submit(w)
         wait_url(w, "/budget/expenses/")
-        time.sleep(2)
+        pause(2)
         src = driver.page_source
         assert "Deact Expense Test" in src, "Expense not found in list"
         assert "exp-card--deactivated" in src, "Deactivated style class missing"

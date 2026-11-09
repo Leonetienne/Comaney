@@ -6,7 +6,6 @@ Covers:
   - the "Enable early access features" checkbox in the profile "Advanced" card turns it on/off
   - demo users cannot change it (server + UI)
 """
-import time
 import uuid
 
 import pytest
@@ -17,6 +16,7 @@ from helpers import (
     _url, fill, click, run_cmd, session_cookies,
     setup_user, cleanup_user, DOCKER_WEB,
 )
+from pacing import pause
 
 SANKEY_URL          = _url("/budget/sankey/")
 SANKEY_SAVE_URL     = _url("/budget/sankey/save/")
@@ -61,13 +61,13 @@ class TestDisabledByDefault:
 
     def test_sidebar_link_absent(self, driver, w, ctx):
         driver.get(DASHBOARD_URL)
-        time.sleep(1)
+        pause(1)
         links = driver.find_elements(By.LINK_TEXT, "Sankey Studio")
         assert not links, "Sankey Studio must be hidden until early access is enabled"
 
     def test_direct_hit_redirects_to_dashboard(self, driver, w, ctx):
         driver.get(SANKEY_URL)
-        time.sleep(1)
+        pause(1)
         assert "/budget/dash/" in driver.current_url, \
             f"Expected redirect to the dashboard, got {driver.current_url}"
 
@@ -90,44 +90,44 @@ class TestToggleViaProfileForm:
 
     def test_enabling_shows_sidebar_link(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         checkbox = driver.find_element(By.ID, "id_enable_early_access")
         if not checkbox.is_selected():
             checkbox.click()
-            time.sleep(0.2)
+            pause(0.2)
         _submit_form(driver, "advanced")
-        time.sleep(2)
+        pause(2)
         assert "Saved." in driver.page_source
 
         driver.get(DASHBOARD_URL)
-        time.sleep(1)
+        pause(1)
         link = driver.find_element(By.LINK_TEXT, "Sankey Studio")
         assert link.get_attribute("href").endswith("/budget/sankey/")
 
     def test_enabled_direct_hit_loads_page(self, driver, w, ctx):
         driver.get(SANKEY_URL)
-        time.sleep(1)
+        pause(1)
         assert "/budget/sankey/" in driver.current_url
         assert "Sankey Studio" in driver.page_source
 
     def test_disabling_hides_sidebar_link_again(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         checkbox = driver.find_element(By.ID, "id_enable_early_access")
         if checkbox.is_selected():
             checkbox.click()
-            time.sleep(0.2)
+            pause(0.2)
         _submit_form(driver, "advanced")
-        time.sleep(2)
+        pause(2)
         assert "Saved." in driver.page_source
 
         driver.get(DASHBOARD_URL)
-        time.sleep(1)
+        pause(1)
         links = driver.find_elements(By.LINK_TEXT, "Sankey Studio")
         assert not links
 
         driver.get(SANKEY_URL)
-        time.sleep(1)
+        pause(1)
         assert "/budget/dash/" in driver.current_url
 
 
@@ -206,11 +206,11 @@ class TestDemoUserCannotToggle:
         fill(w, By.ID, "id_email", demo_ctx["email"])
         fill(w, By.ID, "id_password", demo_ctx["password"])
         click(w, By.CSS_SELECTOR, "button[type=submit]")
-        time.sleep(2)
+        pause(2)
         if "/demo-banner/" in driver.current_url:
             click(w, By.ID, "btn-demo-accept")
-            time.sleep(2)
+            pause(2)
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         fs = driver.find_elements(By.XPATH, "//div[@id='section-advanced']//fieldset[@disabled]")
         assert fs, "Advanced section does not have a disabled fieldset for demo user"

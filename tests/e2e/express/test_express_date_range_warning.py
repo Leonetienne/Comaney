@@ -15,6 +15,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, ai_unavailable, api_get, api_delete, setup_user, cleanup_user
+from pacing import pause
 
 AI_TIMEOUT = 120
 # The selected display range (2020-01) and the forced item date (2024-05-01)
@@ -33,7 +34,7 @@ def _set_range(driver, date_from, date_to):
 
 def _trial_available(driver):
     driver.get(_url("/budget/ai/express-creation/"))
-    time.sleep(1)
+    pause(1)
     if "/profile" in driver.current_url:
         return False
     src = driver.page_source
@@ -63,7 +64,7 @@ class TestExpressCreationDateRangeWarning:
             ai_unavailable("Trial not available")
         _set_range(driver, _OUT_OF_RANGE_FROM, _OUT_OF_RANGE_TO)
         driver.get(_url("/budget/ai/express-creation/"))
-        time.sleep(1)
+        pause(1)
         ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
         driver.execute_script("arguments[0].value = 'Coffee 3 euros';", ta)
         driver.find_element(By.ID, "parse-btn").click()
@@ -85,7 +86,7 @@ class TestExpressCreationDateRangeWarning:
             f".forEach(el => el.value = '{_OUT_OF_RANGE_DATE}');"
         )
         driver.find_element(By.ID, "confirm-btn").click()
-        time.sleep(0.5)
+        pause(0.5)
         backdrop = driver.find_element(By.ID, "cdialog-backdrop")
         assert "cdialog-visible" in backdrop.get_attribute("class")
         msg = driver.find_element(By.ID, "cdialog-msg").text
@@ -95,7 +96,7 @@ class TestExpressCreationDateRangeWarning:
         if not ctx.get("trial_ok"):
             ai_unavailable("Trial not available")
         driver.find_element(By.ID, "cdialog-cancel").click()
-        time.sleep(1)
+        pause(1)
         assert not driver.find_elements(By.CSS_SELECTOR, ".success-banner")
         resp = api_get("/api/v2/expenses/", ctx, params={
             "date_from": "2024-01-01", "date_to": "2024-12-31",
@@ -106,9 +107,9 @@ class TestExpressCreationDateRangeWarning:
         if not ctx.get("trial_ok"):
             ai_unavailable("Trial not available")
         driver.find_element(By.ID, "confirm-btn").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(5)
+        pause(5)
         assert driver.find_elements(By.CSS_SELECTOR, ".success-banner")
         resp = api_get("/api/v2/expenses/", ctx, params={
             "date_from": "2024-01-01", "date_to": "2024-12-31",

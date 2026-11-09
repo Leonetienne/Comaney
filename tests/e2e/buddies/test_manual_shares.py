@@ -3,7 +3,6 @@
 the server-side share bounds check (req sharing.manual.*, sharing.assign.share-bounds).
 """
 import json
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -15,6 +14,7 @@ from bhelpers import (
     share_dialog_value, share_dialog_click, share_dialog_reason, share_dialog_save_enabled,
     share_dialog_is_open,
 )
+from pacing import pause
 
 
 def _add_dummy(email: str, name: str) -> None:
@@ -39,7 +39,7 @@ def _pick_contact(driver, name: str) -> None:
     sel = driver.find_element(By.ID, "buddy-participant-select")
     opt = next(o for o in sel.find_elements(By.TAG_NAME, "option") if name in o.text)
     Select(sel).select_by_value(opt.get_attribute("value"))
-    time.sleep(0.3)
+    pause(0.3)
 
 
 def _manual_btn(driver):
@@ -48,7 +48,7 @@ def _manual_btn(driver):
 
 def _submit(driver) -> None:
     driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-    time.sleep(2)
+    pause(2)
 
 
 def _spendings_of(title: str, email: str) -> list:
@@ -73,10 +73,10 @@ class TestManualSharesContact:
 
     def test_dialog_prefilled_with_current_shares(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         _fill_expense(driver, "Manual Share Dinner", "8.00")
         driver.find_element(By.ID, "assign-contact").click()
-        time.sleep(0.5)
+        pause(0.5)
         assert not _manual_btn(driver).is_displayed(), "share buttons stay hidden until a participant is picked"
         assert not driver.find_element(By.ID, "buddy-equal-btn").is_displayed()
         _pick_contact(driver, "Manual Contact")
@@ -145,19 +145,19 @@ class TestManualSharesProject:
 
     def test_open_with_both_members(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         _fill_expense(driver, "Manual Share Groceries", "30.00")
         driver.find_element(By.ID, "assign-project").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.execute_script(
             "var s = document.getElementById('buddy-group-select'); s.value = arguments[0];"
             "s.dispatchEvent(new Event('change', {bubbles: true}));", str(ctx["gid"]))
-        time.sleep(0.5)
+        pause(0.5)
         for name in ("Anna Offline", "Ben Offline"):
             cb = self._checkbox(driver, name)
             if not cb.is_selected():
                 driver.execute_script("arguments[0].click();", cb)
-                time.sleep(0.2)
+                pause(0.2)
         share_dialog_open(driver, _manual_btn(driver))
         assert len(share_dialog_rows(driver)) == 3
         assert len(driver.find_elements(By.CSS_SELECTOR, ".share-dialog-remove")) == 2, \
@@ -194,22 +194,22 @@ class TestManualSharesProject:
 
     def test_removing_last_participant_gives_payer_100(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         _fill_expense(driver, "Manual Share Solo", "30.00")
         driver.find_element(By.ID, "assign-project").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.execute_script(
             "var s = document.getElementById('buddy-group-select'); s.value = arguments[0];"
             "s.dispatchEvent(new Event('change', {bubbles: true}));", str(ctx["gid"]))
-        time.sleep(0.5)
+        pause(0.5)
         cb = self._checkbox(driver, "Ben Offline")
         if not cb.is_selected():
             driver.execute_script("arguments[0].click();", cb)
-            time.sleep(0.2)
+            pause(0.2)
         cb = self._checkbox(driver, "Anna Offline")
         if cb.is_selected():
             driver.execute_script("arguments[0].click();", cb)
-            time.sleep(0.2)
+            pause(0.2)
         share_dialog_open(driver, _manual_btn(driver))
         share_dialog_click(driver, ".share-dialog-row:nth-child(2) .share-dialog-remove")
         assert len(share_dialog_rows(driver)) == 1
@@ -229,7 +229,7 @@ class TestManualSharesRecurring:
 
     def test_manual_share_saved_on_recurring_expense(self, driver, w, ctx):
         driver.get(_url("/budget/scheduled/new/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             "document.getElementById('id_title').value = 'Manual Share Rent';"
             "var v = document.getElementById('id_value'); v.value = '1000.00';"
@@ -240,7 +240,7 @@ class TestManualSharesRecurring:
         )
         Select(driver.find_element(By.ID, "id_repeat_every_unit")).select_by_value("months")
         driver.find_element(By.ID, "assign-contact").click()
-        time.sleep(0.5)
+        pause(0.5)
         _pick_contact(driver, "Rent Mate")
         share_dialog_open(driver, _manual_btn(driver))
         share_dialog_type(driver, 1, "amt", "650")
@@ -267,10 +267,10 @@ class TestShareBoundsRejectedOnForm:
 
     def test_shares_over_100_not_saved(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         _fill_expense(driver, "Forged Share Expense", "10.00")
         driver.find_element(By.ID, "assign-contact").click()
-        time.sleep(0.5)
+        pause(0.5)
         _pick_contact(driver, "Forged Share Contact")
         driver.execute_script(
             "var j = document.getElementById('buddy-spendings-json');"

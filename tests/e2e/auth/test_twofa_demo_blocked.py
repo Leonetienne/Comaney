@@ -2,7 +2,6 @@
 second factor: 2FA setup is on the hard-blocked list for is_demo=True users
 (see CLAUDE.md), both server-side and in the UI."""
 import subprocess
-import time
 import uuid
 
 import pytest
@@ -11,6 +10,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, fill, click, wait_text, cleanup_user, reset_browser, DOCKER_WEB, PASSWORD
 from bhelpers import _shell
+from pacing import pause
 
 
 def _demo_users_enabled() -> bool:
@@ -35,10 +35,10 @@ def demo_ctx(driver, w):
     fill(w, By.ID, "id_email", email)
     fill(w, By.ID, "id_password", PASSWORD)
     click(w, By.CSS_SELECTOR, "button[type=submit]")
-    time.sleep(2)
+    pause(2)
     if "/demo-banner/" in driver.current_url:
         click(w, By.ID, "btn-demo-accept")
-        time.sleep(2)
+        pause(2)
 
     yield {"email": email, "password": PASSWORD}
     cleanup_user(email)

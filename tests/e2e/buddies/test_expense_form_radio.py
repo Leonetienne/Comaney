@@ -1,13 +1,13 @@
 """
 Tests for the new "Expense assignment" radio group in the expense form.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _create_group, _create_contact_link, _get_pk
+from pacing import pause
 
 
 class TestRadioGroupVisible:
@@ -25,7 +25,7 @@ class TestRadioGroupVisible:
 
     def test_radio_group_present(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         assert "Expense assignment" in driver.page_source
 
     def test_none_radio_present(self, driver, w, ctx):
@@ -60,15 +60,15 @@ class TestRadioBuddyOption:
 
     def test_select_contact_shows_section(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "assign-contact").click()
-        time.sleep(0.5)
+        pause(0.5)
         section = driver.find_element(By.ID, "buddy-payment-section")
         assert section.is_displayed()
 
     def test_switch_to_none_hides_section(self, driver, w, ctx):
         driver.find_element(By.ID, "assign-none").click()
-        time.sleep(0.3)
+        pause(0.3)
         section = driver.find_element(By.ID, "buddy-payment-section")
         assert not section.is_displayed()
 
@@ -88,9 +88,9 @@ class TestRadioProjectOption:
 
     def test_select_project_shows_section(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "assign-project").click()
-        time.sleep(0.5)
+        pause(0.5)
         section = driver.find_element(By.ID, "buddy-payment-section")
         assert section.is_displayed()
 
@@ -100,7 +100,7 @@ class TestRadioProjectOption:
 
     def test_switch_to_none_hides_project_section(self, driver, w, ctx):
         driver.find_element(By.ID, "assign-none").click()
-        time.sleep(0.3)
+        pause(0.3)
         section = driver.find_element(By.ID, "buddy-payment-section")
         assert not section.is_displayed()
 
@@ -113,9 +113,9 @@ class TestRadioProjectOption:
             f"p.archived = True; p.save(update_fields=['archived'])"
         )
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "assign-project").click()
-        time.sleep(0.5)
+        pause(0.5)
         sel = driver.find_element(By.ID, "buddy-group-select")
         options = [o.get_attribute("value") for o in sel.find_elements(By.TAG_NAME, "option")]
         assert str(archived_gid) not in options, "Archived project must not appear in dropdown"
@@ -158,7 +158,7 @@ class TestRadioPreselectedOnEdit:
 
     def test_project_radio_preselected(self, driver, w, ctx):
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
         project_btn = driver.find_element(By.ID, "assign-project")
         assert "assign-tab--active" in project_btn.get_attribute("class"), \
             "Project radio must be pre-selected when editing project expense"

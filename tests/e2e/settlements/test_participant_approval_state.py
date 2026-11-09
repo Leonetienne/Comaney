@@ -4,7 +4,6 @@ Participant approval state for buddy expenses.
 Covers approve and reject for both contact expenses and project expenses,
 plus the 24-hour lock mechanism.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -18,6 +17,7 @@ from bhelpers import (
     _create_personal_expense_with_buddy,
     _create_group, _add_group_member, _create_group_expense,
 )
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -56,13 +56,13 @@ def _send_participant_notice(expense_pk, actor_email):
 def _approve_via_url(driver, expense_pk):
     """Use the direct GET endpoint to approve (simulates email link click)."""
     driver.get(_url(f"/buddies/expense/{expense_pk}/participant-approve/"))
-    time.sleep(1)
+    pause(1)
 
 
 def _reject_via_url(driver, expense_pk):
     """Use the direct GET endpoint to reject (simulates email link click)."""
     driver.get(_url(f"/buddies/expense/{expense_pk}/participant-reject/"))
-    time.sleep(1)
+    pause(1)
 
 
 def _get_consent_set_at(expense_pk, participant_email):
@@ -147,7 +147,7 @@ class TestDirectExpenseParticipantApprove:
     def test_consent_buttons_visible_for_participant(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         btns = driver.find_elements(By.CSS_SELECTOR, "button.btn-consent")
         assert len(btns) > 0, "Consent buttons must be visible for the participant"
 
@@ -171,7 +171,7 @@ class TestDirectExpenseParticipantApprove:
     def test_approved_badge_visible_on_payer_summary(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert len(driver.find_elements(By.CSS_SELECTOR, ".approval-badge--approved")) > 0
 
 
@@ -220,7 +220,7 @@ class TestDirectExpenseParticipantReject:
     def test_rejected_badge_visible_on_payer_summary(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert len(driver.find_elements(By.CSS_SELECTOR, ".approval-badge--rejected")) > 0
 
 
@@ -254,7 +254,7 @@ class TestProjectExpenseParticipantApprove:
     def test_consent_buttons_visible_on_project_page(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/projects/{ctx['group_pk']}/"))
-        time.sleep(1)
+        pause(1)
         btns = driver.find_elements(By.CSS_SELECTOR, "button.btn-consent")
         assert len(btns) > 0, "Consent buttons must appear in the project expense breakdown"
 
@@ -278,7 +278,7 @@ class TestProjectExpenseParticipantApprove:
     def test_approved_badge_on_project_page(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['group_pk']}/"))
-        time.sleep(1)
+        pause(1)
         assert len(driver.find_elements(By.CSS_SELECTOR, ".approval-badge--approved")) > 0
 
 
@@ -330,7 +330,7 @@ class TestProjectExpenseParticipantReject:
     def test_rejected_badge_on_project_page(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['group_pk']}/"))
-        time.sleep(1)
+        pause(1)
         assert len(driver.find_elements(By.CSS_SELECTOR, ".approval-badge--rejected")) > 0
 
 
@@ -358,19 +358,19 @@ class TestAvatarApprovalBadges:
         _set_approval_state(ctx["exp_pk"], ctx["b"]["email"], 0)
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert len(driver.find_elements(By.CSS_SELECTOR, ".approval-badge--neutral")) > 0
 
     def test_approved_badge_for_state_1(self, driver, w, ctx):
         _set_approval_state(ctx["exp_pk"], ctx["b"]["email"], 1)
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert len(driver.find_elements(By.CSS_SELECTOR, ".approval-badge--approved")) > 0
 
     def test_rejected_badge_for_state_2(self, driver, w, ctx):
         _set_approval_state(ctx["exp_pk"], ctx["b"]["email"], 2)
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert len(driver.find_elements(By.CSS_SELECTOR, ".approval-badge--rejected")) > 0
 
 
@@ -397,7 +397,7 @@ class TestOwnerCannotAccessParticipantEndpoints:
     def test_owner_gets_404_on_participant_approve(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/buddies/expense/{ctx['exp_pk']}/participant-approve/"))
-        time.sleep(1)
+        pause(1)
         assert "404" in driver.page_source or "Not Found" in driver.page_source, \
             "Owner must get 404 — they have no BuddySpending row for their own expense"
 
@@ -473,7 +473,7 @@ def _post_to_endpoint(driver, url):
         document.body.appendChild(f);
         f.submit();
     """)
-    time.sleep(1)
+    pause(1)
 
 
 class TestConsentLockAfter24h:
@@ -497,31 +497,31 @@ class TestConsentLockAfter24h:
     def test_consent_buttons_hidden_after_lock(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert len(driver.find_elements(By.CSS_SELECTOR, "button.btn-consent")) == 0, \
             "Consent buttons must not be rendered after the 24-hour lock"
 
     def test_approve_endpoint_get_returns_403(self, driver, w, ctx):
         driver.get(_url(f"/buddies/expense/{ctx['exp_pk']}/participant-approve/"))
-        time.sleep(1)
+        pause(1)
         assert _is_403(driver), "GET to approve endpoint must return 403 after lock"
 
     def test_reject_endpoint_get_returns_403(self, driver, w, ctx):
         driver.get(_url(f"/buddies/expense/{ctx['exp_pk']}/participant-reject/"))
-        time.sleep(1)
+        pause(1)
         assert _is_403(driver), "GET to reject endpoint must return 403 after lock"
 
     def test_approve_endpoint_forged_post_returns_403(self, driver, w, ctx):
         # Navigate to a page first so we have a valid session + CSRF cookie.
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         _post_to_endpoint(driver, f"/buddies/expense/{ctx['exp_pk']}/participant-approve/")
         assert _is_403(driver), "Forged POST to approve must return 403 after lock"
 
     def test_reject_endpoint_forged_post_returns_403(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         _post_to_endpoint(driver, f"/buddies/expense/{ctx['exp_pk']}/participant-reject/")
         assert _is_403(driver), "Forged POST to reject must return 403 after lock"
 
@@ -551,7 +551,7 @@ class TestRejectedStateBypassesLock:
     def test_consent_buttons_still_visible_when_rejected(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         btns = driver.find_elements(By.CSS_SELECTOR, "button.btn-consent")
         assert len(btns) > 0, \
             "Consent buttons must remain visible when state is rejected, regardless of 24-hour window"
@@ -591,7 +591,7 @@ class TestProjectRejectedStateBypassesLock:
     def test_consent_buttons_still_visible_on_project_page(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/projects/{ctx['group_pk']}/"))
-        time.sleep(1)
+        pause(1)
         btns = driver.find_elements(By.CSS_SELECTOR, "button.btn-consent")
         assert len(btns) > 0, \
             "Consent buttons must remain visible on project page when state is rejected, regardless of 24-hour window"
@@ -626,11 +626,11 @@ class TestConsentButtonsUseAjaxNoReload:
     def test_click_approve_updates_button_without_reload(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script("window.__noReloadMarker = true;")
         btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
         btn.click()
-        time.sleep(1)
+        pause(1)
         assert driver.execute_script("return window.__noReloadMarker === true;"), \
             "Page must not have done a full reload/navigation after clicking approve"
         approved_btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
@@ -644,7 +644,7 @@ class TestConsentButtonsUseAjaxNoReload:
         driver.execute_script("window.__noReloadMarker = true;")
         btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="reject"]')
         btn.click()
-        time.sleep(1)
+        pause(1)
         assert driver.execute_script("return window.__noReloadMarker === true;"), \
             "Page must not have done a full reload/navigation after clicking reject"
         approve_btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
@@ -680,11 +680,11 @@ class TestProjectConsentButtonsUseAjaxNoReload:
     def test_click_approve_updates_button_and_avatar_badge_without_reload(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/projects/{ctx['group_pk']}/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script("window.__noReloadMarker = true;")
         btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
         btn.click()
-        time.sleep(1)
+        pause(1)
         assert driver.execute_script("return window.__noReloadMarker === true;"), \
             "Page must not have done a full reload/navigation after clicking approve"
         approved_btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
@@ -698,7 +698,7 @@ class TestProjectConsentButtonsUseAjaxNoReload:
         driver.execute_script("window.__noReloadMarker = true;")
         btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="reject"]')
         btn.click()
-        time.sleep(1)
+        pause(1)
         assert driver.execute_script("return window.__noReloadMarker === true;"), \
             "Page must not have done a full reload/navigation after clicking reject"
         approve_btn = driver.find_element(By.CSS_SELECTOR, '.consent-form button[data-consent="approve"]')
@@ -732,7 +732,7 @@ class TestConsentStillUnlockedWithin24h:
     def test_buttons_still_visible_within_24h(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         btns = driver.find_elements(By.CSS_SELECTOR, "button.btn-consent")
         assert len(btns) > 0, "Consent buttons must still be visible within 24 hours"
 

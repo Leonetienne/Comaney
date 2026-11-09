@@ -8,7 +8,6 @@ Covers:
 - Confirming delete removes the expense from the page and the database
 - A direct POST by the non-owner is rejected (expense survives)
 """
-import time
 
 import pytest
 import requests as req
@@ -20,6 +19,7 @@ from bhelpers import (
     _shell, _login_as, _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy,
 )
+from pacing import pause
 
 
 def _expense_exists(exp_pk: str) -> bool:
@@ -59,7 +59,7 @@ class TestOwnerDeletesContactExpense:
     def test_expense_visible_on_summary(self, driver, w, ctx):
         _login_as(driver, ctx["owner"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Direct Deletable Expense" in driver.page_source, \
             "Contact expense must appear on the summary page for the owner"
 
@@ -72,9 +72,9 @@ class TestOwnerDeletesContactExpense:
 
     def test_owner_deletes_expense(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-delete-exp-']").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "deleted" in driver.page_source.lower(), \
             "Flash message must confirm the expense was deleted"
 
@@ -116,7 +116,7 @@ class TestParticipantCannotDeleteContactExpense:
     def test_expense_visible_to_participant(self, driver, w, ctx):
         _login_as(driver, ctx["partner"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Owner Only Direct Expense" in driver.page_source, \
             "Expense must be visible to the participant"
 

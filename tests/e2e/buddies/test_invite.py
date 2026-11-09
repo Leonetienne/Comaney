@@ -2,7 +2,6 @@
 Real contact invitation flows: send, accept via email link, decline, revoke.
 Each class is fully isolated (own user pair, own cleanup).
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -12,6 +11,7 @@ from helpers import (
     fetch_email, extract_link, mailpit_seen_ids,
 )
 from bhelpers import _shell, _login_as
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -31,13 +31,13 @@ class TestContactInviteAccept:
 
     def test_a_sends_invite(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element(By.CSS_SELECTOR,
             "form[action*='invite-actual'] input[name='email']")
         inp.clear()
         inp.send_keys(ctx["b"]["email"])
         driver.find_element(By.ID, "btn-invite-actual").click()
-        time.sleep(1)
+        pause(1)
         assert "Contact invitations you sent" in driver.page_source
         assert ctx["b"]["email"] in driver.page_source
 
@@ -49,27 +49,27 @@ class TestContactInviteAccept:
     def test_b_sees_pending_invite_on_contacts_page(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Contact invitations" in driver.page_source
         assert ctx["a"]["email"] in driver.page_source
 
     def test_b_accepts_via_invite_link(self, driver, w, ctx):
         driver.get(ctx["invite_link"])
-        time.sleep(1)
+        pause(1)
         assert "invited you to connect as contacts" in driver.page_source
         driver.find_element(By.ID, "btn-accept-invite").click()
-        time.sleep(1)
+        pause(1)
         assert "/buddies/" in driver.current_url
 
     def test_b_sees_a_as_buddy_after_accept(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["a"]["email"] in driver.page_source
 
     def test_a_sees_b_as_buddy_after_accept(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["b"]["email"] in driver.page_source
 
 
@@ -101,12 +101,12 @@ class TestContactInviteDecline:
     def test_b_sees_incoming_invite(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Contact invitations" in driver.page_source
 
     def test_b_declines_invite(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-decline-invite-']").click()
-        time.sleep(1)
+        pause(1)
         assert "Contact invitations" not in driver.page_source
         assert ctx["a"]["email"] not in driver.page_source
 
@@ -139,25 +139,25 @@ class TestContactInviteRevoke:
 
     def test_a_sends_invite(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element(By.CSS_SELECTOR,
             "form[action*='invite-actual'] input[name='email']")
         inp.clear()
         inp.send_keys(ctx["b"]["email"])
         driver.find_element(By.ID, "btn-invite-actual").click()
-        time.sleep(1)
+        pause(1)
         assert ctx["b"]["email"] in driver.page_source
 
     def test_a_revokes_invite(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-revoke-invite-']").click()
-        time.sleep(1)
+        pause(1)
         assert "Contact invitations you sent" not in driver.page_source
         assert ctx["b"]["email"] not in driver.page_source
 
     def test_b_sees_no_invite_after_revoke(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Contact invitations" not in driver.page_source
 
 
@@ -177,13 +177,13 @@ class TestContactInviteOnboarding:
 
     def test_invite_nonexistent_shows_in_pending_list(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element(By.CSS_SELECTOR,
             "form[action*='invite-actual'] input[name='email']")
         inp.clear()
         inp.send_keys(ctx["nonexistent_email"])
         driver.find_element(By.ID, "btn-invite-actual").click()
-        time.sleep(1)
+        pause(1)
         assert "Contact invitations you sent" in driver.page_source
         assert ctx["nonexistent_email"] in driver.page_source
 
@@ -192,6 +192,6 @@ class TestContactInviteOnboarding:
 
     def test_revoke_onboarding_invite(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-revoke-onboarding-invite-']").click()
-        time.sleep(1)
+        pause(1)
         assert "Contact invitations you sent" not in driver.page_source
         assert ctx["nonexistent_email"] not in driver.page_source

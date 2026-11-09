@@ -6,12 +6,12 @@ the offline member back restores the original state, apart from the kicked
 member's own categories, tags and overlays, which leave with them.
 """
 import json
-import time
 
 import pytest
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_group, _add_group_member, _get_pk
+from pacing import pause
 
 TITLES = ["Kick Paid Rent", "Kick Admin Dinner", "Kick Recorded Taxi", "Kick Pending Fuel", "Kick Solo Lunch"]
 
@@ -177,7 +177,7 @@ class TestKickRealMember:
         )
         _login_as(driver, admin)
         driver.get(_url(f"/projects/{gid}/"))
-        time.sleep(1)
+        pause(1)
         visible_after_kick = [t for t in TITLES if t in driver.page_source]
         _add_group_member(gid, kicked["email"])
         merged = _shell(

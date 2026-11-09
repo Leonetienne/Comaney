@@ -55,6 +55,7 @@ from helpers import (
     provider_takes_user_api_key,
 )
 from bhelpers import _get_pk, _create_group, _add_group_member, _create_group_expense
+from pacing import pause
 
 DOCKER_WEB = "comaney-web-1"
 
@@ -161,11 +162,11 @@ class TestDataExport:
         try:
             if takes_key:
                 driver.get(_url("/profile/"))
-                time.sleep(1)
+                pause(1)
                 fill(w, By.ID, "id_ai_api_key", fake_key)
                 fill(w, By.ID, "id_ai_custom_instructions", "")
                 _submit_form(driver, "ai")
-                time.sleep(2)
+                pause(2)
                 assert "Saved." in driver.page_source
             else:
                 # provider without user fields: a stored value is undeclared and must be fully masked

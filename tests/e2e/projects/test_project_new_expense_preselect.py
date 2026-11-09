@@ -9,13 +9,13 @@ Tests navigate directly to the URL that the FAB links to:
   /budget/expenses/new/?project=<uid>&back=/projects/<uid>/
 and verify the DOM state after JS initialisation.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _create_group, _login_as
+from pacing import pause
 
 
 class TestProjectNewExpensePreselect:
@@ -41,7 +41,7 @@ class TestProjectNewExpensePreselect:
     def _open_form(self, driver, ctx):
         gid = ctx["group_id"]
         driver.get(_url(f"/budget/expenses/new/?project={gid}&back=/projects/{gid}/"))
-        time.sleep(1.5)
+        pause(1.5)
 
     def test_expense_assignment_section_present(self, driver, w, ctx):
         self._open_form(driver, ctx)
@@ -101,7 +101,7 @@ class TestProjectNewExpensePreselectForged:
         _login_as(driver, ctx["attacker"])
         gid = ctx["group_id"]
         driver.get(_url(f"/budget/expenses/new/?project={gid}&back=/projects/{gid}/"))
-        time.sleep(1.5)
+        pause(1.5)
         # Eve has no projects of her own, so the Project tab is never rendered
         tabs = driver.find_elements(By.ID, "assign-project")
         assert tabs == [], \

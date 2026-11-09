@@ -16,7 +16,6 @@ Locations:
   /buddies/summary/         "Waiting for your approval"
   /projects/<id>/     "Waiting for approval" + "Expense Breakdown"
 """
-import time
 import uuid
 from datetime import date
 
@@ -28,6 +27,7 @@ from bhelpers import (
     _shell, _login_as,
     _create_contact_link, _create_group, _add_group_member, _get_pk,
 )
+from pacing import pause
 
 
 # ── DOM helpers ────────────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ def _search_expense_list(driver, query: str) -> None:
         "e.dispatchEvent(new Event('change', {bubbles:true}));",
         el,
     )
-    time.sleep(2)
+    pause(2)
 
 
 # ── Fixture ────────────────────────────────────────────────────────────────────
@@ -307,7 +307,7 @@ class TestExpenseAvatarStacks:
         """Case 1: feuser pays feuser → 2 avatars in the expense list."""
         _login_as(driver, ctx["alice"])
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         _search_expense_list(driver, "AvatarTest Normal Buddy")
         count = _avatars_in_list_row(driver, "AvatarTest Normal Buddy")
         assert count == 2, f"Expected 2 avatars for Case 1, got {count}"
@@ -344,7 +344,7 @@ class TestExpenseAvatarStacks:
 
     def _load_summary(self, driver):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(2)
+        pause(2)
 
     def test_one_on_one_case1_count(self, driver, w, ctx):
         """Case 1 in One-on-one expenses: 2 avatars (Alice + Bob)."""
@@ -435,7 +435,7 @@ class TestExpenseAvatarStacks:
 
     def _load_group(self, driver, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(3)
+        pause(3)
 
     def _avatars_in_group_card(self, driver, card_id: str) -> int:
         """Count .user-avatar elements in a server-rendered card by its element id."""

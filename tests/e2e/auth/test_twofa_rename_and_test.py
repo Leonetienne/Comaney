@@ -1,7 +1,6 @@
 """Renaming a 2FA factor's name in place (profile page, .ct-name pattern), and
 using the per-factor "Test" page to verify which physical key or
 authenticator entry a factor actually corresponds to, without logging out."""
-import time
 
 import pyotp
 import pytest
@@ -10,6 +9,7 @@ from selenium.webdriver.common.virtual_authenticator import Protocol, Transport,
 from selenium.webdriver.support import expected_conditions as EC
 
 from helpers import _url, fill, click, submit, wait_url, wait_text, setup_user, cleanup_user
+from pacing import pause
 
 
 def _add_virtual_authenticator(driver):
@@ -35,13 +35,13 @@ def _click_and_type_rename(driver, name_selector, new_value):
         f"var el=document.querySelector('{name_selector}');"
         "el.scrollIntoView({block:'center'}); el.click();"
     )
-    time.sleep(0.5)
+    pause(0.5)
     driver.execute_script(
         f"var inp=document.querySelector('{name_selector} .ct-name-input');"
         f"inp.value={new_value!r};"
         "inp.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));"
     )
-    time.sleep(0.5)
+    pause(0.5)
 
 
 class TestFactorRenameAndTest:
@@ -100,13 +100,13 @@ class TestFactorRenameAndTest:
         wait_text(driver, w, "YubiKey A")
         row = self._webauthn_row(driver)
         row.find_element(By.CSS_SELECTOR, ".twofa-factor-label").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.execute_script(
             "var inp=document.querySelector('.twofa-factor-row .ct-name-input');"
             "inp.value='yubikey_serial_1234';"
             "inp.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));"
         )
-        time.sleep(0.5)
+        pause(0.5)
         driver.get(_url("/profile/"))
         wait_text(driver, w, "yubikey_serial_1234")
 
@@ -115,7 +115,7 @@ class TestFactorRenameAndTest:
         wait_text(driver, w, "yubikey_serial_1234")
         row = self._webauthn_row(driver)
         row.find_element(By.CSS_SELECTOR, "a.btn-secondary[href*='/test/']").click()
-        time.sleep(0.5)
+        pause(0.5)
         click(w, By.ID, "webauthn-login-btn")
         wait_text(driver, w, "Match!")
 
@@ -128,6 +128,6 @@ class TestFactorRenameAndTest:
         driver.get(_url("/profile/"))
         row = self._webauthn_row(driver)
         row.find_element(By.CSS_SELECTOR, "a.btn-secondary[href*='/test/']").click()
-        time.sleep(0.5)
+        pause(0.5)
         click(w, By.ID, "webauthn-login-btn")
         wait_text(driver, w, "We could not verify your security key")

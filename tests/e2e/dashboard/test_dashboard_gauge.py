@@ -1,7 +1,6 @@
 """
 Dashboard gauge card: API validation, data computation, and browser smoke test.
 """
-import time
 
 import requests
 import pytest
@@ -10,6 +9,7 @@ from helpers import (
     _url, api_post, api_delete, server_today,
     session_cookies, BASE_URL, setup_user, cleanup_user,
 )
+from pacing import pause
 
 CARDS_URL = BASE_URL + "/budget/dashboard/cards/"
 
@@ -359,7 +359,7 @@ class TestGaugeBrowser:
         card_id = r.json()["card"]["id"]
 
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
 
         has_gauge = driver.execute_script(
             "return document.querySelectorAll('.dash-gauge-svg').length > 0;"
@@ -418,7 +418,7 @@ class TestGaugeBrowser:
         card_id = r.json()["card"]["id"]
 
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
 
         stroke = driver.execute_script(
             "const el = document.querySelector('.dash-gauge-value');"

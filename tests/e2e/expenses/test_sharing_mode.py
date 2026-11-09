@@ -48,7 +48,6 @@ shared=true   -> sm_dummy_part, sm_dummy_payer, sm_foreign  (have BuddySpending 
 shared=false  -> sm_plain
 """
 import subprocess
-import time
 from decimal import Decimal
 
 import pytest

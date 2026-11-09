@@ -3,7 +3,6 @@ Project offline-member-into-real-member merge requests: requires the target's ap
 Only an existing project member can be selected as a target. The pending request is
 surfaced on the project's settings page, not on Contacts.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -11,6 +10,7 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user, fetch_email, extract_link, mailpit_seen_ids
 from bhelpers import _shell, _login_as, _confirm, _create_group, _add_group_member, _get_pk
+from pacing import pause
 
 
 def _settings_url(group_id) -> str:
@@ -63,9 +63,9 @@ class TestProjectMergeRequestAcceptFlow:
         seen_before = mailpit_seen_ids()
         ctx["seen_before"] = seen_before
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['member_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -84,20 +84,20 @@ class TestProjectMergeRequestAcceptFlow:
     def test_member_sees_pending_card_on_project_settings_not_contacts(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         assert "Merge requests for you" in driver.page_source
         assert "Project Request Dummy" in driver.page_source
 
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         assert "Project Request Dummy" not in driver.page_source, \
             "Project-scoped merge requests must not appear on Contacts"
 
     def test_member_accepts_merge_request(self, driver, w, ctx):
         driver.get(ctx["merge_link"])
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-accept-merge").click()
-        time.sleep(1)
+        pause(1)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
             "Accepting a project merge request must land on the project, not Contacts"
         assert "is now linked to your account" in driver.page_source
@@ -116,7 +116,7 @@ class TestProjectMergeRequestAcceptFlow:
         )
         assert member_count == "1", "Accepting must not create a duplicate ProjectMember"
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Project Request Expense" in driver.page_source
 
     def test_member_takes_over_dummy_payments_completely(self, driver, w, ctx):
@@ -191,9 +191,9 @@ class TestProjectMergeRequestTargetIsExpenseOwner:
         seen_before = mailpit_seen_ids()
         ctx["seen_before"] = seen_before
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['member_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -209,9 +209,9 @@ class TestProjectMergeRequestTargetIsExpenseOwner:
         merge_link = extract_link(body)
         _login_as(driver, ctx["member"])
         driver.get(merge_link)
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-accept-merge").click()
-        time.sleep(1)
+        pause(1)
         assert "is now linked to your account" in driver.page_source
 
     def test_no_stale_owner_as_participant_row(self, driver, w, ctx):
@@ -233,7 +233,7 @@ class TestProjectMergeRequestTargetIsExpenseOwner:
 
     def test_expense_and_member_untouched_otherwise(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Owner Target Expense" in driver.page_source
         member_count = _shell(
             f"from buddies.models import Project, ProjectMember; from feusers.models import FeUser; "
@@ -274,9 +274,9 @@ class TestProjectMergeRequestRevoke:
 
     def test_admin_sends_request(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['member_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -284,7 +284,7 @@ class TestProjectMergeRequestRevoke:
 
     def test_admin_sees_sent_request_and_revokes(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         assert "Merge requests sent" in driver.page_source
         assert "Revoke Project Dummy" in driver.page_source
         token = _shell(
@@ -293,7 +293,7 @@ class TestProjectMergeRequestRevoke:
             f"print(DummyMergeInvite.objects.get(dummy=d).token)"
         ).strip()
         driver.find_element(By.ID, f"btn-revoke-merge-{token}").click()
-        time.sleep(1)
+        pause(1)
         assert "/settings/" in driver.current_url
 
     def test_invite_gone_dummy_untouched(self, driver, w, ctx):
@@ -344,9 +344,9 @@ class TestProjectMergeRequestBlocksDuplicate:
 
     def test_first_request_succeeds(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['b_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -355,9 +355,9 @@ class TestProjectMergeRequestBlocksDuplicate:
 
     def test_second_request_is_blocked(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['c_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -403,9 +403,9 @@ class TestProjectMergeRequestDeclineFlow:
 
     def test_admin_sends_request(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['member_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -419,9 +419,9 @@ class TestProjectMergeRequestDeclineFlow:
         ).strip()
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"btn-decline-merge-{token}").click()
-        time.sleep(1)
+        pause(1)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
             "Declining a project merge request must land on the project, not Contacts"
 
@@ -471,9 +471,9 @@ class TestProjectMergeRequestShowsBadgeOnProjectCard:
 
     def test_admin_sends_request(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['member_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -482,7 +482,7 @@ class TestProjectMergeRequestShowsBadgeOnProjectCard:
     def test_member_sees_badge_on_project_card(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         card_name_el = driver.find_element(
             By.XPATH, "//span[contains(@class,'bgs-name') and contains(.,'Card Badge Merge Project')]"
         )

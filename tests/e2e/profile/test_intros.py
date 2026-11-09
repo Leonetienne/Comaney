@@ -9,7 +9,6 @@ Covers:
   - Upgrade intro is not shown a second time after dismissal
 """
 import subprocess
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -18,6 +17,7 @@ from helpers import (
     _url, setup_user, cleanup_user, browser_login,
     DOCKER_WEB, PASSWORD,
 )
+from pacing import pause
 
 INTRO_MODAL_ID        = "intro-modal"
 UPGRADE_MODAL_ID      = "upgrade-intro-modal"
@@ -81,7 +81,7 @@ class TestIntroModal:
     def test_new_user_sees_intro(self, driver, w, ctx):
         # setup_user already logged us in; navigate to dashboard to trigger context
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert _modal_visible(driver, INTRO_MODAL_ID), \
             "Intro modal should be visible for a brand-new user"
 
@@ -89,7 +89,7 @@ class TestIntroModal:
         # Click "No, thank you" to dismiss without opening docs
         btn = driver.find_element(By.ID, "intro-modal-dismiss")
         btn.click()
-        time.sleep(1)
+        pause(1)
         assert not _modal_visible(driver, INTRO_MODAL_ID), \
             "Intro modal should close after dismissal"
 
@@ -98,7 +98,7 @@ class TestIntroModal:
         driver.delete_all_cookies()
         browser_login(driver, w, ctx["email"], PASSWORD)
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert not _modal_visible(driver, INTRO_MODAL_ID), \
             "Intro modal must not reappear after it was dismissed"
 
@@ -112,7 +112,7 @@ class TestUpgradeIntroModal:
         driver.delete_all_cookies()
         browser_login(driver, w, ctx["email"], PASSWORD)
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert not _modal_visible(driver, UPGRADE_MODAL_ID), \
             "Upgrade intro must be suppressed when intro_seen_at is within the 30-day cooldown"
 
@@ -124,7 +124,7 @@ class TestUpgradeIntroModal:
         driver.delete_all_cookies()
         browser_login(driver, w, ctx["email"], PASSWORD)
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert _modal_visible(driver, UPGRADE_MODAL_ID), \
             "Upgrade intro must be shown when intro_seen_at > 30 days and app_v_created_at differs from current version"
 
@@ -139,7 +139,7 @@ class TestUpgradeIntroModal:
         driver.delete_all_cookies()
         browser_login(driver, w, ctx["email"], PASSWORD)
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert not _modal_visible(driver, UPGRADE_MODAL_ID), \
             "Upgrade intro must not show when user was created on the current APP_VERSION"
 
@@ -151,16 +151,16 @@ class TestUpgradeIntroModal:
         driver.delete_all_cookies()
         browser_login(driver, w, ctx["email"], PASSWORD)
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert _modal_visible(driver, UPGRADE_MODAL_ID), "Precondition: upgrade modal must be visible"
         driver.find_element(By.ID, "upgrade-intro-ok").click()
-        time.sleep(1)
+        pause(1)
         assert not _modal_visible(driver, UPGRADE_MODAL_ID), \
             "Upgrade intro should close after dismissal"
 
         driver.delete_all_cookies()
         browser_login(driver, w, ctx["email"], PASSWORD)
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert not _modal_visible(driver, UPGRADE_MODAL_ID), \
             "Upgrade intro must not reappear after it was dismissed for this version"

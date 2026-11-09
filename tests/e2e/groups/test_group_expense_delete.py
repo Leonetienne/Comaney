@@ -6,7 +6,6 @@ feuser's expense.
 Permission matrix from views.py:
   can_delete = is_feuser_direct_owner OR (is_admin AND is_dummy_exp_in_group)
 """
-import time
 
 import pytest
 import requests as req
@@ -17,6 +16,7 @@ from helpers import _url, setup_user, cleanup_user
 from bhelpers import (
     _shell, _login_as, _create_group, _add_group_member,
 )
+from pacing import pause
 
 
 def _create_approved_group_expense(owner_email: str, participant_email: str,
@@ -93,7 +93,7 @@ class TestOwnerDeletesOwnGroupExpense:
     def test_expense_visible_before_delete(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Owner Deletable Expense" in driver.page_source
 
     def test_delete_button_visible_for_owner(self, driver, w, ctx):
@@ -102,9 +102,9 @@ class TestOwnerDeletesOwnGroupExpense:
 
     def test_owner_deletes_expense_and_flash_shown(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-delete-']").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "deleted" in driver.page_source.lower(), \
             "Flash message must confirm the expense was deleted"
 
@@ -141,16 +141,16 @@ class TestMemberDeletesOwnGroupExpense:
     def test_member_sees_delete_button_for_own_expense(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Member Own Deletable" in driver.page_source
         delete_forms = driver.find_elements(By.CSS_SELECTOR, "form[action*='/delete/']")
         assert delete_forms, "Member must see delete button for their own group expense"
 
     def test_member_deletes_own_expense(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-delete-']").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
 
     def test_expense_gone_after_delete(self, driver, w, ctx):
         assert "Member Own Deletable" not in driver.page_source, \
@@ -186,7 +186,7 @@ class TestMemberCannotDeleteOthersGroupExpense:
     def test_member_sees_no_delete_button_for_admins_expense(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Admin Only Expense" in driver.page_source, \
             "Expense must be visible to the member"
         delete_forms = driver.find_elements(By.CSS_SELECTOR, "form[action*='/delete/']")
@@ -228,7 +228,7 @@ class TestAdminDeletesDummyGroupExpense:
     def test_dummy_expense_visible_on_group_page(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Dummy Payer Expense" in driver.page_source
 
     def test_admin_sees_delete_button_for_dummy_expense(self, driver, w, ctx):
@@ -237,9 +237,9 @@ class TestAdminDeletesDummyGroupExpense:
 
     def test_admin_deletes_dummy_expense(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-delete-']").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "deleted" in driver.page_source.lower(), \
             "Flash must confirm deletion"
 

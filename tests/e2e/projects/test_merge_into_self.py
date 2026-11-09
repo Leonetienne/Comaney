@@ -7,7 +7,6 @@ self-merge behaves like any other merge), including the owner-exclusion
 guard that drops (rather than wrongly creates) a participation row on an
 expense the admin already owns.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -15,6 +14,7 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _confirm, _create_group, _add_group_member, _get_pk
+from pacing import pause
 
 
 def _settings_url(group_id) -> str:
@@ -83,14 +83,14 @@ class TestProjectSelfMergeParticipant:
 
     def test_yourself_option_present(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         select_el = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']} select[name='target_key']")
         values = [o.get_attribute("value") for o in select_el.find_elements(By.TAG_NAME, "option")]
         assert "self" in values, "Yourself must be a selectable merge target for the admin"
 
     def test_admin_merges_dummy_into_self(self, driver, w, ctx):
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value("self")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -170,9 +170,9 @@ class TestProjectSelfMergeUpfrontPayer:
 
     def test_admin_merges_dummy_into_self(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value("self")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -227,9 +227,9 @@ class TestProjectSelfMergeBlockedWhilePending:
 
     def test_self_merge_blocked_while_request_pending(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value("self")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()

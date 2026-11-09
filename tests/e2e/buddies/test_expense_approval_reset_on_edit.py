@@ -9,7 +9,6 @@ cleared. The participant's update email tells them their decision was reset.
 Editing only an unrelated field (payee, note, category, date) must NOT reset an
 existing approval.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -21,6 +20,7 @@ from bhelpers import (
     _shell, _login_as, _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy,
 )
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +71,7 @@ def _submit_form(driver):
         By.CSS_SELECTOR,
         "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)"
     ).click()
-    time.sleep(2)
+    pause(2)
 
 
 # ---------------------------------------------------------------------------
@@ -105,7 +105,7 @@ class TestValueChangeResetsApproval:
         ctx["seen_before"] = mailpit_seen_ids()
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             "document.getElementById('id_value').value = '90.00';"
             f"document.getElementById('id_date_due').value = '{today}';"
@@ -158,7 +158,7 @@ class TestTitleChangeResetsApproval:
         today = server_today()
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             "document.getElementById('id_title').value = 'Reset On Title Expense RENAMED';"
             f"document.getElementById('id_date_due').value = '{today}';"
@@ -198,7 +198,7 @@ class TestShareChangeResetsApproval:
         today = server_today()
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             f"document.getElementById('id_date_due').value = '{today}';"
         )
@@ -243,7 +243,7 @@ class TestNoPriorApprovalNoResetNote:
         ctx["seen_before"] = mailpit_seen_ids()
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             "document.getElementById('id_value').value = '65.00';"
             f"document.getElementById('id_date_due').value = '{today}';"
@@ -291,7 +291,7 @@ class TestUnrelatedChangePreservesApproval:
         today = server_today()
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             "document.getElementById('id_payee').value = 'Some Shop';"
             "document.getElementById('id_title').value = 'Keep Approval Expense';"

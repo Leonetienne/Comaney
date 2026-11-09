@@ -27,6 +27,7 @@ from bhelpers import (
     _create_group, _add_group_member, _create_group_expense,
     _create_personal_expense_with_buddy,
 )
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +59,7 @@ class TestDirectSettlement:
     def test_settle_section_visible(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" in driver.page_source, \
             "Settle Up section must appear when user has outstanding direct debt"
 
@@ -78,7 +79,7 @@ class TestDirectSettlement:
 
     def test_confirm_dialog_appears_on_submit(self, driver, w, ctx):
         driver.find_element("id", "btn-direct-settle").click()
-        time.sleep(0.5)
+        pause(0.5)
         dialog_msg = driver.find_element("id", "cdialog-msg").text
         assert "Beth" in dialog_msg, \
             "Confirmation dialog must include the creditor's name"
@@ -90,12 +91,12 @@ class TestDirectSettlement:
             "Dialog must remind the user to actually send the money"
         # Cancel so the form is not submitted yet
         driver.find_element("id", "cdialog-cancel").click()
-        time.sleep(0.5)
+        pause(0.5)
 
     def test_submit_creates_settlement_record(self, driver, w, ctx):
         driver.find_element("id", "btn-direct-settle").click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         assert "settlement record" in driver.page_source.lower(), \
             "Flash confirmation must mention settlement record"
 
@@ -128,7 +129,7 @@ class TestDirectSettlement:
     def test_settle_section_still_shows_while_pending(self, driver, w, ctx):
         # Debt is not cleared until creditor confirms, so Settle Up must still appear
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" in driver.page_source, \
             "Settle Up section must remain while creditor has not yet confirmed"
 
@@ -151,7 +152,7 @@ class TestDirectSettlement:
     def test_creditor_sees_pending_section(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Waiting for your approval" in driver.page_source, \
             "Creditor must see the 'Waiting for your approval' section"
         assert "Seth" in driver.page_source, \
@@ -168,12 +169,12 @@ class TestDirectSettlement:
             "css selector", "section a[href*='/approve-settlement/']"
         )
         approve_link.click()
-        time.sleep(1)
+        pause(1)
         # Now on confirm_settlement page — click the approve form's submit button specifically
         assert "Confirm" in driver.page_source, \
             "Must land on the settlement confirmation page"
         driver.find_element(By.ID, "btn-approve-settlement").click()
-        time.sleep(1)
+        pause(1)
         assert "confirmed" in driver.page_source.lower(), \
             "Flash must confirm that the settlement was accepted"
 
@@ -207,7 +208,7 @@ class TestDirectSettlement:
     def test_debt_cleared_after_confirmation(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element("id", "direct-settle-amount")
         assert inp.get_attribute("value") in ("", None), \
             "Amount input must be empty once the creditor has confirmed"
@@ -252,7 +253,7 @@ class TestDirectSettlementNoDebt:
         # A is the creditor but still has a contact; the form must appear
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" in driver.page_source, \
             "Pay someone back section must appear whenever the user has a contact"
 
@@ -307,7 +308,7 @@ class TestDirectSettlementRejection:
         # We'll use a non-existent ID to confirm the view enforces the creditor check.
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/expense/999999999/approve-settlement/"))
-        time.sleep(1)
+        pause(1)
         assert driver.current_url != _url("/buddies/expense/999999999/approve-settlement/") \
             or "404" in driver.page_source or "not found" in driver.page_source.lower(), \
             "Accessing another user's settlement URL must return 404"
@@ -315,36 +316,36 @@ class TestDirectSettlementRejection:
     def test_a_submits_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element("id", "btn-direct-settle").click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         assert "settlement record" in driver.page_source.lower(), \
             "Flash must confirm settlement record was created"
 
     def test_b_lands_on_confirm_page(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         approve_link = driver.find_element(
             "css selector", "section a[href*='/approve-settlement/']"
         )
         approve_link.click()
-        time.sleep(1)
+        pause(1)
         assert "did not receive" in driver.page_source.lower(), \
             "Confirm page must offer a rejection option"
 
     def test_b_rejects_with_confirmation_dialog(self, driver, w, ctx):
         # Click the reject button — a confirmation dialog must appear first
         driver.find_element(By.ID, "btn-reject-settlement").click()
-        time.sleep(0.5)
+        pause(0.5)
         dialog_msg = driver.find_element("id", "cdialog-msg").text
         assert "reject" in dialog_msg.lower(), \
             "Rejection dialog must mention rejecting the settlement"
         assert "deleted" in dialog_msg.lower(), \
             "Rejection dialog must warn that the record will be deleted"
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
 
     def test_rejection_flash_shown(self, driver, w, ctx):
         assert "rejected" in driver.page_source.lower(), \
@@ -362,14 +363,14 @@ class TestDirectSettlementRejection:
 
     def test_b_no_longer_sees_pending_section(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Waiting for your approval" not in driver.page_source, \
             "Creditor must no longer see the pending section after rejecting"
 
     def test_settle_up_reappears_for_a(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" in driver.page_source, \
             "Settle Up section must reappear for debtor after creditor rejects"
 
@@ -411,7 +412,7 @@ class TestGroupSettlement:
         # Member owes admin 100; settle-up should be visible for member
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" in driver.page_source, \
             "Pay someone back section must appear for the group member who owes money"
 
@@ -430,7 +431,7 @@ class TestGroupSettlement:
             By.ID, "btn-settle-individual"
         ).click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         assert "settlement record" in driver.page_source.lower(), \
             "Flash confirmation must appear after group settlement submission"
 
@@ -454,7 +455,7 @@ class TestGroupSettlement:
         # who is owed money has no "You owe" row in "Your balances" (Insights tab).
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/insights/"))
-        time.sleep(1)
+        pause(1)
         assert "You owe" not in driver.page_source, \
             "Admin who is owed money must not see a 'You owe' balance row"
         assert "owes you" in driver.page_source, \
@@ -490,14 +491,14 @@ class TestGroupSettlementReviewFlow:
     def test_member_submits_group_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         amt = driver.find_element(By.ID, "settle-amount")
         driver.execute_script("arguments[0].value = '50.00';", amt)
         driver.find_element(
             By.ID, "btn-settle-individual"
         ).click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         assert "settlement record" in driver.page_source.lower(), \
             "Flash must confirm settlement record was created"
 
@@ -527,7 +528,7 @@ class TestGroupSettlementReviewFlow:
     def test_creditor_sees_waiting_for_approval_section(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Waiting for approval" in driver.page_source, \
             "Creditor must see the 'Waiting for approval' section on the group page"
         assert "Marco" in driver.page_source, \
@@ -540,7 +541,7 @@ class TestGroupSettlementReviewFlow:
 
     def test_creditor_lands_on_confirm_page(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
-        time.sleep(1)
+        pause(1)
         assert "did not receive" in driver.page_source.lower(), \
             "Confirm page must show both approve and reject options"
         assert "Cancel" in driver.page_source, \
@@ -548,15 +549,15 @@ class TestGroupSettlementReviewFlow:
 
     def test_cancel_returns_to_group_page(self, driver, w, ctx):
         driver.find_element(By.PARTIAL_LINK_TEXT, "Cancel").click()
-        time.sleep(1)
+        pause(1)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
             f"Cancel must return to the group detail page, not the buddy summary. Landed on {driver.current_url}"
 
     def test_creditor_approves_via_review_flow(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-approve-settlement").click()
-        time.sleep(1)
+        pause(1)
         assert "confirmed" in driver.page_source.lower(), \
             "Flash must confirm receipt after creditor approves"
         assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
@@ -630,26 +631,26 @@ class TestGroupSettlementRejectionFlow:
     def test_member_submits_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         amt = driver.find_element(By.ID, "settle-amount")
         driver.execute_script("arguments[0].value = '40.00';", amt)
         driver.find_element(
             By.ID, "btn-settle-individual"
         ).click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         assert "settlement record" in driver.page_source.lower()
 
     def test_creditor_rejects_via_review_page(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-reject-settlement").click()
-        time.sleep(0.5)
+        pause(0.5)
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         assert "rejected" in driver.page_source.lower(), \
             "Flash must confirm the settlement was rejected"
         assert f"/projects/{ctx['group_id']}/" in driver.current_url, \

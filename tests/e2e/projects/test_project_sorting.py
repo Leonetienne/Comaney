@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _create_group, _add_group_member
+from pacing import pause
 
 
 def _post_json(url, payload, user_ctx):
@@ -47,7 +48,7 @@ class TestArchivedSortedLast:
 
     def test_archived_after_non_archived(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         cards = driver.find_elements(By.CSS_SELECTOR, ".bgs-card")
         ids = [c.get_attribute("data-project-id") for c in cards]
         if str(ctx["g1"]) in ids and str(ctx["g2"]) in ids:
@@ -132,7 +133,7 @@ class TestTouchDragReorder:
 
     def test_long_press_drag_reorders_cards(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
 
         cards = driver.find_elements(By.CSS_SELECTOR, ".bgs-card")
         ids = [c.get_attribute("data-project-id") for c in cards]
@@ -164,7 +165,7 @@ class TestTouchDragReorder:
                 "type": "touchEnd",
                 "touchPoints": [],
             })
-            time.sleep(1)
+            pause(1)
         finally:
             driver.execute_cdp_cmd("Emulation.setTouchEmulationEnabled", {"enabled": False})
 
@@ -192,7 +193,7 @@ class TestTouchDragReorder:
 
     def test_long_press_suppresses_native_context_menu(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         card = driver.find_element(By.CSS_SELECTOR, ".bgs-card:not(.bgs-card--archived)")
         not_shown = driver.execute_script(
             "var ev = new MouseEvent('contextmenu', {bubbles: true, cancelable: true}); "
@@ -210,7 +211,7 @@ class TestTouchDragReorder:
         for the window the touchmove handler explicitly preventDefault()s,
         i.e. while a long-press drag is actually in progress."""
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         card = driver.find_element(By.CSS_SELECTOR, ".bgs-card:not(.bgs-card--archived)")
         touch_action = driver.execute_script(
             "return getComputedStyle(arguments[0]).touchAction;", card

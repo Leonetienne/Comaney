@@ -17,6 +17,7 @@ from helpers import (
     api_get, api_post, api_patch, api_delete, CLICK_PACE,
     setup_user, cleanup_user, reset_browser, DOCKER_WEB,
 )
+from pacing import pause
 
 
 def _shell(code: str) -> str:
@@ -31,13 +32,13 @@ def _shell(code: str) -> str:
 def _login_as(driver, ctx_user: dict) -> None:
     reset_browser(driver)
     driver.get(_url("/login/"))
-    time.sleep(1)
+    pause(1)
     email_el = driver.find_element(By.ID, "id_email")
     driver.execute_script("arguments[0].value = arguments[1];", email_el, ctx_user["email"])
     pass_el = driver.find_element(By.ID, "id_password")
     driver.execute_script("arguments[0].value = arguments[1];", pass_el, ctx_user["password"])
     driver.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
-    time.sleep(2)
+    pause(2)
 
 # Titles scoped with a prefix so they are easy to isolate via the search box.
 PREFIX   = "BulkTest"
@@ -63,7 +64,7 @@ def search_type(driver, value):
         el, value,
     )
     _wait_search_idle(driver)
-    time.sleep(1)
+    pause(1)
 
 
 def search_clear(driver):
@@ -190,9 +191,9 @@ def _bulk_action(driver, w, action_value, secondary_id=None, secondary_value=Non
         time.sleep(0.3)
         SeleniumSelect(driver.find_element(By.ID, secondary_id)).select_by_value(str(secondary_value))
     driver.find_element(By.ID, "exp-bulk-go").click()
-    time.sleep(CLICK_PACE)
+    pause(CLICK_PACE)
     w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-    time.sleep(CLICK_PACE)
+    pause(CLICK_PACE)
     w.until(lambda d: d.execute_script("return document.readyState") == "complete")
     wait_text(driver, w, "Expenses")
 
@@ -236,9 +237,9 @@ class TestBulkActions:
         click(w, By.ID, "exp-select-all")
         SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value("delete")
         driver.find_element(By.ID, "exp-bulk-go").click()
-        time.sleep(CLICK_PACE)
+        pause(CLICK_PACE)
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-cancel"))).click()
-        time.sleep(CLICK_PACE)
+        pause(CLICK_PACE)
         assert TITLE_A in driver.page_source
 
     def test_bulk_delete(self, driver, w, ctx):
@@ -248,7 +249,7 @@ class TestBulkActions:
         _select_prefix(driver, w)
         SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value("delete")
         driver.find_element(By.ID, "exp-bulk-go").click()
-        time.sleep(CLICK_PACE)
+        pause(CLICK_PACE)
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
         w.until(EC.staleness_of(anchor))
         w.until(lambda d: TITLE_A not in d.page_source)
@@ -450,9 +451,9 @@ class TestBulkPentest:
                 str(secondary_value)
             )
         driver.find_element(By.ID, "exp-bulk-go").click()
-        time.sleep(CLICK_PACE)
+        pause(CLICK_PACE)
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-        time.sleep(CLICK_PACE)
+        pause(CLICK_PACE)
         w.until(lambda d: d.execute_script("return document.readyState") == "complete")
         wait_text(driver, w, "Expenses")
 

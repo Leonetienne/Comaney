@@ -13,7 +13,6 @@ Admin creates a settlement: D (dummy debtor) pays B (real-user creditor).
   [B3] The real creditor B sees the settlement in their "Waiting for your approval"
        section and CAN approve it.
 """
-import time
 
 import pytest
 import requests as _requests
@@ -21,6 +20,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_group, _add_group_member
+from pacing import pause
 
 
 def _create_group_dummy(group_id: int, display_name: str) -> str:
@@ -101,7 +101,7 @@ class TestSettlementDummyDebtorFeuserCreditor:
     def test_b1_admin_summary_no_approval_item_for_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         src = driver.page_source
         assert f"btn-admin-approve-{ctx['exp_pk']}" not in src, \
             "[B1] Admin must not see an Approve button for a dummy->real-user settlement"
@@ -134,7 +134,7 @@ class TestSettlementDummyDebtorFeuserCreditor:
         group_id = ctx["group_id"]
         exp_pk = ctx["exp_pk"]
         driver.get(_url(f"/projects/{group_id}/"))
-        time.sleep(1)
+        pause(1)
         cookies = {c["name"]: c["value"] for c in driver.get_cookies()}
         csrftoken = cookies.get("csrftoken", "")
         resp = _requests.post(
@@ -150,7 +150,7 @@ class TestSettlementDummyDebtorFeuserCreditor:
     def test_b3_creditor_sees_settlement_in_summary(self, driver, w, ctx):
         _login_as(driver, ctx["creditor"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Waiting for your approval" in driver.page_source, \
             "[B3] Creditor must see 'Waiting for your approval' section"
 
@@ -160,9 +160,9 @@ class TestSettlementDummyDebtorFeuserCreditor:
 
     def test_b3_creditor_can_approve(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-approve-settlement").click()
-        time.sleep(1)
+        pause(1)
         assert "confirmed" in driver.page_source.lower(), \
             "[B3] Flash must confirm receipt after creditor approves"
 

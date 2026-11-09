@@ -2,7 +2,6 @@
 Dashboard list card: API CRUD, validation, data computation, ordering, sum row,
 type colours, and a browser smoke test.
 """
-import time
 
 import requests
 import pytest
@@ -12,6 +11,7 @@ from helpers import (
     _url, api_post, api_delete, server_today,
     session_cookies, BASE_URL, setup_user, cleanup_user,
 )
+from pacing import pause
 
 CARDS_URL = BASE_URL + "/budget/dashboard/cards/"
 
@@ -470,7 +470,7 @@ class TestListCardBrowser:
         card_id = r.json()["card"]["id"]
 
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
 
         src = driver.page_source
         assert "BrowserListItem" in src
@@ -493,7 +493,7 @@ class TestListCardBrowser:
         card_id = r.json()["card"]["id"]
 
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
 
         abbrs = driver.execute_script(
             "return Array.from(document.querySelectorAll('.dash-list-type'))"

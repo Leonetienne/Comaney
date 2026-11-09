@@ -15,7 +15,6 @@ Three scenarios:
    Member owes admin 80.00. Member settles 80.00. Admin confirms.
    Group page shows "You are all settled up." and "Everyone is settled up."
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -27,6 +26,7 @@ from bhelpers import (
     _create_personal_expense_with_buddy,
     _create_group, _add_group_member, _create_group_expense,
 )
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ class TestDirectFullSettlementZeroBalance:
     def test_initial_debt_shown_correctly(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element("id", "direct-settle-amount")
         assert inp.get_attribute("value") == "50.00", \
             "Pre-filled amount must equal the exact debt of 50.00"
@@ -66,23 +66,23 @@ class TestDirectFullSettlementZeroBalance:
     def test_settle_exact_amount(self, driver, w, ctx):
         driver.find_element("id", "btn-direct-settle").click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
 
     def test_creditor_confirms(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(
             By.ID, "btn-approve-settlement"
         ).click()
-        time.sleep(1)
+        pause(1)
 
     def test_balance_zero_on_contacts_page(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         # When net = 0 the template renders a span with "Settled" inside balance-zero div
         assert "Settled" in driver.page_source, \
             "Buddies page must show 'Settled' next to Gil once debt is fully cleared"
@@ -93,7 +93,7 @@ class TestDirectFullSettlementZeroBalance:
 
     def test_amount_empty_when_debt_is_zero(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element("id", "direct-settle-amount")
         assert inp.get_attribute("value") in ("", None), \
             "Amount input must be empty when remaining debt = 0"
@@ -139,7 +139,7 @@ class TestDirectPartialThenFullSettlement:
     def test_initial_debt_is_100(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element("id", "direct-settle-amount")
         assert inp.get_attribute("value") == "100.00", \
             "Pre-filled amount must be 100.00 (full debt)"
@@ -149,30 +149,30 @@ class TestDirectPartialThenFullSettlement:
         driver.execute_script("arguments[0].value = '60.00';", inp)
         driver.find_element("id", "btn-direct-settle").click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
 
     def test_creditor_confirms_partial(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(
             By.ID, "btn-approve-settlement"
         ).click()
-        time.sleep(1)
+        pause(1)
 
     def test_remaining_debt_is_40(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element("id", "direct-settle-amount")
         assert inp.get_attribute("value") == "40.00", \
             "Remaining debt must be 40.00 after the 60.00 partial settlement"
 
     def test_balance_shows_negative_40_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         # Template renders: <span title="You owe them">-€40.00</span>
         assert "You owe them" in driver.page_source, \
             "Buddies page must show 'You owe them' while 40.00 is still owed"
@@ -181,33 +181,33 @@ class TestDirectPartialThenFullSettlement:
 
     def test_settle_remaining_40(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element("id", "btn-direct-settle").click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
 
     def test_creditor_confirms_remainder(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(
             By.ID, "btn-approve-settlement"
         ).click()
-        time.sleep(1)
+        pause(1)
 
     def test_amount_empty_after_full_clearance(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element("id", "direct-settle-amount")
         assert inp.get_attribute("value") in ("", None), \
             "Amount input must be empty once both partial settlements are confirmed"
 
     def test_balance_settled_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Settled" in driver.page_source, \
             "Buddies page must show 'Settled' next to Ida after both partial settlements clear"
         assert "You owe them" not in driver.page_source, \
@@ -243,7 +243,7 @@ class TestGroupFullSettlementZeroBalance:
     def test_member_initial_debt_shown(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "80.00" in driver.page_source, \
             "Member must see 80.00 owed before settlement"
         assert "Jane" in driver.page_source, \
@@ -256,26 +256,26 @@ class TestGroupFullSettlementZeroBalance:
             By.ID, "btn-settle-individual"
         ).click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         assert "settlement record" in driver.page_source.lower()
 
     def test_admin_confirms_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(
             By.ID, "btn-approve-settlement"
         ).click()
-        time.sleep(1)
+        pause(1)
         assert "confirmed" in driver.page_source.lower()
 
     def test_member_sees_all_settled_up_on_group_page(self, driver, w, ctx):
         # "You are all settled up." (personal balance) lives on the Insights tab.
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['group_id']}/insights/"))
-        time.sleep(1)
+        pause(1)
         assert "You are all settled up." in driver.page_source, \
             "Insights tab must show 'You are all settled up.' when member's balance = 0"
 
@@ -283,19 +283,19 @@ class TestGroupFullSettlementZeroBalance:
         # "Everyone is settled up." (group-wide settle tools) lives on the
         # default expense-list tab.
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Everyone is settled up. No transfers needed." in driver.page_source, \
             "Group page must show 'No transfers needed.' once all debts are cleared"
 
     def test_no_settle_up_for_member_on_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" not in driver.page_source, \
             "Settle Up section must not appear on buddy summary when group debt = 0"
 
     def test_admin_balance_zero_on_group_page(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Everyone is settled up. No transfers needed." in driver.page_source, \
             "Admin must also see 'No transfers needed.' once all debts are cleared"

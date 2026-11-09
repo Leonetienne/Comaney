@@ -17,6 +17,7 @@ import pytest
 import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from pacing import pause
 
 BASE_URL    = "http://localhost:8080"
 MAILPIT_API = "http://localhost:8030/api/v1"
@@ -181,7 +182,7 @@ def fill(w, by, locator, value):
 
 def click(w, by, locator):
     w.until(EC.element_to_be_clickable((by, locator))).click()
-    time.sleep(CLICK_PACE)
+    pause(CLICK_PACE)
 
 
 def submit(w):
@@ -388,7 +389,7 @@ def browser_login(driver, w, email: str, password: str):
     fill(w, By.ID, "id_email", email)
     fill(w, By.ID, "id_password", password)
     click(w, By.CSS_SELECTOR, "button[type=submit]")
-    time.sleep(2)
+    pause(2)
     assert "/budget/" in driver.current_url, \
         f"Login failed; landed at {driver.current_url}"
 

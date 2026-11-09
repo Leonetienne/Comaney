@@ -3,12 +3,12 @@ Shared helpers specific to the buddies e2e test suite.
 Import alongside the standard helpers.py from tests/e2e/.
 """
 import subprocess
-import time
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 from helpers import _url, DOCKER_WEB, PASSWORD, reset_browser
+from pacing import pause
 
 
 def _shell(code: str) -> str:
@@ -25,27 +25,27 @@ def _login_as(driver, ctx_user: dict) -> None:
     """Switch the browser session to ctx_user (clears cookies first)."""
     reset_browser(driver)
     driver.get(_url("/login/"))
-    time.sleep(1)
+    pause(1)
     email_el = driver.find_element(By.ID, "id_email")
     driver.execute_script("arguments[0].value = arguments[1];", email_el, ctx_user["email"])
     pass_el = driver.find_element(By.ID, "id_password")
     driver.execute_script("arguments[0].value = arguments[1];", pass_el, ctx_user["password"])
     driver.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
-    time.sleep(2)
+    pause(2)
 
 
 def _confirm(driver) -> None:
     """Click OK in the in-DOM cdialog confirmation modal."""
-    time.sleep(0.5)
+    pause(0.5)
     driver.find_element(By.ID, "cdialog-ok").click()
-    time.sleep(1)
+    pause(1)
 
 
 def _open_ctx_menu_for(driver, element) -> None:
     """Open the context menu that contains the given element."""
     wrap = element.find_element(By.XPATH, "ancestor::*[contains(@class,'ctx-menu-wrap')]")
     wrap.find_element(By.CSS_SELECTOR, ".ctx-menu-btn").click()
-    time.sleep(0.3)
+    pause(0.3)
 
 
 def _ctx_click(driver, selector: str) -> None:
@@ -148,7 +148,7 @@ def _create_personal_expense_with_buddy(
 
 def share_dialog_open(driver, button) -> None:
     driver.execute_script("arguments[0].click();", button)
-    time.sleep(0.4)
+    pause(0.4)
     assert driver.find_element(By.CSS_SELECTOR, ".share-dialog-backdrop.cdialog-visible").is_displayed()
 
 
@@ -163,7 +163,7 @@ def share_dialog_type(driver, row_idx: int, field: str, value: str) -> None:
         "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
         inp, value,
     )
-    time.sleep(0.2)
+    pause(0.2)
 
 
 def share_dialog_value(driver, row_idx: int, field: str) -> str:
@@ -175,7 +175,7 @@ def share_dialog_click(driver, css: str) -> None:
     """Click an element inside the open dialog (e.g. '.share-dialog-save')."""
     el = driver.find_element(By.CSS_SELECTOR, ".share-dialog-backdrop.cdialog-visible " + css)
     driver.execute_script("arguments[0].click();", el)
-    time.sleep(0.3)
+    pause(0.3)
 
 
 def share_dialog_reason(driver) -> str:

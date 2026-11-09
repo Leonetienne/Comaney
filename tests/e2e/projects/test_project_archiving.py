@@ -2,7 +2,6 @@
 Tests for project archiving: admin can archive/unarchive, frozen state prevents
 new expenses/settlements, in-flight settlements can still be confirmed.
 """
-import time
 from decimal import Decimal
 
 import pytest
@@ -11,6 +10,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user, api_delete
 from bhelpers import _shell, _create_group, _add_group_member, _create_group_expense
+from pacing import pause
 
 
 class TestProjectArchiveBasic:
@@ -25,16 +25,16 @@ class TestProjectArchiveBasic:
 
     def test_archive_button_present(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['gid']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Archive project" in driver.page_source
 
     def test_archive_project(self, driver, w, ctx):
         form = driver.find_element(By.CSS_SELECTOR,
             f"form[action*='/projects/{ctx['gid']}/archive/']")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "Archived" in driver.page_source
 
     def test_unarchive_button_present_after_archive(self, driver, w, ctx):
@@ -42,7 +42,7 @@ class TestProjectArchiveBasic:
 
     def test_archived_badge_in_list(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         card = driver.find_element(By.CSS_SELECTOR,
             f".bgs-card[data-project-id='{ctx['gid']}']")
         assert "bgs-card--archived" in card.get_attribute("class")
@@ -70,7 +70,7 @@ class TestArchivedProjectFrozen:
 
     def test_add_expense_button_not_visible(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['gid']}/settings/"))
-        time.sleep(1)
+        pause(1)
         # Archived project does not show invite/add members section in settings
         assert "Invite by email" not in driver.page_source
 
@@ -100,13 +100,13 @@ class TestArchivedProjectFrozen:
 
     def test_unarchive_restores_project(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['gid']}/settings/"))
-        time.sleep(1)
+        pause(1)
         form = driver.find_element(By.CSS_SELECTOR,
             f"form[action*='/projects/{ctx['gid']}/unarchive/']")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "Unarchive project" not in driver.page_source
         assert "Archive project" in driver.page_source
 
@@ -141,5 +141,5 @@ class TestArchivedProjectMemberLeave:
         from bhelpers import _login_as
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/projects/{ctx['gid']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Leave project" in driver.page_source

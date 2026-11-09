@@ -9,7 +9,6 @@ Also covers the server-side security check: a user who forges the project_id
 POST field to point at a project they are not a member of must not have an
 expense created for that project.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -20,6 +19,7 @@ from helpers import (
     fetch_email, mailpit_seen_ids,
 )
 from bhelpers import _shell, _create_contact_link, _get_pk, _create_group, _login_as
+from pacing import pause
 
 
 def _select_first_participant(driver):
@@ -29,13 +29,13 @@ def _select_first_participant(driver):
     if sel_els:
         sel = Select(sel_els[0])
         sel.select_by_index(1)  # index 0 is the empty '-- Select contact --' option
-        time.sleep(0.3)
+        pause(0.3)
         return
     cbs = driver.find_elements(By.CSS_SELECTOR,
         "#buddy-participants-checkboxes input[type=checkbox]")
     if cbs:
         cbs[0].click()
-        time.sleep(0.3)
+        pause(0.3)
 
 
 # ---------------------------------------------------------------------------
@@ -60,13 +60,13 @@ class TestBuddyPaymentSectionUI:
 
     def test_buddy_section_visible_with_buddy(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         assert "Expense assignment" in driver.page_source
         assert "Form Buddy" in driver.page_source
 
     def test_enable_buddy_payment_shows_section(self, driver, w, ctx):
         driver.find_element(By.ID, "assign-contact").click()
-        time.sleep(0.5)
+        pause(0.5)
         section = driver.find_element(By.ID, "buddy-payment-section")
         assert section.is_displayed()
 
@@ -80,7 +80,7 @@ class TestBuddyPaymentSectionUI:
     def test_select_participant_and_equal_shares_gives_50_50(self, driver, w, ctx):
         _select_first_participant(driver)
         driver.find_element(By.ID, "buddy-equal-btn").click()
-        time.sleep(0.3)
+        pause(0.3)
         pct_els = driver.find_elements(By.CSS_SELECTOR, "#buddy-sliders .buddy-slider-pct")
         assert len(pct_els) == 2, "Payer row + participant row expected"
         assert all("50.0%" in el.text for el in pct_els), \
@@ -116,7 +116,7 @@ class TestExpenseWithDummyParticipant:
     def test_create_expense_with_dummy_participant(self, driver, w, ctx):
         today = server_today()
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "id_title").clear()
         driver.find_element(By.ID, "id_title").send_keys("Buddy Participant Expense")
         driver.find_element(By.ID, "id_value").clear()
@@ -126,12 +126,12 @@ class TestExpenseWithDummyParticipant:
             "document.getElementById('id_settled').checked = true;"
         )
         driver.find_element(By.ID, "assign-contact").click()
-        time.sleep(0.5)
+        pause(0.5)
         _select_first_participant(driver)
         driver.find_element(By.ID, "buddy-equal-btn").click()
-        time.sleep(0.3)
+        pause(0.3)
         driver.find_element(By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)").click()
-        time.sleep(2)
+        pause(2)
         assert "/budget/expenses/" in driver.current_url
 
     def test_expense_in_api_list(self, driver, w, ctx):
@@ -142,7 +142,7 @@ class TestExpenseWithDummyParticipant:
 
     def test_expense_visible_on_contact_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Buddy Participant Expense" in driver.page_source
 
 
@@ -171,7 +171,7 @@ class TestExpenseWithDummyAsPayer:
     def test_create_expense_dummy_as_payer(self, driver, w, ctx):
         today = server_today()
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "id_title").clear()
         driver.find_element(By.ID, "id_title").send_keys("Dummy Payer Expense")
         driver.find_element(By.ID, "id_value").clear()
@@ -181,23 +181,23 @@ class TestExpenseWithDummyAsPayer:
             "document.getElementById('id_settled').checked = true;"
         )
         driver.find_element(By.ID, "assign-contact").click()
-        time.sleep(0.5)
+        pause(0.5)
         # Select dummy as upfront payer via JS
         driver.execute_script(
             f"var sel = document.getElementById('buddy-upfront-select');"
             f"sel.value = 'dummy:{ctx['dummy_id']}';"
             f"sel.dispatchEvent(new Event('change', {{bubbles: true}}));"
         )
-        time.sleep(0.4)
+        pause(0.4)
         # Me is now the participant; check the checkbox for me
         cbs = driver.find_elements(By.CSS_SELECTOR, "#buddy-participants-checkboxes input[type=checkbox]")
         if cbs:
             cbs[0].click()
-            time.sleep(0.3)
+            pause(0.3)
             driver.find_element(By.ID, "buddy-equal-btn").click()
-            time.sleep(0.3)
+            pause(0.3)
         driver.find_element(By.CSS_SELECTOR, "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)").click()
-        time.sleep(2)
+        pause(2)
 
     def test_redirected_to_contact_summary(self, driver, w, ctx):
         assert "/buddies/summary/" in driver.current_url, \
@@ -253,7 +253,7 @@ class TestBuddyExpenseReEdit:
         exp_id = resp.json()["expenses"][0]["id"]
         ctx["exp_id"] = exp_id
         driver.get(_url(f"/budget/expenses/{exp_id}/edit/"))
-        time.sleep(1)
+        pause(1)
         btn = driver.find_element(By.ID, "assign-contact")
         assert "assign-tab--active" in btn.get_attribute("class"), \
             "assign-contact must be active when re-editing a contact expense"
@@ -270,7 +270,7 @@ class TestBuddyExpenseReEdit:
             "s.dispatchEvent(new Event('input', {bubbles: true}));",
             slider,
         )
-        time.sleep(0.3)
+        pause(0.3)
         pct_el = driver.find_element(By.ID, "bs-pct-0")
         assert "30.0%" in pct_el.text, \
             f"Participant slider did not update to 30%, got: {pct_el.text!r}"
@@ -303,7 +303,7 @@ class TestRealBuddyAsUptrontPayer:
         ctx["seen_before"] = seen_before
         today = server_today()
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "id_title").clear()
         driver.find_element(By.ID, "id_title").send_keys("Buddy Payer Expense")
         driver.find_element(By.ID, "id_value").clear()
@@ -312,22 +312,22 @@ class TestRealBuddyAsUptrontPayer:
             f"document.getElementById('id_date_due').value = '{today}';"
         )
         driver.find_element(By.ID, "assign-contact").click()
-        time.sleep(0.5)
+        pause(0.5)
         # Set B (real buddy) as upfront payer
         driver.execute_script(
             f"var sel = document.getElementById('buddy-upfront-select');"
             f"sel.value = 'feuser:{ctx['b_pk']}';"
             f"sel.dispatchEvent(new Event('change', {{bubbles: true}}));"
         )
-        time.sleep(0.4)
+        pause(0.4)
         driver.find_element(By.ID, "buddy-equal-btn").click()
-        time.sleep(0.3)
+        pause(0.3)
         driver.find_element(By.CSS_SELECTOR,
             "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)").click()
         # The JS intercepts submit and shows a confirm dialog for feuser payer
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
 
     def test_redirected_to_expense_list(self, driver, w, ctx):
         # Feuser-as-payer expenses are saved on B's account and redirect to A's
@@ -338,7 +338,7 @@ class TestRealBuddyAsUptrontPayer:
 
     def test_a_sees_needs_approval_on_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Needs approval" in driver.page_source, \
             "A must see 'Needs approval' badge for the pending expense"
         assert "Buddy Payer Expense" in driver.page_source
@@ -356,7 +356,7 @@ class TestRealBuddyAsUptrontPayer:
         from bhelpers import _login_as
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Needs approval" in driver.page_source, \
             "B (owning_feuser) must also see 'Needs approval' on their summary"
         assert "Buddy Payer Expense" in driver.page_source
@@ -400,12 +400,12 @@ class TestGroupModeParticipantCheckboxWithNonMePayer:
 
     def test_open_new_expense_form(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         assert "Expense assignment" in driver.page_source
 
     def test_enable_buddy_checkbox(self, driver, w, ctx):
         driver.find_element(By.ID, "assign-project").click()
-        time.sleep(0.5)
+        pause(0.5)
         assert driver.find_element(By.ID, "buddy-payment-section").is_displayed()
 
     def test_switch_to_group_mode(self, driver, w, ctx):
@@ -418,7 +418,7 @@ class TestGroupModeParticipantCheckboxWithNonMePayer:
             f"sel.value = '{ctx['group_id']}';"
             f"sel.dispatchEvent(new Event('change', {{bubbles: true}}));"
         )
-        time.sleep(0.5)
+        pause(0.5)
         # Participant checkboxes for group members should now be visible
         cbs = driver.find_elements(By.CSS_SELECTOR,
             "#buddy-participants-checkboxes .buddy-participant-cb")
@@ -430,7 +430,7 @@ class TestGroupModeParticipantCheckboxWithNonMePayer:
             f"sel.value = 'dummy:{ctx['thomas_id']}';"
             f"sel.dispatchEvent(new Event('change', {{bubbles: true}}));"
         )
-        time.sleep(0.4)
+        pause(0.4)
         # Thomas's checkbox should be hidden; Jim's should still be visible
         thomas_lbl = driver.find_element(
             By.CSS_SELECTOR,
@@ -447,9 +447,9 @@ class TestGroupModeParticipantCheckboxWithNonMePayer:
         jim_cb = jim_lbl.find_element(By.CSS_SELECTOR, "input[type=checkbox]")
         if jim_cb.is_selected():
             jim_cb.click()
-            time.sleep(0.4)
+            pause(0.4)
         jim_cb.click()
-        time.sleep(0.5)
+        pause(0.5)
         sliders = driver.find_elements(By.CSS_SELECTOR, "#buddy-sliders .buddy-slider-row")
         # Payer row + me row + Jim row = 3
         assert len(sliders) >= 3, (
@@ -498,7 +498,7 @@ class TestBuddySliderCurrencyAmounts:
 
     def test_open_form_and_set_value(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script("document.getElementById('id_value').value = '120';")
         driver.execute_script(
             "document.getElementById('id_value').dispatchEvent(new Event('input'));"
@@ -506,9 +506,9 @@ class TestBuddySliderCurrencyAmounts:
 
     def test_enable_buddy_and_select_participant(self, driver, w, ctx):
         driver.find_element(By.ID, "assign-contact").click()
-        time.sleep(0.5)
+        pause(0.5)
         _select_first_participant(driver)
-        time.sleep(0.3)
+        pause(0.3)
 
     def test_amt_spans_present(self, driver, w, ctx):
         amt_els = driver.find_elements(By.CSS_SELECTOR, "#buddy-sliders .buddy-slider-amt")
@@ -522,7 +522,7 @@ class TestBuddySliderCurrencyAmounts:
             "s.value = 30;"
             "s.dispatchEvent(new Event('input', {bubbles: true}));",
         )
-        time.sleep(0.3)
+        pause(0.3)
         amt_text = driver.find_element(By.ID, "bs-amt-0").text.strip()
         assert "36.00" in amt_text, \
             f"30% of 120 must show 36.00 in the participant amount span, got: {amt_text!r}"
@@ -539,7 +539,7 @@ class TestBuddySliderCurrencyAmounts:
         driver.execute_script(
             "document.getElementById('id_value').dispatchEvent(new Event('input'));"
         )
-        time.sleep(0.3)
+        pause(0.3)
         # Participant still at 30%: 60.00
         part_text = driver.find_element(By.ID, "bs-amt-0").text.strip()
         assert "60.00" in part_text, \
@@ -581,9 +581,9 @@ class TestDefaultPayerIsMe:
 
     def test_contact_default_payer_is_me(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "assign-contact").click()
-        time.sleep(0.5)
+        pause(0.5)
         val = driver.execute_script(
             "return document.getElementById('buddy-upfront-select').value;"
         )
@@ -592,15 +592,15 @@ class TestDefaultPayerIsMe:
 
     def test_project_default_payer_is_me(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "assign-project").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.execute_script(
             f"var sel = document.getElementById('buddy-group-select');"
             f"sel.value = '{ctx['group_id']}';"
             f"sel.dispatchEvent(new Event('change', {{bubbles: true}}));"
         )
-        time.sleep(0.5)
+        pause(0.5)
         val = driver.execute_script(
             "return document.getElementById('buddy-upfront-select').value;"
         )
@@ -649,7 +649,7 @@ class TestForgedProjectIdOnExpenseCreate:
         mpk = ctx["mallory_pk"]
 
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
 
         # Fill required expense fields
         driver.execute_script(
@@ -661,7 +661,7 @@ class TestForgedProjectIdOnExpenseCreate:
         # Activate project mode via the tab so the hidden inputs are in the DOM,
         # then overwrite project_id with the victim's project before submitting.
         driver.find_element(By.ID, "assign-project").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.execute_script(
             f"document.getElementById('buddy-group-id-input').value = '{pid}';"
             f"document.getElementById('buddy-mode-input').value = 'group';"
@@ -672,7 +672,7 @@ class TestForgedProjectIdOnExpenseCreate:
         )
 
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(1.5)
+        pause(1.5)
 
         # The expense must not have been linked to the victim's project
         linked = _shell(

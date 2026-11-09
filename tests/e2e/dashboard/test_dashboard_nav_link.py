@@ -2,7 +2,6 @@
 Dashboard nav-link: verify card links append ?view=year when in year mode
 and navigate cleanly in month mode.
 """
-import time
 
 import requests
 import pytest
@@ -11,6 +10,7 @@ from selenium.webdriver.common.by import By
 from helpers import (
     _url, server_today, session_cookies, BASE_URL, setup_user, cleanup_user,
 )
+from pacing import pause
 
 CARDS_URL = BASE_URL + "/budget/dashboard/cards/"
 
@@ -72,12 +72,12 @@ class TestNavLinkYearView:
         card_id = r.json()["card"]["id"]
 
         driver.get(_url(f"/budget/?date_from={year}-01-01&date_to={year}-12-31"))
-        time.sleep(3)
+        pause(3)
 
         driver.execute_script(
             "document.querySelector('.dash-card-body--linked').click();"
         )
-        time.sleep(2)
+        pause(2)
 
         assert "/budget/expenses/" in driver.current_url
 
@@ -93,12 +93,12 @@ class TestNavLinkYearView:
         card_id = r.json()["card"]["id"]
 
         driver.get(_url(f"/budget/?year={year}&month={month}"))
-        time.sleep(3)
+        pause(3)
 
         driver.execute_script(
             "document.querySelector('.dash-card-body--linked').click();"
         )
-        time.sleep(2)
+        pause(2)
 
         assert "view=year" not in driver.current_url
         assert "/budget/expenses/" in driver.current_url
@@ -121,12 +121,12 @@ class TestNavLinkYearView:
         card_id = r.json()["card"]["id"]
 
         driver.get(_url(f"/budget/?date_from={year}-01-01&date_to={year}-12-31"))
-        time.sleep(3)
+        pause(3)
 
         driver.execute_script(
             "document.querySelector('.dash-card-body--linked').click();"
         )
-        time.sleep(2)
+        pause(2)
 
         assert "/budget/expenses/" in driver.current_url
         search_value = driver.find_element(By.ID, "exp-search").get_attribute("value")
@@ -148,12 +148,12 @@ class TestNavLinkYearView:
         card_id = r.json()["card"]["id"]
 
         driver.get(_url(f"/budget/?date_from={year}-01-01&date_to={year}-12-31"))
-        time.sleep(3)
+        pause(3)
 
         driver.execute_script(
             "document.querySelector('.dash-card-body--linked').click();"
         )
-        time.sleep(2)
+        pause(2)
 
         assert "search=" not in driver.current_url, \
             f"?search= must be stripped from the URL right after page load, got '{driver.current_url}'"

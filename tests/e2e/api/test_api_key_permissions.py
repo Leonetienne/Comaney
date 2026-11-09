@@ -5,7 +5,6 @@ session keeps full access, and revoking the key and generating a new one keeps i
 Run with: pytest -v tests/e2e/api/test_api_key_permissions.py | tee logfile.log
 """
 import json
-import time
 
 import pytest
 import requests
@@ -13,6 +12,7 @@ from selenium.webdriver.common.by import By
 
 from bhelpers import _shell
 from helpers import BASE_URL, _url, api_get, api_post, cleanup_user, session_cookies, setup_user
+from pacing import pause
 
 
 def _set_permissions(email, perms):
@@ -31,7 +31,7 @@ def _stored_permissions(email):
 
 def _card(driver):
     driver.get(_url("/profile/"))
-    time.sleep(1)
+    pause(1)
     return driver.find_element(By.ID, "section-apikey")
 
 
@@ -77,14 +77,14 @@ class TestRestrictPanel:
     def test_save_permissions(self, driver, ctx):
         card = _card(driver)
         card.find_element(By.CSS_SELECTOR, ".key-restrict-toggle").click()
-        time.sleep(0.3)
+        pause(0.3)
         for box in card.find_elements(By.CSS_SELECTOR, ".key-permissions input[type=checkbox]"):
             if box.is_selected():
                 driver.execute_script("arguments[0].click();", box)
         driver.execute_script("arguments[0].click();", card.find_element(By.NAME, "write_projects"))
         assert card.find_element(By.NAME, "read_projects").is_selected()
         card.find_element(By.XPATH, ".//button[normalize-space()='Save permissions']").click()
-        time.sleep(2)
+        pause(2)
         stored = _stored_permissions(ctx["email"])
         assert stored["projects"] == {"read": True, "write": True}
         assert stored["expenses"] == {"read": False, "write": False}
@@ -92,7 +92,7 @@ class TestRestrictPanel:
     def test_new_key_after_revoke_keeps_permissions(self, driver, ctx):
         before = _stored_permissions(ctx["email"])
         _card(driver).find_element(By.XPATH, ".//button[normalize-space()='Revoke']").click()
-        time.sleep(2)
+        pause(2)
         _card(driver).find_element(By.XPATH, ".//button[normalize-space()='Generate API key']").click()
-        time.sleep(2)
+        pause(2)
         assert _stored_permissions(ctx["email"]) == before

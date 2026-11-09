@@ -9,12 +9,12 @@ Provider-neutral: the active provider is asked from the stack.
 Run with: pytest -v tests/e2e/test_landing_page_ai_wording.py | tee logfile.log
 """
 import json
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, cleanup_user, require_ai_provider, run_cmd, setup_user
+from pacing import pause
 
 
 def _provider() -> dict:
@@ -37,7 +37,7 @@ class TestLandingPage:
     def test_names_no_vendor_and_no_data_location_claim(self, driver):
         driver.delete_all_cookies()
         driver.get(_url("/"))
-        time.sleep(1)
+        pause(1)
         # textContent: FAQ answers sit in collapsed <details>
         text = " ".join(driver.execute_script("return document.body.textContent").split())
         lower = text.lower()
@@ -66,7 +66,7 @@ class TestProfileTip:
 
     def test_tip_names_active_provider(self, driver, ctx, provider):
         driver.get(_url("/profile/#section-ai"))
-        time.sleep(1)
+        pause(1)
         tip = driver.find_element(By.CSS_SELECTOR, "#section-ai .in-page-tip").text
         if provider["user_fields"]:
             assert f"Use your own {provider['display']} settings" in tip

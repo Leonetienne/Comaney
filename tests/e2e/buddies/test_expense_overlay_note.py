@@ -15,6 +15,7 @@ import pytest
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_contact_link, _get_pk
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +95,7 @@ class TestOverlayNoteStored:
         )
         from selenium.webdriver.common.by import By
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(1)
+        pause(1)
         assert _overlay_note(ctx["exp_pk"], ctx["part"]["email"]) == "My personal note.", \
             "[N1] Note must be stored on overlay after form submit"
 
@@ -141,7 +142,7 @@ class TestEmptyNoteIsNull:
         )
         driver.execute_script("document.getElementById('id_note').value = '';")
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(1)
+        pause(1)
         assert _overlay_note(ctx["exp_pk"], ctx["part"]["email"]) is None, \
             "[N2] Submitting empty note must store None on overlay"
 
@@ -190,7 +191,7 @@ class TestClearNoteDeletesOverlayWhenAllEmpty:
             ".forEach(cb => cb.checked = false);"
         )
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(1)
+        pause(1)
         assert not _overlay_exists(ctx["exp_pk"], ctx["part"]["email"]), \
             "[N3] Overlay must be deleted when note, category, and tags are all empty"
 

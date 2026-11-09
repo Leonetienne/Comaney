@@ -3,13 +3,13 @@ Record ids: uid=<id> and #<id> find one expense, and the opt-in "Show record IDs
 shows them in the expense and recurring expense lists without adding height.
 Run with: pytest -v tests/e2e/expenses/test_record_ids.py | tee logfile.log
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from bhelpers import _login_as
 from helpers import _url, api_get, api_patch, api_post, cleanup_user, setup_user
+from pacing import pause
 
 DATE = "2025-06-15"
 
@@ -48,7 +48,7 @@ def test_uid_filter_and_shorthand_find_exactly_one_expense(ctx):
 
 def _expense_card(driver, expense_id):
     driver.get(_url("/budget/expenses/?date_from=2025-01-01&date_to=2025-12-31"))
-    time.sleep(2)
+    pause(2)
     return driver.find_element(By.ID, f"expense-{expense_id}")
 
 
@@ -63,10 +63,10 @@ def test_record_ids_show_only_when_opted_in_without_growing_the_card(ctx, driver
     assert card.size["height"] == height_off
 
     driver.get(_url("/budget/scheduled/"))
-    time.sleep(1)
+    pause(1)
     assert [e.text for e in driver.find_elements(By.CSS_SELECTOR, ".exp-card .record-id")] == [f"#{ctx['scheduled']}"]
 
     assert api_patch("/api/v2/account/", ctx, {"show_record_ids": False}).status_code == 200
     driver.get(_url("/budget/scheduled/"))
-    time.sleep(1)
+    pause(1)
     assert driver.find_elements(By.CSS_SELECTOR, ".record-id") == []

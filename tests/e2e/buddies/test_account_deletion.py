@@ -16,7 +16,6 @@ Scenarios tested:
      - The deleting user is ghost-dummied in the group.
      - The group still exists with the new admin.
 """
-import time
 
 import pytest
 
@@ -24,17 +23,18 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_contact_link, _create_group, _add_group_member
+from pacing import pause
 
 
 def _delete_account_via_ui(driver, ctx_user: dict) -> None:
     """Navigate to /account/delete/ and confirm with password."""
     _login_as(driver, ctx_user)
     driver.get(_url("/account/delete/"))
-    time.sleep(1)
+    pause(1)
     pw_el = driver.find_element(By.ID, "id_password")
     driver.execute_script("arguments[0].value = arguments[1];", pw_el, ctx_user["password"])
     driver.find_element(By.ID, "btn-delete-account").click()
-    time.sleep(2)
+    pause(2)
 
 
 def _dummy_count_for(feuser_email: str) -> int:
@@ -139,7 +139,7 @@ class TestAccountDeletionWithPersonalBuddy:
     def test_b_sees_ghost_dummy_on_contacts_page(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Dustin" in driver.page_source, \
             "B's buddies page must show the ghost dummy with A's name"
 
@@ -222,13 +222,13 @@ class TestAccountDeletionGroupAdmin:
     def test_b_sees_group_on_contacts_page(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         assert "AdminGoneGroup" in driver.page_source, \
             "B must still see the group on their projects page"
 
     def test_b_is_shown_as_admin_on_group_page(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "You are admin" in driver.page_source or "Admin" in driver.page_source, \
             "B must be displayed as the group admin on the group detail page"
 

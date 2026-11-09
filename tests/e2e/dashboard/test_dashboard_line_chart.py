@@ -1,7 +1,6 @@
 """
 Dashboard line chart card: API validation, data computation, and browser smoke test.
 """
-import time
 
 import requests
 import pytest
@@ -10,6 +9,7 @@ from helpers import (
     _url, api_post, api_delete, server_today,
     session_cookies, BASE_URL, setup_user, cleanup_user,
 )
+from pacing import pause
 
 CARDS_URL = BASE_URL + "/budget/dashboard/cards/"
 
@@ -523,7 +523,7 @@ class TestLineChartBrowser:
         card_id = r.json()["card"]["id"]
 
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
 
         canvases = driver.execute_script(
             "return Array.from(document.querySelectorAll('canvas[id]'))"

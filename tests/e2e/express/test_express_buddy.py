@@ -20,6 +20,7 @@ from helpers import (
     _url, ai_unavailable, api_get, api_delete, setup_user, cleanup_user,
     session_cookies, fetch_email, mailpit_seen_ids, set_ai_user_config, reset_browser,
 )
+from pacing import pause
 
 DOCKER_WEB = "comaney-web-1"
 AI_TIMEOUT = 120
@@ -115,7 +116,7 @@ class TestExpressBuddyPageConfig:
 
     def test_buddy_config_injected(self, driver, w, ctx):
         driver.get(_url("/budget/ai/express-creation/"))
-        time.sleep(1)
+        pause(1)
         assert "BUDDY_EXPENSE_CONFIG" in driver.page_source, \
             "window.BUDDY_EXPENSE_CONFIG must be injected when user has buddies"
 
@@ -126,15 +127,15 @@ class TestExpressBuddyPageConfig:
             # Log in as user without buddies
             reset_browser(driver)
             driver.get(_url("/login/"))
-            time.sleep(1)
+            pause(1)
             email_el = driver.find_element(By.ID, "id_email")
             driver.execute_script("arguments[0].value = arguments[1];", email_el, c2["email"])
             pass_el = driver.find_element(By.ID, "id_password")
             driver.execute_script("arguments[0].value = arguments[1];", pass_el, c2["password"])
             driver.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
-            time.sleep(2)
+            pause(2)
             driver.get(_url("/budget/ai/express-creation/"))
-            time.sleep(1)
+            pause(1)
             assert "BUDDY_EXPENSE_CONFIG" not in driver.page_source, \
                 "BUDDY_EXPENSE_CONFIG must not be injected when user has no buddies"
         finally:
@@ -142,13 +143,13 @@ class TestExpressBuddyPageConfig:
             # Log back in as original user
             reset_browser(driver)
             driver.get(_url("/login/"))
-            time.sleep(1)
+            pause(1)
             email_el = driver.find_element(By.ID, "id_email")
             driver.execute_script("arguments[0].value = arguments[1];", email_el, ctx["email"])
             pass_el = driver.find_element(By.ID, "id_password")
             driver.execute_script("arguments[0].value = arguments[1];", pass_el, ctx["password"])
             driver.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
-            time.sleep(2)
+            pause(2)
 
 
 # ---------------------------------------------------------------------------
@@ -196,7 +197,7 @@ class TestExpressBuddyConfirmDummyParticipant:
 
     def test_expense_on_contact_summary_ui(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "ExpressDummyPart" in driver.page_source, \
             "Expense must appear on the buddy summary page"
 
@@ -244,7 +245,7 @@ class TestExpressBuddyConfirmDummyPayer:
 
     def test_expense_on_contact_summary_ui(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "ExpressDummyPayer" in driver.page_source, \
             "Dummy-payer expense must appear on the buddy summary page"
 
@@ -305,7 +306,7 @@ class TestExpressBuddyConfirmFeuserPayer:
 
     def test_expense_on_askers_contact_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "ExpressFeuserPayer" in driver.page_source, \
             "Expense must appear on the asker's buddy summary (as participant)"
 
@@ -326,7 +327,7 @@ class TestExpressBuddyCardUI:
 
     def test_trial_available(self, driver, w, ctx):
         driver.get(_url("/budget/ai/express-creation/"))
-        time.sleep(1)
+        pause(1)
         if "/profile" in driver.current_url:
             ai_unavailable("No API key configured")
         src = driver.page_source
@@ -338,7 +339,7 @@ class TestExpressBuddyCardUI:
         if not ctx.get("ai_ok"):
             ai_unavailable("AI not available")
         driver.get(_url("/budget/ai/express-creation/"))
-        time.sleep(1)
+        pause(1)
         ta = driver.find_element(By.CSS_SELECTOR, "textarea[name=description]")
         driver.execute_script("arguments[0].value = arguments[1];", ta, "Coffee 3.50 euros")
         driver.find_element(By.ID, "parse-btn").click()
@@ -363,7 +364,7 @@ class TestExpressBuddyCardUI:
         assert cards, "No preview cards left over from the previous test"
         tab = cards[0].find_element(By.CSS_SELECTOR, ".pcard-assign-contact")
         tab.click()
-        time.sleep(0.5)
+        pause(0.5)
         details = cards[0].find_element(By.CSS_SELECTOR, ".pcard-buddy-details")
         assert details.is_displayed(), "Buddy details section must become visible after clicking the Contact tab"
 
@@ -375,7 +376,7 @@ class TestExpressBuddyCardUI:
         # Contact tab must already be active from previous test; ensure it is
         tab = cards[0].find_element(By.CSS_SELECTOR, ".pcard-assign-contact")
         tab.click()
-        time.sleep(0.5)
+        pause(0.5)
         sel = cards[0].find_element(By.CSS_SELECTOR, ".buddy-upfront-select")
         options = sel.find_elements(By.TAG_NAME, "option")
         assert len(options) >= 2, \
@@ -398,7 +399,7 @@ class TestExpressBuddySliderAmounts:
 
     def _check_ai(self, driver):
         driver.get(_url("/budget/ai/express-creation/"))
-        time.sleep(1)
+        pause(1)
         if "/profile" in driver.current_url:
             ai_unavailable("No API key configured")
         src = driver.page_source
@@ -437,7 +438,7 @@ class TestExpressBuddySliderAmounts:
         # Enable buddy payment via Contact tab.
         tab = card.find_element(By.CSS_SELECTOR, ".pcard-assign-contact")
         tab.click()
-        time.sleep(0.5)
+        pause(0.5)
 
         # Single mode is the default; select the dummy from the participant dropdown.
         part_sel = card.find_element(By.CSS_SELECTOR, ".buddy-participant-select")
@@ -446,7 +447,7 @@ class TestExpressBuddySliderAmounts:
         assert target, "No buddy option available in participant dropdown"
         driver.execute_script("arguments[0].value = arguments[1];", part_sel, target.get_attribute("value"))
         driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", part_sel)
-        time.sleep(0.5)
+        pause(0.5)
 
         # Set the participant slider to 30% and trigger the input event.
         participant_slider = card.find_element(
@@ -456,7 +457,7 @@ class TestExpressBuddySliderAmounts:
             "arguments[0].value = 30; arguments[0].dispatchEvent(new Event('input'));",
             participant_slider,
         )
-        time.sleep(0.3)
+        pause(0.3)
 
         # Participant row: must show 30 % of expense_val.
         part_amt_el = card.find_element(
@@ -487,7 +488,7 @@ class TestExpressBuddySliderAmounts:
         val_input = card.find_element(By.CSS_SELECTOR, ".edit-value")
         driver.execute_script("arguments[0].value = '100';", val_input)
         driver.execute_script("arguments[0].dispatchEvent(new Event('input'));", val_input)
-        time.sleep(0.3)
+        pause(0.3)
 
         # Participant is still at 30%: must now show 30.00.
         part_amt_text = card.find_element(

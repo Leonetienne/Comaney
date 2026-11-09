@@ -9,7 +9,6 @@ Everything else (invites, archive, delete, transfer admin) stays admin only.
 
 Run with: pytest tests/e2e/projects/test_project_permission_laxity.py -v -s
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -17,6 +16,7 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_group, _add_group_member
+from pacing import pause
 
 
 def _settings_url(gid) -> str:
@@ -58,7 +58,7 @@ class TestPermissionLaxity:
         """With laxity 0 the member sees no rename form on the Manage page."""
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
         assert not driver.find_elements(By.ID, "btn-rename-project"), \
             "Non-admin should not see the rename form while laxity is admin-only"
 
@@ -67,7 +67,7 @@ class TestPermissionLaxity:
         original = _project_name(ctx["gid"])
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             """
             var f = document.createElement('form');
@@ -81,7 +81,7 @@ class TestPermissionLaxity:
             """,
             _url(f"/projects/{ctx['gid']}/rename/"),
         )
-        time.sleep(2)
+        pause(2)
         assert _project_name(ctx["gid"]) == original, \
             "Non-admin rename must be blocked server-side while laxity is admin-only"
 
@@ -89,30 +89,30 @@ class TestPermissionLaxity:
         """Admin picks 'Any member' and clicks Save for it to persist."""
         _login_as(driver, ctx["admin"])
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
         select_el = driver.find_element(By.ID, "select-permission-laxity")
         Select(select_el).select_by_value("1")
         # Choosing the option alone must NOT save; only the Save button does.
         driver.find_element(By.ID, "btn-save-permission-laxity").click()
-        time.sleep(2)
+        pause(2)
         assert _laxity_value(ctx["gid"]) == "1"
 
     def test_member_can_now_rename(self, driver, w, ctx):
         """With laxity 1 the member sees the rename form and can rename the project."""
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
         name_input = driver.find_element(By.ID, "project-rename-name")
         driver.execute_script("arguments[0].value = arguments[1];", name_input, "Renamed By Member")
         driver.find_element(By.ID, "btn-rename-project").click()
-        time.sleep(2)
+        pause(2)
         assert _project_name(ctx["gid"]) == "Renamed By Member"
 
     def test_member_still_cannot_access_admin_only_actions(self, driver, w, ctx):
         """Even with laxity 1, the member does not get transfer/archive/delete controls."""
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
         assert not driver.find_elements(By.ID, "btn-transfer-admin"), \
             "Non-admin must never see transfer-admin controls"
         assert not driver.find_elements(By.ID, "select-permission-laxity"), \

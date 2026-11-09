@@ -6,13 +6,13 @@ Catalog sync after a completed partnership:
   - Non-complete members do NOT receive sync
 Run with: pytest tests/e2e/buddies/test_partnership_sync_ui.py -v -s
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as
+from pacing import pause
 
 
 def _setup_full_partnership(email_a: str, email_b: str) -> None:
@@ -73,9 +73,9 @@ class TestTagSyncCreate:
     def test_a_creates_tag(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         _enter_in_input(driver, "tag-input", "vacation")
-        time.sleep(1.5)
+        pause(1.5)
         assert "vacation" in driver.page_source
 
     def test_b_has_tag_in_db(self, driver, w, ctx):
@@ -84,7 +84,7 @@ class TestTagSyncCreate:
     def test_b_sees_tag_in_ui(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         assert "vacation" in driver.page_source
 
 
@@ -107,9 +107,9 @@ class TestCategorySyncCreate:
     def test_a_creates_category(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         _enter_in_input(driver, "category-input", "Utilities")
-        time.sleep(1.5)
+        pause(1.5)
         assert "Utilities" in driver.page_source
 
     def test_b_has_category_in_db(self, driver, w, ctx):
@@ -118,7 +118,7 @@ class TestCategorySyncCreate:
     def test_b_sees_category_in_ui(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         assert "Utilities" in driver.page_source
 
 
@@ -146,12 +146,12 @@ class TestDeletionWarningDialog:
     def test_delete_dialog_mentions_partners(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         assert "warntag" in driver.page_source
         # Click the delete button for 'warntag'
         btn = driver.find_element(By.CSS_SELECTOR, "button.ct-delete[data-title='warntag']")
         btn.click()
-        time.sleep(0.8)
+        pause(0.8)
         dialog = driver.find_element(By.CSS_SELECTOR, ".cdialog")
         assert "partner" in dialog.text.lower()
 
@@ -184,7 +184,7 @@ class TestNoSyncBeforeOnboarding:
     def test_tag_does_not_reach_incomplete_partner(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         _enter_in_input(driver, "tag-input", "shouldnotreach")
-        time.sleep(1.5)
+        pause(1.5)
         assert _count_tags(ctx["b"]["email"], "shouldnotreach") == 0

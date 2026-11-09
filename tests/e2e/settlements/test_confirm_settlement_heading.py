@@ -4,12 +4,12 @@ Verify the confirm-settlement page shows the right creditor wording.
 - Real user creditor: heading says "Did you" (settling against yourself).
 - Offline-member creditor: heading says "Did Rainer (offline member)".
 """
-import time
 
 import pytest
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_group
+from pacing import pause
 
 
 def _create_settlement_to_feuser(debtor_email: str, creditor_email: str) -> str:
@@ -73,7 +73,7 @@ class TestConfirmSettlementHeadingRealUser:
     def test_confirm_page_says_did_you(self, driver, w, ctx):
         _login_as(driver, ctx["creditor"])
         driver.get(_url(f"/buddies/expense/{ctx['expense_pk']}/approve-settlement/"))
-        time.sleep(1)
+        pause(1)
         assert "Did you" in driver.page_source, \
             "Confirm page for real-user creditor must say 'Did you'"
         assert "Did Rainer" not in driver.page_source, \
@@ -98,7 +98,7 @@ class TestConfirmSettlementHeadingOfflineMember:
         driver.get(_url(
             f"/projects/{ctx['group_id']}/expense/{ctx['expense_pk']}/approve-dummy/"
         ))
-        time.sleep(1)
+        pause(1)
         assert "Did Rainer (offline member)" in driver.page_source, \
             "Confirm page for offline-member creditor must say 'Did Rainer (offline member)'"
         assert "Did you" not in driver.page_source, \

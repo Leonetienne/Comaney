@@ -2,13 +2,13 @@
 Actual contact kick flows: without debt (immediate via confirm dialog),
 with debt (confirm shows balance), and post-kick state for the kicked user.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_contact_link, _get_pk, _confirm
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -29,18 +29,18 @@ class TestKickActualBuddyNoDebt:
 
     def test_buddy_visible_before_kick(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["b"]["email"] in driver.page_source
 
     def test_kick_shows_confirm_dialog(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR,
             "[id^='btn-kick-']:not([id^='btn-kick-dummy-'])").click()
-        time.sleep(0.5)
+        pause(0.5)
         assert driver.find_element(By.ID, "cdialog-ok").is_displayed()
 
     def test_confirm_removes_buddy(self, driver, w, ctx):
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "/buddies/" in driver.current_url
         assert ctx["b"]["email"] not in driver.page_source
 
@@ -86,28 +86,28 @@ class TestKickActualBuddyWithDebt:
 
     def test_balance_visible_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         # Balance = 100.00 (50% of 200)
         assert "100.00" in driver.page_source
 
     def test_kick_dialog_contains_balance(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR,
             "[id^='btn-kick-']:not([id^='btn-kick-dummy-'])").click()
-        time.sleep(0.5)
+        pause(0.5)
         dialog_msg = driver.find_element(By.ID, "cdialog-msg").text
         assert "100.00" in dialog_msg, \
             f"Dialog must mention the balance, got: {dialog_msg!r}"
 
     def test_confirm_removes_buddy_with_debt(self, driver, w, ctx):
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         assert ctx["b"]["email"] not in driver.page_source
         assert "/buddies/" in driver.current_url
 
     def test_kicked_b_has_ghost_dummy_for_a(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         # A ghost dummy with A's display name must exist on B's page
         a_display = "Kira DebtKicker"
         assert a_display in driver.page_source, \
@@ -115,6 +115,6 @@ class TestKickActualBuddyWithDebt:
 
     def test_kicked_b_sees_cloned_expense(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Kick Debt Exp" in driver.page_source, \
             "Kicked user B must see the cloned expense history"

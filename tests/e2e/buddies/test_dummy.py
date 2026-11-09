@@ -2,13 +2,13 @@
 Personal dummy buddy: add, kick (no debt / with debt), onboarding hint,
 is_dummy expense visibility (hidden from API, visible on buddies summary).
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user, api_get
 from bhelpers import _shell, _confirm
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -26,7 +26,7 @@ class TestDummyCRUD:
 
     def test_onboarding_hint_no_buddies(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "How contacts work:" in driver.page_source
 
     def test_add_dummy(self, driver, w, ctx):
@@ -34,7 +34,7 @@ class TestDummyCRUD:
         inp.clear()
         inp.send_keys("Offline Alice")
         driver.find_element(By.ID, "btn-add-dummy").click()
-        time.sleep(1)
+        pause(1)
         assert "Offline Alice" in driver.page_source
 
     def test_onboarding_hint_hidden_with_dummy(self, driver, w, ctx):
@@ -42,21 +42,21 @@ class TestDummyCRUD:
 
     def test_dummy_appears_in_expense_form(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         assert "Expense assignment" in driver.page_source
         assert "Offline Alice" in driver.page_source
 
     def test_kick_dummy_no_debt_shows_confirm(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.CSS_SELECTOR, "a[href*='kick']").click()
-        time.sleep(1)
+        pause(1)
         assert "kick" in driver.current_url
         assert "Remove" in driver.page_source
 
     def test_kick_dummy_confirm_removes_dummy(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-confirm-kick").click()
-        time.sleep(1)
+        pause(1)
         assert "Offline Alice" not in driver.page_source
         assert "/buddies/" in driver.current_url
 
@@ -98,7 +98,7 @@ class TestDummyKickWithDebt:
 
     def test_dummy_with_debt_shown_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Debt Dummy" in driver.page_source
 
     def test_balance_amount_in_page(self, driver, w, ctx):
@@ -107,14 +107,14 @@ class TestDummyKickWithDebt:
 
     def test_kick_dummy_with_debt_shows_confirm_page(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "a[href*='kick']").click()
-        time.sleep(1)
+        pause(1)
         assert "kick" in driver.current_url
         assert "50.00" in driver.page_source, \
             "Confirmation page must show the outstanding balance"
 
     def test_kick_dummy_confirm_removes_dummy(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-confirm-kick").click()
-        time.sleep(1)
+        pause(1)
         assert "Debt Dummy" not in driver.page_source
         assert "/buddies/" in driver.current_url
 
@@ -152,7 +152,7 @@ class TestIsDummyExpenseVisibility:
 
     def test_visible_on_contact_summary_page(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Hidden Payer Expense" in driver.page_source, \
             "is_dummy expense must be visible on the buddy summary page"
 

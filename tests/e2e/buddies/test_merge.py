@@ -8,13 +8,13 @@ UI-driven "Merge into..." flows that replaced the old free-text-email form.
 Personal merge: A has a dummy; an invite to B is seeded; B accepts or declines.
 Group merge: Admin has a group dummy; an invite to C is seeded; C accepts.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_group, _add_group_member, _create_contact_link
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -79,31 +79,31 @@ class TestPersonalDummyMergeAccept:
     def test_b_sees_merge_invite_page(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(ctx["merge_link"])
-        time.sleep(1)
+        pause(1)
         assert "Merge Buddy" in driver.page_source
         assert "Accept and merge" in driver.page_source
 
     def test_b_accepts_merge(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-accept-merge").click()
-        time.sleep(1)
+        pause(1)
         assert "/buddies/" in driver.current_url
 
     def test_b_sees_a_as_buddy_after_merge(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["a"]["email"] in driver.page_source
 
     def test_b_sees_transferred_expense_on_summary(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Merge History Expense" in driver.page_source, \
             "Expense previously tracked under the dummy must transfer to B after merge"
 
     def test_a_sees_b_not_dummy_after_merge(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["b"]["email"] in driver.page_source, \
             "After merge, A must see B as a real buddy"
         assert "Merge Buddy" not in driver.page_source, \
@@ -151,13 +151,13 @@ class TestPersonalDummyMergeDecline:
     def test_b_sees_merge_invite_page(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/buddies/merge/{ctx['token']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Decline Dummy" in driver.page_source
         assert "Decline" in driver.page_source
 
     def test_b_declines_merge(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-decline-merge").click()
-        time.sleep(1)
+        pause(1)
         assert "/buddies/" in driver.current_url
 
     def test_no_contact_link_after_decline(self, driver, w, ctx):
@@ -174,7 +174,7 @@ class TestPersonalDummyMergeDecline:
     def test_dummy_still_exists_for_a(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Decline Dummy" in driver.page_source, \
             "Dummy must still be present on A's page after B declines"
 
@@ -234,20 +234,20 @@ class TestGroupDummyMergeAccept:
     def test_c_sees_group_merge_page(self, driver, w, ctx):
         _login_as(driver, ctx["c"])
         driver.get(ctx["merge_link"])
-        time.sleep(1)
+        pause(1)
         assert "MergeGroup" in driver.page_source
         assert "Group Dummy" in driver.page_source
         assert "Accept and merge" in driver.page_source
 
     def test_c_accepts_group_merge(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-accept-merge").click()
-        time.sleep(1)
+        pause(1)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
             "Accepting a group merge must land on the project, not Contacts"
 
     def test_c_is_member_after_merge(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["c"]["email"] in driver.page_source or \
                "Clara GroupJoiner" in driver.page_source, \
             "C must appear as a group member after accepting the group merge"
@@ -308,7 +308,7 @@ class TestPersonalMergeAcceptAfterUnbuddy:
     def test_b_accept_is_rejected_after_unbuddy(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(ctx["merge_link"])
-        time.sleep(1)
+        pause(1)
         assert "invalid or has expired" in driver.page_source, \
             "Removing the contact expires the request, so it can no longer re-link them"
 
@@ -387,7 +387,7 @@ class TestProjectMergeAcceptAfterLeave:
     def test_m_accept_is_rejected_after_leaving(self, driver, w, ctx):
         _login_as(driver, ctx["m"])
         driver.get(ctx["merge_link"])
-        time.sleep(1)
+        pause(1)
         assert "invalid or has expired" in driver.page_source, \
             "Leaving the project expires the request, so it can no longer re-add M"
 
@@ -459,9 +459,9 @@ class TestProjectMergeAcceptAfterArchive:
     def test_m_accept_is_rejected_on_archived_project(self, driver, w, ctx):
         _login_as(driver, ctx["m"])
         driver.get(ctx["merge_link"])
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-accept-merge").click()
-        time.sleep(1)
+        pause(1)
         assert "invalid or has expired" in driver.page_source, \
             "Accepting on an archived project must fail cleanly, not mutate it"
 

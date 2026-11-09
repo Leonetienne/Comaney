@@ -10,6 +10,7 @@ from helpers import (
     _url, click, wait_url, wait_text, fill, BASE_URL,
     setup_user, cleanup_user,
 )
+from pacing import pause
 
 
 @pytest.fixture(scope="module")
@@ -55,7 +56,7 @@ class TestProfile:
         driver.get(_url("/profile/"))
         click(w, By.XPATH, "//form[contains(@action,'api-key/revoke')]//button")
         wait_url(w, "/profile/")
-        time.sleep(1)
+        pause(1)
         resp = requests.get(
             f"{BASE_URL}/api/v2/account/",
             headers={"Authorization": f"Bearer {ctx['api_key']}"},

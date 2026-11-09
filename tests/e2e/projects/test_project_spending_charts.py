@@ -3,7 +3,6 @@ Spending over time (line chart) and tag distribution (bar chart) on the
 project's Insights tab. Both charts use Chart.js via project_charts.js and
 are visible regardless of whether the project is solo or multi-member.
 """
-import time
 from datetime import date, timedelta
 
 import pytest
@@ -11,6 +10,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_group, _add_group_member, _create_group_expense
+from pacing import pause
 
 
 def _get_group_uid(group_id: int) -> str:
@@ -97,7 +97,7 @@ class TestSpendingOverTimeChart:
     def test_spending_over_time_section_visible(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(1)
+        pause(1)
         assert "Spending over time" in driver.page_source, \
             "Spending over time section must appear when project has approved non-settlement expenses"
 
@@ -167,7 +167,7 @@ class TestSpendingOverTimeOldProject:
         # date-range picker (which only affects the expense list/export),
         # so these ~400-day-old expenses must still show up on the chart.
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(1)
+        pause(1)
         labels = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.spendingOverTime; "
             "return d ? d.labels : [];"
@@ -214,7 +214,7 @@ class TestProjectTotalSpendingLabel:
         _login_as(driver, ctx["admin"])
         # Default date range (current financial month) excludes the 400-day-old expense.
         driver.get(_url(f"/projects/{ctx['uid']}/"))
-        time.sleep(1)
+        pause(1)
         label_text = driver.find_element(By.ID, "proj-total-label").text
         assert "120.00" in label_text, (
             "Total project spendings must include all-time expenses (100.00 + 20.00 = 120.00), "
@@ -255,7 +255,7 @@ class TestProjectTotalSpendingLabelSoloProject:
     def test_total_label_visible_for_solo_project(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/"))
-        time.sleep(1)
+        pause(1)
         section = driver.find_element(By.ID, "section-total-spending")
         assert section.is_displayed(), \
             "Total project spendings section must be visible for solo projects too"
@@ -291,7 +291,7 @@ class TestTagDistributionChart:
     def test_tag_chart_section_visible(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(1)
+        pause(1)
         assert "Project spending by tag" in driver.page_source, \
             "Project spending by tag section must appear when feuser has tags on their expenses"
 
@@ -333,7 +333,7 @@ class TestTagDistributionChart:
         # the expense's full value (90.00), not just the member's own share.
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(1)
+        pause(1)
         labels = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
             "return d ? d.labels : [];"
@@ -355,7 +355,7 @@ class TestTagDistributionChart:
         # Turning the switch on restores the member's own 50% share (45.00)
         # instead of the expense's full value.
         driver.find_element(By.ID, "tag-dist-my-share-only").click()
-        time.sleep(1)
+        pause(1)
         labels = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
             "return d ? d.labels : [];"
@@ -373,9 +373,9 @@ class TestTagDistributionChart:
         # The owner's own tag always counts the full expense value, switch or not.
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "tag-dist-my-share-only").click()
-        time.sleep(1)
+        pause(1)
         labels = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
             "return d ? d.labels : [];"
@@ -394,7 +394,7 @@ class TestTagDistributionChart:
         # expenses behind that bar in the expense list below.
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(1)
+        pause(1)
         labels = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
             "return d ? d.labels : [];"
@@ -410,7 +410,7 @@ class TestTagDistributionChart:
     def test_tag_dist_queries_for_untagged(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(1)
+        pause(1)
         queries = driver.execute_script(
             "var d = window.PROJECT_CHARTS && window.PROJECT_CHARTS.tagDist; "
             "return d ? d.queries : [];"
@@ -424,7 +424,7 @@ class TestTagDistributionChart:
         # pre-fill the search box and apply the filter on load.
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/?q=" + 'tag%3D%22Camping%22'))
-        time.sleep(1)
+        pause(1)
         search_value = driver.find_element(By.ID, "proj-exp-search").get_attribute("value")
         assert search_value == 'tag="Camping"', \
             f"?q= must pre-fill the expense search box, got '{search_value}'"
@@ -438,7 +438,7 @@ class TestTagDistributionChart:
         # chart's original deep-linked query.
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/?q=" + 'tag%3D%22Camping%22'))
-        time.sleep(1)
+        pause(1)
         assert "q=" not in driver.current_url, \
             f"?q= must be stripped from the URL right after page load, got '{driver.current_url}'"
 
@@ -449,9 +449,9 @@ class TestTagDistributionChart:
         # carried it.
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/?q=" + 'tag%3D%22Camping%22'))
-        time.sleep(1)
+        pause(1)
         driver.get(driver.current_url)
-        time.sleep(1)
+        pause(1)
         search_value = driver.find_element(By.ID, "proj-exp-search").get_attribute("value")
         assert search_value == "", \
             f"Reloading after the ?q= deep link must not restore the stale query, got '{search_value}'"
@@ -473,14 +473,14 @@ class TestSoloProjectSpendingChart:
     def test_solo_spending_over_time_visible(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(1)
+        pause(1)
         assert "Spending over time" in driver.page_source, \
             "Solo project must show Spending over time chart when it has expenses"
 
     def test_solo_total_spending_label_visible(self, driver, w, ctx):
         # "Total:" comes from the expense breakdown card, on the Expense list tab.
         driver.get(_url(f"/projects/{ctx['uid']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Total:" in driver.page_source, \
             "Solo project must show the total spending amount on its expense card"
 
@@ -490,7 +490,7 @@ class TestSoloProjectSpendingChart:
 
     def test_solo_pie_chart_absent(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(1)
+        pause(1)
         assert "Spending breakdown" not in driver.page_source, \
             "Solo project must never show the multi-member pie chart"
 

@@ -15,13 +15,13 @@ Two sub-scenarios:
 
 Requirements: req 10.8 and the admin-auto-approve code fix.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_group, _add_group_member
+from pacing import pause
 
 
 def _create_group_dummy(group_id: int, display_name: str) -> str:
@@ -56,7 +56,7 @@ class TestGroupSettlementNonAdminPaysDummy:
     def test_member_submits_payment_to_dummy(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" in driver.page_source, \
             "Pay someone back section must be visible for member"
 
@@ -68,7 +68,7 @@ class TestGroupSettlementNonAdminPaysDummy:
         assert any("Cash Dummy" in t for t in opt_texts), \
             "Creditor dropdown must include the group dummy"
         cred_sel.select_by_visible_text("Cash Dummy (offline member)")
-        time.sleep(0.3)
+        pause(0.3)
 
         amt = driver.find_element(By.ID, "settle-amount")
         amt.clear()
@@ -77,13 +77,13 @@ class TestGroupSettlementNonAdminPaysDummy:
         driver.find_element(
             By.ID, "btn-settle-individual"
         ).click()
-        time.sleep(0.5)
+        pause(0.5)
         # Dialog must say admin needs to confirm
         msg = driver.find_element(By.ID, "cdialog-msg").text
         assert "admin" in msg.lower() or "offline" in msg.lower(), \
             "Dialog must mention that the admin needs to confirm on buddy summary"
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "settlement record" in driver.page_source.lower(), \
             "Flash must confirm settlement was created"
 
@@ -101,7 +101,7 @@ class TestGroupSettlementNonAdminPaysDummy:
     def test_admin_sees_pending_approvals_section(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Waiting for your approval" in driver.page_source, \
             "Admin must see 'Waiting for your approval' section"
         assert "Cash Dummy" in driver.page_source, \
@@ -109,16 +109,16 @@ class TestGroupSettlementNonAdminPaysDummy:
 
     def test_admin_approves_dummy_settlement(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-review-dummy-']").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-approve-settlement").click()
-        time.sleep(1)
+        pause(1)
         assert "confirmed" in driver.page_source.lower() or \
                "approved" in driver.page_source.lower(), \
             "Flash must confirm approval on behalf of the offline member"
 
     def test_section_gone_after_approval(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Waiting for your approval" not in driver.page_source, \
             "Section must disappear after admin has approved"
 
@@ -148,7 +148,7 @@ class TestGroupSettlementAdminPaysDummyAutoApprove:
     def test_admin_submits_payment_to_dummy(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" in driver.page_source
 
         # Admin selects self as debtor (default), dummy as creditor
@@ -158,7 +158,7 @@ class TestGroupSettlementAdminPaysDummyAutoApprove:
         assert any("Instant Dummy" in t for t in opt_texts), \
             "Creditor dropdown must include the group dummy"
         cred_sel.select_by_visible_text("Instant Dummy (offline member)")
-        time.sleep(0.3)
+        pause(0.3)
 
         amt = driver.find_element(By.ID, "settle-amount")
         amt.clear()
@@ -167,9 +167,9 @@ class TestGroupSettlementAdminPaysDummyAutoApprove:
         driver.find_element(
             By.ID, "btn-settle-individual"
         ).click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "settlement record" in driver.page_source.lower()
 
     def test_settlement_is_immediately_approved(self, driver, w, ctx):
@@ -185,6 +185,6 @@ class TestGroupSettlementAdminPaysDummyAutoApprove:
 
     def test_no_pending_section_for_admin_after_auto_approve(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Waiting for your approval" not in driver.page_source, \
             "Auto-approved settlement must not create a pending item"

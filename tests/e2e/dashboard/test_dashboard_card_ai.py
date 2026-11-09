@@ -11,6 +11,7 @@ import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, ai_unavailable, get_ai_user_config, run_cmd, set_ai_user_config, setup_user, cleanup_user, session_cookies, BASE_URL, fill
+from pacing import pause
 
 AI_URL = BASE_URL + "/budget/dashboard/cards/ai/"
 CARDS_URL = BASE_URL + "/budget/dashboard/cards/"
@@ -50,15 +51,15 @@ def _cm_text(driver, backdrop_id: str) -> str:
 
 def _open_add_dialog(driver, w):
     driver.get(_url("/budget/"))
-    time.sleep(3)
+    pause(3)
     driver.find_element(By.XPATH, "//button[contains(text(),'New dashboard card')]").click()
-    time.sleep(1)
+    pause(1)
 
 
 def _ai_available(driver) -> bool:
     """True if a real AI call could succeed: own key or a working trial key."""
     driver.get(_url("/budget/"))
-    time.sleep(2)
+    pause(2)
     return len(driver.find_elements(By.CSS_SELECTOR, ".dash-ai-section")) > 0
 
 
@@ -116,9 +117,9 @@ class TestVisibility:
 
     def test_visible_with_own_key(self, driver, w, ctx, with_fake_key):
         driver.get(_url("/budget/"))
-        time.sleep(2)
+        pause(2)
         driver.find_element(By.XPATH, "//button[contains(text(),'New dashboard card')]").click()
-        time.sleep(1)
+        pause(1)
         section = driver.find_element(By.CSS_SELECTOR, "#dash-add-backdrop .dash-ai-section")
         assert section.is_displayed()
         assert "let AI create the card for you" in driver.page_source
@@ -129,13 +130,13 @@ class TestVisibility:
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        time.sleep(1)
+        pause(1)
 
     def test_hidden_when_disable_ai_ui(self, driver, w, ctx, with_fake_key):
         _set_disable_ai_ui(ctx["email"], True)
         try:
             driver.get(_url("/budget/"))
-            time.sleep(2)
+            pause(2)
             assert not driver.find_elements(By.CSS_SELECTOR, ".dash-ai-section")
         finally:
             _set_disable_ai_ui(ctx["email"], False)
@@ -150,13 +151,13 @@ class TestVisibility:
         card_id = r.json()["card"]["id"]
 
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
         driver.execute_script(
             "Array.from(document.querySelectorAll('.dash-card')).find("
             "  c => c.querySelector('.dash-card-title')?.textContent?.trim() === 'AIPlaceholderTest'"
             ")?.querySelector('.dash-card-edit-btn')?.click()"
         )
-        time.sleep(1)
+        pause(1)
         placeholder = driver.find_element(
             By.CSS_SELECTOR, "#dash-edit-backdrop .dash-ai-input"
         ).get_attribute("placeholder")
@@ -164,7 +165,7 @@ class TestVisibility:
         driver.find_element(
             By.XPATH, "//div[@id='dash-edit-backdrop']//button[text()='Cancel']"
         ).click()
-        time.sleep(1)
+        pause(1)
         sess.delete(f"{CARDS_URL}{card_id}/", headers={"X-CSRFToken": csrf})
 
 
@@ -215,6 +216,6 @@ class TestGenerateFlow:
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        time.sleep(1)
+        pause(1)
         after_count = len(sess.get(CARDS_URL).json()["cards"])
         assert after_count == before_count

@@ -38,6 +38,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, ai_unavailable, api_get, setup_user, cleanup_user
 from bhelpers import share_dialog_click, share_dialog_open, share_dialog_type
+from pacing import pause
 
 DOCKER_WEB = "comaney-web-1"
 ASSET = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "projectpic.jpg")
@@ -135,7 +136,7 @@ def _expense_in_api(title_prefix: str, ctx: dict) -> bool:
 def _ui_create_project(driver, name: str, description: str = "") -> int:
     """Create a project via /projects/ and return its uid (from redirect URL)."""
     driver.get(_url("/projects/"))
-    time.sleep(1)
+    pause(1)
     driver.execute_script(
         "arguments[0].value = arguments[1];",
         driver.find_element(By.ID, "project-name"), name,
@@ -146,7 +147,7 @@ def _ui_create_project(driver, name: str, description: str = "") -> int:
             driver.find_element(By.ID, "project-description"), description,
         )
     driver.find_element(By.ID, "btn-create-project").click()
-    time.sleep(2)
+    pause(2)
     m = re.search(r"/projects/(\d+)/", driver.current_url)
     assert m, f"Expected redirect to /projects/<uid>/, got: {driver.current_url}"
     return int(m.group(1))
@@ -155,15 +156,15 @@ def _ui_create_project(driver, name: str, description: str = "") -> int:
 def _ui_upload_picture(driver, project_uid: int) -> None:
     """Upload projectpic.jpg via the project settings page."""
     driver.get(_url(f"/projects/{project_uid}/settings/"))
-    time.sleep(1)
+    pause(1)
     driver.execute_script("document.getElementById('project-pic-input').style.display = 'block';")
     driver.find_element(By.ID, "project-pic-input").send_keys(ASSET)
-    time.sleep(0.3)
+    pause(0.3)
     # Fallback submit in case the change-event auto-upload did not fire
     driver.execute_script(
         "var f = document.getElementById('project-pic-upload-form'); if (f) f.submit();"
     )
-    time.sleep(2)
+    pause(2)
 
 
 def _get_personal_dummy_pk(email: str, name: str) -> int:
@@ -177,11 +178,11 @@ def _get_personal_dummy_pk(email: str, name: str) -> int:
 def _ui_add_personal_dummy(driver, name: str) -> None:
     """Add a personal offline contact via the /buddies/ page form."""
     driver.get(_url("/buddies/"))
-    time.sleep(1)
+    pause(1)
     inp = driver.find_element(By.CSS_SELECTOR, "form.inline-form input[name='display_name']")
     driver.execute_script("arguments[0].value = arguments[1];", inp, name)
     driver.execute_script("arguments[0].closest('form').submit();", inp)
-    time.sleep(2)
+    pause(2)
     assert name in driver.page_source, \
         f"'{name}' must appear on the buddies page after adding as personal offline contact"
 
@@ -189,7 +190,7 @@ def _ui_add_personal_dummy(driver, name: str) -> None:
 def _ui_add_dummy(driver, project_uid: int, name: str) -> None:
     """Add an offline member via the project settings form."""
     driver.get(_url(f"/projects/{project_uid}/settings/"))
-    time.sleep(2)
+    pause(2)
     inp = driver.find_element(By.CSS_SELECTOR, "input[name='display_name']")
     driver.execute_script("arguments[0].value = arguments[1];", inp, name)
     driver.execute_script(
@@ -200,7 +201,7 @@ def _ui_add_dummy(driver, project_uid: int, name: str) -> None:
     driver.execute_script(
         "document.getElementById('btn-group-add-dummy').closest('form').submit();"
     )
-    time.sleep(2)
+    pause(2)
     assert name in driver.page_source, \
         f"'{name}' must appear on the project page after adding as offline member"
 
@@ -211,7 +212,7 @@ def _ui_parse(driver, description: str) -> bool:
     Returns True when cards appear, False if AI is unavailable or timed out.
     """
     driver.get(_url("/budget/ai/express-creation/"))
-    time.sleep(1)
+    pause(1)
     if "/profile" in driver.current_url:
         return False
     src = driver.page_source
@@ -243,13 +244,13 @@ def _set_value(driver, card, amount: str) -> None:
     inp = card.find_element(By.CSS_SELECTOR, ".edit-value")
     driver.execute_script("arguments[0].value = arguments[1];", inp, amount)
     driver.execute_script("arguments[0].dispatchEvent(new Event('input'));", inp)
-    time.sleep(0.2)
+    pause(0.2)
 
 
 def _click_tab(driver, card, tab_class: str) -> None:
     el = card.find_element(By.CSS_SELECTOR, tab_class)
     driver.execute_script("arguments[0].click();", el)
-    time.sleep(0.5)
+    pause(0.5)
 
 
 def _set_payer(driver, card, option_text_fragment: str) -> None:
@@ -260,7 +261,7 @@ def _set_payer(driver, card, option_text_fragment: str) -> None:
         "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
         sel, target.get_attribute("value"),
     )
-    time.sleep(0.5)
+    pause(0.5)
 
 
 def _select_contact(driver, card, name_fragment: str) -> None:
@@ -272,7 +273,7 @@ def _select_contact(driver, card, name_fragment: str) -> None:
         "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
         sel, target.get_attribute("value"),
     )
-    time.sleep(0.5)
+    pause(0.5)
 
 
 def _uncheck_participant(driver, card, name_fragment: str) -> None:
@@ -282,7 +283,7 @@ def _uncheck_participant(driver, card, name_fragment: str) -> None:
     cb = label.find_element(By.TAG_NAME, "input")
     if cb.is_selected():
         driver.execute_script("arguments[0].click();", cb)
-        time.sleep(0.5)
+        pause(0.5)
 
 
 def _set_participant_slider(driver, card, sidx: int, pct: float) -> None:
@@ -294,13 +295,13 @@ def _set_participant_slider(driver, card, sidx: int, pct: float) -> None:
         "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('input'));",
         slider, str(pct),
     )
-    time.sleep(0.3)
+    pause(0.3)
 
 
 def _confirm(driver) -> None:
     """Click the Save button and wait for the success state."""
     driver.find_element(By.ID, "confirm-btn").click()
-    time.sleep(2)
+    pause(2)
     assert "saved" in driver.page_source.lower() or "created" in driver.current_url, \
         f"Confirm did not reach success state. URL: {driver.current_url}"
 
@@ -331,7 +332,7 @@ def _keep_only_first_card(driver) -> None:
         cb = card.find_element(By.CSS_SELECTOR, "input[name=selected]")
         if cb.is_selected():
             driver.execute_script("arguments[0].click();", cb)
-    time.sleep(0.3)
+    pause(0.3)
 
 
 # ---------------------------------------------------------------------------
@@ -412,7 +413,7 @@ class TestExpressWithProject:
         card = _first_card(driver)
         title = _card_title(card)
         _click_tab(driver, card, ".pcard-assign-project")
-        time.sleep(0.5)
+        pause(0.5)
         # Schanzenfest 2026 is the only project; it is pre-selected
         _confirm(driver)
         assert _expense_project_name(title, ctx["email"]) == "Schanzenfest 2026"
@@ -661,7 +662,7 @@ class TestExpressViewExpensesLink:
         card = _first_card(driver)
         _keep_only_first_card(driver)
         _click_tab(driver, card, ".pcard-assign-project")
-        time.sleep(0.5)
+        pause(0.5)
         _confirm(driver)
         href = _view_expenses_href(driver)
         assert href.rstrip("/").endswith(f"/projects/{ctx['project_uid']}"), \

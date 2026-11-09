@@ -3,13 +3,13 @@ Partnership dissolution: leave and kick flows.
 All partnerships are created via shell; each class is fully independent.
 Run with: pytest tests/e2e/buddies/test_partnership_dissolution.py -v -s
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _get_pk
+from pacing import pause
 
 
 def _setup_two_member_partnership(email_a: str, email_b: str) -> None:
@@ -69,15 +69,15 @@ class TestLeavePartnership:
     def test_leave_button_visible(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         btn = driver.find_element(By.ID, "partnership-leave-btn")
         assert btn.is_displayed()
 
     def test_leave_removes_b_membership(self, driver, w, ctx):
         driver.find_element(By.ID, "partnership-leave-btn").click()
-        time.sleep(0.8)
+        pause(0.8)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         assert _membership_count(ctx["b"]["email"]) == 0
 
     def test_solo_partnership_dissolves(self, driver, w, ctx):
@@ -86,7 +86,7 @@ class TestLeavePartnership:
 
     def test_leave_button_gone_after_reload(self, driver, w, ctx):
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         # Check DOM — the button ID also appears as a JS string literal in page_source
         btns = driver.find_elements(By.ID, "partnership-leave-btn")
         assert not btns, "Leave button should not be in DOM after membership is gone"
@@ -112,7 +112,7 @@ class TestKickPartner:
     def test_kick_button_visible(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         btn = driver.find_element(
             By.CSS_SELECTOR, f"button.partner-kick-btn[data-feuser-id='{ctx['b_pk']}']"
         )
@@ -122,9 +122,9 @@ class TestKickPartner:
         driver.find_element(
             By.CSS_SELECTOR, f"button.partner-kick-btn[data-feuser-id='{ctx['b_pk']}']"
         ).click()
-        time.sleep(0.8)
+        pause(0.8)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         assert _membership_count(ctx["b"]["email"]) == 0
 
     def test_solo_partnership_dissolves_after_kick(self, driver, w, ctx):
@@ -132,7 +132,7 @@ class TestKickPartner:
 
     def test_kicked_partner_not_shown_after_reload(self, driver, w, ctx):
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["b"]["email"] not in driver.page_source
 
 
@@ -157,11 +157,11 @@ class TestThreeMemberLeave:
     def test_c_leaves(self, driver, w, ctx):
         _login_as(driver, ctx["c"])
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "partnership-leave-btn").click()
-        time.sleep(0.8)
+        pause(0.8)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         assert _membership_count(ctx["c"]["email"]) == 0
 
     def test_a_still_in_partnership(self, driver, w, ctx):

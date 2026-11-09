@@ -2,7 +2,6 @@
 Group spending breakdown pie chart: section visibility, totals, SVG rendering,
 and bgs-card total spending display on the buddy summary page.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -12,6 +11,7 @@ from bhelpers import (
     _shell, _login_as, _create_contact_link, _get_pk,
     _create_group, _add_group_member, _create_group_expense,
 )
+from pacing import pause
 
 
 def _get_group_uid(group_id: int) -> str:
@@ -56,7 +56,7 @@ class TestGroupSpendingChart:
     def test_spending_section_visible(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(1)
+        pause(1)
         assert "Spending breakdown" in driver.page_source, \
             "Spending breakdown section must appear when group has approved non-settlement expenses"
 
@@ -124,7 +124,7 @@ class TestGroupSpendingChartHidden:
     def test_spending_section_absent(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(2)  # Wait for AJAX charts to load
+        pause(2)  # Wait for AJAX charts to load
         is_hidden = driver.execute_script(
             "var s = document.getElementById('section-spending-breakdown');"
             "if (!s) return true;"
@@ -159,7 +159,7 @@ class TestBgsCardTotalSpending:
     def test_bgs_card_shows_total(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         # Total spending is rendered as a .bgs-stat row with label "Total spending"
         stat_labels = driver.find_elements(By.CLASS_NAME, "bgs-stat-label")
         total_labels = [el for el in stat_labels if "Total spending" in el.text]
@@ -210,7 +210,7 @@ class TestPieChartClickThrough:
     def test_spending_pie_data_injected(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(2)
+        pause(2)
         has_data = driver.execute_script(
             "return !!(window.PROJECT_CHARTS && window.PROJECT_CHARTS.spendingPie)"
         )
@@ -233,7 +233,7 @@ class TestPieChartClickThrough:
         driver.execute_script(
             "arguments[0].dispatchEvent(new MouseEvent('click', {bubbles: true}));", hit_paths[0]
         )
-        time.sleep(1)
+        pause(1)
         assert "/insights/" not in driver.current_url, \
             "Clicking a pie slice must navigate away from the Insights tab to the expense list"
         search_value = driver.find_element(By.ID, "proj-exp-search").get_attribute("value")
@@ -243,31 +243,31 @@ class TestPieChartClickThrough:
     def test_click_pie_slice_strips_q_param_from_url(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(2)
+        pause(2)
         hit_paths = driver.find_elements(By.CSS_SELECTOR, "#group-spending-pie svg path[fill='transparent']")
         assert hit_paths, "Pie chart must render at least one clickable slice"
         driver.execute_script(
             "arguments[0].dispatchEvent(new MouseEvent('click', {bubbles: true}));", hit_paths[0]
         )
-        time.sleep(1)
+        pause(1)
         assert "q=" not in driver.current_url, \
             f"?q= must be stripped from the URL right after page load, got '{driver.current_url}'"
 
     def test_click_legend_row_navigates_to_expense_list(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['uid']}/insights/"))
-        time.sleep(2)
+        pause(2)
         rows = driver.find_elements(By.CLASS_NAME, "pie-legend-row")
         assert rows, "Legend must render at least one row"
         driver.execute_script("arguments[0].click();", rows[0])
-        time.sleep(1)
+        pause(1)
         search_value = driver.find_element(By.ID, "proj-exp-search").get_attribute("value")
         assert search_value.startswith('payer="'), \
             f"Clicking a legend row must pre-fill the expense search box with a payer= filter, got '{search_value}'"
 
     def test_payer_filter_matches_only_that_payer(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['uid']}/?q=" + 'payer%3D%22Piechart%20Payer%22'))
-        time.sleep(1)
+        pause(1)
         search_value = driver.find_element(By.ID, "proj-exp-search").get_attribute("value")
         assert search_value == 'payer="Piechart Payer"', \
             f"?q= must pre-fill the expense search box, got '{search_value}'"
@@ -276,6 +276,6 @@ class TestPieChartClickThrough:
 
     def test_payer_filter_excludes_other_payer(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['uid']}/?q=" + 'payer%3D%22Piechart%20Member%22'))
-        time.sleep(1)
+        pause(1)
         assert "Pie Click Expense" not in driver.page_source, \
             "payer= filter for the member must not show the expense paid by the admin"

@@ -89,9 +89,9 @@ Covers:
 - `feat~constraints~1`
 
 ### Test conventions
-`req~constraints.test-conventions~1`
+`req~constraints.test-conventions~2`
 
-End-to-end tests shall wait with `time.sleep()` rather than `WebDriverWait`, run with `-v` only (never `-x`), and guard AI-dependent tests with `helpers.ai_unavailable()` instead of `pytest.skip`.
+End-to-end tests shall wait after a browser action with `pacing.pause()` (returns once the page is idle, at most the given seconds) and with `time.sleep()` for waits the page cannot observe, rather than `WebDriverWait`, run with `-v` only (never `-x`), and guard AI-dependent tests with `helpers.ai_unavailable()` instead of `pytest.skip`.
 
 Covers:
 - `feat~constraints~1`

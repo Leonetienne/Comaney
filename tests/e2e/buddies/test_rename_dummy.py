@@ -2,7 +2,6 @@
 Rename offline contact: personal context and group context.
 Clicking the buddy name turns it into an inline text input (Enter to save, Escape to cancel).
 """
-import time
 
 import pytest
 import requests
@@ -10,6 +9,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, BASE_URL, session_cookies, setup_user, cleanup_user
 from bhelpers import _shell, _create_group, _add_group_member
+from pacing import pause
 
 
 def _session(driver):
@@ -48,7 +48,7 @@ class TestRenamePersonalDummy:
 
     def test_name_shown_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Old Name" in driver.page_source
 
     def test_name_span_is_editable(self, driver, w, ctx):
@@ -58,7 +58,7 @@ class TestRenamePersonalDummy:
     def test_click_name_shows_input(self, driver, w, ctx):
         span = driver.find_element(By.CSS_SELECTOR, ".buddy-name--editable")
         span.click()
-        time.sleep(0.3)
+        pause(0.3)
         inp = driver.find_element(By.CSS_SELECTOR, ".buddy-name--editable input")
         assert inp is not None
 
@@ -69,12 +69,12 @@ class TestRenamePersonalDummy:
             "arguments[0].dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));",
             inp,
         )
-        time.sleep(1)
+        pause(1)
         assert "New Name" in driver.page_source
 
     def test_old_name_gone(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Old Name" not in driver.page_source
 
     def test_renamed_in_database(self, driver, w, ctx):
@@ -87,14 +87,14 @@ class TestRenamePersonalDummy:
     def test_escape_cancels_rename(self, driver, w, ctx):
         span = driver.find_element(By.CSS_SELECTOR, ".buddy-name--editable")
         span.click()
-        time.sleep(0.3)
+        pause(0.3)
         inp = driver.find_element(By.CSS_SELECTOR, ".buddy-name--editable input")
         driver.execute_script("arguments[0].value = 'Discard This';", inp)
         driver.execute_script(
             "arguments[0].dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));",
             inp,
         )
-        time.sleep(0.3)
+        pause(0.3)
         assert "New Name" in driver.page_source
         assert "Discard This" not in driver.page_source
 
@@ -121,19 +121,19 @@ class TestRenameGroupDummy:
 
     def test_group_detail_shows_dummy(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Old Group Member" in driver.page_source
 
     def test_name_span_is_editable(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         span = driver.find_element(By.CSS_SELECTOR, ".buddy-name--editable")
         assert span.text.strip() == "Old Group Member"
 
     def test_click_name_shows_input(self, driver, w, ctx):
         span = driver.find_element(By.CSS_SELECTOR, ".buddy-name--editable")
         span.click()
-        time.sleep(0.3)
+        pause(0.3)
         inp = driver.find_element(By.CSS_SELECTOR, ".buddy-name--editable input")
         assert inp is not None
 
@@ -144,12 +144,12 @@ class TestRenameGroupDummy:
             "arguments[0].dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));",
             inp,
         )
-        time.sleep(1)
+        pause(1)
         assert "New Group Member" in driver.page_source
 
     def test_old_name_gone(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Old Group Member" not in driver.page_source
 
     def test_renamed_in_database(self, driver, w, ctx):

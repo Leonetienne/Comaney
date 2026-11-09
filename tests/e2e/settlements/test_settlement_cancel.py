@@ -16,7 +16,6 @@ Scenarios covered:
 - In the group view, edit button IS present for admin editing a dummy-creditor settlement
 - In the group view, approved real-user settlements cannot be deleted by the debtor
 """
-import time
 
 import pytest
 
@@ -25,6 +24,7 @@ from bhelpers import (
     _shell, _login_as, _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy, _create_group, _add_group_member,
 )
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ class TestCloneButtonAbsentForSettlements:
     def test_clone_button_absent_in_expense_list(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         # The clone URL pattern should not appear next to the settlement
         clone_action = f"/budget/expenses/{ctx['exp_pk']}/clone/"
         assert clone_action not in driver.page_source, \
@@ -147,7 +147,7 @@ class TestCloneButtonAbsentForSettlements:
             f"t.name = 'csrfmiddlewaretoken'; t.value = csrf; f.appendChild(t);"
             f"document.body.appendChild(f); f.submit();"
         )
-        time.sleep(2)
+        pause(2)
         current_ids = {e["id"] for e in api_get("/api/v2/expenses/", ctx["a"]).json()["expenses"]}
         assert current_ids == seen_before, \
             "Cloning a settlement must not create a new expense"
@@ -189,7 +189,7 @@ class TestPersonalContactSummaryButtons:
     def test_edit_button_present_for_unapproved_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(2)
+        pause(2)
         edit_url = f"/budget/expenses/{ctx['unapproved_pk']}/edit/"
         assert edit_url in driver.page_source, \
             "Edit button must appear for an unapproved real-user settlement in buddy summary"
@@ -231,21 +231,21 @@ class TestApprovedRealUserSettlementNotDeletable:
     def test_delete_button_absent_in_expense_list(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         delete_action = f"/budget/expenses/{ctx['exp_pk']}/delete/"
         assert delete_action not in driver.page_source, \
             "Delete button must not appear for approved real-user settlement in expense list"
 
     def test_delete_button_absent_in_contact_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(2)
+        pause(2)
         delete_action = f"/budget/expenses/{ctx['exp_pk']}/delete/"
         assert delete_action not in driver.page_source, \
             "Delete button must not appear for approved real-user settlement in buddy summary"
 
     def test_direct_delete_post_is_rejected(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             f"var f = document.createElement('form');"
             f"f.method = 'POST';"
@@ -255,7 +255,7 @@ class TestApprovedRealUserSettlementNotDeletable:
             f"t.name = 'csrfmiddlewaretoken'; t.value = csrf; f.appendChild(t);"
             f"document.body.appendChild(f); f.submit();"
         )
-        time.sleep(2)
+        pause(2)
 
     def test_approved_settlement_still_exists(self, driver, w, ctx):
         resp = api_get("/api/v2/expenses/", ctx["a"], params={"q": "Test Settlement"})
@@ -289,7 +289,7 @@ class TestUnapprovedSettlementCancellationEmail:
     def test_delete_button_present(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(2)
+        pause(2)
         assert f"/budget/expenses/{ctx['exp_pk']}/delete/" in driver.page_source, \
             "Delete button must be present for unapproved settlement in buddy summary"
 
@@ -305,7 +305,7 @@ class TestUnapprovedSettlementCancellationEmail:
             f"t.name = 'csrfmiddlewaretoken'; t.value = csrf; f.appendChild(t);"
             f"document.body.appendChild(f); f.submit();"
         )
-        time.sleep(2)
+        pause(2)
 
     def test_settlement_is_deleted(self, driver, w, ctx):
         resp = api_get("/api/v2/expenses/", ctx["a"], params={"q": "Test Settlement"})
@@ -360,7 +360,7 @@ class TestBulkDeleteSkipsSettlements:
     def test_bulk_delete_both(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/budget/expenses/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             f"var f = document.createElement('form');"
             f"f.method = 'POST'; f.action = '/budget/expenses/bulk-action/';"
@@ -371,7 +371,7 @@ class TestBulkDeleteSkipsSettlements:
             f"i.name=n; i.value=v; f.appendChild(i); }});"
             f"document.body.appendChild(f); f.submit();"
         )
-        time.sleep(2)
+        pause(2)
 
     def test_normal_expense_deleted(self, driver, w, ctx):
         resp = api_get("/api/v2/expenses/", ctx["a"], params={"q": "Bulk Normal Expense"})
@@ -416,7 +416,7 @@ class TestGroupViewEditButtonAbsentForRealUserSettlement:
     def test_edit_button_present_for_pending_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
-        time.sleep(2)
+        pause(2)
         edit_url = f"/budget/expenses/{ctx['pending_pk']}/edit/"
         assert edit_url in driver.page_source, \
             "Edit button must appear for a pending real-user settlement in group view (debtor can edit unapproved)"
@@ -451,14 +451,14 @@ class TestGroupViewEditButtonPresentForDummySettlement:
     def test_edit_button_present_in_group_view(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
-        time.sleep(2)
+        pause(2)
         edit_url = f"/budget/expenses/{ctx['exp_pk']}/edit/"
         assert edit_url in driver.page_source, \
             "Edit button must appear for dummy-creditor settlement in group view for admin"
 
     def test_edit_page_opens_without_redirect(self, driver, w, ctx):
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
         assert f"/budget/expenses/{ctx['exp_pk']}/edit/" in driver.current_url, \
             "Edit page must not redirect for dummy-creditor settlements"
 
@@ -490,7 +490,7 @@ class TestGroupViewApprovedSettlementNotDeletable:
     def test_delete_button_absent_in_group_view(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
-        time.sleep(2)
+        pause(2)
         delete_action = f"/projects/{ctx['grp_pk']}/expense/{ctx['exp_pk']}/delete/"
         assert delete_action not in driver.page_source, \
             "Delete button must not appear for approved settlement in group view"
@@ -505,7 +505,7 @@ class TestGroupViewApprovedSettlementNotDeletable:
             f"t.name = 'csrfmiddlewaretoken'; t.value = csrf; f.appendChild(t);"
             f"document.body.appendChild(f); f.submit();"
         )
-        time.sleep(2)
+        pause(2)
 
     def test_approved_settlement_still_exists_after_delete_attempt(self, driver, w, ctx):
         resp = api_get("/api/v2/expenses/", ctx["a"], params={"q": "Test Settlement"})

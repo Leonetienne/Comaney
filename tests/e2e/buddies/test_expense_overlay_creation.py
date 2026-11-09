@@ -21,7 +21,6 @@ upfront-payer transfers.
 
 [C5] No snapshot overlay for old owner if expense had no category/tags.
 """
-import time
 
 import pytest
 

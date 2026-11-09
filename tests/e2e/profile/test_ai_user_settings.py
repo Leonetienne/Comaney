@@ -19,7 +19,6 @@ Run with: pytest -v tests/e2e/profile/test_ai_user_settings.py | tee logfile.log
 import json
 import re
 import subprocess
-import time
 import uuid
 
 import pytest
@@ -30,6 +29,7 @@ from helpers import (
     BASE_URL, DOCKER_WEB, PASSWORD, _url, cleanup_user, click, fill,
     get_ai_user_config, require_ai_provider, run_cmd, set_ai_user_config, setup_user,
 )
+from pacing import pause
 
 KEY = "sk-e2e-own-settings-4321"
 
@@ -69,7 +69,7 @@ def _submit_ai_form(driver):
     driver.execute_script(
         "document.querySelector(\"input[name='action'][value='ai']\").closest('form').submit()"
     )
-    time.sleep(2)
+    pause(2)
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -107,7 +107,7 @@ class TestProfileForm:
 
     def test_labels_come_from_provider(self, driver, w, ctx, fields):
         driver.get(_url("/profile/#section-ai"))
-        time.sleep(1)
+        pause(1)
         if not fields:
             assert _own_settings_inputs(driver) == []
             assert driver.find_element(By.ID, "id_ai_custom_instructions").is_displayed()
@@ -121,7 +121,7 @@ class TestProfileForm:
 
     def test_save_shows_masked_value(self, driver, w, ctx, takes_key):
         driver.get(_url("/profile/#section-ai"))
-        time.sleep(1)
+        pause(1)
         if not takes_key:
             fill(w, By.ID, "id_ai_custom_instructions", "No-key provider save")
             _submit_ai_form(driver)
@@ -139,7 +139,7 @@ class TestProfileForm:
 
     def test_resave_without_change_keeps_key(self, driver, w, ctx, takes_key):
         driver.get(_url("/profile/#section-ai"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_ai_custom_instructions", "Re-save test")
         _submit_ai_form(driver)
         assert "Saved." in driver.page_source
@@ -148,7 +148,7 @@ class TestProfileForm:
     def test_saving_drops_other_providers_entries(self, driver, w, ctx, takes_key):
         _set_raw_config(ctx["email"], {**_raw_config(ctx["email"]), "retired": {"api_key": "sk-old"}})
         driver.get(_url("/profile/#section-ai"))
-        time.sleep(1)
+        pause(1)
         _submit_ai_form(driver)
         assert "Saved." in driver.page_source
         expected = {_active_provider(): {"api_key": KEY}} if takes_key else {}
@@ -160,7 +160,7 @@ class TestProfileForm:
             assert _raw_config(ctx["email"]) == {}
             return
         driver.get(_url("/profile/#section-ai"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_ai_api_key", "")
         _submit_ai_form(driver)
         assert "Saved." in driver.page_source
@@ -239,12 +239,12 @@ class TestDemoUser:
         fill(w, By.ID, "id_email", demo["email"])
         fill(w, By.ID, "id_password", demo["password"])
         click(w, By.CSS_SELECTOR, "button[type=submit]")
-        time.sleep(2)
+        pause(2)
         if "/demo-banner/" in driver.current_url:
             click(w, By.ID, "btn-demo-accept")
-            time.sleep(2)
+            pause(2)
         driver.get(_url("/profile/#section-ai"))
-        time.sleep(1)
+        pause(1)
         card = driver.find_element(By.ID, "section-ai")
         assert "Not available on demo accounts." in card.text
         assert not driver.find_element(By.ID, "id_ai_custom_instructions").is_enabled()

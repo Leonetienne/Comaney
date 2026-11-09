@@ -4,7 +4,6 @@ overlays keep their tags and category, remapped like their own expenses.
 Requirement: req~partnership.wizard.apply~2 (specs/requirements/partnership.md).
 Run with: pytest tests/e2e/partnerships/test_partnership_onboarding_records.py -v | tee logfile.log
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -12,6 +11,7 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_contact_link, _get_pk, _create_personal_expense_with_buddy
+from pacing import pause
 
 
 def _create_invite_via_shell(inviter_email: str, invitee_email: str) -> str:
@@ -114,9 +114,9 @@ class TestOnboardingRemapsRecurringAndOverlays:
     def test_complete_wizard(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/buddies/partnership/accept/{ctx['token']}/"))
-        time.sleep(1.5)
+        pause(1.5)
         driver.find_element(By.ID, "step1-next").click()
-        time.sleep(0.8)
+        pause(0.8)
 
         Select(driver.find_element(
             By.CSS_SELECTOR, "#step-2 select.wizard-map-select[data-source='booze_pm']"
@@ -124,19 +124,19 @@ class TestOnboardingRemapsRecurringAndOverlays:
         driver.find_element(
             By.CSS_SELECTOR, "#step-2 .wizard-map-drop input[data-source='junk_pm']"
         ).click()
-        time.sleep(0.3)
+        pause(0.3)
         driver.find_element(By.ID, "step2-next").click()
-        time.sleep(0.8)
+        pause(0.8)
 
         Select(driver.find_element(
             By.CSS_SELECTOR, "#step-3 select.wizard-map-select[data-source='snacks_pm']"
         )).select_by_value("food_pm")
-        time.sleep(0.3)
+        pause(0.3)
         driver.find_element(By.ID, "step3-next").click()
-        time.sleep(0.8)
+        pause(0.8)
 
         driver.find_element(By.ID, "step4-apply").click()
-        time.sleep(3)
+        pause(3)
         assert "/budget/categories" in driver.current_url
 
     def test_own_expense_remapped(self, driver, w, ctx):

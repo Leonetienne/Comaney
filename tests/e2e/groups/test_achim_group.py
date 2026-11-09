@@ -6,13 +6,13 @@ Achim Archive: group scenarios.
 5.11d: Bulk-deleting group Achim Archive's expenses via the wipe confirmation page
        removes the archive from the group member list.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _create_group
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -61,13 +61,13 @@ class TestAchimGroupCreated:
 
     def test_group_dummy_visible_before_removal(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Offline Otto" in driver.page_source
 
     def test_remove_link_leads_to_confirm_page(self, driver, w, ctx):
         dummy_card = driver.find_element(By.CSS_SELECTOR, ".buddy-card-dummy")
         dummy_card.find_element(By.CSS_SELECTOR, "a[href*='remove']").click()
-        time.sleep(1)
+        pause(1)
         assert "remove" in driver.current_url
 
     def test_confirm_page_shows_group_context(self, driver, w, ctx):
@@ -82,7 +82,7 @@ class TestAchimGroupCreated:
 
     def test_submit_redirects_to_group_page(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-confirm-kick").click()
-        time.sleep(1.5)
+        pause(1.5)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url
 
     def test_achim_modal_visible(self, driver, w, ctx):
@@ -94,7 +94,7 @@ class TestAchimGroupCreated:
         # rendered in a collapsed DOM section, so page_source always contains the
         # name; what matters is that no member card still lists Otto.
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         member_names = [
             el.text for el in driver.find_elements(By.CSS_SELECTOR, ".buddy-card-dummy .buddy-name")
         ]
@@ -162,12 +162,12 @@ class TestAchimGroupWipe:
 
     def test_achim_visible_in_group_members(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Achim Archive" in driver.page_source
 
     def test_delete_expenses_link_leads_to_wipe_page(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "a[href*='archive-wipe']").click()
-        time.sleep(1)
+        pause(1)
         assert "archive-wipe" in driver.current_url
 
     def test_wipe_page_shows_group_context(self, driver, w, ctx):
@@ -182,7 +182,7 @@ class TestAchimGroupWipe:
 
     def test_submit_wipes_and_redirects(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-confirm-wipe").click()
-        time.sleep(1.5)
+        pause(1.5)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url
 
     def test_flash_message_shown(self, driver, w, ctx):
@@ -191,7 +191,7 @@ class TestAchimGroupWipe:
 
     def test_achim_gone_from_group_members(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Achim Archive" not in driver.page_source, \
             "Achim Archive must be gone from group members after wipe"
 
@@ -254,14 +254,14 @@ class TestAchimGroupSelfDebtCancels:
 
     def test_group_page_loads(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1.5)
+        pause(1.5)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url
 
     def test_achim_is_only_dummy_member(self, driver, w, ctx):
         # Check member cards only — archived notes in collapsed DOM sections
         # contain "DummyA"/"DummyB" as audit trail text, so page_source is not reliable.
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         member_names = [
             el.text for el in driver.find_elements(By.CSS_SELECTOR, ".buddy-card-dummy .buddy-name")
         ]
@@ -275,7 +275,7 @@ class TestAchimGroupSelfDebtCancels:
     def test_no_simplified_links_in_page(self, driver, w, ctx):
         # Debt graphs live on the Insights tab, not the default expense list.
         driver.get(_url(f"/projects/{ctx['group_id']}/insights/"))
-        time.sleep(1.5)
+        pause(1.5)
         src = driver.page_source
         assert '"links": []' in src or '"links":[]' in src, \
             "simplified_graph_json must contain no links after both dummies merged into Achim"

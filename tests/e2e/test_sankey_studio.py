@@ -17,13 +17,13 @@ i.e. what the user actually sees, not just the JS object graph.
 Run with (live stack required):
     pytest tests/e2e/test_sankey_studio.py -v | tee logfile.log
 """
-import time
 from datetime import date
 
 from selenium.webdriver.common.by import By
 
 from bhelpers import _confirm
 from helpers import _url, cleanup_user, run_cmd, server_today, setup_user
+from pacing import pause
 
 SANKEY_URL = _url("/budget/sankey/")
 
@@ -76,10 +76,10 @@ class TestSankeyStudioNav:
         ctx = _setup_user(driver, w)
         try:
             driver.get(_url("/budget/"))
-            time.sleep(1)
+            pause(1)
             link = driver.find_element(By.LINK_TEXT, "Sankey Studio")
             link.click()
-            time.sleep(1)
+            pause(1)
             assert "/budget/sankey/" in driver.current_url
             assert "Sankey Studio" in driver.page_source
         finally:
@@ -93,9 +93,9 @@ class TestSankeyStudioGenerate:
             _create_expense(ctx["email"], "Salary", "Food", 250, TODAY)
 
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             driver.execute_script("window._sankeyEditor.generate();")
-            time.sleep(1)
+            pause(1)
             assert driver.find_element(By.ID, "sankey-error").text == ""
             chart = driver.execute_script("return window._sankeyEditor.chart;")
             assert chart == {"nodes": [], "links": []}
@@ -108,7 +108,7 @@ class TestSankeyStudioGenerate:
             _create_expense(ctx["email"], "Salary", "Food", 250, TODAY)
 
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             result = driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -124,7 +124,7 @@ class TestSankeyStudioGenerate:
             assert result["sourceKey"], "Default 'Salary' category must exist from create_defaults"
 
             driver.find_element(By.ID, "sankey-generate").click()
-            time.sleep(2)
+            pause(2)
 
             assert driver.find_element(By.ID, "sankey-error").text == ""
             chart = driver.execute_script("return window._sankeyEditor.chart;")
@@ -141,7 +141,7 @@ class TestSankeyStudioGenerate:
             _create_expense(ctx["email"], "Salary", "Food", 250, TODAY)
 
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
 
             result = driver.execute_script(
                 """
@@ -166,7 +166,7 @@ class TestSankeyStudioGenerate:
                 "Default 'Salary' category and 'Food' tag must exist from create_defaults"
 
             driver.find_element(By.ID, "sankey-generate").click()
-            time.sleep(2)
+            pause(2)
 
             chart = driver.execute_script("return window._sankeyEditor.chart;")
             assert chart is not None
@@ -195,7 +195,7 @@ class TestSankeyStudioGenerate:
                              txn_type="TransactionType.SAVINGS_DEPOSIT")
 
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             result = driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -214,7 +214,7 @@ class TestSankeyStudioGenerate:
             assert result["sourceKey"] and result["targetKey"]
 
             driver.find_element(By.ID, "sankey-generate").click()
-            time.sleep(2)
+            pause(2)
 
             assert driver.find_element(By.ID, "sankey-error").text == ""
             chart = driver.execute_script("return window._sankeyEditor.chart;")
@@ -230,7 +230,7 @@ class TestSankeyStudioGenerate:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -243,10 +243,10 @@ class TestSankeyStudioGenerate:
                 """
             )
             driver.find_element(By.ID, "sankey-save").click()
-            time.sleep(1)
+            pause(1)
 
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             placed_titles = driver.execute_script(
                 "return Object.keys(window._sankeyEditor.nodes).map("
                 "k => window._sankeyEditor._nodeTitle(k));"
@@ -259,7 +259,7 @@ class TestSankeyStudioGenerate:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -298,7 +298,7 @@ class TestSankeyStudioGenerate:
             _create_expense(ctx["email"], "Sales", "Health", 50, TODAY)
 
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             driver.find_element(By.ID, "sankey-add-connector").click()
 
             result = driver.execute_script(
@@ -331,7 +331,7 @@ class TestSankeyStudioGenerate:
             assert result["edgeCount"] == 4  # 2 in + 2 out, not 2*2 direct
 
             driver.find_element(By.ID, "sankey-generate").click()
-            time.sleep(2)
+            pause(2)
 
             chart = driver.execute_script("return window._sankeyEditor.chart;")
             values_by_title = {n["title"]: n["value"] for n in chart["nodes"]}
@@ -345,7 +345,7 @@ class TestSankeyStudioGenerate:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             error_text = driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -372,7 +372,7 @@ class TestSankeyStudioToolbar:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             layout = driver.execute_script(
                 """
                 const toolbar = document.getElementById('sankey-canvas-toolbar');
@@ -409,7 +409,7 @@ class TestSankeyStudioColorOverride:
             _create_expense(ctx["email"], "Salary", "Food", 250, TODAY)
 
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -428,7 +428,7 @@ class TestSankeyStudioColorOverride:
                 """
             )
             driver.find_element(By.ID, "sankey-generate").click()
-            time.sleep(2)
+            pause(2)
 
             chart = driver.execute_script("return window._sankeyEditor.chart;")
             colors_by_title = {n["title"]: n["color"] for n in chart["nodes"]}
@@ -448,7 +448,7 @@ class TestSankeyStudioColorOverride:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             result = driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -483,7 +483,7 @@ class TestSankeyStudioColorOverride:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             result = driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -510,7 +510,7 @@ class TestSankeyStudioSnapToGrid:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             # Snap to grid defaults to enabled -- both the editor flag and
             # the checkbox itself must agree on that.
             before = driver.execute_script(
@@ -533,7 +533,7 @@ class TestSankeyStudioSnapToGrid:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             result = driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -568,7 +568,7 @@ class TestSankeyStudioAnchors:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             result = driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -608,7 +608,7 @@ class TestSankeyStudioAnchors:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             result = driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -638,7 +638,7 @@ class TestSankeyStudioAnchors:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             result = driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -672,7 +672,7 @@ class TestSankeyStudioAnchors:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             # Anchors must reshape the line with a smooth, tangent-continuous
             # curve (all cubic-bezier "C" segments), the same rounded feel as
             # an unshaped connection -- never sharp straight-line "L" joints.
@@ -705,7 +705,7 @@ class TestSankeyStudioTooltip:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             result = driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -755,7 +755,7 @@ class TestSankeyStudioTooltip:
             _create_expense(ctx["email"], "Salary", "Food", 250, TODAY)
 
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             driver.execute_script(
                 """
                 const ed = window._sankeyEditor;
@@ -771,7 +771,7 @@ class TestSankeyStudioTooltip:
                 """
             )
             driver.find_element(By.ID, "sankey-generate").click()
-            time.sleep(2)
+            pause(2)
 
             result = driver.execute_script(
                 """
@@ -795,7 +795,7 @@ class TestSankeyStudioChartHeight:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             # 12 nodes all feeding one target used to be squeezed into a flat
             # 480px budget; height must now scale with the most crowded
             # column instead of being capped there.
@@ -822,7 +822,7 @@ class TestSankeyStudioChartHeight:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             # Root -> 8 direct leaves (naive longest-path depth 1) plus
             # Root -> Mid -> 8 more leaves (naive depth 2). d3-sankey's
             # default "justify" alignment pushes every *sink* node (no
@@ -866,7 +866,7 @@ class TestSankeyStudioNodeSpawn:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             # Pan far away from the origin -- the old fixed-grid spawn logic
             # placed every new node starting at world (30, 30) regardless of
             # pan/zoom, which could land far outside a panned-away
@@ -896,7 +896,7 @@ class TestSankeyStudioNodeSpawn:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             # A heavily zoomed-in viewport only fits a couple of grid slots;
             # once they're used up, further adds must cascade with a small
             # offset instead of landing exactly on top of earlier nodes.
@@ -924,7 +924,7 @@ class TestSankeyStudioConnectAutoPan:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             # Two nodes far apart wouldn't both fit in the viewport, making
             # them impossible to wire together without panning manually
             # first -- dragging a connection with the cursor held near the
@@ -984,7 +984,7 @@ class TestSankeyStudioConnectAutoPan:
         ctx = _setup_user(driver, w)
         try:
             driver.get(SANKEY_URL)
-            time.sleep(1)
+            pause(1)
             result = driver.execute_script(
                 """
                 const ed = window._sankeyEditor;

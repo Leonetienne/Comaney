@@ -5,13 +5,13 @@ type != expense hides/clears the assignment, and an active assignment locks
 the type dropdown to "Expense". The two can never end up in conflict because
 each direction blocks the other from being set first.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _create_group, _shell
+from pacing import pause
 
 
 class TestExpenseTypeAssignmentLock:
@@ -26,7 +26,7 @@ class TestExpenseTypeAssignmentLock:
 
     def _open_form(self, driver):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1.5)
+        pause(1.5)
 
     def _set_type(self, driver, value):
         driver.execute_script(
@@ -35,7 +35,7 @@ class TestExpenseTypeAssignmentLock:
             "sel.dispatchEvent(new Event('change', {bubbles: true}));",
             value,
         )
-        time.sleep(0.3)
+        pause(0.3)
 
     def _type_option_disabled(self, driver, value):
         return driver.execute_script(
@@ -54,14 +54,14 @@ class TestExpenseTypeAssignmentLock:
 
     def _select_project(self, driver, group_id):
         driver.find_element(By.ID, "assign-project").click()
-        time.sleep(0.3)
+        pause(0.3)
         sel = driver.find_element(By.ID, "buddy-group-select")
         driver.execute_script(
             "arguments[0].value = arguments[1];"
             "arguments[0].dispatchEvent(new Event('change'));",
             sel, str(group_id),
         )
-        time.sleep(0.5)
+        pause(0.5)
 
     def test_assignment_visible_by_default(self, driver, w, ctx):
         self._open_form(driver)
@@ -92,7 +92,7 @@ class TestExpenseTypeAssignmentLock:
 
     def test_clearing_assignment_unlocks_type_dropdown(self, driver, w, ctx):
         driver.find_element(By.ID, "assign-none").click()
-        time.sleep(0.3)
+        pause(0.3)
         assert self._type_option_disabled(driver, "income") is False, \
             "Type options must unlock once the assignment is cleared"
 
@@ -135,7 +135,7 @@ class TestExpenseEditTypeAssignmentLockOnLoad:
 
     def test_type_dropdown_already_locked_on_load(self, driver, w, ctx):
         driver.get(_url(f"/budget/expenses/{ctx['exp_uid']}/edit/"))
-        time.sleep(1.5)
+        pause(1.5)
         assert self._type_option_disabled(driver, "income") is True, \
             "Editing a project expense must start with non-expense types already disabled"
         assert self._type_option_disabled(driver, "expense") is False

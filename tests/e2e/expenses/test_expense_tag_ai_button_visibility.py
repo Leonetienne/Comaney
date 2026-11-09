@@ -7,12 +7,12 @@ which short-circuits ai_smart_create_available regardless of an own/trial key
 (see feusers/context_processors.py). Mirrors the ai_available/ai_unavailable
 fixture pattern in test_add_expense_page.py.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, run_cmd, setup_user, cleanup_user, set_ai_user_config
+from pacing import pause
 
 NEW_EXPENSE_URL   = "/budget/expenses/new/"
 NEW_SCHEDULED_URL = "/budget/scheduled/new/"
@@ -64,12 +64,12 @@ class TestAiAvailable:
 
     def test_button_present_on_new_expense_form(self, driver, w, ctx, ai_available):
         driver.get(_url(NEW_EXPENSE_URL))
-        time.sleep(1)
+        pause(1)
         assert driver.find_elements(By.ID, "tag-ai-btn")
 
     def test_button_present_on_new_scheduled_expense_form(self, driver, w, ctx, ai_available):
         driver.get(_url(NEW_SCHEDULED_URL))
-        time.sleep(1)
+        pause(1)
         assert driver.find_elements(By.ID, "tag-ai-btn")
 
 
@@ -77,10 +77,10 @@ class TestAiUnavailable:
 
     def test_button_absent_on_new_expense_form(self, driver, w, ctx, ai_unavailable):
         driver.get(_url(NEW_EXPENSE_URL))
-        time.sleep(1)
+        pause(1)
         assert not driver.find_elements(By.ID, "tag-ai-btn")
 
     def test_button_absent_on_new_scheduled_expense_form(self, driver, w, ctx, ai_unavailable):
         driver.get(_url(NEW_SCHEDULED_URL))
-        time.sleep(1)
+        pause(1)
         assert not driver.find_elements(By.ID, "tag-ai-btn")

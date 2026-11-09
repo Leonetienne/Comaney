@@ -12,7 +12,6 @@ Run with: pytest -v tests/e2e/express/test_express_vision_flag.py | tee logfile.
 import base64
 import io
 import re
-import time
 
 import pytest
 import requests
@@ -23,6 +22,7 @@ from helpers import (
     BASE_URL, _url, cleanup_user, get_ai_user_config, require_ai_provider, run_cmd,
     session_cookies, set_ai_user_config, setup_user,
 )
+from pacing import pause
 
 EXPRESS = "/budget/ai/express-creation/"
 ERROR = "The configured AI cannot read images."
@@ -77,7 +77,7 @@ class TestVisionFlag:
 
     def test_upload_zone_and_tip(self, driver, w, ctx, vision):
         driver.get(_url(EXPRESS))
-        time.sleep(1)
+        pause(1)
         tip = driver.find_element(By.CSS_SELECTOR, ".add-buddy-panel .page-tip").text
         zones = driver.find_elements(By.ID, "image-zone")
         if vision:
@@ -89,7 +89,7 @@ class TestVisionFlag:
 
     def test_paste_image(self, driver, w, ctx, vision):
         driver.get(_url(EXPRESS))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             "const bytes = Uint8Array.from(atob(arguments[0]), c => c.charCodeAt(0));"
             "const dt = new DataTransfer();"
@@ -97,7 +97,7 @@ class TestVisionFlag:
             "document.dispatchEvent(new ClipboardEvent('paste', {clipboardData: dt}));",
             base64.b64encode(PNG_BYTES).decode(),
         )
-        time.sleep(1)
+        pause(1)
         previews = driver.find_elements(By.ID, "preview-img")
         try:
             if vision:

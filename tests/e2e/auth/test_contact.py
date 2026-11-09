@@ -10,6 +10,7 @@ from helpers import (
     _url, wait_text, fill, BASE_URL, MAILPIT_API,
     setup_user, cleanup_user,
 )
+from pacing import pause
 
 CONTACT_URL = "/contact/"
 
@@ -67,7 +68,7 @@ class TestContact:
             fill(w, By.ID, fid, val)
         w.until(EC.element_to_be_clickable((By.ID, "submit-btn")))
         driver.find_element(By.ID, "submit-btn").click()
-        time.sleep(3)
+        pause(3)
         assert "sent=1" in driver.current_url
         assert "Your message has been sent" in driver.page_source
 

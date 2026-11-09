@@ -8,7 +8,6 @@ All expenses use a unique keyword "SrchTest" so other data never interferes.
 Date-comparison tests pin expenses to a fixed reference year (2025) and
 always query with view=year&year=2025 to avoid month-boundary clipping.
 """
-import time
 from datetime import date
 
 import pytest
@@ -19,6 +18,7 @@ from helpers import (
     _url, api_get, api_post, api_patch, api_delete, server_today,
     setup_user, cleanup_user,
 )
+from pacing import pause
 
 FIXED_YEAR = 2025
 DATE_EARLY  = "2025-02-01"
@@ -43,7 +43,7 @@ def _search(driver, query):
         el, query,
     )
     _wait_idle(driver)
-    time.sleep(1)
+    pause(1)
 
 
 def _visible_titles(driver):
@@ -223,9 +223,9 @@ class TestBrowserSearch:
         eid = ctx["srch_eids"][0]
         # Use JS navigation so document.referrer is preserved (driver.get() clears it).
         driver.execute_script(f"window.location.href = '{_url(f'/budget/expenses/{eid}/edit/')}'")
-        time.sleep(1)
+        pause(1)
         driver.execute_script(f"window.location.href = '{expenses_url}'")
-        time.sleep(2)
+        pause(2)
         _wait_idle(driver)
 
         current_value = driver.execute_script(

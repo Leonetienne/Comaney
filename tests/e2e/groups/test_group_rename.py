@@ -2,7 +2,6 @@
 Group rename: admin can rename the group and set a description.
 Non-admin members and unauthenticated requests are rejected.
 """
-import time
 
 import pytest
 import requests
@@ -10,6 +9,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, BASE_URL, session_cookies, setup_user, cleanup_user, PASSWORD
 from bhelpers import _shell, _create_group, _add_group_member
+from pacing import pause
 
 
 def _session(driver):
@@ -46,7 +46,7 @@ class TestGroupRenameAdmin:
 
     def test_group_detail_loads(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Original Name" in driver.page_source
 
     def test_rename_form_visible_for_admin(self, driver, w, ctx):
@@ -56,7 +56,7 @@ class TestGroupRenameAdmin:
         name_input = driver.find_element(By.ID, "project-rename-name")
         driver.execute_script("arguments[0].value = arguments[1];", name_input, "Renamed Group")
         driver.find_element(By.ID, "btn-rename-project").click()
-        time.sleep(1)
+        pause(1)
         assert "Renamed Group" in driver.page_source
 
     def test_old_name_gone(self, driver, w, ctx):
@@ -71,11 +71,11 @@ class TestGroupRenameAdmin:
 
     def test_set_description_via_form(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         desc_input = driver.find_element(By.ID, "project-rename-desc")
         driver.execute_script("arguments[0].value = arguments[1];", desc_input, "A test description.")
         driver.find_element(By.ID, "btn-rename-project").click()
-        time.sleep(1)
+        pause(1)
         assert "A test description." in driver.page_source
 
     def test_description_in_database(self, driver, w, ctx):
@@ -87,11 +87,11 @@ class TestGroupRenameAdmin:
 
     def test_clear_description(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         desc_input = driver.find_element(By.ID, "project-rename-desc")
         driver.execute_script("arguments[0].value = '';", desc_input)
         driver.find_element(By.ID, "btn-rename-project").click()
-        time.sleep(1)
+        pause(1)
         desc = _shell(
             f"from buddies.models import Project; "
             f"print(repr(Project.objects.get(pk={ctx['group_id']}).description))"

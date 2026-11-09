@@ -1,6 +1,5 @@
 """Expense CRUD via browser, plus all-fields browser round-trip and CSV export."""
 import re
-import time
 
 import requests
 import pytest
@@ -12,6 +11,7 @@ from helpers import (
     session_cookies, api_get, api_post, api_delete,
     setup_user, cleanup_user, browser_login, SUBMIT_BTN,
 )
+from pacing import pause
 
 
 @pytest.fixture(scope="module")
@@ -33,7 +33,7 @@ class TestExpenses:
             f"document.getElementById('id_date_due').value = '{today}';"
             "document.getElementById('id_settled').checked = true;")
         submit(w)
-        time.sleep(2)
+        pause(2)
         assert "/budget/expenses/" in driver.current_url
         assert "E2E Expense" in driver.page_source
         resp = api_get("/api/v2/expenses/", ctx, params={"q": "E2E Expense"})
@@ -43,13 +43,13 @@ class TestExpenses:
         driver.get(_url(f"/budget/expenses/{ctx['exp_uid']}/edit/"))
         fill(w, By.ID, "id_title", "E2E Expense Edited")
         submit(w)
-        time.sleep(2)
+        pause(2)
         assert "/budget/expenses/" in driver.current_url
         assert "E2E Expense Edited" in driver.page_source
 
     def test_clone(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         # Find the expense card and click its Clone button
         card = driver.execute_script(
             "return Array.from(document.querySelectorAll('.exp-card')).find("
@@ -58,15 +58,15 @@ class TestExpenses:
         )
         assert card is not None, "Could not find 'E2E Expense Edited' card in expense list"
         card.find_element(By.XPATH, ".//button[text()='Clone']").click()
-        time.sleep(2)
+        pause(2)
         ctx["clone_uid"] = re.search(r'/expenses/(\d+)/edit/', driver.current_url).group(1)
         assert "CLONE - E2E Expense Edited" in driver.find_element(By.ID, "id_title").get_attribute("value")
         submit(w)
-        time.sleep(2)
+        pause(2)
 
     def test_delete_clone(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         card = driver.execute_script(
             "return Array.from(document.querySelectorAll('.exp-card')).find("
             "  c => c.querySelector('.exp-title')?.textContent?.trim() === 'CLONE - E2E Expense Edited'"
@@ -74,15 +74,15 @@ class TestExpenses:
         )
         assert card is not None, "Could not find clone card in expense list"
         card.find_element(By.XPATH, ".//button[text()='Delete']").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         assert "CLONE - E2E Expense Edited" not in driver.page_source
 
     def test_all_fields_round_trip(self, driver, w, ctx):
         today = server_today()
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_title", "E2E AllFields")
         fill(w, By.ID, "id_value", "77.77")
         Select(driver.find_element(By.ID, "id_type")).select_by_value("expense")
@@ -93,7 +93,7 @@ class TestExpenses:
             "document.getElementById('id_auto_settle_on_due_date').checked = true;"
         )
         submit(w)
-        time.sleep(2)
+        pause(2)
         # Presentation already covered by other tests; verify via API
         resp = api_get("/api/v2/expenses/", ctx, params={"q": "E2E AllFields"})
         assert resp.status_code == 200
@@ -106,7 +106,7 @@ class TestExpenses:
     def test_type_income(self, driver, w, ctx):
         today = server_today()
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_title", "E2E Income")
         fill(w, By.ID, "id_value", "500.00")
         Select(driver.find_element(By.ID, "id_type")).select_by_value("income")
@@ -115,7 +115,7 @@ class TestExpenses:
             "document.getElementById('id_settled').checked = true;"
         )
         submit(w)
-        time.sleep(2)
+        pause(2)
         resp = api_get("/api/v2/expenses/", ctx, params={"q": "E2E Income"})
         assert resp.status_code == 200
         data = resp.json()["expenses"][0]
@@ -126,7 +126,7 @@ class TestExpenses:
         today = server_today()
         # savings_dep
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_title", "E2E SavingsDep")
         fill(w, By.ID, "id_value", "200.00")
         Select(driver.find_element(By.ID, "id_type")).select_by_value("savings_dep")
@@ -135,13 +135,13 @@ class TestExpenses:
             "document.getElementById('id_settled').checked = true;"
         )
         submit(w)
-        time.sleep(2)
+        pause(2)
         dep = api_get("/api/v2/expenses/", ctx, params={"q": "E2E SavingsDep"})
         assert dep.json()["expenses"][0]["type"] == "savings_dep"
         ctx["dep_id"] = dep.json()["expenses"][0]["id"]
         # savings_wit
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_title", "E2E SavingsWit")
         fill(w, By.ID, "id_value", "50.00")
         Select(driver.find_element(By.ID, "id_type")).select_by_value("savings_wit")
@@ -150,7 +150,7 @@ class TestExpenses:
             "document.getElementById('id_settled').checked = true;"
         )
         submit(w)
-        time.sleep(2)
+        pause(2)
         wit = api_get("/api/v2/expenses/", ctx, params={"q": "E2E SavingsWit"})
         assert wit.json()["expenses"][0]["type"] == "savings_wit"
         ctx["wit_id"] = wit.json()["expenses"][0]["id"]
@@ -202,14 +202,14 @@ class TestExpenseSorting:
         driver.get(_url(
             f"/budget/expenses/?year={sctx['sort_year']}&month={sctx['sort_month']}"
         ))
-        time.sleep(2)
+        pause(2)
         # Change to title asc via the sort dropdowns
         sort_by_sel = Select(driver.find_element(By.ID, "exp-sort-by"))
         sort_dir_sel = Select(driver.find_element(By.ID, "exp-sort-dir"))
         sort_by_sel.select_by_value("title")
-        time.sleep(0.1)
+        pause(0.1)
         sort_dir_sel.select_by_value("asc")
-        time.sleep(2)
+        pause(2)
         titles = self._card_titles(driver)
         sort_titles = [t for t in titles if t.endswith(" Sort")]
         assert sort_titles == ["AAA Sort", "MMM Sort", "ZZZ Sort"], sort_titles
@@ -218,9 +218,9 @@ class TestExpenseSorting:
         sort_by_sel = Select(driver.find_element(By.ID, "exp-sort-by"))
         sort_dir_sel = Select(driver.find_element(By.ID, "exp-sort-dir"))
         sort_by_sel.select_by_value("value")
-        time.sleep(0.1)
+        pause(0.1)
         sort_dir_sel.select_by_value("desc")
-        time.sleep(2)
+        pause(2)
         values = driver.execute_script(
             "return Array.from(document.querySelectorAll('.exp-amount'))"
             ".map(e => parseFloat(e.textContent.trim()));"
@@ -233,7 +233,7 @@ class TestExpenseSorting:
         driver.get(_url(
             f"/budget/expenses/?year={sctx['sort_year']}&month={sctx['sort_month']}"
         ))
-        time.sleep(2)
+        pause(2)
         sort_by_sel = Select(driver.find_element(By.ID, "exp-sort-by"))
         sort_dir_sel = Select(driver.find_element(By.ID, "exp-sort-dir"))
         assert sort_by_sel.first_selected_option.get_attribute("value") == "date"
@@ -283,7 +283,7 @@ class TestDoubleSubmitGuard:
         )
         btn = driver.find_element(By.CSS_SELECTOR, SUBMIT_BTN)
         btn.click()
-        time.sleep(2)
+        pause(2)
         assert "/budget/expenses/" in driver.current_url
         locked = driver.execute_script("return sessionStorage.getItem('e2eSubmitBtnLocked');")
         assert locked == "true", f"Submit button was not locked on submit (recorded: {locked!r})"
@@ -375,7 +375,7 @@ class TestSaveChecks:
             "return !!document.getElementById('id_title').closest('form')._saveChecks;"
         ), "Expense form has no save checks registered"
         driver.find_element(By.CSS_SELECTOR, SUBMIT_BTN).click()
-        time.sleep(2)
+        pause(2)
         assert "/new/" not in driver.current_url, "One click on Save did not submit the form"
         events = driver.execute_script("return sessionStorage.getItem('e2eSubmitEvents');")
         assert events == "1", f"Save went through a resubmit (submit events: {events!r})"

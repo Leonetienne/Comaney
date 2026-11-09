@@ -5,13 +5,13 @@ The approve_expense endpoint now requires settled=False. A direct HTTP POST
 by the debtor to /buddies/expense/<uid>/approve/ on a settlement expense
 must return 404 and must NOT flip buddy_approved to True.
 """
-import time
 
 import pytest
 import requests as req
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_contact_link, _get_pk, _create_personal_expense_with_buddy
+from pacing import pause
 
 
 class TestApproveOwnSettlementBlocked:
@@ -39,13 +39,13 @@ class TestApproveOwnSettlementBlocked:
     def test_a_creates_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" in driver.page_source, \
             "Settle Up section must be visible before test can run"
         driver.find_element("id", "btn-direct-settle").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element("id", "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
 
     def test_settlement_expense_uid_exists(self, driver, w, ctx):
         uid = _shell(

@@ -1,6 +1,5 @@
 """Auth: registration, email confirmation, login, last_login/last_seen tracking."""
 import subprocess
-import time
 
 
 import pytest
@@ -11,6 +10,7 @@ from helpers import (
     fetch_email, extract_link, cleanup_user,
     register_user, PASSWORD, DOCKER_WEB,
 )
+from pacing import pause
 
 
 def _get_feuser_field(email, field):
@@ -56,7 +56,7 @@ class TestAuth:
 
     def test_last_seen_set(self, driver, w, ctx):
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         value = _get_feuser_field(ctx["email"], "last_seen")
         assert value and value != "None", "last_seen must be set after an authenticated request"
 
@@ -65,4 +65,4 @@ class TestAuth:
         driver.get(_url("/account/delete/"))
         fill(w, By.ID, "id_password", PASSWORD)
         click(w, By.CSS_SELECTOR, "button[type=submit]")
-        time.sleep(2)
+        pause(2)

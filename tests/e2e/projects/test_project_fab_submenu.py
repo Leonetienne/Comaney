@@ -12,7 +12,6 @@ attribute rather than visible text -- Selenium treats zero-opacity elements
 as "not displayed" and returns an empty `.text` for them, so a text-based
 lookup silently fails while the menu is closed.
 """
-import time
 import urllib.parse
 
 import pytest
@@ -20,6 +19,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, ai_unavailable, setup_user, cleanup_user
 from bhelpers import _create_group, _shell
+from pacing import pause
 
 PREPROMPT = "Put Robert and Mallory always at 0%, they're invited."
 
@@ -45,7 +45,7 @@ class TestProjectFabSubmenu:
 
     def _open(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
 
     def _item_by_title(self, driver, title):
         els = driver.find_elements(By.CSS_SELECTOR, f'.fab-menu-item[title="{title}"]')
@@ -54,13 +54,13 @@ class TestProjectFabSubmenu:
     @pytest.mark.parametrize("path", ["", "insights/", "settings/"])
     def test_fab_present_on_every_project_tab(self, driver, w, ctx, path):
         driver.get(_url(f"/projects/{ctx['group_id']}/{path}"))
-        time.sleep(1)
+        pause(1)
         assert driver.find_elements(By.CSS_SELECTOR, ".fab-wrap .fab-toggle"), \
             f"New expense FAB must be present on /projects/<id>/{path}"
 
     def test_closed_menu_lets_clicks_through(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         hit_menu = driver.execute_script(
             "var r = document.querySelector('.fab-menu').getBoundingClientRect();"
             "var el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);"
@@ -91,9 +91,9 @@ class TestProjectFabSubmenu:
         if self._item_by_title(driver, "AI Express") is None:
             ai_unavailable("AI Express not available for this test user")
         driver.find_element(By.CSS_SELECTOR, ".fab-toggle").click()
-        time.sleep(0.3)
+        pause(0.3)
         self._item_by_title(driver, "AI Express").click()
-        time.sleep(1)
+        pause(1)
         textarea = driver.find_element(By.CSS_SELECTOR, ".smart-input")
         assert textarea.get_attribute("value") == "Create all expenses for project 'Fab Menu Project' "
 
@@ -106,7 +106,7 @@ class TestProjectFabSubmenu:
         dismiss = driver.find_elements(By.ID, "intro-modal-dismiss")
         if dismiss and dismiss[0].is_displayed():
             dismiss[0].click()
-            time.sleep(0.5)
+            pause(0.5)
         textarea = driver.find_element(By.CSS_SELECTOR, ".smart-input")
         state = driver.execute_script(
             "var t = arguments[0];"
@@ -119,13 +119,13 @@ class TestProjectFabSubmenu:
 
     def test_preprompt_saved_from_settings(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         if not driver.find_elements(By.ID, "project-ai-preprompt"):
             ai_unavailable("AI preprompt not available for this test user")
         textarea = driver.find_element(By.ID, "project-ai-preprompt")
         driver.execute_script("arguments[0].value = arguments[1];", textarea, PREPROMPT)
         driver.find_element(By.ID, "btn-rename-project").click()
-        time.sleep(1)
+        pause(1)
         assert driver.find_element(By.ID, "project-ai-preprompt").get_attribute("value") == PREPROMPT
 
     def test_preprompt_not_in_ai_express_prefill(self, driver, w, ctx):
@@ -140,7 +140,7 @@ class TestProjectFabSubmenu:
         _set_disable_ai_ui(ctx["email"], True)
         try:
             driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-            time.sleep(1)
+            pause(1)
             assert not driver.find_elements(By.ID, "project-ai-preprompt"), \
                 "AI preprompt field must be hidden when 'Hide all AI features' is on"
             assert "AI preprompt" not in driver.page_source
@@ -150,17 +150,17 @@ class TestProjectFabSubmenu:
     def test_rename_without_preprompt_field_keeps_preprompt(self, driver, w, ctx):
         """Saving the rename form while the preprompt field is hidden must not wipe it."""
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         if not driver.find_elements(By.ID, "project-ai-preprompt"):
             ai_unavailable("AI preprompt not available for this test user")
         _set_disable_ai_ui(ctx["email"], True)
         try:
             driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-            time.sleep(1)
+            pause(1)
             driver.find_element(By.ID, "btn-rename-project").click()
-            time.sleep(1)
+            pause(1)
         finally:
             _set_disable_ai_ui(ctx["email"], False)
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert driver.find_element(By.ID, "project-ai-preprompt").get_attribute("value") == PREPROMPT

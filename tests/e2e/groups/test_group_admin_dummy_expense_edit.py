@@ -4,13 +4,13 @@ Group admin can edit a dummy-upfront group expense.
 A regular (non-admin) member cannot access the edit form for a dummy-upfront
 expense they do not own.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_group, _add_group_member
+from pacing import pause
 
 
 def _create_dummy_upfront_expense(owner_email: str, group_id: int,
@@ -68,21 +68,21 @@ class TestAdminCanEditDummyUpfrontExpense:
     def test_edit_button_visible_for_admin(self, driver, w, ctx):
         _login_as(driver, ctx)
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         links = driver.find_elements(By.CSS_SELECTOR, "a.btn-secondary[data-edit='full']")
         edit_links = [l for l in links if str(ctx["expense_pk"]) in (l.get_attribute("href") or "")]
         assert edit_links, "Admin should see an Edit button for the dummy-upfront expense"
 
     def test_edit_form_loads_for_admin(self, driver, w, ctx):
         driver.get(_url(f"/budget/expenses/{ctx['expense_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
         assert "/edit/" in driver.current_url, "Admin should be able to load the edit form"
         assert "Dan Paid Camping" in driver.page_source
 
     def test_edit_button_not_visible_for_non_admin_member(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         links = driver.find_elements(By.CSS_SELECTOR, "a.btn-secondary[data-edit='full']")
         edit_links = [
             l for l in links
@@ -92,7 +92,7 @@ class TestAdminCanEditDummyUpfrontExpense:
 
     def test_non_admin_member_cannot_access_edit_form(self, driver, w, ctx):
         driver.get(_url(f"/budget/expenses/{ctx['expense_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
         assert driver.find_elements(By.CSS_SELECTOR, "input[name='title']") == [], \
             "Non-admin must not get the edit form for another user's dummy-upfront expense"
 
@@ -100,7 +100,7 @@ class TestAdminCanEditDummyUpfrontExpense:
         # Must run last: unchecking buddy_payment clears group association on save.
         _login_as(driver, ctx)
         driver.get(_url(f"/budget/expenses/{ctx['expense_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
         # buddy_spendings_json starts as "[]" (JS populates it, but Selenium submits
         # before the participant section fully initialises). Uncheck buddy_payment so
         # buddy=None and form.save() runs without buddy validation.
@@ -110,7 +110,7 @@ class TestAdminCanEditDummyUpfrontExpense:
         title_input = driver.find_element(By.CSS_SELECTOR, "input[name='title']")
         driver.execute_script("arguments[0].value = arguments[1];", title_input, "Dan Paid Camping Trip")
         driver.find_element(By.XPATH, "//button[contains(text(), 'Finish')]").click()
-        time.sleep(1)
+        pause(1)
         saved_title = _shell(
             f"from budget.models import Expense; "
             f"print(Expense.objects.get(pk={ctx['expense_pk']}).title)"

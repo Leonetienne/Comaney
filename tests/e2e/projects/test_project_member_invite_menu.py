@@ -5,7 +5,6 @@ each option hidden once it no longer applies.
 Run with: pytest tests/e2e/projects/test_project_member_invite_menu.py -v -s
 """
 import subprocess
-import time
 import uuid
 
 import pytest
@@ -16,6 +15,7 @@ from bhelpers import (
     _shell, _login_as, _create_contact_link, _create_group, _add_group_member,
     _get_pk, _ctx_click,
 )
+from pacing import pause
 
 
 def _create_full_partnership_via_shell(email_a: str, email_b: str) -> None:
@@ -56,7 +56,7 @@ class TestBothOptionsVisibleForNonAdmin:
     def test_menu_has_both_invite_buttons(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
         partner_btn = driver.find_elements(
             By.CSS_SELECTOR, f"button.partnership-invite-btn[data-feuser-id='{ctx['admin_pk']}']")
         buddy_btn = driver.find_elements(
@@ -68,7 +68,7 @@ class TestBothOptionsVisibleForNonAdmin:
         """Regression guard: the admin's own kebab menu keeps its existing items only."""
         _login_as(driver, ctx["admin"])
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
         buddy_btn = driver.find_elements(By.CSS_SELECTOR, "button.buddy-invite-btn")
         assert not buddy_btn, "Admin's kebab menu should not gain the new buddy-invite button"
 
@@ -95,7 +95,7 @@ class TestBuddyOptionHiddenWhenAlreadyContacts:
     def test_buddy_button_gone_partner_button_present(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
         buddy_btn = driver.find_elements(
             By.CSS_SELECTOR, f"button.buddy-invite-btn[data-feuser-id='{ctx['admin_pk']}']")
         partner_btn = driver.find_elements(
@@ -126,7 +126,7 @@ class TestMenuHiddenWhenNothingApplies:
     def test_no_ctx_menu_for_fully_connected_member(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
         assert "Partner" in driver.page_source
         assert not driver.find_elements(By.CSS_SELECTOR, ".ctx-menu-wrap"), (
             "Non-admin member list should show no ... menu once neither action applies"
@@ -154,12 +154,12 @@ class TestSendContactInviteViaMenu:
     def test_send_contact_invite_and_pill_appears(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
 
         _ctx_click(driver, f"button.buddy-invite-btn[data-feuser-id='{ctx['admin_pk']}']")
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
 
         count = _shell(
             "from buddies.models import ContactInvite; "
@@ -169,7 +169,7 @@ class TestSendContactInviteViaMenu:
         assert count == "1", f"Expected a ContactInvite in DB, got count={count}"
 
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
         assert "Contact invite pending" in driver.page_source
         buddy_btn = driver.find_elements(
             By.CSS_SELECTOR, f"button.buddy-invite-btn[data-feuser-id='{ctx['admin_pk']}']")
@@ -202,10 +202,10 @@ def _demo_login_and_accept(driver, w, demo_ctx):
     fill(w, By.ID, "id_email", demo_ctx["email"])
     fill(w, By.ID, "id_password", demo_ctx["password"])
     click(w, By.CSS_SELECTOR, "button[type=submit]")
-    time.sleep(2)
+    pause(2)
     if "/demo-banner/" in driver.current_url:
         click(w, By.ID, "btn-demo-accept")
-        time.sleep(2)
+        pause(2)
 
 
 class TestDemoViewerNeverSeesMenu:
@@ -226,7 +226,7 @@ class TestDemoViewerNeverSeesMenu:
     def test_no_ctx_menu_for_demo_viewer(self, driver, w, ctx):
         _demo_login_and_accept(driver, w, ctx["member"])
         driver.get(_settings_url(ctx["gid"]))
-        time.sleep(1)
+        pause(1)
         assert not driver.find_elements(By.CSS_SELECTOR, ".ctx-menu-wrap"), (
             "Demo viewers must never see the ... menu on the member list"
         )

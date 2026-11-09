@@ -23,6 +23,7 @@ from bhelpers import (
     _create_contact_link, _create_group, _add_group_member,
     _create_group_expense, _create_personal_expense_with_buddy,
 )
+from pacing import pause
 
 
 def _mk_group_dummy(group_pk: int, name: str) -> int:
@@ -62,7 +63,7 @@ class TestPersonalSettlementCreationNotifiesCreditor:
         seen_before = mailpit_seen_ids()
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(2)
+        pause(2)
         # Bypass the Alpine.js confirmation dialog by posting to the endpoint directly
         driver.execute_script(
             f"var f=document.createElement('form');"
@@ -74,7 +75,7 @@ class TestPersonalSettlementCreationNotifiesCreditor:
             f"i.name=p[0];i.value=p[1];f.appendChild(i);}});"
             f"document.body.appendChild(f);f.submit();"
         )
-        time.sleep(2)
+        pause(2)
         body = fetch_email(ctx["b"]["email"], "settlement", ignore_ids=seen_before)
         assert "CN1Debtor" in body, \
             "[CN1] Confirmation email must name the debtor"
@@ -111,7 +112,7 @@ class TestGroupSettlementCreationNotifiesCreditor:
         seen_before = mailpit_seen_ids()
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
-        time.sleep(2)
+        pause(2)
         driver.execute_script(
             f"var f=document.createElement('form');"
             f"f.method='POST';"
@@ -123,7 +124,7 @@ class TestGroupSettlementCreationNotifiesCreditor:
             f"i.name=p[0];i.value=p[1];f.appendChild(i);}});"
             f"document.body.appendChild(f);f.submit();"
         )
-        time.sleep(2)
+        pause(2)
         body = fetch_email(ctx["b"]["email"], "settlement", ignore_ids=seen_before)
         assert "CN2Debtor" in body, \
             "[CN2] Confirmation email must name the debtor"
@@ -168,7 +169,7 @@ class TestGroupDummyDebtorSettlementCreationNotifiesCreditor:
         seen_before = mailpit_seen_ids()
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['grp_pk']}/"))
-        time.sleep(2)
+        pause(2)
         driver.execute_script(
             f"var f=document.createElement('form');"
             f"f.method='POST';"
@@ -180,7 +181,7 @@ class TestGroupDummyDebtorSettlementCreationNotifiesCreditor:
             f"i.name=p[0];i.value=p[1];f.appendChild(i);}});"
             f"document.body.appendChild(f);f.submit();"
         )
-        time.sleep(2)
+        pause(2)
         body = fetch_email(ctx["creditor"]["email"], "settlement", ignore_ids=seen_before)
         assert "CN3Offline" in body, \
             "[CN3] Confirmation email must name the offline member as the debtor"

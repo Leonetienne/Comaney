@@ -4,12 +4,12 @@ selected global date range (localStorage `comaney_date_range`), mirroring the
 existing upfront-payer confirm dialog (see tests/e2e/buddies/test_expense_form.py).
 Covers both create and edit.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user, api_get, api_post, server_today
+from pacing import pause
 
 _OUT_OF_RANGE_FROM = "2020-01-01"
 _OUT_OF_RANGE_TO = "2020-01-31"
@@ -41,7 +41,7 @@ class TestDateOutsideRangeWarningOnCreate:
         _set_range(driver, _OUT_OF_RANGE_FROM, _OUT_OF_RANGE_TO)
         today = server_today()
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "id_title").clear()
         driver.find_element(By.ID, "id_title").send_keys("Out Of Range Expense")
         driver.find_element(By.ID, "id_value").clear()
@@ -51,7 +51,7 @@ class TestDateOutsideRangeWarningOnCreate:
             "document.getElementById('id_settled').checked = true;"
         )
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(0.5)
+        pause(0.5)
         backdrop = driver.find_element(By.ID, "cdialog-backdrop")
         assert "cdialog-visible" in backdrop.get_attribute("class")
         msg = driver.find_element(By.ID, "cdialog-msg").text
@@ -59,7 +59,7 @@ class TestDateOutsideRangeWarningOnCreate:
 
     def test_cancel_keeps_expense_unsaved(self, driver, w, ctx):
         driver.find_element(By.ID, "cdialog-cancel").click()
-        time.sleep(1)
+        pause(1)
         assert "/budget/expenses/new/" in driver.current_url
         resp = api_get("/api/v2/expenses/", ctx, params={"q": "Out Of Range Expense"})
         assert not any(e["title"] == "Out Of Range Expense" for e in resp.json()["expenses"]), \
@@ -67,9 +67,9 @@ class TestDateOutsideRangeWarningOnCreate:
 
     def test_confirm_saves_the_expense(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         assert "/budget/expenses/" in driver.current_url
         resp = api_get("/api/v2/expenses/", ctx, params={"q": "Out Of Range Expense"})
         assert any(e["title"] == "Out Of Range Expense" for e in resp.json()["expenses"]), \
@@ -88,7 +88,7 @@ class TestDateInsideRangeNoWarning:
         today = server_today()
         _set_range(driver, today, today)
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "id_title").clear()
         driver.find_element(By.ID, "id_title").send_keys("In Range Expense")
         driver.find_element(By.ID, "id_value").clear()
@@ -98,7 +98,7 @@ class TestDateInsideRangeNoWarning:
             "document.getElementById('id_settled').checked = true;"
         )
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(1.5)
+        pause(1.5)
         assert "/budget/expenses/" in driver.current_url, \
             "Submit must go straight through with no dialog when the date is in range"
         backdrop_classes = driver.execute_script(
@@ -132,25 +132,25 @@ class TestDateOutsideRangeWarningOnEdit:
         today = server_today()
         _set_range(driver, today, today)
         driver.get(_url(f"/budget/expenses/{exp_id}/edit/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(1.5)
+        pause(1.5)
         assert "/budget/expenses/" in driver.current_url
 
     def test_dialog_appears_when_moving_date_out_of_range(self, driver, w, ctx, exp_id):
         driver.get(_url(f"/budget/expenses/{exp_id}/edit/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             f"document.getElementById('id_date_due').value = '{_OUT_OF_RANGE_FROM}';"
         )
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(0.5)
+        pause(0.5)
         backdrop = driver.find_element(By.ID, "cdialog-backdrop")
         assert "cdialog-visible" in backdrop.get_attribute("class")
 
     def test_confirm_saves_the_new_date(self, driver, w, ctx, exp_id):
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         resp = api_get("/api/v2/expenses/", ctx, params={
             "q": "Edit Range Expense",
             "date_from": "2019-01-01",

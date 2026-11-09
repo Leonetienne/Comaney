@@ -5,7 +5,6 @@ the Gate A/B recurrence-rule locking (repeat_every_factor/unit and
 repeat_base_date/end_on require explicit confirmation to change).
 """
 import re
-import time
 from datetime import date, timedelta
 
 import pytest
@@ -18,6 +17,7 @@ from helpers import (
     api_get, api_post, api_patch, api_delete, run_cmd, server_today,
     setup_user, cleanup_user,
 )
+from pacing import pause
 
 
 @pytest.fixture(scope="module")
@@ -293,7 +293,7 @@ class TestLockedFieldsUI:
     def test_locked_fields_disabled_and_uncheck_reverts(self, driver, w, ctx):
         today = server_today()
         driver.get(_url("/budget/scheduled/new/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_title", "Integrity UI Lock")
         fill(w, By.ID, "id_value", "20.00")
         Select(driver.find_element(By.ID, "id_type")).select_by_value("expense")
@@ -301,7 +301,7 @@ class TestLockedFieldsUI:
         Select(driver.find_element(By.ID, "id_repeat_every_unit")).select_by_value("months")
         driver.execute_script(f"document.getElementById('id_repeat_base_date').value = '{today}';")
         submit(w)
-        time.sleep(2)
+        pause(2)
 
         link = driver.find_element(By.XPATH,
             "//span[contains(text(),'Integrity UI Lock')]"
@@ -310,7 +310,7 @@ class TestLockedFieldsUI:
         )
         sid = re.search(r"/scheduled/(\d+)/edit/", link.get_attribute("href")).group(1)
         driver.get(_url(f"/budget/scheduled/{sid}/edit/"))
-        time.sleep(1)
+        pause(1)
 
         factor_el = driver.find_element(By.ID, "id_repeat_every_factor")
         assert factor_el.get_attribute("disabled")
@@ -319,14 +319,14 @@ class TestLockedFieldsUI:
         # Check + cancel: field stays locked, checkbox reverts to unchecked
         click(w, By.ID, "id_confirm_modify_schedule")
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-cancel"))).click()
-        time.sleep(1)
+        pause(1)
         assert not driver.find_element(By.ID, "id_confirm_modify_schedule").is_selected()
         assert driver.find_element(By.ID, "id_repeat_every_factor").get_attribute("disabled")
 
         # Check + confirm: field unlocks
         click(w, By.ID, "id_confirm_modify_schedule")
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-        time.sleep(1)
+        pause(1)
         assert not driver.find_element(By.ID, "id_repeat_every_factor").get_attribute("disabled")
 
         fill(w, By.ID, "id_repeat_every_factor", "9")
@@ -334,7 +334,7 @@ class TestLockedFieldsUI:
 
         # Unchecking reverts the in-progress edit back to the original value and re-disables
         click(w, By.ID, "id_confirm_modify_schedule")
-        time.sleep(1)
+        pause(1)
         factor_el = driver.find_element(By.ID, "id_repeat_every_factor")
         assert factor_el.get_attribute("value") == "1"
         assert factor_el.get_attribute("disabled")

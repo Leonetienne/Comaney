@@ -15,13 +15,13 @@ Also covers:
 - Admin approve flow marks the expense as approved.
 - Admin reject flow deletes the expense.
 """
-import time
 
 import pytest
 import requests as req
 
 from helpers import _url, setup_user, cleanup_user, server_today
 from bhelpers import _shell, _login_as, _create_group, _add_group_member
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +151,7 @@ class TestNonAdminDummyUpfrontRequiresApproval:
     def test_non_admin_expense_requires_approval(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(0.5)
+        pause(0.5)
         uid = _post_expense_with_dummy_payer(
             driver, ctx["group_id"], ctx["dummy_pk"],
             ctx["member_pk"], "NonAdminDummyPaidExpense"
@@ -173,7 +173,7 @@ class TestNonAdminDummyUpfrontRequiresApproval:
         assert uid and uid != "none", "The earlier test's expense was not created"
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "NonAdminDummyPaidExpense" in driver.page_source, \
             "Pending expense must appear in the project detail page for the admin"
 
@@ -204,7 +204,7 @@ class TestAdminDummyUpfrontAutoApproved:
     def test_admin_expense_auto_approved(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(0.5)
+        pause(0.5)
         uid = _post_expense_with_dummy_payer(
             driver, ctx["group_id"], ctx["dummy_pk"],
             ctx["admin_pk"], "AdminDummyPaidExpense"
@@ -256,7 +256,7 @@ class TestAdminConfirmPageWordingNonSettlement:
         driver.get(_url(
             f"/projects/{ctx['group_id']}/expense/{ctx['expense_pk']}/approve-dummy/"
         ))
-        time.sleep(1)
+        pause(1)
         src = driver.page_source
         assert "Offline Helga" in src, \
             "Confirm page must mention the offline member's name"
@@ -316,9 +316,9 @@ class TestAdminApprovesNonSettlementDummyUpfront:
         driver.get(_url(
             f"/projects/{ctx['group_id']}/expense/{ctx['expense_pk']}/approve-dummy/"
         ))
-        time.sleep(1)
+        pause(1)
         driver.find_element("id", "btn-approve-settlement").click()
-        time.sleep(1)
+        pause(1)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url, \
             "After approval admin must be redirected to project detail"
 
@@ -362,9 +362,9 @@ class TestAdminRejectsNonSettlementDummyUpfront:
         driver.get(_url(
             f"/projects/{ctx['group_id']}/expense/{ctx['expense_pk']}/approve-dummy/"
         ))
-        time.sleep(1)
+        pause(1)
         driver.find_element("id", "btn-reject-settlement").click()
-        time.sleep(0.5)
+        pause(0.5)
         # Confirm the JS dialog
         from selenium.webdriver.support.ui import WebDriverWait
         from selenium.webdriver.support import expected_conditions as EC
@@ -377,7 +377,7 @@ class TestAdminRejectsNonSettlementDummyUpfront:
             ok_buttons = driver.find_elements(By.ID, "cdialog-ok")
             if ok_buttons:
                 ok_buttons[0].click()
-        time.sleep(1)
+        pause(1)
 
     def test_expense_deleted_after_rejection(self, driver, w, ctx):
         exists = _shell(

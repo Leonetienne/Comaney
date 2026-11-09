@@ -13,7 +13,6 @@ Scenarios:
 Run: pytest tests/e2e/buddies/test_scheduled_assignment.py -sx
 """
 import json
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -21,6 +20,7 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user, server_today
 from bhelpers import _shell, _login_as, _create_group, _add_group_member, _create_contact_link
+from pacing import pause
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
@@ -219,7 +219,7 @@ class TestScheduledAssignmentForm:
         _login_as(driver, ctx)
         today = server_today()
         driver.get(_url("/budget/scheduled/new/"))
-        time.sleep(1)
+        pause(1)
 
         driver.execute_script("document.getElementById('id_title').value = 'UI Assign Test';")
         driver.execute_script("document.getElementById('id_value').value = '88.00';")
@@ -230,12 +230,12 @@ class TestScheduledAssignmentForm:
             f"document.getElementById('id_repeat_base_date').value = '{today}';")
 
         driver.find_element(By.CSS_SELECTOR, "#assign-tab-group [data-assign='project']").click()
-        time.sleep(0.5)
+        pause(0.5)
         Select(driver.find_element(By.ID, "buddy-group-select")).select_by_value(group_id)
-        time.sleep(0.5)
+        pause(0.5)
 
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(2)
+        pause(2)
 
         saved = _shell(
             "from budget.models import ScheduledExpense; "

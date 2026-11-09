@@ -8,7 +8,6 @@ This tests the individual group settlement form (admin selects dummy debtor,
 dummy creditor) as well as the group-wide settle-all path which always
 auto-approves dummy-creditor settlements.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -16,6 +15,7 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_group
+from pacing import pause
 
 
 def _create_group_dummy(group_id: int, display_name: str) -> str:
@@ -72,7 +72,7 @@ class TestBothDummiesSettlementAutoApprove:
     def test_admin_submits_both_dummy_settlement(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" in driver.page_source
 
         # Select Dummy Ower as debtor
@@ -81,7 +81,7 @@ class TestBothDummiesSettlementAutoApprove:
         assert any("Dummy Ower" in t for t in opt_texts), \
             "Debtor dropdown must include 'Dummy Ower'"
         debtor_sel.select_by_visible_text("Dummy Ower (offline member)")
-        time.sleep(0.5)
+        pause(0.5)
 
         # Creditor should auto-fill or select Dummy Payer
         cred_sel = Select(driver.find_element(By.ID, "settle-creditor"))
@@ -89,7 +89,7 @@ class TestBothDummiesSettlementAutoApprove:
         assert any("Dummy Payer" in t for t in opt_texts), \
             "Creditor dropdown must include 'Dummy Payer'"
         cred_sel.select_by_visible_text("Dummy Payer (offline member)")
-        time.sleep(0.3)
+        pause(0.3)
 
         amt = driver.find_element(By.ID, "settle-amount")
         driver.execute_script("arguments[0].value = '40.00';", amt)
@@ -97,13 +97,13 @@ class TestBothDummiesSettlementAutoApprove:
         driver.find_element(
             By.ID, "btn-settle-individual"
         ).click()
-        time.sleep(0.5)
+        pause(0.5)
         # Dialog must say "approved automatically" when both are offline
         msg = driver.find_element(By.ID, "cdialog-msg").text
         assert "automatically" in msg.lower(), \
             "Dialog must say the payment is approved automatically when both are offline"
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "settlement record" in driver.page_source.lower()
 
     def test_settlement_is_immediately_approved(self, driver, w, ctx):
@@ -123,6 +123,6 @@ class TestBothDummiesSettlementAutoApprove:
 
     def test_no_pending_section_on_summary_for_both_dummy(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Waiting for your approval" not in driver.page_source, \
             "No admin confirmation needed for both-dummy settlement"

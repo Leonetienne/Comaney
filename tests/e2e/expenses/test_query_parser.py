@@ -6,7 +6,6 @@ date comparisons (all three formats), the 'today' keyword, value
 comparisons, the NOT operator, multi-constraint tag filters, and
 the deactivated= flag.  No browser interaction required.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -16,6 +15,7 @@ from helpers import (
     api_get, api_post, api_patch, api_delete,
     server_today, setup_user, cleanup_user, run_cmd,
 )
+from pacing import pause
 
 YEAR = 2025
 PAST_ISO   = "2025-03-01"
@@ -430,19 +430,19 @@ def _set_search(driver, value):
         "e.dispatchEvent(new Event('input', {bubbles:true}));",
         el, value,
     )
-    time.sleep(0.3)
+    pause(0.3)
 
 
 def _click_checkbox(driver):
     driver.find_element(By.ID, "exp-hide-recurring").click()
-    time.sleep(0.3)
+    pause(0.3)
 
 
 class TestRecurringCheckbox:
 
     def test_check_adds_filter(self, driver, w, ctx):
         driver.get(_exp_url())
-        time.sleep(0.5)
+        pause(0.5)
         _set_search(driver, "")
         _click_checkbox(driver)
         assert "recurring=no" in _search_val(driver)
@@ -450,7 +450,7 @@ class TestRecurringCheckbox:
 
     def test_uncheck_removes_filter(self, driver, w, ctx):
         driver.get(_exp_url())
-        time.sleep(0.5)
+        pause(0.5)
         _set_search(driver, "")
         _click_checkbox(driver)   # check
         _click_checkbox(driver)   # uncheck
@@ -459,26 +459,26 @@ class TestRecurringCheckbox:
 
     def test_manual_no_checks_checkbox(self, driver, w, ctx):
         driver.get(_exp_url())
-        time.sleep(0.5)
+        pause(0.5)
         _set_search(driver, "recurring=no")
         assert _checkbox_checked(driver)
 
     def test_manual_yes_unchecks_checkbox(self, driver, w, ctx):
         driver.get(_exp_url())
-        time.sleep(0.5)
+        pause(0.5)
         _set_search(driver, "recurring=yes")
         assert not _checkbox_checked(driver)
 
     def test_manual_remove_unchecks_checkbox(self, driver, w, ctx):
         driver.get(_exp_url())
-        time.sleep(0.5)
+        pause(0.5)
         _set_search(driver, "recurring=no")
         _set_search(driver, "")
         assert not _checkbox_checked(driver)
 
     def test_check_with_existing_query_no_leading_space(self, driver, w, ctx):
         driver.get(_exp_url())
-        time.sleep(0.5)
+        pause(0.5)
         _set_search(driver, "coffee")
         _click_checkbox(driver)
         val = _search_val(driver)
@@ -486,20 +486,20 @@ class TestRecurringCheckbox:
 
     def test_uncheck_with_existing_query_leaves_rest(self, driver, w, ctx):
         driver.get(_exp_url())
-        time.sleep(0.5)
+        pause(0.5)
         _set_search(driver, "coffee recurring=no")
         _click_checkbox(driver)   # uncheck
         assert _search_val(driver) == "coffee"
 
     def test_manual_no_with_existing_query_checks_checkbox(self, driver, w, ctx):
         driver.get(_exp_url())
-        time.sleep(0.5)
+        pause(0.5)
         _set_search(driver, "coffee recurring=no")
         assert _checkbox_checked(driver)
 
     def test_manual_yes_with_existing_query_unchecks_checkbox(self, driver, w, ctx):
         driver.get(_exp_url())
-        time.sleep(0.5)
+        pause(0.5)
         _set_search(driver, "coffee recurring=yes")
         assert not _checkbox_checked(driver)
 

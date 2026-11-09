@@ -8,7 +8,6 @@ Pie-chart dashboard card:
 - method=custom and method=count are rejected for pie-chart
 - Query filter is applied to data
 """
-import time
 
 import pytest
 
@@ -17,6 +16,7 @@ from helpers import (
     session_cookies, BASE_URL, setup_user, cleanup_user,
 )
 import requests
+from pacing import pause
 
 
 CARDS_URL = BASE_URL + "/budget/dashboard/cards/"
@@ -60,7 +60,7 @@ def ctx(driver, w):
 @pytest.fixture(scope="module")
 def sess(driver, ctx):
     driver.get(_url("/budget/"))
-    time.sleep(1)
+    pause(1)
     return _cards_session(driver)
 
 

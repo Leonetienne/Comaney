@@ -4,7 +4,6 @@ Advanced profile features:
 - Email notifications toggle via profile form checkbox in browser
 - Password change via profile form in browser (old password rejected, new accepted)
 """
-import time
 
 import pytest
 import requests
@@ -15,6 +14,7 @@ from helpers import (
     api_get, api_patch, session_cookies,
     setup_user, cleanup_user, PASSWORD, provider_takes_user_api_key,
 )
+from pacing import pause
 
 NEW_PASSWORD = "R41n3RWlnKl3R"
 
@@ -58,19 +58,19 @@ class TestAISettings:
 
     def test_save_own_api_key(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         if not provider_takes_user_api_key():
             # provider without user settings
             assert not driver.find_elements(By.ID, "id_ai_api_key")
             return
         fill(w, By.ID, "id_ai_api_key", "sk-ant-api03-testkey5678")
         _submit_form(driver, "ai")
-        time.sleep(2)
+        pause(2)
         assert "Saved." in driver.page_source
 
     def test_masked_key_shown_in_form(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         if not provider_takes_user_api_key():
             assert not driver.find_elements(By.ID, "id_ai_api_key")
             return
@@ -80,32 +80,32 @@ class TestAISettings:
 
     def test_save_custom_instructions(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_ai_custom_instructions",
              "Always use category Groceries for supermarket purchases.")
         _submit_form(driver, "ai")
-        time.sleep(2)
+        pause(2)
         assert "Saved." in driver.page_source
 
     def test_custom_instructions_round_trip(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         value = driver.find_element(By.ID, "id_ai_custom_instructions").get_attribute("value")
         assert "Groceries" in value
 
     def test_clear_api_key(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         if provider_takes_user_api_key():
             driver.find_element(By.ID, "id_ai_api_key").clear()
         fill(w, By.ID, "id_ai_custom_instructions", "")
         _submit_form(driver, "ai")
-        time.sleep(2)
+        pause(2)
         assert "Saved." in driver.page_source
 
     def test_frontend_maxlength_matches_backend_limit(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         field = driver.find_element(By.ID, "id_ai_custom_instructions")
         assert field.get_attribute("maxlength") == "4096"
 
@@ -126,32 +126,32 @@ class TestEmailNotificationsToggle:
         api_patch("/api/v2/account/", ctx, json={"email_notifications": True})
 
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         checkbox = driver.find_element(By.ID, "id_email_notifications")
         if checkbox.is_selected():
             checkbox.click()
-            time.sleep(0.2)
+            pause(0.2)
 
         _submit_form(driver, "notifications")
-        time.sleep(2)
+        pause(2)
         assert "Saved." in driver.page_source
 
-        time.sleep(1)
+        pause(1)
         assert api_get("/api/v2/account/", ctx).json()["email_notifications"] is False
 
     def test_enable_via_notifications_form(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         checkbox = driver.find_element(By.ID, "id_email_notifications")
         if not checkbox.is_selected():
             checkbox.click()
-            time.sleep(0.2)
+            pause(0.2)
 
         _submit_form(driver, "notifications")
-        time.sleep(2)
+        pause(2)
         assert "Saved." in driver.page_source
 
-        time.sleep(1)
+        pause(1)
         assert api_get("/api/v2/account/", ctx).json()["email_notifications"] is True
 
 
@@ -159,22 +159,22 @@ class TestPasswordChange:
 
     def test_change_password(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_current_password", PASSWORD)
         fill(w, By.ID, "id_new_password", NEW_PASSWORD)
         fill(w, By.ID, "id_new_password_confirm", NEW_PASSWORD)
         _submit_form(driver, "password")
-        time.sleep(2)
+        pause(2)
         assert "Password updated." in driver.page_source
 
     def test_old_password_rejected_after_change(self, driver, w, ctx):
         driver.delete_all_cookies()
         driver.get(_url("/login/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_email", ctx["email"])
         fill(w, By.ID, "id_password", PASSWORD)
         driver.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
-        time.sleep(1)
+        pause(1)
         assert "/budget/" not in driver.current_url
 
     def test_new_password_accepted(self, driver, w, ctx):
@@ -183,20 +183,20 @@ class TestPasswordChange:
 
     def test_wrong_current_password_shows_error(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_current_password", "wrongpassword")
         fill(w, By.ID, "id_new_password", "something99!")
         fill(w, By.ID, "id_new_password_confirm", "something99!")
         _submit_form(driver, "password")
-        time.sleep(2)
+        pause(2)
         assert "Incorrect password" in driver.page_source
 
     def test_mismatched_passwords_show_error(self, driver, w, ctx):
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_current_password", NEW_PASSWORD)
         fill(w, By.ID, "id_new_password", "Mismatch1!")
         fill(w, By.ID, "id_new_password_confirm", "Mismatch2!")
         _submit_form(driver, "password")
-        time.sleep(2)
+        pause(2)
         assert "do not match" in driver.page_source.lower()

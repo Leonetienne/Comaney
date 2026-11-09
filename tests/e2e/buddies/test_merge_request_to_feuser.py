@@ -2,7 +2,6 @@
 Personal offline-buddy-into-real-buddy merge requests: requires the target's approval.
 Only an already-linked contact can be selected as a target.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -10,6 +9,7 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user, fetch_email, extract_link, mailpit_seen_ids
 from bhelpers import _shell, _login_as, _confirm, _create_contact_link, _get_pk
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ class TestPersonalMergeRequestOnlyListsLinkedBuddies:
 
     def test_only_linked_buddy_is_a_candidate(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         select_el = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']} select[name='target_key']")
         values = [o.get_attribute("value") for o in select_el.find_elements(By.TAG_NAME, "option")]
         assert f"f{ctx['b_pk']}" in values, "Already-linked contact B must be a candidate"
@@ -73,9 +73,9 @@ class TestPersonalMergeRequestRevoke:
 
     def test_a_sends_request(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['b_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -83,7 +83,7 @@ class TestPersonalMergeRequestRevoke:
 
     def test_a_sees_sent_request_and_revokes(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         assert "Merge requests you sent" in driver.page_source
         assert "Revoke Dummy" in driver.page_source
         token = _shell(
@@ -92,7 +92,7 @@ class TestPersonalMergeRequestRevoke:
             f"print(DummyMergeInvite.objects.get(dummy=d).token)"
         ).strip()
         driver.find_element(By.ID, f"btn-revoke-merge-{token}").click()
-        time.sleep(1)
+        pause(1)
         assert "/buddies/" in driver.current_url
 
     def test_invite_gone_dummy_untouched(self, driver, w, ctx):
@@ -141,9 +141,9 @@ class TestPersonalMergeRequestBlocksDuplicate:
 
     def test_first_request_succeeds(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['b_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -152,9 +152,9 @@ class TestPersonalMergeRequestBlocksDuplicate:
 
     def test_second_request_is_blocked(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['c_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -207,9 +207,9 @@ class TestPersonalMergeRequestAcceptFlow:
         seen_before = mailpit_seen_ids()
         ctx["seen_before"] = seen_before
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['b_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -231,7 +231,7 @@ class TestPersonalMergeRequestAcceptFlow:
     def test_b_sees_navbar_bell_and_pending_card(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         bell = driver.find_elements(By.ID, "notif-badge")
         assert bell and int(bell[0].text.strip()) >= 1, "B's navbar bell must show at least one notification"
         assert "Offline record link requests" in driver.page_source
@@ -239,9 +239,9 @@ class TestPersonalMergeRequestAcceptFlow:
 
     def test_b_accepts_merge_request(self, driver, w, ctx):
         driver.get(ctx["merge_link"])
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-accept-merge").click()
-        time.sleep(1)
+        pause(1)
         assert "/buddies/" in driver.current_url
 
     def test_dummy_gone_history_transferred_no_duplicate_link(self, driver, w, ctx):
@@ -259,7 +259,7 @@ class TestPersonalMergeRequestAcceptFlow:
         )
         assert link_count == "1", "Accepting must not create a duplicate ContactLink for an already-linked buddy"
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Request Merge Expense" in driver.page_source
 
 
@@ -331,9 +331,9 @@ class TestMergeRequestSumsConflictingCoParticipantShares:
 
     def test_a_requests_merge_and_tom_accepts(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['mario_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['mario_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['tom_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -346,9 +346,9 @@ class TestMergeRequestSumsConflictingCoParticipantShares:
         ).strip()
         _login_as(driver, ctx["tom"])
         driver.get(_url(f"/buddies/merge/{token}/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-accept-merge").click()
-        time.sleep(1)
+        pause(1)
         assert "/buddies/" in driver.current_url
 
     def test_expense_not_lost_shares_summed_others_untouched(self, driver, w, ctx):
@@ -447,9 +447,9 @@ class TestMergeRequestUpfrontPayerBecomesRealOwner:
 
     def test_a_requests_merge_and_tom_accepts(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['mario_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['mario_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['tom_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -462,9 +462,9 @@ class TestMergeRequestUpfrontPayerBecomesRealOwner:
         ).strip()
         _login_as(driver, ctx["tom"])
         driver.get(_url(f"/buddies/merge/{token}/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-accept-merge").click()
-        time.sleep(1)
+        pause(1)
         assert "/buddies/" in driver.current_url
 
     def test_ownership_transferred_stale_row_removed_anna_untouched(self, driver, w, ctx):
@@ -529,9 +529,9 @@ class TestPersonalMergeRequestDeclineFlow:
 
     def test_a_sends_merge_request(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['dummy_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['dummy_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"f{ctx['b_pk']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -545,13 +545,13 @@ class TestPersonalMergeRequestDeclineFlow:
         ).strip()
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"btn-decline-merge-{token}").click()
-        time.sleep(1)
+        pause(1)
         assert "/buddies/" in driver.current_url
 
     def test_dummy_still_exists_for_a(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         assert "Decline Request Dummy" in driver.page_source

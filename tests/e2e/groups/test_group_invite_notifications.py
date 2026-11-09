@@ -3,7 +3,6 @@ Group invite accept/decline: invitor receives email notification.
 Group invite to an unregistered email: onboarding invite is sent without error.
 Group member removal: removed member receives email notification.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -13,6 +12,7 @@ from helpers import (
     fetch_email, extract_link, mailpit_seen_ids,
 )
 from bhelpers import _shell, _login_as, _create_group, _add_group_member, _confirm
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -46,9 +46,9 @@ class TestGroupInviteAcceptNotifiesAdmin:
         ctx["seen_before_accept"] = seen_before
         _login_as(driver, ctx["c"])
         driver.get(ctx["invite_link"])
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-accept-project-invite").click()
-        time.sleep(1)
+        pause(1)
         assert "/projects/" in driver.current_url
 
     def test_admin_receives_accepted_notification(self, driver, w, ctx):
@@ -92,9 +92,9 @@ class TestGroupInviteDeclineNotifiesAdmin:
         ctx["seen_before_decline"] = seen_before
         _login_as(driver, ctx["c"])
         driver.get(ctx["invite_link"])
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-decline-project-invite").click()
-        time.sleep(1)
+        pause(1)
         assert "/projects/" in driver.current_url
 
     def test_admin_receives_declined_notification(self, driver, w, ctx):
@@ -128,11 +128,11 @@ class TestGroupInviteOnboarding:
         seen_before = mailpit_seen_ids()
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element(By.ID, "project-invite-email")
         driver.execute_script("arguments[0].value = arguments[1];", inp, ctx["nonexistent_email"])
         driver.find_element(By.ID, "btn-group-invite").click()
-        time.sleep(1)
+        pause(1)
         assert "A registration and project invitation has been sent to" in driver.page_source
         ctx["seen_before"] = seen_before
 
@@ -167,7 +167,7 @@ class TestGroupMemberRemovedNotification:
         ctx["seen_before_remove"] = seen_before
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         # Find and click the remove button for member b
         member_pk = _shell(
             f"from feusers.models import FeUser; "
@@ -177,7 +177,7 @@ class TestGroupMemberRemovedNotification:
             f"print(ProjectMember.objects.get(group=g, feuser=b).uid)"
         ).strip()
         driver.find_element(By.ID, f"btn-remove-member-{member_pk}").click()
-        time.sleep(0.5)
+        pause(0.5)
         _confirm(driver)
 
     def test_removed_member_receives_email(self, driver, w, ctx):
@@ -249,9 +249,9 @@ class TestGroupActivityNotificationSuppressed:
         seen_before = mailpit_seen_ids()
         _login_as(driver, ctx["c"])
         driver.get(ctx["invite_link"])
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-accept-project-invite").click()
-        time.sleep(2)
+        pause(2)
         import requests
         from helpers import MAILPIT_API
         msgs = requests.get(f"{MAILPIT_API}/messages", timeout=5).json().get("messages", [])

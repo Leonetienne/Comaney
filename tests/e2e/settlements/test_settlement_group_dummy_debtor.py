@@ -5,7 +5,6 @@ Requirements: req 10.7 - admin creates a settlement on behalf of a group dummy
 (debtor) toward a real-user creditor. The real-user creditor must confirm receipt
 via the "Waiting for approval" / Review flow on the group detail page.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -13,6 +12,7 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_group
+from pacing import pause
 
 
 def _create_group_dummy(group_id: int, display_name: str) -> str:
@@ -62,7 +62,7 @@ class TestGroupSettlementDummyDebtor:
     def test_pay_someone_back_section_visible(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Pay someone back" in driver.page_source, \
             "Pay someone back section must appear on the group page"
 
@@ -72,7 +72,7 @@ class TestGroupSettlementDummyDebtor:
         assert any("Sir Owes-A-Lot" in t for t in option_texts), \
             "Admin's debtor dropdown must include the group dummy"
         debtor_sel.select_by_visible_text("Sir Owes-A-Lot (offline member)")
-        time.sleep(0.5)
+        pause(0.5)
 
     def test_amount_input_available(self, driver, w, ctx):
         amt = driver.find_element(By.ID, "settle-amount")
@@ -84,12 +84,12 @@ class TestGroupSettlementDummyDebtor:
         driver.find_element(
             By.ID, "btn-settle-individual"
         ).click()
-        time.sleep(0.5)
+        pause(0.5)
         msg = driver.find_element(By.ID, "cdialog-msg").text
         assert "confirm" in msg.lower(), \
             "Dialog must mention that the creditor will need to confirm receipt"
         driver.find_element(By.ID, "cdialog-cancel").click()
-        time.sleep(0.5)
+        pause(0.5)
 
     def test_submit_creates_settlement(self, driver, w, ctx):
         amt = driver.find_element(By.ID, "settle-amount")
@@ -98,9 +98,9 @@ class TestGroupSettlementDummyDebtor:
         driver.find_element(
             By.ID, "btn-settle-individual"
         ).click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "settlement record" in driver.page_source.lower(), \
             "Flash must confirm the settlement record was created"
 
@@ -129,11 +129,11 @@ class TestGroupSettlementDummyDebtor:
 
     def test_creditor_approves_via_review(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(
             By.ID, "btn-approve-settlement"
         ).click()
-        time.sleep(1)
+        pause(1)
         assert "confirmed" in driver.page_source.lower(), \
             "Flash must confirm receipt after admin approves"
 

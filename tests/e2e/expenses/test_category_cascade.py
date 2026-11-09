@@ -4,7 +4,6 @@ Category and tag cascade behavior:
 - Deleting a tag via UI removes it from expense.tags (verified in expense edit form)
 - API confirms the same for scheduled expenses
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -15,6 +14,7 @@ from helpers import (
     api_post, api_get, api_delete, server_today,
     setup_user, cleanup_user,
 )
+from pacing import pause
 
 
 @pytest.fixture(scope="module")
@@ -42,16 +42,16 @@ class TestCategoryCascade:
 
         # Action via UI: delete category from categories/tags page
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         btn = w.until(EC.element_to_be_clickable(
             (By.CSS_SELECTOR, f"#category-{cat_id} .ct-delete")))
         btn.click()
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-        time.sleep(1)
+        pause(1)
 
         # Verify via UI: expense edit form shows no category selected
         driver.get(_url(f"/budget/expenses/{eid}/edit/"))
-        time.sleep(1)
+        pause(1)
         cat_select = driver.find_element(By.ID, "id_category")
         selected_value = cat_select.find_element(By.CSS_SELECTOR, "option:checked").get_attribute("value")
         assert selected_value == "", (
@@ -76,16 +76,16 @@ class TestCategoryCascade:
 
         # Action via UI: delete tag from categories/tags page
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         btn = w.until(EC.element_to_be_clickable(
             (By.CSS_SELECTOR, f"#tag-{tag_id} .ct-delete")))
         btn.click()
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-        time.sleep(1)
+        pause(1)
 
         # Verify via UI: the tag no longer appears in the expense edit form
         driver.get(_url(f"/budget/expenses/{eid}/edit/"))
-        time.sleep(1)
+        pause(1)
         tag_wrap_text = driver.find_element(By.CSS_SELECTOR, ".tag-cb-wrap").text
         assert "CascadeTagUI" not in tag_wrap_text, (
             "Deleted tag must not appear as a checkbox in the expense edit form"
@@ -110,16 +110,16 @@ class TestCategoryCascade:
 
         # Action via UI: delete category
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         btn = w.until(EC.element_to_be_clickable(
             (By.CSS_SELECTOR, f"#category-{cat_id} .ct-delete")))
         btn.click()
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-        time.sleep(1)
+        pause(1)
 
         # Verify via UI: scheduled expense edit form shows no category
         driver.get(_url(f"/budget/scheduled/{sid}/edit/"))
-        time.sleep(1)
+        pause(1)
         cat_select = driver.find_element(By.ID, "id_category")
         selected_value = cat_select.find_element(By.CSS_SELECTOR, "option:checked").get_attribute("value")
         assert selected_value == "", (
@@ -145,16 +145,16 @@ class TestCategoryCascade:
 
         # Action via UI: delete tag
         driver.get(_url("/budget/categories-tags/"))
-        time.sleep(1)
+        pause(1)
         btn = w.until(EC.element_to_be_clickable(
             (By.CSS_SELECTOR, f"#tag-{tag_id} .ct-delete")))
         btn.click()
         w.until(EC.element_to_be_clickable((By.ID, "cdialog-ok"))).click()
-        time.sleep(1)
+        pause(1)
 
         # Verify via UI: scheduled expense edit form no longer shows the tag
         driver.get(_url(f"/budget/scheduled/{sid}/edit/"))
-        time.sleep(1)
+        pause(1)
         tag_wrap_text = driver.find_element(By.CSS_SELECTOR, ".tag-cb-wrap").text
         assert "SchedTagCascadeUI" not in tag_wrap_text, (
             "Deleted tag must not appear as a checkbox in the scheduled expense edit form"

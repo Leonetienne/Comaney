@@ -8,13 +8,13 @@ section used to be hidden entirely in that case. The selector page's three
 panels (Enter Manually / Create with AI / Create new recurring expense) each
 link to, and successfully load, their target page.
 """
-import time
 
 import pytest
 import requests
 from selenium.webdriver.common.by import By
 
 from helpers import _url, run_cmd, setup_user, cleanup_user, session_cookies, set_ai_user_config
+from pacing import pause
 
 ADD_EXPENSE_URL = "/budget/expenses/add/"
 MANUAL_URL      = "/budget/expenses/new/"
@@ -76,36 +76,36 @@ class TestAiAvailable:
 
     def test_sidebar_link_points_to_selector(self, driver, w, ctx, ai_available):
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         link = driver.find_element(By.LINK_TEXT, "Add Expense")
         assert link.get_attribute("href").endswith(ADD_EXPENSE_URL)
 
     def test_sidebar_link_navigates_to_selector(self, driver, w, ctx, ai_available):
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.LINK_TEXT, "Add Expense").click()
-        time.sleep(1)
+        pause(1)
         assert driver.current_url.endswith(ADD_EXPENSE_URL)
 
     def test_manual_panel_navigates_to_manual_form(self, driver, w, ctx, ai_available):
         driver.get(_url(ADD_EXPENSE_URL))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "add-expense-manual-tile").click()
-        time.sleep(1)
+        pause(1)
         assert driver.current_url.endswith(MANUAL_URL)
 
     def test_ai_panel_navigates_to_express_creation(self, driver, w, ctx, ai_available):
         driver.get(_url(ADD_EXPENSE_URL))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "add-expense-ai-tile").click()
-        time.sleep(1)
+        pause(1)
         assert driver.current_url.endswith(AI_URL)
 
     def test_recurring_panel_navigates_to_scheduled_form(self, driver, w, ctx, ai_available):
         driver.get(_url(ADD_EXPENSE_URL))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.CSS_SELECTOR, ".add-expense-tile--recurring").click()
-        time.sleep(1)
+        pause(1)
         assert driver.current_url.endswith(RECURRING_URL)
 
     def test_all_panel_target_urls_return_2xx(self, driver, w, ctx, ai_available, sess):
@@ -118,18 +118,18 @@ class TestAiUnavailable:
 
     def test_sidebar_link_points_directly_to_manual_form(self, driver, w, ctx, ai_unavailable):
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         link = driver.find_element(By.LINK_TEXT, "Add Expense")
         assert link.get_attribute("href").endswith(MANUAL_URL)
 
     def test_sidebar_link_navigates_directly_to_manual_form(self, driver, w, ctx, ai_unavailable):
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.LINK_TEXT, "Add Expense").click()
-        time.sleep(1)
+        pause(1)
         assert driver.current_url.endswith(MANUAL_URL)
 
     def test_direct_hit_on_selector_url_redirects_to_manual_form(self, driver, w, ctx, ai_unavailable):
         driver.get(_url(ADD_EXPENSE_URL))
-        time.sleep(1)
+        pause(1)
         assert driver.current_url.endswith(MANUAL_URL)

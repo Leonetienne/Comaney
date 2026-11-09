@@ -7,13 +7,13 @@ Tests:
 3. Cloning a project expense copies the project FK and BuddySpending rows.
 4. Project participant receives notification after clone.
 """
-import time
 
 import pytest
 import requests
 
 from helpers import _url, setup_user, cleanup_user, fetch_email, mailpit_seen_ids, MAILPIT_API
 from bhelpers import _shell, _login_as, _create_contact_link, _get_pk, _create_group, _add_group_member
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ class TestCloneContactExpense:
             """,
             _url(f"/budget/expenses/{ctx['exp_pk']}/clone/"),
         )
-        time.sleep(2)
+        pause(2)
 
         import re
         m = re.search(r'/expenses/(\d+)/edit/', driver.current_url)
@@ -187,7 +187,7 @@ class TestCloneProjectExpense:
             """,
             _url(f"/budget/expenses/{ctx['exp_pk']}/clone/"),
         )
-        time.sleep(2)
+        pause(2)
 
         import re
         m = re.search(r'/expenses/(\d+)/edit/', driver.current_url)

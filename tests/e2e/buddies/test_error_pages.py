@@ -4,13 +4,13 @@ Error paths and edge cases for the buddies extension.
 Covers: invalid tokens, expired invites, wrong-account invite pages,
 and admin self-removal guard.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _create_contact_link, _get_pk, _create_group
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -28,7 +28,7 @@ class TestInvalidContactInviteToken:
 
     def test_invalid_token_shows_error_page(self, driver, w, ctx):
         driver.get(_url("/buddies/invite/this-token-does-not-exist-xyz123/"))
-        time.sleep(1)
+        pause(1)
         assert "Invitation not found" in driver.page_source or \
                "invalid or has expired" in driver.page_source, \
             "Invalid invite token must show the invite_invalid page"
@@ -66,7 +66,7 @@ class TestExpiredContactInvite:
         # B logs in and opens the expired invite link
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/buddies/invite/{ctx['token']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Invitation not found" in driver.page_source or \
                "invalid or has expired" in driver.page_source, \
             "Expired invite link must show the invite_invalid page"
@@ -105,7 +105,7 @@ class TestWrongAccountContactInvite:
     def test_wrong_account_shows_error_page(self, driver, w, ctx):
         # A (wrong user) opens B's invite link
         driver.get(_url(f"/buddies/invite/{ctx['token']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Invitation for a different account" in driver.page_source, \
             "Opening an invite for a different email must show invite_wrong_account page"
         assert "Please log in with the correct account" in driver.page_source
@@ -153,7 +153,7 @@ class TestWrongAccountMergeInvite:
     def test_wrong_account_merge_shows_error_page(self, driver, w, ctx):
         # A opens merge link that is meant for B
         driver.get(_url(f"/buddies/merge/{ctx['token']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Merge request for a different account" in driver.page_source, \
             "Opening a merge invite for a different account must show invite_wrong_account page"
 
@@ -185,7 +185,7 @@ class TestAdminCannotRemoveSelf:
     def test_admin_self_remove_shows_error(self, driver, w, ctx):
         # POST directly to the remove-member endpoint for the admin themselves
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         # Attempt to remove self: find remove form for the admin member (if present)
         remove_forms = driver.find_elements(By.CSS_SELECTOR,
             f"form[action*='remove-member/{ctx['member_uid']}']")
@@ -194,12 +194,12 @@ class TestAdminCannotRemoveSelf:
             return
         # If the button exists (UI shows it), click and expect an error flash
         remove_forms[0].find_element(By.CSS_SELECTOR, "button[type=submit]").click()
-        time.sleep(0.5)
+        pause(0.5)
         # If confirm dialog appears, confirm it
         ok_btns = driver.find_elements(By.ID, "cdialog-ok")
         if ok_btns and ok_btns[0].is_displayed():
             ok_btns[0].click()
-            time.sleep(1)
+            pause(1)
         assert "Transfer admin rights" in driver.page_source or \
                "cannot remove yourself" in driver.page_source.lower(), \
             "Admin self-removal must be blocked with an error message"

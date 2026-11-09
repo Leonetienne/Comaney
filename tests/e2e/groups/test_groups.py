@@ -3,7 +3,6 @@ Buddy group management: create, invite, accept/decline group invite,
 member management, dummy management, admin transfer, leave, dissolve,
 and group expense breakdown.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -18,6 +17,7 @@ from bhelpers import (
     _create_contact_link, _get_pk,
     _create_group, _add_group_member, _create_group_expense,
 )
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -35,11 +35,11 @@ class TestGroupCreate:
 
     def test_create_group_via_ui(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element(By.ID, "project-name")
         driver.execute_script("arguments[0].value = arguments[1];", inp, "Test Group Alpha")
         driver.find_element(By.ID, "btn-create-project").click()
-        time.sleep(1)
+        pause(1)
         assert "/projects/" in driver.current_url
 
     def test_group_name_on_detail_page(self, driver, w, ctx):
@@ -52,12 +52,12 @@ class TestGroupCreate:
         import re
         m = re.search(r'/projects/(\d+)/', driver.current_url)
         driver.get(_url(f"/projects/{m.group(1)}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Invite by email" in driver.page_source
 
     def test_group_appears_on_contacts(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         assert "Test Group Alpha" in driver.page_source
 
 
@@ -79,13 +79,13 @@ class TestGroupInviteAccept:
 
     def test_admin_invites_member(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element(By.CSS_SELECTOR,
             "form[action*='invite'] input[name='email']")
         inp.clear()
         inp.send_keys(ctx["c"]["email"])
         driver.find_element(By.ID, "btn-group-invite").click()
-        time.sleep(1)
+        pause(1)
         assert "Group invitation sent" in driver.page_source or \
                ctx["c"]["email"] in driver.page_source
 
@@ -101,13 +101,13 @@ class TestGroupInviteAccept:
     def test_c_sees_group_invite_on_contacts_page(self, driver, w, ctx):
         _login_as(driver, ctx["c"])
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         assert "Group invitations" in driver.page_source
         assert "Invite Test Group" in driver.page_source
 
     def test_c_sees_existing_members_on_invite_screen(self, driver, w, ctx):
         driver.get(ctx["group_invite_link"])
-        time.sleep(1)
+        pause(1)
         assert "Your friends are already here" in driver.page_source
         # The admin (Gina InvAdmin) is already a member and must be listed.
         member_names = driver.find_elements(
@@ -117,16 +117,16 @@ class TestGroupInviteAccept:
 
     def test_c_accepts_group_invite_via_link(self, driver, w, ctx):
         driver.get(ctx["group_invite_link"])
-        time.sleep(1)
+        pause(1)
         assert "You're invited!" in driver.page_source
         assert "Invite Test Group" in driver.page_source
         driver.find_element(By.ID, "btn-accept-project-invite").click()
-        time.sleep(1)
+        pause(1)
         assert f"/projects/{ctx['group_id']}/" in driver.current_url
 
     def test_c_in_member_list_after_accept(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["c"]["email"] in driver.page_source
 
     def test_contact_link_created_between_a_and_c(self, driver, w, ctx):
@@ -168,18 +168,18 @@ class TestGroupInviteDecline:
     def test_c_sees_group_invite(self, driver, w, ctx):
         _login_as(driver, ctx["c"])
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         assert "Decline Test Group" in driver.page_source
 
     def test_c_clicks_view_invite(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR,
             ".invite-card a[href*='project-invite']").click()
-        time.sleep(1)
+        pause(1)
         assert "Decline Test Group" in driver.page_source
 
     def test_c_declines_group_invite(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-decline-project-invite").click()
-        time.sleep(1)
+        pause(1)
         assert "/projects/" in driver.current_url
 
     def test_c_not_in_group_after_decline(self, driver, w, ctx):
@@ -217,12 +217,12 @@ class TestGroupInviteRevoke:
 
     def test_pending_invite_shown(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["c"]["email"] in driver.page_source
 
     def test_admin_revokes_invite(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "[id^='btn-revoke-group-invite-']").click()
-        time.sleep(1)
+        pause(1)
         assert ctx["c"]["email"] not in driver.page_source
 
 
@@ -245,24 +245,24 @@ class TestGroupInviteErrors:
 
     def test_self_invite_shows_error(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element(By.CSS_SELECTOR,
             "form[action*='invite'] input[name='email']")
         inp.clear()
         inp.send_keys(ctx["a"]["email"])
         driver.find_element(By.ID, "btn-group-invite").click()
-        time.sleep(1)
+        pause(1)
         assert "cannot invite yourself" in driver.page_source.lower()
 
     def test_already_member_invite_shows_info(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element(By.CSS_SELECTOR,
             "form[action*='invite'] input[name='email']")
         inp.clear()
         inp.send_keys(ctx["c"]["email"])
         driver.find_element(By.ID, "btn-group-invite").click()
-        time.sleep(1)
+        pause(1)
         assert "already a member" in driver.page_source.lower()
 
 
@@ -282,22 +282,22 @@ class TestGroupDummyManagement:
 
     def test_add_group_dummy(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element(By.CSS_SELECTOR,
             "form[action*='add-dummy'] input[name='display_name']")
         inp.clear()
         inp.send_keys("Group Offline Member")
         driver.find_element(By.ID, "btn-group-add-dummy").click()
-        time.sleep(1)
+        pause(1)
         assert "Group Offline Member" in driver.page_source
 
     def test_remove_group_dummy(self, driver, w, ctx):
         dummy_card = driver.find_element(By.CSS_SELECTOR, ".buddy-card-dummy")
         dummy_card.find_element(By.CSS_SELECTOR, "a[href*='remove']").click()
-        time.sleep(1)
+        pause(1)
         assert "remove" in driver.current_url
         driver.find_element(By.ID, "btn-confirm-kick").click()
-        time.sleep(1)
+        pause(1)
         assert "Group Offline Member" not in driver.page_source
 
 
@@ -320,7 +320,7 @@ class TestGroupRemoveMember:
 
     def test_c_in_member_list(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert ctx["c"]["email"] in driver.page_source
 
     def test_remove_c_shows_confirm(self, driver, w, ctx):
@@ -333,17 +333,17 @@ class TestGroupRemoveMember:
                 break
         assert remove_btn is not None, "Remove button not found for member C"
         remove_btn.click()
-        time.sleep(0.5)
+        pause(0.5)
         assert driver.find_element(By.ID, "cdialog-ok").is_displayed()
 
     def test_confirm_removes_c(self, driver, w, ctx):
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert ctx["c"]["email"] not in driver.page_source
 
     def test_ghost_dummy_appears(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Cian Removeable" in driver.page_source, \
             "Ghost dummy with removed member's name must appear"
         assert "Offline" in driver.page_source
@@ -370,7 +370,7 @@ class TestGroupTransferAdmin:
 
     def test_admin_selects_new_admin_and_transfers(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         sel = Select(driver.find_element(By.CSS_SELECTOR, "select[name='new_admin_id']"))
         sel.select_by_value(str(ctx["c_pk"]))
         driver.find_element(By.ID, "btn-transfer-admin").click()
@@ -384,7 +384,7 @@ class TestGroupTransferAdmin:
     def test_new_admin_sees_admin_ui(self, driver, w, ctx):
         _login_as(driver, ctx["c"])
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "You are admin" in driver.page_source or "Admin" in driver.page_source
         assert "Transfer admin rights" in driver.page_source
 
@@ -410,7 +410,7 @@ class TestGroupLeave:
     def test_c_can_see_leave_button(self, driver, w, ctx):
         _login_as(driver, ctx["c"])
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Leave project" in driver.page_source
 
     def test_c_leaves_group(self, driver, w, ctx):
@@ -423,13 +423,13 @@ class TestGroupLeave:
 
     def test_group_gone_from_c_list(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         assert "Leave Test Group" not in driver.page_source
 
     def test_admin_cannot_see_leave_button(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Leave project" not in driver.page_source
 
 
@@ -449,13 +449,13 @@ class TestGroupDissolve:
 
     def test_dissolve_group(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         inp = driver.find_element(By.ID, "delete-confirm-name")
         driver.execute_script("arguments[0].value = arguments[1];", inp, "Dissolve Test Group")
         driver.execute_script("arguments[0].dispatchEvent(new Event('input'));", inp)
-        time.sleep(0.3)
+        pause(0.3)
         driver.find_element(By.ID, "btn-delete-project").click()
-        time.sleep(1)
+        pause(1)
         assert "/projects/" in driver.current_url
 
     def test_flash_message_after_dissolve(self, driver, w, ctx):
@@ -463,7 +463,7 @@ class TestGroupDissolve:
 
     def test_group_gone_from_contacts(self, driver, w, ctx):
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         assert "Dissolve Test Group" not in driver.page_source
 
 
@@ -496,14 +496,14 @@ class TestGroupBreakdown:
 
     def test_expense_in_breakdown_table(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Breakdown Expense" in driver.page_source, \
             "Group expense must appear in the Expense Breakdown section"
 
     def test_settlement_row_visible(self, driver, w, ctx):
         # "Your balances" (the "owes" wording) lives on the Insights tab.
         driver.get(_url(f"/projects/{ctx['group_id']}/insights/"))
-        time.sleep(1)
+        pause(1)
         assert "owes" in driver.page_source, \
             "A settlement 'owes' row must be shown"
 
@@ -542,18 +542,18 @@ class TestGroupExpenseCreateUI:
 
     def test_group_mode_radio_visible(self, driver, w, ctx):
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "buddy-payment-cb").click()
-        time.sleep(0.5)
+        pause(0.5)
         radios = driver.find_elements(By.ID, "buddy-mode-group")
         assert len(radios) == 1, "Group mode radio button must exist in the buddy payment section"
 
     def test_select_group_mode_and_group(self, driver, w, ctx):
         driver.find_element(By.ID, "buddy-mode-group").click()
-        time.sleep(0.4)
+        pause(0.4)
         group_sel = driver.find_element(By.ID, "buddy-group-select")
         Select(group_sel).select_by_value(str(ctx["group_id"]))
-        time.sleep(0.5)
+        pause(0.5)
         # At least one participant checkbox should appear (group member, excluding me)
         cbs = driver.find_elements(By.CSS_SELECTOR,
             "#buddy-participants-checkboxes input[type=checkbox]")
@@ -574,16 +574,16 @@ class TestGroupExpenseCreateUI:
         for cb in cbs:
             if not cb.is_selected():
                 cb.click()
-        time.sleep(0.3)
+        pause(0.3)
         driver.find_element(By.ID, "buddy-equal-btn").click()
-        time.sleep(0.3)
+        pause(0.3)
         driver.find_element(By.XPATH, "//button[contains(text(), 'Finish')]").click()
-        time.sleep(2)
+        pause(2)
         assert "/budget/expenses/" in driver.current_url, \
             "Group expense (I pay) must redirect to expense list"
 
     def test_expense_appears_in_group_breakdown(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "UI Group Expense" in driver.page_source, \
             "Group expense created via UI must appear in the group breakdown"

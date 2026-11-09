@@ -20,7 +20,6 @@ Project data export (ZIP):
   always cover all-time data; any date_from/date_to params passed are ignored
 """
 import io
-import time
 import zipfile
 
 import pytest
@@ -28,6 +27,7 @@ import requests
 
 from helpers import _url, setup_user, cleanup_user, session_cookies
 from bhelpers import _shell, _login_as, _get_pk, _create_group, _add_group_member, _create_group_expense
+from pacing import pause
 
 
 def _get_export(driver, project_id, date_from=None, date_to=None):
@@ -236,11 +236,11 @@ class TestProjectExport:
         not in a dedicated section on the Manage (settings) page."""
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['gid']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Export ZIP" in driver.page_source, "Export link missing from project Overview page"
 
         driver.get(_url(f"/projects/{ctx['gid']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Export project data" not in driver.page_source, (
             "The old dedicated Export section must be removed from the Manage page"
         )

@@ -18,6 +18,7 @@ from bhelpers import (
     _shell, _login_as, _create_contact_link, _get_pk,
     _create_personal_expense_with_buddy,
 )
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -50,20 +51,20 @@ class TestExpenseApproval:
     def test_b_sees_needs_approval_badge(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Needs approval" in driver.page_source
         assert "Approval Expense" in driver.page_source
 
     def test_b_approves_expense(self, driver, w, ctx):
         driver.find_element(By.ID, f"btn-review-exp-{ctx['exp_pk']}").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-approve-settlement").click()
-        time.sleep(1)
+        pause(1)
         assert "/budget/expenses/" in driver.current_url
 
     def test_badge_gone_after_approval(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Needs approval" not in driver.page_source
         assert "Approval Expense" in driver.page_source, \
             "Approved expense must still be visible on the summary page"
@@ -71,7 +72,7 @@ class TestExpenseApproval:
     def test_a_sees_expense_on_summary_after_approval(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Approval Expense" in driver.page_source
 
 
@@ -104,7 +105,7 @@ class TestExpenseOwnerRejection:
     def test_b_sees_needs_approval_badge(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Needs approval" in driver.page_source
         assert "Rejection Expense" in driver.page_source
 
@@ -112,16 +113,16 @@ class TestExpenseOwnerRejection:
         seen_before = mailpit_seen_ids()
         ctx["seen_before"] = seen_before
         driver.find_element(By.ID, f"btn-review-exp-{ctx['exp_pk']}").click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-reject-settlement").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "/budget/expenses/" in driver.current_url
 
     def test_expense_gone_from_b_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Rejection Expense" not in driver.page_source, \
             "Rejected expense must be deleted and no longer visible for B"
 
@@ -143,7 +144,7 @@ class TestExpenseOwnerRejection:
     def test_expense_gone_from_a_summary(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Rejection Expense" not in driver.page_source, \
             "Rejected expense must not appear on A's summary either"
 
@@ -175,7 +176,7 @@ class TestParticipantSeesNeedsApproval:
 
     def test_a_sees_pending_expense_on_summary(self, driver, w, ctx):
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Pending For A" in driver.page_source
         assert "Needs approval" in driver.page_source
 

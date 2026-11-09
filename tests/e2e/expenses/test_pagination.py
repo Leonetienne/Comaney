@@ -15,7 +15,6 @@ source files listed above.
 No existing test modules need migration: all of them create fewer than
 PAGE_SIZE expenses per user, so all items land on page 1.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -28,6 +27,7 @@ from bhelpers import (
     _create_group, _add_group_member,
     _create_group_expense, _create_personal_expense_with_buddy,
 )
+from pacing import pause
 
 PAGE_SIZE = 25
 N_ITEMS   = PAGE_SIZE + 2   # 27 → 2 pages
@@ -71,7 +71,7 @@ def _click_page(driver, number, nav_index=-1):
         By.XPATH, f".//button[normalize-space(.)='{number}']"
     )
     driver.execute_script("arguments[0].click();", btn)
-    time.sleep(1)
+    pause(1)
 
 
 def _active_page(driver):
@@ -118,7 +118,7 @@ class TestExpenseListPagination:
 
     def _load(self, driver):
         driver.get(EXP_URL)
-        time.sleep(2)
+        pause(2)
         _wait_exp_list(driver)
 
     def test_nav_appears(self, driver, w, ctx):
@@ -150,7 +150,7 @@ class TestExpenseListPagination:
         nav = _pagination_navs(driver)[-1]
         btn = nav.find_element(By.XPATH, ".//button[normalize-space(.)='|<']")
         driver.execute_script("arguments[0].click();", btn)
-        time.sleep(1)
+        pause(1)
         assert _active_page(driver) == 1
 
     def test_top_nav_has_top_modifier_class(self, driver, w, ctx):
@@ -177,7 +177,7 @@ class TestExpenseListPagination:
             el, self.PREFIX,   # returns all 27 items, but page resets to 1
         )
         _wait_exp_list(driver)
-        time.sleep(1)
+        pause(1)
         assert _active_page(driver) == 1, "Searching must reset pagination to page 1"
         # Clear search
         driver.execute_script(
@@ -186,7 +186,7 @@ class TestExpenseListPagination:
             el,
         )
         _wait_exp_list(driver)
-        time.sleep(1)
+        pause(1)
 
     def test_nav_hidden_with_fewer_than_page_size_items(self, driver, w, ctx):
         """A user with fewer items than PAGE_SIZE sees no pagination nav."""
@@ -199,7 +199,7 @@ class TestExpenseListPagination:
             assert r.status_code == 201
             _login_as(driver, c2)
             driver.get(EXP_URL)
-            time.sleep(2)
+            pause(2)
             _wait_exp_list(driver)
             for nav in driver.find_elements(By.CSS_SELECTOR, ".exp-pagination"):
                 assert nav.value_of_css_property("display") == "none", \
@@ -244,7 +244,7 @@ class TestContactSummaryPagination:
     def _load(self, driver):
         driver.get(_url("/buddies/summary/"))
         _wait_bexp_cards(driver, "buddy-direct-exp-container")
-        time.sleep(1)   # let _attachPaginator run after XHR
+        pause(1)   # let _attachPaginator run after XHR
 
     def test_nav_appears(self, driver, w, ctx):
         self._load(driver)
@@ -297,7 +297,7 @@ class TestProjectListPagination:
     def _load(self, driver, grp):
         driver.get(_url(f"/projects/{grp}/"))
         _wait_bexp_cards(driver, "proj-exp-list-container")
-        time.sleep(1)   # let _attachPaginator run after XHR
+        pause(1)   # let _attachPaginator run after XHR
 
     def test_nav_appears(self, driver, w, ctx):
         self._load(driver, ctx["grp"])
@@ -367,7 +367,7 @@ class TestExpenseListScrollTo:
     def test_scroll_to_opens_correct_page(self, driver, w, ctx):
         # Load page 2 to learn a page-2 item's DOM id and uid
         driver.get(EXP_URL)
-        time.sleep(2)
+        pause(2)
         _wait_exp_list(driver)
         _click_page(driver, 2)
         dom_id = _page2_dom_id_exp(driver)
@@ -375,9 +375,9 @@ class TestExpenseListScrollTo:
 
         # Simulate returning from edit: fresh load with ?scroll_to=<uid>
         driver.get(EXP_URL + "&scroll_to=" + uid)
-        time.sleep(2)
+        pause(2)
         _wait_exp_list(driver)
-        time.sleep(1)
+        pause(1)
 
         assert _active_page(driver) == 2, \
             f"?scroll_to={uid} must cause Alpine to open page 2"
@@ -413,7 +413,7 @@ class TestContactSummaryScrollTo:
         # Load page 2 to learn a page-2 item's DOM id and uid
         driver.get(summary_url)
         _wait_bexp_cards(driver, "buddy-direct-exp-container")
-        time.sleep(1)
+        pause(1)
         _click_page(driver, 2)
         dom_id = _page2_dom_id_bexp(driver)
         uid = dom_id[len("expense-"):]
@@ -421,7 +421,7 @@ class TestContactSummaryScrollTo:
         # Simulate returning from edit: fresh load with ?scroll_to=<uid>
         driver.get(summary_url + "?scroll_to=" + uid)
         _wait_bexp_cards(driver, "buddy-direct-exp-container")
-        time.sleep(2)   # _attachPaginator + scroll_to jump
+        pause(2)   # _attachPaginator + scroll_to jump
 
         assert _active_page(driver) == 2, \
             f"?scroll_to={uid} must cause _attachPaginator to open page 2"
@@ -459,7 +459,7 @@ class TestProjectScrollTo:
         # Load page 2 to learn a page-2 item's DOM id and uid
         driver.get(project_url)
         _wait_bexp_cards(driver, "proj-exp-list-container")
-        time.sleep(1)
+        pause(1)
         _click_page(driver, 2)
         dom_id = _page2_dom_id_bexp(driver)
         uid = dom_id[len("expense-"):]
@@ -467,7 +467,7 @@ class TestProjectScrollTo:
         # Simulate returning from edit: fresh load with ?scroll_to=<uid>
         driver.get(project_url + "?scroll_to=" + uid)
         _wait_bexp_cards(driver, "proj-exp-list-container")
-        time.sleep(2)   # _attachPaginator + scroll_to jump
+        pause(2)   # _attachPaginator + scroll_to jump
 
         assert _active_page(driver) == 2, \
             f"?scroll_to={uid} must cause _attachPaginator to open page 2"

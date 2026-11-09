@@ -12,7 +12,6 @@ is only for non-owner participants.
 [O5] Overlay edit button absent for settlements.
 [O6] Lite editor shows the owner's original category, tags, and note.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -23,6 +22,7 @@ from bhelpers import (
     _create_group, _add_group_member, _create_group_expense,
     _create_personal_expense_with_buddy,
 )
+from pacing import pause
 
 
 def _create_category(email: str, title: str) -> str:
@@ -75,7 +75,7 @@ class TestContactOverlayButton:
     def test_participant_sees_lite_button(self, driver, w, ctx):
         _login_as(driver, ctx["part"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(2)
+        pause(2)
         assert f"/budget/expenses/{ctx['exp_pk']}/edit-overlay/" in driver.page_source, \
             "[O1] Participant must see edit-overlay link"
 
@@ -86,7 +86,7 @@ class TestContactOverlayButton:
     def test_owner_sees_full_button_not_lite(self, driver, w, ctx):
         _login_as(driver, ctx["owner"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(2)
+        pause(2)
         assert f"/budget/expenses/{ctx['exp_pk']}/edit/" in driver.page_source, \
             "[O1] Owner must see full edit link"
         assert f"/budget/expenses/{ctx['exp_pk']}/edit-overlay/" not in driver.page_source, \
@@ -116,7 +116,7 @@ class TestGroupExpenseOverlayButton:
     def test_participant_sees_lite_button(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_url(f"/projects/{ctx['gid']}/"))
-        time.sleep(2)
+        pause(2)
         links = driver.find_elements(By.CSS_SELECTOR, f"a[data-edit='lite']")
         matching = [l for l in links if str(ctx["exp_pk"]) in (l.get_attribute("href") or "")]
         assert matching, "[O2] Member must see edit-lite button for group expense"
@@ -124,7 +124,7 @@ class TestGroupExpenseOverlayButton:
     def test_owner_sees_full_not_lite(self, driver, w, ctx):
         _login_as(driver, ctx["admin"])
         driver.get(_url(f"/projects/{ctx['gid']}/"))
-        time.sleep(2)
+        pause(2)
         lite = driver.find_elements(By.CSS_SELECTOR, f"a[data-edit='lite']")
         matching_lite = [l for l in lite if str(ctx["exp_pk"]) in (l.get_attribute("href") or "")]
         assert not matching_lite, "[O2] Owner must not see edit-lite button for their own expense"
@@ -161,7 +161,7 @@ class TestOverlayEditorSave:
     def test_edit_overlay_page_loads(self, driver, w, ctx):
         _login_as(driver, ctx["part"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit-overlay/"))
-        time.sleep(1)
+        pause(1)
         assert "edit-overlay" in driver.current_url, \
             "[O3] Lite editor must load for participant"
         assert "My tags" in driver.page_source or "category" in driver.page_source.lower(), \
@@ -169,7 +169,7 @@ class TestOverlayEditorSave:
 
     def test_save_overlay_creates_db_entry(self, driver, w, ctx):
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit-overlay/"))
-        time.sleep(1)
+        pause(1)
         # Select the category
         driver.execute_script(
             f"document.getElementById('id_category').value = '{ctx['cat_pk']}';"
@@ -181,14 +181,14 @@ class TestOverlayEditorSave:
             f"if(cb) cb.checked = true;"
         )
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(1)
+        pause(1)
         assert _overlay_exists(ctx["exp_pk"], ctx["part"]["email"]), \
             "[O3] Overlay must exist in DB after saving"
 
     def test_owner_cannot_access_overlay_editor(self, driver, w, ctx):
         _login_as(driver, ctx["owner"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit-overlay/"))
-        time.sleep(1)
+        pause(1)
         assert driver.find_elements(By.CSS_SELECTOR, ".form-wrap button[type=submit]") == [], \
             "[O3] Owner must not see the overlay form (404)"
 
@@ -228,7 +228,7 @@ class TestOverlayClear:
     def test_empty_submit_removes_overlay(self, driver, w, ctx):
         _login_as(driver, ctx["part"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit-overlay/"))
-        time.sleep(1)
+        pause(1)
         # Deselect category (set to empty)
         driver.execute_script("document.getElementById('id_category').value = '';")
         # Uncheck all tag checkboxes
@@ -237,7 +237,7 @@ class TestOverlayClear:
             ".forEach(cb => cb.checked = false);"
         )
         driver.find_element(By.CSS_SELECTOR, ".form-wrap button[type=submit]").click()
-        time.sleep(1)
+        pause(1)
         assert not _overlay_exists(ctx["exp_pk"], ctx["part"]["email"]), \
             "[O4] Overlay must be deleted when saved empty"
 
@@ -275,7 +275,7 @@ class TestNoOverlayOnSettlements:
     def test_no_edit_lite_button_for_settlement_creditor(self, driver, w, ctx):
         _login_as(driver, ctx["creditor"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(2)
+        pause(2)
         assert f"/budget/expenses/{ctx['exp_pk']}/edit-overlay/" not in driver.page_source, \
             "[O5] Settlement creditor must not see edit-overlay button"
 
@@ -316,7 +316,7 @@ class TestOverlayShowsOriginalValues:
     def test_original_category_shown(self, driver, w, ctx):
         _login_as(driver, ctx["part"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit-overlay/"))
-        time.sleep(1)
+        pause(1)
         assert "OrigCatElectronics" in driver.page_source, \
             "[O6] Lite editor must show the owner's original category"
 

@@ -16,7 +16,6 @@ Enabling the trust also accepts A's already-pending entries and invitations
 Run: pytest tests/e2e/buddies/test_auto_accept_trust.py -v | tee logfile.log
 """
 import json
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -30,6 +29,7 @@ from bhelpers import (
     _create_group, _add_group_member, _create_group_expense,
     _create_personal_expense_with_buddy,
 )
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +97,7 @@ def _submit_expense_form(driver, *, title, value, upfront_type, upfront_id,
     which are not what these tests are about).
     """
     driver.get(_url(url))
-    time.sleep(1)
+    pause(1)
     driver.execute_script(
         """
         const [title, value, date, mode, pid, utype, uid, sp] = arguments;
@@ -116,7 +116,7 @@ def _submit_expense_form(driver, *, title, value, upfront_type, upfront_id,
         title, value, date, mode, str(project_id), upfront_type, str(upfront_id),
         json.dumps(spendings),
     )
-    time.sleep(2)
+    pause(2)
 
 
 def _no_email(to_email: str, subject_fragment: str, ignore_ids) -> bool:
@@ -149,13 +149,13 @@ class TestAutoAcceptToggle:
     def test_toggle_visible_and_off_by_default(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         assert "Automatically accept expenses, settlements and project invitations from Toggle Actor" in driver.page_source
         assert not self._toggle(driver, ctx).is_selected()
 
     def test_enabling_asks_for_confirmation_with_warning(self, driver, w, ctx):
         driver.execute_script("arguments[0].click();", self._toggle(driver, ctx))
-        time.sleep(0.5)
+        pause(0.5)
         msg = driver.find_element(By.ID, "cdialog-msg").text
         assert "cannot be undone" in msg, f"Dialog must warn about the permanent change, got: {msg!r}"
         assert "project invitation" in msg, f"Dialog must mention project invitations, got: {msg!r}"
@@ -163,20 +163,20 @@ class TestAutoAcceptToggle:
 
     def test_cancel_keeps_it_off(self, driver, w, ctx):
         driver.find_element(By.ID, "cdialog-cancel").click()
-        time.sleep(1)
+        pause(1)
         assert not self._toggle(driver, ctx).is_selected()
         assert _trust_flag(ctx["b"]["email"], ctx["a"]["email"]) == "False"
 
     def test_ok_saves_it(self, driver, w, ctx):
         driver.execute_script("arguments[0].click();", self._toggle(driver, ctx))
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         assert "You now automatically accept entries from Toggle Actor" in driver.page_source
         assert _trust_flag(ctx["b"]["email"], ctx["a"]["email"]) == "True"
 
     def test_stays_on_after_reload(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         assert self._toggle(driver, ctx).is_selected()
 
     def test_only_one_direction(self, driver, w, ctx):
@@ -186,25 +186,25 @@ class TestAutoAcceptToggle:
     def test_a_sees_label(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         assert "Accepts your entries automatically" in driver.page_source
 
     def test_b_does_not_see_label(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         assert "Accepts your entries automatically" not in driver.page_source
 
     def test_disabling_needs_no_confirmation(self, driver, w, ctx):
         driver.execute_script("arguments[0].click();", self._toggle(driver, ctx))
-        time.sleep(1.5)
+        pause(1.5)
         assert not driver.find_element(By.ID, "cdialog-backdrop").is_displayed()
         assert _trust_flag(ctx["b"]["email"], ctx["a"]["email"]) == "False"
 
     def test_a_label_gone_after_disabling(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         assert "Accepts your entries automatically" not in driver.page_source
 
 
@@ -229,26 +229,26 @@ class TestDirectExpenseAutoAccepted:
         ctx["seen_before"] = mailpit_seen_ids()
         _login_as(driver, ctx["a"])
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "id_title").clear()
         driver.find_element(By.ID, "id_title").send_keys("Trusted Direct Expense")
         driver.find_element(By.ID, "id_value").clear()
         driver.find_element(By.ID, "id_value").send_keys("80.00")
         driver.execute_script(f"document.getElementById('id_date_due').value = '{server_today()}';")
         driver.find_element(By.ID, "assign-contact").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.execute_script(
             f"var sel = document.getElementById('buddy-upfront-select');"
             f"sel.value = 'feuser:{ctx['b_pk']}';"
             f"sel.dispatchEvent(new Event('change', {{bubbles: true}}));"
         )
-        time.sleep(0.4)
+        pause(0.4)
         driver.find_element(By.ID, "buddy-equal-btn").click()
-        time.sleep(0.3)
+        pause(0.3)
         driver.find_element(By.CSS_SELECTOR,
             "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)").click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         ctx["exp_pk"] = _expense_pk(ctx["b"]["email"], "Trusted Direct Expense")
 
     def test_expense_is_approved(self, driver, w, ctx):
@@ -269,7 +269,7 @@ class TestDirectExpenseAutoAccepted:
     def test_b_sees_no_needs_approval(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         assert "Trusted Direct Expense" in driver.page_source
         assert "Needs approval" not in driver.page_source
 
@@ -284,7 +284,7 @@ def _pick_payer(driver, pk: int) -> None:
         f"sel.value = 'feuser:{pk}';"
         f"sel.dispatchEvent(new Event('change', {{bubbles: true}}));"
     )
-    time.sleep(0.4)
+    pause(0.4)
 
 
 def _payer_notice(driver) -> str:
@@ -295,10 +295,10 @@ def _submit_dialog_text(driver) -> str:
     """Click Finish, read the payer confirm dialog, then cancel it."""
     driver.find_element(By.CSS_SELECTOR,
         "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)").click()
-    time.sleep(0.5)
+    pause(0.5)
     msg = driver.find_element(By.ID, "cdialog-msg").text
     driver.find_element(By.ID, "cdialog-cancel").click()
-    time.sleep(0.3)
+    pause(0.3)
     return msg
 
 
@@ -330,12 +330,12 @@ class TestPayerApprovalWording:
     def _open_form(self, driver, ctx, tab_id):
         _login_as(driver, ctx["a"])
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "id_title").send_keys("Wording Expense")
         driver.find_element(By.ID, "id_value").send_keys("20.00")
         driver.execute_script(f"document.getElementById('id_date_due').value = '{server_today()}';")
         driver.find_element(By.ID, tab_id).click()
-        time.sleep(0.5)
+        pause(0.5)
 
     def test_direct_trusting_payer(self, driver, w, ctx):
         self._open_form(driver, ctx, "assign-contact")
@@ -454,7 +454,7 @@ class TestProjectExpenseAutoAccepted:
     def test_b_sees_no_waiting_item_on_project(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Trusted Project Expense" in driver.page_source
         assert f"/buddies/expense/{ctx['exp_pk']}/review/" not in driver.page_source
 
@@ -643,10 +643,10 @@ class TestDirectSettlementAutoConfirmed:
         ctx["seen_before"] = mailpit_seen_ids()
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/summary/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "btn-direct-settle").click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         ctx["exp_pk"] = int(_shell(
             f"from budget.models import Expense; "
             f"print(Expense.objects.filter(owning_feuser__email='{ctx['a']['email']}', "
@@ -685,7 +685,7 @@ class TestDirectSettlementAutoConfirmed:
 
     def test_a_sees_settled_on_contacts(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         row = driver.find_element(By.XPATH,
             "//div[contains(@class,'buddy-balance-row')][.//span[contains(@class,'buddy-name') and contains(., 'Payback Truster')]]")
         assert "Settled" in row.find_element(By.CSS_SELECTOR, ".bbl-balance").text
@@ -713,12 +713,12 @@ class TestProjectSettlementAutoConfirmed:
     def test_a_settles_in_project(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         amt = driver.find_element(By.ID, "settle-amount")
         driver.execute_script("arguments[0].value = '50.00';", amt)
         driver.find_element(By.ID, "btn-settle-individual").click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
 
     def test_settlement_is_confirmed(self, driver, w, ctx):
         state = _shell(
@@ -730,7 +730,7 @@ class TestProjectSettlementAutoConfirmed:
 
     def test_no_waiting_section_for_a(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/"))
-        time.sleep(1)
+        pause(1)
         assert "Waiting for approval" not in driver.page_source
 
 
@@ -786,11 +786,11 @@ class TestRetroactiveAcceptOnEnable:
         ctx["seen_before"] = mailpit_seen_ids()
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         cb = driver.find_element(By.ID, f"auto-accept-{ctx['link_pk']}")
         driver.execute_script("arguments[0].click();", cb)
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         assert "1 pending entry accepted" in driver.page_source
 
     def test_pending_entry_from_a_accepted(self, driver, w, ctx):
@@ -826,11 +826,11 @@ class TestTrustRemovedWithContactLink:
     def test_a_removes_b(self, driver, w, ctx):
         _login_as(driver, ctx["a"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(
             f"document.getElementById('kick-form-{ctx['link_pk']}').submit();"
         )
-        time.sleep(1.5)
+        pause(1.5)
         assert _trust_flag(ctx["b"]["email"], ctx["a"]["email"]) == "nolink"
 
     def test_reconnected_link_starts_untrusted(self, driver, w, ctx):
@@ -859,12 +859,12 @@ def _open_invite_count(group_id: int, email: str) -> str:
 def _invite_via_settings(driver, group_id: int, email: str) -> None:
     """Admin sends a project invitation through the Settings tab form."""
     driver.get(_url(f"/projects/{group_id}/settings/"))
-    time.sleep(1)
+    pause(1)
     form = driver.find_element(By.ID, "btn-group-invite").find_element(By.XPATH, "ancestor::form")
     inp = form.find_element(By.CSS_SELECTOR, "input[name=email]")
     driver.execute_script("arguments[0].value = arguments[1];", inp, email)
     driver.find_element(By.ID, "btn-group-invite").click()
-    time.sleep(2)
+    pause(2)
 
 
 class TestProjectInviteAutoAccepted:
@@ -895,7 +895,7 @@ class TestProjectInviteAutoAccepted:
 
     def test_a_sees_b_in_member_list(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
-        time.sleep(1)
+        pause(1)
         assert "Invite Truster" in driver.page_source
 
     def test_b_gets_joined_email(self, driver, w, ctx):
@@ -913,7 +913,7 @@ class TestProjectInviteAutoAccepted:
     def test_b_sees_project(self, driver, w, ctx):
         _login_as(driver, ctx["b"])
         driver.get(_url("/projects/"))
-        time.sleep(1)
+        pause(1)
         assert "Trusted Invite Project" in driver.page_source
 
 
@@ -972,11 +972,11 @@ class TestRetroactiveInviteAcceptOnEnable:
         ctx["seen_before"] = mailpit_seen_ids()
         _login_as(driver, ctx["b"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         cb = driver.find_element(By.ID, f"auto-accept-{ctx['link_pk']}")
         driver.execute_script("arguments[0].click();", cb)
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         assert "You joined 1 project." in driver.page_source
 
     def test_joined_live_project(self, driver, w, ctx):

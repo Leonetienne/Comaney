@@ -9,7 +9,6 @@ Both create_user and set_user_password accept -p for non-interactive use and
 prompt via getpass otherwise. delete_user accepts --yes to skip confirmation.
 """
 import subprocess
-import time
 import uuid
 
 import pyotp
@@ -22,6 +21,7 @@ from helpers import (
     cleanup_user, browser_login,
     DOCKER_WEB, PASSWORD,
 )
+from pacing import pause
 
 NEW_PASSWORD = "R41nerWinkl3rH0s3np1nkl3r"
 
@@ -128,7 +128,7 @@ class TestSetUserPassword:
         fill(w, By.ID, "id_email", ctx["email3"])
         fill(w, By.ID, "id_password", PASSWORD)
         click(w, By.CSS_SELECTOR, "button[type=submit]")
-        time.sleep(1)
+        pause(1)
         assert "/budget/" not in driver.current_url
 
     def test_set_password_interactive(self, driver, w, ctx):
@@ -174,7 +174,7 @@ class TestRemoveUser2FA:
         fill(w, By.ID, "id_email", ctx["email4"])
         fill(w, By.ID, "id_password", PASSWORD)
         click(w, By.CSS_SELECTOR, "button[type=submit]")
-        time.sleep(1)
+        pause(1)
         assert "/totp/verify/" not in driver.current_url
         assert "/budget/" in driver.current_url
 
@@ -198,7 +198,7 @@ class TestDeleteUser:
         fill(w, By.ID, "id_email", email)
         fill(w, By.ID, "id_password", PASSWORD)
         click(w, By.CSS_SELECTOR, "button[type=submit]")
-        time.sleep(1)
+        pause(1)
         assert "/budget/" not in driver.current_url
 
     def test_delete_user_interactive(self, driver, w, ctx):
@@ -210,7 +210,7 @@ class TestDeleteUser:
         fill(w, By.ID, "id_email", email)
         fill(w, By.ID, "id_password", PASSWORD)
         click(w, By.CSS_SELECTOR, "button[type=submit]")
-        time.sleep(1)
+        pause(1)
         assert "/budget/" not in driver.current_url
 
     def test_delete_user_aborted(self, driver, w, ctx):

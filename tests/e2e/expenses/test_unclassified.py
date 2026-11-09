@@ -16,6 +16,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 from helpers import DOCKER_WEB, _url, ai_unavailable, cleanup_user, session_cookies, set_ai_user_config, setup_user
+from pacing import pause
 
 
 def _shell(code: str) -> str:
@@ -130,11 +131,11 @@ class TestUnclassifiedExpensesList:
         uid_full = _create_expense(ctx["email"], "Fully classified", category="Alpha Cat", tag_titles=["Alpha"])
 
         driver.get(_url("/budget/"))
-        time.sleep(1)
+        pause(1)
         assert _badge_count(driver) >= 3
 
         driver.get(_url("/budget/unclassified/"))
-        time.sleep(1.5)
+        pause(1.5)
 
         assert "Category missing" in _row(driver, uid_cat).text
         assert "Tags missing" in _row(driver, uid_tags).text
@@ -146,7 +147,7 @@ class TestUnclassifiedExpensesList:
         uid_wit = _create_expense(ctx["email"], "Savings withdrawal test", type="savings_wit")
 
         driver.get(_url("/budget/unclassified/"))
-        time.sleep(1.5)
+        pause(1.5)
 
         assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_dep}")) == 0
         assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_wit}")) == 0
@@ -177,21 +178,21 @@ class TestUnclassifiedExpensesList:
 
             _login_as(driver, debtor)
             driver.get(_url("/buddies/summary/"))
-            time.sleep(1)
+            pause(1)
             driver.find_element(_By.ID, "btn-direct-settle").click()
             _confirm(driver)
-            time.sleep(1)
+            pause(1)
 
             _login_as(driver, ctx)
             driver.get(_url("/buddies/summary/"))
-            time.sleep(1)
+            pause(1)
             driver.find_element(_By.CSS_SELECTOR, "a[href*='/approve-settlement/']").click()
-            time.sleep(1)
+            pause(1)
             driver.find_element(_By.ID, "btn-approve-settlement").click()
-            time.sleep(1)
+            pause(1)
 
             driver.get(_url("/budget/unclassified/"))
-            time.sleep(1.5)
+            pause(1.5)
             assert "Settlement received from" not in driver.page_source, \
                 "The creditor's settlement-receipt income record must not appear as unclassified"
         finally:
@@ -201,22 +202,22 @@ class TestUnclassifiedExpensesList:
         _ensure_category(ctx, "Beta Cat")
         uid = _create_expense(ctx["email"], "Select category test", tag_titles=["Beta"])
         driver.get(_url("/budget/unclassified/"))
-        time.sleep(1.5)
+        pause(1.5)
 
         row = _row(driver, uid)
         row.find_element(By.CSS_SELECTOR, "td[data-label='Category'] .unclassified-cell-view").click()
-        time.sleep(0.5)
+        pause(0.5)
 
         select_el = row.find_element(By.CSS_SELECTOR, "select.unclassified-category-select")
         Select(select_el).select_by_visible_text("Beta Cat")
-        time.sleep(0.5)
+        pause(0.5)
 
         save_btn = row.find_element(By.XPATH, ".//button[text()='Save']")
         assert save_btn.is_displayed()
         edit_btns = row.find_elements(By.XPATH, ".//button[text()='Edit']")
         assert not edit_btns or not edit_btns[0].is_displayed()
         save_btn.click()
-        time.sleep(1.5)
+        pause(1.5)
 
         assert len(driver.find_elements(By.ID, f"unclassified-row-{uid}")) == 0
 
@@ -225,11 +226,11 @@ class TestUnclassifiedExpensesList:
         _ensure_tag(ctx, "Groceries Extra")
         uid = _create_expense(ctx["email"], "Tags combobox test", category="Gamma Cat")
         driver.get(_url("/budget/unclassified/"))
-        time.sleep(1.5)
+        pause(1.5)
 
         row = _row(driver, uid)
         row.find_element(By.CSS_SELECTOR, "td[data-label='Tags'] .unclassified-cell-view").click()
-        time.sleep(0.5)
+        pause(0.5)
 
         tag_input = row.find_element(By.CSS_SELECTOR, ".unclassified-tag-input")
         driver.execute_script(
@@ -237,48 +238,48 @@ class TestUnclassifiedExpensesList:
             "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
             tag_input, "Grocer",
         )
-        time.sleep(0.5)
+        pause(0.5)
         suggestion = row.find_element(
             By.XPATH, ".//div[contains(@class,'unclassified-tag-suggestion') and text()='Groceries']"
         )
         suggestion.click()
-        time.sleep(0.3)
+        pause(0.3)
 
         pills = row.find_elements(By.CSS_SELECTOR, ".unclassified-tag-pill")
         assert len(pills) == 1
 
         # click outside to close the combobox
         driver.find_element(By.TAG_NAME, "h1").click()
-        time.sleep(0.3)
+        pause(0.3)
 
         assert "Groceries" in row.find_element(By.CSS_SELECTOR, "td[data-label='Tags']").text
 
         save_btn = row.find_element(By.XPATH, ".//button[text()='Save']")
         save_btn.click()
-        time.sleep(1.5)
+        pause(1.5)
         assert len(driver.find_elements(By.ID, f"unclassified-row-{uid}")) == 0
 
     def test_edit_hidden_while_dirty_and_revert_restores(self, driver, w, ctx):
         uid = _create_expense(ctx["email"], "Revert test", tag_titles=["Delta"])
         driver.get(_url("/budget/unclassified/"))
-        time.sleep(1.5)
+        pause(1.5)
 
         row = _row(driver, uid)
         assert row.find_element(By.XPATH, ".//button[text()='Edit']").is_displayed()
 
         row.find_element(By.CSS_SELECTOR, "td[data-label='Category'] .unclassified-cell-view").click()
-        time.sleep(0.3)
+        pause(0.3)
         select_el = row.find_element(By.CSS_SELECTOR, "select.unclassified-category-select")
         options = [o.text for o in Select(select_el).options if o.text.strip() and o.text != "—"]
         assert options, "expected at least one category option"
         Select(select_el).select_by_visible_text(options[0])
-        time.sleep(0.3)
+        pause(0.3)
 
         assert not row.find_element(By.XPATH, ".//button[text()='Edit']").is_displayed()
         revert_btn = row.find_element(By.XPATH, ".//button[text()='Revert']")
         assert revert_btn.is_displayed()
         revert_btn.click()
-        time.sleep(0.5)
+        pause(0.5)
 
         row = _row(driver, uid)
         assert row.find_element(By.XPATH, ".//button[text()='Edit']").is_displayed()
@@ -293,18 +294,18 @@ class TestUnclassifiedExpensesList:
             )
             _relogin(driver, w, ctx)
             driver.get(_url("/budget/unclassified/"))
-            time.sleep(1.5)
+            pause(1.5)
 
             row = _row(driver, uid)
             assert "From " in row.text
             row.find_element(By.XPATH, ".//button[text()='Edit']").click()
-            time.sleep(1)
+            pause(1)
 
             assert "edit-overlay" in driver.current_url
             assert "back=" in driver.current_url
 
             driver.find_element(By.CSS_SELECTOR, "a.btn-secondary").click()
-            time.sleep(1)
+            pause(1)
             assert driver.current_url.rstrip("/").endswith("/budget/unclassified")
         finally:
             cleanup_user(owner["email"])
@@ -321,34 +322,34 @@ class TestUnclassifiedExpensesList:
             _relogin(driver, w, ctx)
             _ensure_tag(ctx, "MyOwnTag")
             driver.get(_url("/budget/unclassified/"))
-            time.sleep(1.5)
+            pause(1.5)
 
             row = _row(driver, uid)
             row.find_element(By.CSS_SELECTOR, "td[data-label='Category'] .unclassified-cell-view").click()
-            time.sleep(0.3)
+            pause(0.3)
             select_el = row.find_element(By.CSS_SELECTOR, "select.unclassified-category-select")
             options = [o.text for o in Select(select_el).options if o.text.strip() and o.text != "—"]
             Select(select_el).select_by_visible_text(options[0])
-            time.sleep(0.3)
+            pause(0.3)
 
             row.find_element(By.CSS_SELECTOR, "td[data-label='Tags'] .unclassified-cell-view").click()
-            time.sleep(0.3)
+            pause(0.3)
             tag_input = row.find_element(By.CSS_SELECTOR, ".unclassified-tag-input")
             driver.execute_script(
                 "arguments[0].value = arguments[1];"
                 "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
                 tag_input, "MyOwnTag",
             )
-            time.sleep(0.5)
+            pause(0.5)
             row.find_element(
                 By.XPATH, ".//div[contains(@class,'unclassified-tag-suggestion') and text()='MyOwnTag']"
             ).click()
-            time.sleep(0.3)
+            pause(0.3)
             driver.find_element(By.TAG_NAME, "h1").click()
-            time.sleep(0.3)
+            pause(0.3)
 
             row.find_element(By.XPATH, ".//button[text()='Save']").click()
-            time.sleep(1.5)
+            pause(1.5)
 
             assert len(driver.find_elements(By.ID, f"unclassified-row-{uid}")) == 0
             assert _overlay_count(ctx["email"], uid) == 1
@@ -385,7 +386,7 @@ def _relogin(driver, w, ctx):
 
 def _ai_gate_ok(driver) -> bool:
     driver.get(_url("/budget/unclassified/"))
-    time.sleep(1)
+    pause(1)
     return "Let AI solve" in driver.page_source or "Let AI resolve all" in driver.page_source
 
 
@@ -397,12 +398,12 @@ class TestUnclassifiedExpensesAI:
 
         uid = _create_expense(ctx["email"], "Netflix subscription", payee="Netflix")
         driver.get(_url("/budget/unclassified/"))
-        time.sleep(1.5)
+        pause(1.5)
 
         row = _row(driver, uid)
         ai_btn = row.find_element(By.XPATH, ".//button[contains(text(),'Let AI solve')]")
         ai_btn.click()
-        time.sleep(12)
+        pause(12)
 
         row = _row(driver, uid)
         cat_text = row.find_element(By.CSS_SELECTOR, "td[data-label='Category']").text
@@ -411,7 +412,7 @@ class TestUnclassifiedExpensesAI:
 
         save_btn = row.find_element(By.XPATH, ".//button[text()='Save']")
         save_btn.click()
-        time.sleep(1.5)
+        pause(1.5)
         assert len(driver.find_elements(By.ID, f"unclassified-row-{uid}")) == 0
 
     def test_ai_resolve_all_and_save_all(self, driver, w, ctx):
@@ -424,7 +425,7 @@ class TestUnclassifiedExpensesAI:
             uid_a = _create_expense(solo["email"], "Spotify subscription", payee="Spotify")
             uid_b = _create_expense(solo["email"], "Gas station fill-up", payee="Shell")
             driver.get(_url("/budget/unclassified/"))
-            time.sleep(1.5)
+            pause(1.5)
             assert len(driver.find_elements(By.CSS_SELECTOR, "[id^='unclassified-row-']")) == 2
 
             assert not driver.find_elements(By.XPATH, "//button[text()='Save all']") or \
@@ -442,7 +443,7 @@ class TestUnclassifiedExpensesAI:
             save_all = driver.find_element(By.XPATH, "//button[text()='Save all']")
             assert save_all.is_displayed()
             save_all.click()
-            time.sleep(2)
+            pause(2)
 
             assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_a}")) == 0
             assert len(driver.find_elements(By.ID, f"unclassified-row-{uid_b}")) == 0
@@ -510,7 +511,7 @@ class TestUnclassifiedAiButtonVisibility:
         _set_disable_ai_ui(ctx["email"], True)
         try:
             driver.get(_url("/budget/unclassified/"))
-            time.sleep(1.5)
+            pause(1.5)
             assert not driver.find_elements(By.CLASS_NAME, "unclassified-ai-solve-btn"), \
                 "Per-row AI button must be gone when disable_ai_ui is set"
             assert not driver.find_elements(By.ID, "unclassified-resolve-all-btn"), \
@@ -521,7 +522,7 @@ class TestUnclassifiedAiButtonVisibility:
     def test_ai_buttons_visible_when_enabled(self, driver, w, ctx):
         _create_expense(ctx["email"], "AI gate visible row")
         driver.get(_url("/budget/unclassified/"))
-        time.sleep(1.5)
+        pause(1.5)
         assert driver.find_elements(By.CLASS_NAME, "unclassified-ai-solve-btn"), \
             "Per-row AI button should be present when AI is available"
         assert driver.find_elements(By.ID, "unclassified-resolve-all-btn"), \

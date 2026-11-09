@@ -3,7 +3,6 @@ Personal offline-buddy-into-offline-buddy merge: immediate, no approval needed.
 Replaces the old free-text-email "Invite as user" flow for this case.
 """
 import subprocess
-import time
 import uuid
 
 import pytest
@@ -12,6 +11,7 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user, fill, click, DOCKER_WEB, PASSWORD
 from bhelpers import _shell, _confirm, _create_contact_link, _create_group
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ class TestPersonalDummyIntoDummyMerge:
 
     def test_merge_into_option_visible_not_invite_as_user(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         assert len(driver.find_elements(By.XPATH, "//*[contains(text(),'Invite as user')]")) == 0, \
             "The old 'Invite as user' option must be gone"
         assert driver.find_elements(By.ID, f"merge-btn-{ctx['d1_uid']}"), \
@@ -63,7 +63,7 @@ class TestPersonalDummyIntoDummyMerge:
 
     def test_a_merges_dummy_into_dummy(self, driver, w, ctx):
         driver.find_element(By.ID, f"merge-btn-{ctx['d1_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['d1_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['d2_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -72,7 +72,7 @@ class TestPersonalDummyIntoDummyMerge:
 
     def test_source_dummy_gone_target_remains(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         assert "Source Dummy" not in driver.page_source
         assert "Target Dummy" in driver.page_source
 
@@ -137,9 +137,9 @@ class TestDummyIntoDummyMergeAnnotatesUpfrontPayerNote:
 
     def test_a_merges_fronting_dummy_into_receiving_dummy(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['d1_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['d1_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['d2_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -229,9 +229,9 @@ class TestDummyIntoDummyMergeSumsConflictingShares:
 
     def test_merge_mario_into_tom(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['mario_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['mario_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['tom_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -317,9 +317,9 @@ class TestPersonalDummyIntoDummyMergeBlockedWhilePending:
 
     def test_dummy_into_dummy_merge_blocked_while_request_pending(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['source_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['source_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['other_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -385,9 +385,9 @@ class TestDummyIntoDummyMergeUpfrontPayerConflict:
 
     def test_a_merges_source_into_target(self, driver, w, ctx):
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['source_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['source_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['target_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -518,10 +518,10 @@ def _demo_login_and_accept(driver, w, demo_ctx):
     fill(w, By.ID, "id_email", demo_ctx["email"])
     fill(w, By.ID, "id_password", demo_ctx["password"])
     click(w, By.CSS_SELECTOR, "button[type=submit]")
-    time.sleep(2)
+    pause(2)
     if "/demo-banner/" in driver.current_url:
         click(w, By.ID, "btn-demo-accept")
-        time.sleep(2)
+        pause(2)
 
 
 class TestDemoUserCannotMergePersonalDummy:
@@ -546,6 +546,6 @@ class TestDemoUserCannotMergePersonalDummy:
     def test_no_merge_option_for_demo_user(self, driver, w, ctx):
         _demo_login_and_accept(driver, w, ctx["demo"])
         driver.get(_url("/buddies/contacts/"))
-        time.sleep(1)
+        pause(1)
         assert not driver.find_elements(By.ID, f"merge-btn-{ctx['dummy_uid']}"), \
             "Demo users must never see 'Merge into...' for their offline contacts"

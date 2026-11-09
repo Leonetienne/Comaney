@@ -17,6 +17,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user, fetch_email, mailpit_seen_ids, server_today
 from bhelpers import _shell, _login_as, _create_contact_link, _get_pk
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +47,7 @@ class TestCreateNotifiesParticipant:
 
         _login_as(driver, ctx["a"])
         driver.get(_url("/budget/expenses/new/"))
-        time.sleep(1)
+        pause(1)
 
         driver.execute_script(
             "document.getElementById('id_title').value = 'Shared Dinner';"
@@ -56,7 +57,7 @@ class TestCreateNotifiesParticipant:
         )
         # Enable buddy payment
         driver.find_element(By.ID, "buddy-payment-cb").click()
-        time.sleep(0.5)
+        pause(0.5)
 
         # Select B as participant via the dropdown
         driver.execute_script(
@@ -64,15 +65,15 @@ class TestCreateNotifiesParticipant:
             f"sel.value = 'feuser:{b_pk}';"
             f"sel.dispatchEvent(new Event('change', {{bubbles: true}}));"
         )
-        time.sleep(0.4)
+        pause(0.4)
         driver.find_element(By.ID, "buddy-equal-btn").click()
-        time.sleep(0.3)
+        pause(0.3)
 
         driver.find_element(
             By.CSS_SELECTOR,
             "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)"
         ).click()
-        time.sleep(2)
+        pause(2)
         assert "/budget/expenses/" in driver.current_url, \
             "Expected redirect to expense list after creating buddy expense"
 
@@ -148,7 +149,7 @@ class TestEditNotifiesParticipant:
 
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
 
         # Change the title
         driver.execute_script(
@@ -168,7 +169,7 @@ class TestEditNotifiesParticipant:
             By.CSS_SELECTOR,
             "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)"
         ).click()
-        time.sleep(2)
+        pause(2)
 
     def test_b_receives_update_email(self, driver, w, ctx):
         body = fetch_email(
@@ -243,7 +244,7 @@ class TestEditAddParticipantNotification:
 
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
 
         # Add C alongside B in group mode (single mode caps at 1 participant)
         new_spendings = json.dumps([
@@ -262,7 +263,7 @@ class TestEditAddParticipantNotification:
             By.CSS_SELECTOR,
             "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)"
         ).click()
-        time.sleep(2)
+        pause(2)
 
     def test_c_receives_added_to_expense_email(self, driver, w, ctx):
         body = fetch_email(
@@ -342,7 +343,7 @@ class TestEditRemoveParticipantNotification:
 
         _login_as(driver, ctx["a"])
         driver.get(_url(f"/budget/expenses/{ctx['exp_pk']}/edit/"))
-        time.sleep(1)
+        pause(1)
 
         # Keep only C; remove B. Use group mode (original expense has 2 participants).
         new_spendings = json.dumps([
@@ -360,7 +361,7 @@ class TestEditRemoveParticipantNotification:
             By.CSS_SELECTOR,
             "button[type=submit]:not(#logout-button):not(#sidebar-logout-button)"
         ).click()
-        time.sleep(2)
+        pause(2)
 
     def test_b_receives_removed_from_expense_email(self, driver, w, ctx):
         body = fetch_email(

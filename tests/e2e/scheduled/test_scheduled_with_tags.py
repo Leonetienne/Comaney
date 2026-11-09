@@ -16,6 +16,7 @@ from helpers import (
     api_get, api_post, api_delete, run_cmd, server_today,
     setup_user, cleanup_user,
 )
+from pacing import pause
 
 
 def _check_tag(driver, tag_title):
@@ -27,7 +28,7 @@ def _check_tag(driver, tag_title):
     checkbox = driver.find_element(By.ID, label.get_attribute("for"))
     if not checkbox.is_selected():
         label.click()
-        time.sleep(0.1)
+        pause(0.1)
 
 
 def _uncheck_tag(driver, tag_title):
@@ -39,7 +40,7 @@ def _uncheck_tag(driver, tag_title):
     checkbox = driver.find_element(By.ID, label.get_attribute("for"))
     if checkbox.is_selected():
         label.click()
-        time.sleep(0.1)
+        pause(0.1)
 
 
 def _tag_is_checked(driver, tag_title) -> bool:
@@ -100,7 +101,7 @@ class TestScheduledWithCategoryAndTags:
     ):
         today = server_today()
         driver.get(_url("/budget/scheduled/new/"))
-        time.sleep(1)
+        pause(1)
         fill(w, By.ID, "id_title", "SchedWithMeta")
         fill(w, By.ID, "id_value", "30.00")
         Select(driver.find_element(By.ID, "id_type")).select_by_value("expense")
@@ -113,7 +114,7 @@ class TestScheduledWithCategoryAndTags:
         _check_tag(driver, "SchedTagA")
         _check_tag(driver, "SchedTagB")
         submit(w)
-        time.sleep(2)
+        pause(2)
 
         assert "/budget/scheduled/" in driver.current_url
         assert "SchedWithMeta" in driver.page_source
@@ -132,7 +133,7 @@ class TestScheduledWithCategoryAndTags:
         self, driver, w, ctx, cat_id, tag_a_id, tag_b_id
     ):
         driver.get(_url(f"/budget/scheduled/{ctx['sched_meta_uid']}/edit/"))
-        time.sleep(1)
+        pause(1)
 
         selected_val = driver.find_element(By.ID, "id_category").find_element(
             By.CSS_SELECTOR, "option:checked"
@@ -145,15 +146,15 @@ class TestScheduledWithCategoryAndTags:
         self, driver, w, ctx, cat2_id, tag_a_id, tag_b_id
     ):
         driver.get(_url(f"/budget/scheduled/{ctx['sched_meta_uid']}/edit/"))
-        time.sleep(1)
+        pause(1)
         Select(driver.find_element(By.ID, "id_category")).select_by_visible_text("SchedCatAlt")
         _uncheck_tag(driver, "SchedTagA")
         _uncheck_tag(driver, "SchedTagB")
         submit(w)
-        time.sleep(2)
+        pause(2)
 
         driver.get(_url(f"/budget/scheduled/{ctx['sched_meta_uid']}/edit/"))
-        time.sleep(1)
+        pause(1)
         selected_val = driver.find_element(By.ID, "id_category").find_element(
             By.CSS_SELECTOR, "option:checked"
         ).get_attribute("value")
@@ -163,13 +164,13 @@ class TestScheduledWithCategoryAndTags:
 
     def test_clear_category(self, driver, w, ctx):
         driver.get(_url(f"/budget/scheduled/{ctx['sched_meta_uid']}/edit/"))
-        time.sleep(1)
+        pause(1)
         Select(driver.find_element(By.ID, "id_category")).select_by_value("")
         submit(w)
-        time.sleep(2)
+        pause(2)
 
         driver.get(_url(f"/budget/scheduled/{ctx['sched_meta_uid']}/edit/"))
-        time.sleep(1)
+        pause(1)
         selected_val = driver.find_element(By.ID, "id_category").find_element(
             By.CSS_SELECTOR, "option:checked"
         ).get_attribute("value")

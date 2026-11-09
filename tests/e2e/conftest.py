@@ -46,6 +46,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 
 from helpers import BASE_URL, MAILPIT_API, DOCKER_WEB, TIMEOUT
+import pacing
 
 # On macOS, native Selenium clicks are silently dropped when the browser window
 # is in the background. Patch WebElement.click to always dispatch via JS so
@@ -124,8 +125,13 @@ def driver():
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--window-size=1280,900")
     opts.add_argument(f"--user-data-dir={tmpdir}")
+    # a background window keeps timers and animations at full speed
+    opts.add_argument("--disable-background-timer-throttling")
+    opts.add_argument("--disable-backgrounding-occluded-windows")
+    opts.add_argument("--disable-renderer-backgrounding")
     d = webdriver.Chrome(options=opts)
     d.implicitly_wait(0)
+    pacing.install(d)
     yield d
     d.quit()
 

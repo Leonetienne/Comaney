@@ -4,7 +4,6 @@ restrict it per data area with Read/Write checkboxes (write includes read),
 revoke it, and no agent keys for demo accounts.
 Run with: pytest -v tests/e2e/profile/test_agent_keys.py | tee logfile.log
 """
-import time
 
 import pytest
 import requests
@@ -12,6 +11,7 @@ from selenium.webdriver.common.by import By
 
 from bhelpers import _confirm, _shell
 from helpers import BASE_URL, _url, cleanup_user, form_login, form_post, http_session, setup_user
+from pacing import pause
 
 
 def _ping(key):
@@ -23,7 +23,7 @@ def _ping(key):
 
 def _card(driver):
     driver.get(_url("/profile/"))
-    time.sleep(1)
+    pause(1)
     return driver.find_element(By.ID, "section-agent-keys")
 
 
@@ -49,7 +49,7 @@ class TestAgentKeys:
         name = card.find_element(By.CSS_SELECTOR, ".agent-key-create input[name=label]")
         driver.execute_script("arguments[0].value = 'Laptop';", name)
         card.find_element(By.XPATH, ".//button[normalize-space()='Create agent key']").click()
-        time.sleep(2)
+        pause(2)
         secret = driver.find_element(By.ID, "agent-key-secret").get_attribute("value")
         assert secret.startswith("cmy_")
         assert _ping(secret) == 200
@@ -61,14 +61,14 @@ class TestAgentKeys:
         card = _card(driver)
         row = card.find_element(By.CSS_SELECTOR, ".agent-key-row")
         row.find_element(By.CSS_SELECTOR, ".key-restrict-toggle").click()
-        time.sleep(0.3)
+        pause(0.3)
         for box in row.find_elements(By.CSS_SELECTOR, ".key-permissions input[type=checkbox]"):
             if box.is_selected():
                 driver.execute_script("arguments[0].click();", box)
         driver.execute_script("arguments[0].click();", row.find_element(By.NAME, "write_projects"))
         assert row.find_element(By.NAME, "read_projects").is_selected()
         row.find_element(By.XPATH, ".//button[normalize-space()='Save permissions']").click()
-        time.sleep(2)
+        pause(2)
         stored = _stored_permissions(ctx["email"], "Laptop")
         assert '"projects": {"read": true, "write": true}' in stored
         assert '"expenses": {"read": false, "write": false}' in stored
@@ -77,7 +77,7 @@ class TestAgentKeys:
         card = _card(driver)
         card.find_element(By.XPATH, ".//button[normalize-space()='Revoke']").click()
         _confirm(driver)
-        time.sleep(1)
+        pause(1)
         assert "Laptop" not in _card(driver).text
         assert _ping(ctx["secret"]) == 401
 

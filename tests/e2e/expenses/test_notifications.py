@@ -23,6 +23,7 @@ from helpers import (
     extract_link, fetch_email, mailpit_seen_ids, run_cmd, server_today,
     setup_user, cleanup_user, session_cookies,
 )
+from pacing import pause
 
 _today     = date.fromisoformat(server_today())
 TODAY      = _today.isoformat()
@@ -109,10 +110,10 @@ class TestInitialClass:
         eid = e["id"]
         assert e["last_notification_class_sent"] == ""
         driver.get(_url(f"/budget/expenses/{eid}/edit/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(f"document.getElementById('id_date_due').value = '{TOMORROW}';")
         submit(w)
-        time.sleep(2)
+        pause(2)
         assert _get(ctx, eid)["last_notification_class_sent"] == "tomorrow"
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
@@ -154,13 +155,13 @@ class TestSettledNotification:
         eid = e["id"]
         seen = mailpit_seen_ids()
         driver.get(_url(f"/budget/expenses/{eid}/edit/"))
-        time.sleep(1)
+        pause(1)
         cb = driver.find_element(By.ID, "id_settled")
         if not cb.is_selected():
             cb.click()
-            time.sleep(0.1)
+            pause(0.1)
         submit(w)
-        time.sleep(2)
+        pause(2)
         fetch_email(ctx["email"], "settled", timeout=30, ignore_ids=seen)
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
@@ -240,10 +241,10 @@ class TestEditClassBack:
         eid = e["id"]
         assert e["last_notification_class_sent"] == "tomorrow"
         driver.get(_url(f"/budget/expenses/{eid}/edit/"))
-        time.sleep(1)
+        pause(1)
         driver.execute_script(f"document.getElementById('id_date_due').value = '{IN_10_DAYS}';")
         submit(w)
-        time.sleep(2)
+        pause(2)
         assert _get(ctx, eid)["last_notification_class_sent"] == ""
         api_delete(f"/api/v2/expenses/{eid}/", ctx)
 
@@ -355,21 +356,21 @@ class TestSettledNotifications:
         msgs_before = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         # Bulk settle via browser
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         search_el = driver.find_element(By.ID, "exp-search")
         driver.execute_script(
             "arguments[0].value=arguments[1];"
             "arguments[0].dispatchEvent(new Event('input',{bubbles:true}));",
             search_el, "BulkNoNotify",
         )
-        time.sleep(2)
+        pause(2)
         driver.find_element(By.ID, "exp-select-all").click()
-        time.sleep(0.3)
+        pause(0.3)
         SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value("settle")
         driver.find_element(By.ID, "exp-bulk-go").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         msgs_after = requests.get("http://localhost:8030/api/v1/messages", timeout=5).json().get("messages", [])
         new_settled = [m for m in msgs_after
                        if m.get("ID") not in {x.get("ID") for x in msgs_before}
@@ -385,21 +386,21 @@ class TestSettledNotifications:
         seen = mailpit_seen_ids()
         # Bulk settle via browser
         driver.get(_url("/budget/expenses/"))
-        time.sleep(2)
+        pause(2)
         search_el = driver.find_element(By.ID, "exp-search")
         driver.execute_script(
             "arguments[0].value=arguments[1];"
             "arguments[0].dispatchEvent(new Event('input',{bubbles:true}));",
             search_el, "BulkNotify Single",
         )
-        time.sleep(2)
+        pause(2)
         driver.find_element(By.ID, "exp-select-all").click()
-        time.sleep(0.3)
+        pause(0.3)
         SeleniumSelect(driver.find_element(By.ID, "exp-bulk-action")).select_by_value("settle")
         driver.find_element(By.ID, "exp-bulk-go").click()
-        time.sleep(0.5)
+        pause(0.5)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         exp = _get(ctx, eid)
         assert exp["settled"] is True
         assert exp["last_notification_class_sent"] == "settled"
@@ -608,7 +609,7 @@ class TestNotificationClasses:
     def test_profile_page_shows_notification_checkboxes(self, driver, w, ctx):
         """Profile settings page renders all notification class checkboxes."""
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         for field_id in (
             "id_email_notifications",
             "id_notify_expense_reminders",
@@ -626,15 +627,15 @@ class TestNotificationClasses:
     def test_profile_page_saves_notification_preferences(self, driver, w, ctx):
         """Unchecking a class checkbox on the profile page and saving persists the change."""
         driver.get(_url("/profile/"))
-        time.sleep(1)
+        pause(1)
         cb = driver.find_element(By.ID, "id_notify_expense_reminders")
         assert cb.is_selected()
         cb.click()
-        time.sleep(0.1)
+        pause(0.1)
         driver.execute_script(
             "document.querySelector(\"input[name='action'][value='notifications']\").closest('form').submit()"
         )
-        time.sleep(2)
+        pause(2)
         assert api_get("/api/v2/account/", ctx).json()["notify_expense_reminders"] is False
         # Re-enable via API so state is clean for subsequent tests
         api_patch("/api/v2/account/", ctx, json={"notify_expense_reminders": True})

@@ -8,13 +8,13 @@ Achim Archive: personal (non-group) scenarios.
 5.11e: Popup does not appear again when Achim is re-created after the user
        has already seen it (has_seen_achim_intro flag).
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell
+from pacing import pause
 
 
 # ---------------------------------------------------------------------------
@@ -51,12 +51,12 @@ class TestAchimPersonalCreated:
 
     def test_dummy_visible_before_kick(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Vanishing Vera" in driver.page_source
 
     def test_kick_link_leads_to_confirm_page(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "a[href*='kick']").click()
-        time.sleep(1)
+        pause(1)
         assert "kick" in driver.current_url
 
     def test_confirm_page_shows_expense_count(self, driver, w, ctx):
@@ -72,7 +72,7 @@ class TestAchimPersonalCreated:
 
     def test_submit_redirects_to_contacts_page(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-confirm-kick").click()
-        time.sleep(1.5)
+        pause(1.5)
         assert "/buddies/" in driver.current_url
 
     def test_achim_modal_is_visible(self, driver, w, ctx):
@@ -144,12 +144,12 @@ class TestAchimPersonalWipe:
 
     def test_achim_visible_on_contacts_page(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Achim Archive" in driver.page_source
 
     def test_delete_expenses_link_leads_to_wipe_page(self, driver, w, ctx):
         driver.find_element(By.CSS_SELECTOR, "a[href*='archive-wipe']").click()
-        time.sleep(1)
+        pause(1)
         assert "archive-wipe" in driver.current_url
 
     def test_wipe_page_shows_expense_count(self, driver, w, ctx):
@@ -165,7 +165,7 @@ class TestAchimPersonalWipe:
 
     def test_submit_wipes_and_redirects(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-confirm-wipe").click()
-        time.sleep(1.5)
+        pause(1.5)
         assert "/buddies/" in driver.current_url
 
     def test_flash_message_shown(self, driver, w, ctx):
@@ -174,7 +174,7 @@ class TestAchimPersonalWipe:
 
     def test_achim_gone_from_balance_list(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         assert "Achim Archive" not in driver.page_source, \
             "Achim Archive must be gone after wipe"
 
@@ -230,14 +230,14 @@ class TestAchimPersonalNoRepeatPopup:
 
     def test_kick_confirm_page_loads(self, driver, w, ctx):
         driver.get(_url("/buddies/"))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.CSS_SELECTOR, "a[href*='kick']").click()
-        time.sleep(1)
+        pause(1)
         assert "kick" in driver.current_url
 
     def test_submit_redirects_to_contacts_page(self, driver, w, ctx):
         driver.find_element(By.ID, "btn-confirm-kick").click()
-        time.sleep(1.5)
+        pause(1.5)
         assert "/buddies/" in driver.current_url
 
     def test_achim_modal_not_shown(self, driver, w, ctx):

@@ -2,7 +2,6 @@
 Project offline-member-into-offline-member merge: immediate, admin only.
 Replaces the old free-text-email "Invite as user" flow for this case.
 """
-import time
 
 import pytest
 from selenium.webdriver.common.by import By
@@ -10,6 +9,7 @@ from selenium.webdriver.support.ui import Select
 
 from helpers import _url, setup_user, cleanup_user
 from bhelpers import _shell, _login_as, _confirm, _create_group, _add_group_member
+from pacing import pause
 
 
 def _settings_url(group_id) -> str:
@@ -58,7 +58,7 @@ class TestProjectDummyIntoDummyMergeAdmin:
 
     def test_merge_into_option_visible_not_invite_as_user(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         assert len(driver.find_elements(By.XPATH, "//*[contains(text(),'Invite as user')]")) == 0, \
             "The old 'Invite as user' option must be gone"
         assert driver.find_elements(By.ID, f"merge-btn-{ctx['d1_uid']}"), \
@@ -71,7 +71,7 @@ class TestProjectDummyIntoDummyMergeAdmin:
 
     def test_admin_merges_dummy_into_dummy(self, driver, w, ctx):
         driver.find_element(By.ID, f"merge-btn-{ctx['d1_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['d1_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['d2_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -80,7 +80,7 @@ class TestProjectDummyIntoDummyMergeAdmin:
 
     def test_source_member_gone_target_remains(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         assert "Source Member" not in driver.page_source
         assert "Target Member" in driver.page_source
 
@@ -161,9 +161,9 @@ class TestProjectDummyIntoDummyMergeSumsConflictingShares:
 
     def test_merge_mario_into_tom(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['mario_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['mario_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['tom_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -222,7 +222,7 @@ class TestNonAdminNeverSeesProjectDummyMergeOption:
     def test_non_admin_does_not_see_merge_option(self, driver, w, ctx):
         _login_as(driver, ctx["member"])
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         assert "Hidden Offline Member" in driver.page_source, \
             "Non-admins can see the offline member's name"
         assert len(driver.find_elements(By.XPATH, "//*[contains(text(),'Merge into')]")) == 0
@@ -272,9 +272,9 @@ class TestProjectDummyIntoDummyMergeBlockedWhilePending:
 
     def test_dummy_into_dummy_merge_blocked_while_request_pending(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['source_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['source_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['other_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()
@@ -344,9 +344,9 @@ class TestProjectDummyIntoDummyMergeUpfrontPayerConflict:
 
     def test_admin_merges_source_into_target(self, driver, w, ctx):
         driver.get(_settings_url(ctx["group_id"]))
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, f"merge-btn-{ctx['source_uid']}").click()
-        time.sleep(0.3)
+        pause(0.3)
         form = driver.find_element(By.CSS_SELECTOR, f"#merge-form-{ctx['source_uid']}")
         Select(form.find_element(By.CSS_SELECTOR, "select[name='target_key']")).select_by_value(f"d{ctx['target_uid']}")
         form.find_element(By.CSS_SELECTOR, "button[type=submit]").click()

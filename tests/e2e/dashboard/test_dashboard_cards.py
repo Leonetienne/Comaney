@@ -2,7 +2,6 @@
 Dashboard cards: API CRUD, computed values, YAML validation,
 color_breakpoints, flip_signs, method=total, presets, and browser smoke tests.
 """
-import time
 
 import requests
 import pytest
@@ -13,6 +12,7 @@ from helpers import (
     _url, wait_text, click, api_post, api_delete, server_today,
     session_cookies, BASE_URL, setup_user, cleanup_user,
 )
+from pacing import pause
 
 CARDS_URL   = BASE_URL + "/budget/dashboard/cards/"
 REORDER_URL = BASE_URL + "/budget/dashboard/cards/reorder/"
@@ -71,9 +71,9 @@ def _dialog_visible(driver) -> bool:
 
 def _open_add_dialog(driver, w):
     driver.get(_url("/budget/"))
-    time.sleep(3)
+    pause(3)
     driver.find_element(By.XPATH, "//button[contains(text(),'New dashboard card')]").click()
-    time.sleep(1)
+    pause(1)
 
 
 @pytest.fixture(scope="module")
@@ -419,7 +419,7 @@ class TestBrowserSmoke:
                     "positioning:\n  position: 1\n  width: 2\n  height: 1\n")
         card_id = _post_card(sess, csrf, yaml_str).json()["card"]["id"]
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
         assert len(driver.find_elements(By.CSS_SELECTOR, ".dash-card")) > 0
         _delete_card(sess, csrf, card_id)
 
@@ -432,14 +432,14 @@ class TestBrowserSmoke:
         presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         assert len(presets) > 0
         presets[0].click()
-        time.sleep(1)
+        pause(1)
         assert "type:" in _cm_text(driver, "dash-add-backdrop")
 
     def test_cancel_dialog(self, driver, w, ctx):
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        time.sleep(1)
+        pause(1)
         assert not driver.find_element(By.ID, "dash-add-backdrop").is_displayed()
 
     def test_edit_modal_opens(self, driver, w, ctx, sess):
@@ -448,19 +448,19 @@ class TestBrowserSmoke:
                     "positioning:\n  position: 1\n  width: 2\n  height: 1\n")
         card_id = _post_card(sess, csrf, yaml_str).json()["card"]["id"]
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
         driver.execute_script(
             "Array.from(document.querySelectorAll('.dash-card')).find("
             "  c => c.querySelector('.dash-card-title')?.textContent?.trim() === 'EditModalCard'"
             ")?.querySelector('.dash-card-edit-btn')?.click()"
         )
-        time.sleep(1)
+        pause(1)
         assert driver.find_element(By.ID, "dash-edit-backdrop").is_displayed()
         assert "type:" in _cm_text(driver, "dash-edit-backdrop")
         driver.find_element(
             By.XPATH, "//div[@id='dash-edit-backdrop']//button[text()='Cancel']"
         ).click()
-        time.sleep(1)
+        pause(1)
         _delete_card(sess, csrf, card_id)
 
     def test_sequential_presets_no_confirm(self, driver, w, ctx):
@@ -468,22 +468,22 @@ class TestBrowserSmoke:
         presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         assert len(presets) >= 1
         presets[0].click()
-        time.sleep(1)
+        pause(1)
         assert "type:" in _cm_text(driver, "dash-add-backdrop")
         presets[0].click()
-        time.sleep(1)
+        pause(1)
         assert "type:" in _cm_text(driver, "dash-add-backdrop")
         assert not _dialog_visible(driver)
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        time.sleep(1)
+        pause(1)
 
     def test_dirty_editor_confirm_cancel_keeps_content(self, driver, w, ctx):
         _open_add_dialog(driver, w)
         presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         presets[0].click()
-        time.sleep(1)
+        pause(1)
         driver.execute_script("""
             const data = document.querySelector('[x-data="dashboardBoard"]')._x_dataStack[0];
             const view = data._addEditor;
@@ -492,24 +492,24 @@ class TestBrowserSmoke:
                 view.dispatch({ changes: { from: len, to: len, insert: 'z' } });
             }
         """)
-        time.sleep(0.3)
+        pause(0.3)
         dirty_text = _cm_text(driver, "dash-add-backdrop")
         presets[0].click()
-        time.sleep(1)
+        pause(1)
         assert _dialog_visible(driver)
         driver.find_element(By.ID, "cdialog-cancel").click()
-        time.sleep(1)
+        pause(1)
         assert _cm_text(driver, "dash-add-backdrop") == dirty_text
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        time.sleep(1)
+        pause(1)
 
     def test_dirty_editor_confirm_overwrite_loads_preset(self, driver, w, ctx):
         _open_add_dialog(driver, w)
         presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         presets[0].click()
-        time.sleep(1)
+        pause(1)
         driver.execute_script("""
             const data = document.querySelector('[x-data="dashboardBoard"]')._x_dataStack[0];
             const view = data._addEditor;
@@ -518,38 +518,38 @@ class TestBrowserSmoke:
                 view.dispatch({ changes: { from: len, to: len, insert: 'z' } });
             }
         """)
-        time.sleep(0.3)
+        pause(0.3)
         presets[0].click()
-        time.sleep(1)
+        pause(1)
         assert _dialog_visible(driver)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(1)
+        pause(1)
         assert "type:" in _cm_text(driver, "dash-add-backdrop")
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        time.sleep(1)
+        pause(1)
 
     def test_empty_editor_loads_preset_without_confirm(self, driver, w, ctx):
         _open_add_dialog(driver, w)
         presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         presets[0].click()
-        time.sleep(1)
+        pause(1)
         driver.execute_script("""
             const data = document.querySelector('[x-data="dashboardBoard"]')._x_dataStack[0];
             const view = data._addEditor;
             view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: '' } });
         """)
-        time.sleep(1)
+        pause(1)
         assert _cm_text(driver, "dash-add-backdrop").strip() == ""
         presets[0].click()
-        time.sleep(1)
+        pause(1)
         assert "type:" in _cm_text(driver, "dash-add-backdrop")
         assert not _dialog_visible(driver)
         driver.find_element(
             By.XPATH, "//div[@id='dash-add-backdrop']//button[text()='Cancel']"
         ).click()
-        time.sleep(1)
+        pause(1)
 
     def test_delete_card_via_browser_modal(self, driver, w, ctx, sess):
         csrf = _csrf(sess)
@@ -559,21 +559,21 @@ class TestBrowserSmoke:
         ))
         assert r.status_code == 201
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
         driver.execute_script(
             "Array.from(document.querySelectorAll('.dash-card')).find("
             "  c => c.querySelector('.dash-card-title')?.textContent?.trim() === 'BrowserDeleteTest'"
             ")?.querySelector('.dash-card-edit-btn')?.click()"
         )
-        time.sleep(1)
+        pause(1)
         assert driver.find_element(By.ID, "dash-edit-backdrop").is_displayed()
         driver.find_element(
             By.XPATH, "//div[@id='dash-edit-backdrop']//button[contains(@class,'btn-danger')]"
         ).click()
-        time.sleep(1)
+        pause(1)
         assert _dialog_visible(driver)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
         assert not driver.find_element(By.ID, "dash-edit-backdrop").is_displayed()
         titles = [el.text.strip() for el in driver.find_elements(By.CSS_SELECTOR, ".dash-card-title")]
         assert "BrowserDeleteTest" not in titles
@@ -588,13 +588,13 @@ class TestBrowserSmoke:
         assert r.status_code == 201
         card_id = r.json()["card"]["id"]
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
         driver.execute_script(
             "Array.from(document.querySelectorAll('.dash-card')).find("
             "  c => c.querySelector('.dash-card-title')?.textContent?.trim() === 'LinkTestCell'"
             ")?.querySelector('.dash-card-body--linked')?.click()"
         )
-        time.sleep(2)
+        pause(2)
         assert "/budget/expenses/" in driver.current_url
         _delete_card(sess, csrf, card_id)
 
@@ -607,13 +607,13 @@ class TestBrowserSmoke:
         _open_add_dialog(driver, w)
         presets = driver.find_elements(By.CSS_SELECTOR, ".dash-presets .btn")
         presets[0].click()
-        time.sleep(1)
+        pause(1)
         _set_cm_text(driver, "dash-add-backdrop", yaml_str)
-        time.sleep(1)
+        pause(1)
         driver.find_element(
             By.CSS_SELECTOR, "#dash-add-backdrop .dash-modal-actions .btn-primary"
         ).click()
-        time.sleep(3)
+        pause(3)
         titles = [el.text.strip().lower() for el in driver.find_elements(By.CSS_SELECTOR, ".dash-card-title")]
         assert "templateuitest" in titles
         bodies = driver.find_elements(By.CSS_SELECTOR, ".dash-card-body--cell .dash-cell-value")
@@ -624,13 +624,13 @@ class TestBrowserSmoke:
             "  c => c.querySelector('.dash-card-title')?.textContent?.trim() === 'TemplateUITest'"
             ")?.querySelector('.dash-card-edit-btn')?.click()"
         )
-        time.sleep(1)
+        pause(1)
         driver.find_element(
             By.XPATH, "//div[@id='dash-edit-backdrop']//button[contains(@class,'btn-danger')]"
         ).click()
-        time.sleep(1)
+        pause(1)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(2)
+        pause(2)
 
     _BP_YAML = (
         "type: cell\n"
@@ -691,7 +691,7 @@ class TestBrowserSmoke:
         exp_id, card_id = self._bp_setup(driver, ctx, sess, "bptest_35a", 200, "BPGreenCard")
         try:
             driver.get(_url("/budget/"))
-            time.sleep(3)
+            pause(3)
             dark = self._bp_is_dark(driver)
             expected = self._BP_COLORS[dark]["green"]
             style = self._bp_card_style(driver, "BPGreenCard")
@@ -704,7 +704,7 @@ class TestBrowserSmoke:
         exp_id, card_id = self._bp_setup(driver, ctx, sess, "bptest_35b", 50, "BPYellowCard")
         try:
             driver.get(_url("/budget/"))
-            time.sleep(3)
+            pause(3)
             dark = self._bp_is_dark(driver)
             expected = self._BP_COLORS[dark]["yellow"]
             style = self._bp_card_style(driver, "BPYellowCard")
@@ -717,7 +717,7 @@ class TestBrowserSmoke:
         exp_id, card_id = self._bp_setup(driver, ctx, sess, "bptest_35c", 5, "BPRedCard")
         try:
             driver.get(_url("/budget/"))
-            time.sleep(3)
+            pause(3)
             dark = self._bp_is_dark(driver)
             expected = self._BP_COLORS[dark]["red"]
             style = self._bp_card_style(driver, "BPRedCard")
@@ -752,7 +752,7 @@ class TestBrowserSmoke:
         ))
         assert r.status_code == 201
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
 
         def _titles():
             return driver.execute_script(
@@ -767,21 +767,21 @@ class TestBrowserSmoke:
         driver.find_element(
             By.XPATH, "//*[@id='dash-reset-btn']"
         ).click()
-        time.sleep(1)
+        pause(1)
         assert _dialog_visible(driver)
         # Cancel: marker should still be there
         driver.find_element(By.ID, "cdialog-cancel").click()
-        time.sleep(1)
+        pause(1)
         assert not _dialog_visible(driver)
         assert "resetmarker" in _titles()
         # Confirm reset
         driver.find_element(
             By.XPATH, "//*[@id='dash-reset-btn']"
         ).click()
-        time.sleep(1)
+        pause(1)
         assert _dialog_visible(driver)
         driver.find_element(By.ID, "cdialog-ok").click()
-        time.sleep(3)
+        pause(3)
         titles = _titles()
         assert "resetmarker" not in titles
         assert "income" in titles

@@ -13,7 +13,6 @@ Test organisation:
 """
 
 import subprocess
-import time
 
 import requests
 import pytest
@@ -24,6 +23,7 @@ from helpers import (
     _url, wait_text, session_cookies, BASE_URL,
     setup_user, cleanup_user, ai_test_api_key_args,
 )
+from pacing import pause
 
 DASHBOARDS_URL = BASE_URL + "/budget/dashboards/"
 CARDS_URL      = BASE_URL + "/budget/dashboard/cards/"
@@ -142,7 +142,7 @@ def _dash_exists_in_db(dash_id) -> bool:
 def ctx(driver, w):
     c = setup_user(driver, w)
     driver.get(_url("/budget/"))
-    time.sleep(2)
+    pause(2)
     yield c
     cleanup_user(c["email"])
 
@@ -165,7 +165,7 @@ def ctx2(driver, w):
 @pytest.fixture(scope="module")
 def sess(driver, ctx):
     driver.get(_url("/budget/"))
-    time.sleep(2)
+    pause(2)
     return _session(driver)
 
 
@@ -392,34 +392,34 @@ class TestUITabBar:
     def test_redirect_from_budget_root(self, driver, w, ctx, sess):
         """/budget/ must redirect to /budget/dash/<id>/."""
         driver.get(_url("/budget/"))
-        time.sleep(2)
+        pause(2)
         assert "/budget/dash/" in driver.current_url
 
     def test_tab_bar_visible(self, driver, w, ctx, sess):
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
         tabbar = driver.find_element(By.CSS_SELECTOR, ".dash-tabbar-wrap")
         assert tabbar.is_displayed()
 
     def test_active_tab_shown(self, driver, w, ctx, sess):
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
         active_tab = driver.find_element(By.CSS_SELECTOR, ".dash-tab--active")
         assert active_tab.is_displayed()
 
     def test_close_button_on_active_tab(self, driver, w, ctx, sess):
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
         close_btn = driver.find_element(By.CSS_SELECTOR, ".dash-tab--active .dash-tab-close")
         assert close_btn.is_displayed()
 
     def test_add_dashboard_via_plus_button(self, driver, w, ctx, sess):
         driver.get(_url("/budget/"))
-        time.sleep(3)
+        pause(3)
 
         # Click the + button
         driver.find_element(By.CSS_SELECTOR, ".dash-tab-add-btn").click()
-        time.sleep(1)
+        pause(1)
 
         inp = driver.find_element(By.CSS_SELECTOR, ".dash-tab-new-input")
         driver.execute_script("arguments[0].value = arguments[1];", inp, "UI Created")
@@ -429,12 +429,12 @@ class TestUITabBar:
             "e.dispatchEvent(new Event('change',{bubbles:true}));",
             inp,
         )
-        time.sleep(0.3)
+        pause(0.3)
 
         create_btn = driver.find_element(By.XPATH,
             "//div[contains(@class,'dash-tab-new-form')]//button[contains(text(),'Create')]")
         create_btn.click()
-        time.sleep(3)
+        pause(3)
 
         assert "/budget/dash/" in driver.current_url
         path = driver.current_url.split("?")[0]
@@ -443,14 +443,14 @@ class TestUITabBar:
 
     def test_double_click_rename_active_tab(self, driver, w, ctx, sess):
         driver.get(_url("/budget/dash/" + str(ctx["first_dash_id"]) + "/"))
-        time.sleep(3)
+        pause(3)
 
         active_title = driver.find_element(By.CSS_SELECTOR, ".dash-tab--active .dash-tab-title")
         driver.execute_script(
             "arguments[0].dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));",
             active_title,
         )
-        time.sleep(0.5)
+        pause(0.5)
 
         rename_input = driver.find_element(By.CSS_SELECTOR, ".dash-tab--active .dash-tab-rename-input")
         driver.execute_script("arguments[0].value = arguments[1];", rename_input, "Renamed Via UI")
@@ -460,7 +460,7 @@ class TestUITabBar:
             "e.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));",
             rename_input,
         )
-        time.sleep(1)
+        pause(1)
 
         wait_text(driver, w, "Renamed Via UI")
 
@@ -468,13 +468,13 @@ class TestUITabBar:
         """Clicking a non-active tab navigates to that dashboard."""
         first_id = ctx.get("first_dash_id") or _list_dashboards(sess)[0]["id"]
         driver.get(_url("/budget/dash/" + str(first_id) + "/"))
-        time.sleep(3)
+        pause(3)
 
         # Find the non-active tab and click its title
         tabs = driver.find_elements(By.CSS_SELECTOR, ".dash-tab:not(.dash-tab--active) .dash-tab-title")
         assert len(tabs) >= 1, "No non-active tab found to click"
         tabs[0].click()
-        time.sleep(2)
+        pause(2)
 
         assert "/budget/dash/" in driver.current_url
         path = driver.current_url.split("?")[0]
@@ -486,7 +486,7 @@ class TestUITabBar:
         if uid:
             csrf = _csrf(sess)
             driver.get(_url("/budget/"))
-            time.sleep(1)
+            pause(1)
             _delete_dashboard(_session(driver), csrf, uid)
 
 
