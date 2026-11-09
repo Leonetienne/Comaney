@@ -20,8 +20,8 @@ from PIL import Image
 from selenium.webdriver.common.by import By
 
 from helpers import (
-    BASE_URL, _url, cleanup_user, get_ai_user_config, run_cmd, session_cookies,
-    set_ai_user_config, setup_user,
+    BASE_URL, _url, cleanup_user, get_ai_user_config, require_ai_provider, run_cmd,
+    session_cookies, set_ai_user_config, setup_user,
 )
 
 EXPRESS = "/budget/ai/express-creation/"
@@ -36,6 +36,7 @@ PNG_BYTES = _PNG.getvalue()
 
 @pytest.fixture(scope="module")
 def vision() -> bool:
+    require_ai_provider()
     out = run_cmd("shell", "-c", "from ai_providers import get_provider; print(get_provider().supports_vision())")
     return out.strip().splitlines()[-1] == "True"
 

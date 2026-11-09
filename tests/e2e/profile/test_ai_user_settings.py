@@ -28,7 +28,7 @@ from selenium.webdriver.common.by import By
 
 from helpers import (
     BASE_URL, DOCKER_WEB, PASSWORD, _url, cleanup_user, click, fill,
-    get_ai_user_config, run_cmd, set_ai_user_config, setup_user,
+    get_ai_user_config, require_ai_provider, run_cmd, set_ai_user_config, setup_user,
 )
 
 KEY = "sk-e2e-own-settings-4321"
@@ -70,6 +70,11 @@ def _submit_ai_form(driver):
         "document.querySelector(\"input[name='action'][value='ai']\").closest('form').submit()"
     )
     time.sleep(2)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _ai_provider():
+    require_ai_provider()
 
 
 @pytest.fixture(scope="module")

@@ -73,10 +73,17 @@ def ai_test_api_key_args() -> list:
     return ["--ai-config", f"api_key={key}"] if key else []
 
 
+def require_ai_provider() -> None:
+    """Skip the test when the stack has no active AI provider."""
+    if not _stack_provider()[0]:
+        ai_unavailable("No AI provider on the stack")
+
+
 def set_ai_user_config(email: str, values: dict) -> None:
     """Replace the account's own AI settings for the active provider, e.g.
     {"api_key": "..."}; {} clears them. Like saving the profile form, this
-    leaves no entry of another provider behind."""
+    leaves no entry of another provider behind. Skips without a provider."""
+    require_ai_provider()
     run_cmd(
         "shell", "-c",
         "from ai_providers import get_provider; from feusers.models import FeUser; "
@@ -87,7 +94,8 @@ def set_ai_user_config(email: str, values: dict) -> None:
 
 
 def get_ai_user_config(email: str) -> dict:
-    """The account's own AI settings for the active provider ({} if none)."""
+    """The account's own AI settings for the active provider ({} if none). Skips without a provider."""
+    require_ai_provider()
     out = run_cmd(
         "shell", "-c",
         "import json; from ai_providers import get_provider; from feusers.models import FeUser; "

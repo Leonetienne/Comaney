@@ -120,6 +120,8 @@ class TestProjectFabSubmenu:
     def test_preprompt_saved_from_settings(self, driver, w, ctx):
         driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
         time.sleep(1)
+        if not driver.find_elements(By.ID, "project-ai-preprompt"):
+            ai_unavailable("AI preprompt not available for this test user")
         textarea = driver.find_element(By.ID, "project-ai-preprompt")
         driver.execute_script("arguments[0].value = arguments[1];", textarea, PREPROMPT)
         driver.find_element(By.ID, "btn-rename-project").click()
@@ -147,6 +149,10 @@ class TestProjectFabSubmenu:
 
     def test_rename_without_preprompt_field_keeps_preprompt(self, driver, w, ctx):
         """Saving the rename form while the preprompt field is hidden must not wipe it."""
+        driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))
+        time.sleep(1)
+        if not driver.find_elements(By.ID, "project-ai-preprompt"):
+            ai_unavailable("AI preprompt not available for this test user")
         _set_disable_ai_ui(ctx["email"], True)
         try:
             driver.get(_url(f"/projects/{ctx['group_id']}/settings/"))

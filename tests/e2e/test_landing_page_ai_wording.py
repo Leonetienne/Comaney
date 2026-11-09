@@ -1,7 +1,7 @@
 """
 AI wording visible to users is provider-neutral:
-- the landing page is static: it names AI vendors only in the FAQ answer on
-  configurable AI services and claims nothing about where data goes
+- the landing page is static: it names AI vendors only in the FAQ answers on
+  configurable AI services and on privacy (the public instance's provider)
 - the profile AI card tip names the active provider (when it has user
   fields), so "Anthropic" appears only with the claude provider
 
@@ -14,7 +14,7 @@ import time
 import pytest
 from selenium.webdriver.common.by import By
 
-from helpers import _url, cleanup_user, run_cmd, setup_user
+from helpers import _url, cleanup_user, require_ai_provider, run_cmd, setup_user
 
 
 def _provider() -> dict:
@@ -28,9 +28,8 @@ def _provider() -> dict:
 
 @pytest.fixture(scope="module")
 def provider():
-    p = _provider()
-    assert p, "These tests need an active AI provider"
-    return p
+    require_ai_provider()
+    return _provider()
 
 
 class TestLandingPage:
@@ -45,11 +44,12 @@ class TestLandingPage:
         without_providers_faq = " ".join(driver.execute_script(
             "const body = document.body.cloneNode(true);"
             "body.querySelectorAll('.lp-faq-item').forEach(d => {"
-            "  if (d.querySelector('summary').textContent.includes('What AI services')) d.remove();"
+            "  const q = d.querySelector('summary').textContent;"
+            "  if (q.includes('What AI services') || q.includes('Is my financial data private')) d.remove();"
             "});"
             "return body.textContent;"
         ).split()).lower()
-        assert without_providers_faq != lower, "AI services FAQ item missing"
+        assert without_providers_faq != lower, "AI services or privacy FAQ item missing"
         for word in ("anthropic", "claude", "sonnet", "deepseek"):
             assert word not in without_providers_faq, word
         assert "never leaves" not in lower
