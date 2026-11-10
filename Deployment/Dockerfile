@@ -1,6 +1,14 @@
+FROM node:25.9.0-slim AS assets
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm install
+COPY build/ ./build/
+RUN npm run build
+
+
 FROM python:3.12-slim
 
-ARG NODE_VERSION=25.9.0
 ARG APP_VERSION=dev
 ENV APP_VERSION=$APP_VERSION
 
@@ -8,20 +16,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     default-libmysqlclient-dev \
     gcc \
     pkg-config \
-    curl \
-    && curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz \
-       | tar -xz -C /usr/local --strip-components=1 --no-same-owner \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY requirements.txt package.json ./
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-
-RUN npm install
-RUN npm run build && rm -rf node_modules/ build/
+RUN rm -rf build/ node_modules/ static/dist/
+COPY --from=assets /app/static/dist/ ./static/dist/
 
 # Build MkDocs documentation; source is removed afterwards, site stays at docs/build/site/
 RUN pip install --no-cache-dir mkdocs-material \
