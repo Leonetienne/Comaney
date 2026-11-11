@@ -309,12 +309,11 @@ git tag v<version> && git push origin v<version>
 The action also runs weekly to keep dependencies up to date and to check for known vulnerabilities.
 
 ### Building the Docker image locally / Manual deployment
-
 ```bash
 docker buildx build \
   --platform linux/amd64 \
   -f Deployment/Dockerfile \
-  -t leonetienne/comaney:v<version> \
+  -t leonetienne/comaney:v<version> \ # Obviously this would not fork anyone other than the author
   --build-arg APP_VERSION=v<version> \
   --push \
   .
