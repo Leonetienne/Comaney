@@ -301,14 +301,21 @@ See [Dev Manual: Testing](https://comaney.app/docs/dev-manual/testing/) for full
 
 The dev stack can run against a self-hosted model on your machine (`AI_PROVIDER=local`), with or without authentication. On a Mac the model server runs natively for GPU access; plain `docker compose up -d` is unchanged. See [Dev Manual: Local AI in the Dev Stack](https://comaney.app/docs/dev-manual/local-ai-dev-stack/).
 
-### Building the Docker image
+### Deploying the docker image
+Automatic deployment via Github Actions on tag pushes:
+```
+git tag v<version> && git push origin v<version>
+```
+The action also runs weekly to keep dependencies up to date and to check for known vulnerabilities.
+
+### Building the Docker image locally / Manual deployment
 
 ```bash
 docker buildx build \
   --platform linux/amd64 \
   -f Deployment/Dockerfile \
-  -t leonetienne/comaney:<version> \
-  --build-arg APP_VERSION=<version> \
+  -t leonetienne/comaney:v<version> \
+  --build-arg APP_VERSION=v<version> \
   --push \
   .
 ```
