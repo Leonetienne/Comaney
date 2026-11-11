@@ -313,7 +313,7 @@ The action also runs weekly to keep dependencies up to date and to check for kno
 docker buildx build \
   --platform linux/amd64 \
   -f Deployment/Dockerfile \
-  -t leonetienne/comaney:v<version> \ # Obviously this would not fork anyone other than the author
+  -t leonetienne/comaney:v<version> \ # Obviously this would not work for anyone other than the author
   --build-arg APP_VERSION=v<version> \
   --push \
   .
